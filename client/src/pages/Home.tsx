@@ -1064,7 +1064,7 @@ export default function Home() {
 
         {/* ── PRODUCT VALUE TAB ── */}
         {activeTab === "productvalue" && (
-          <div className="fade-in flex flex-col gap-3">
+          <div className="fade-in flex flex-col gap-5">
 
             {/* ── Section 1: Value Stack ── */}
             <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
@@ -1074,23 +1074,23 @@ export default function Home() {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💰</span>
-                  <span className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Value Stack</span>
+                  <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Value Stack</span>
                 </div>
                 {pvOpen === "stack" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
               </button>
               {pvOpen === "stack" && (
-                <div className="px-5 pb-5 flex flex-col gap-4">
+                <div className="px-5 pb-6 flex flex-col gap-5">
                   <div className="coaching-note flex gap-2 items-start">
                     <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                     <p className="text-sm leading-relaxed">Say the total value OUT LOUD before you say the price. "This starter kit has a value of £50." Then pause. Let that land. THEN say "and today it comes to you for just £4.95."</p>
                   </div>
                   {/* Value table */}
                   <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
-                    <table className="w-full text-sm">
+                    <table className="w-full text-base">
                       <thead>
                         <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                          <th className="text-left px-4 py-2 text-white font-semibold">What She Receives</th>
-                          <th className="text-right px-4 py-2 text-white font-semibold">Value</th>
+                          <th className="text-left px-4 py-3 text-white font-semibold">What She Receives</th>
+                          <th className="text-right px-4 py-3 text-white font-semibold">Value</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1100,8 +1100,8 @@ export default function Home() {
                           ["Ashkara Intensive Eye Serum", "included"],
                         ].map(([name, val], i) => (
                           <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                            <td className="px-4 py-2 text-white/80">{name}</td>
-                            <td className="px-4 py-2 text-right text-white/60">{val}</td>
+                            <td className="px-4 py-3 text-white/90">{name}</td>
+                            <td className="px-4 py-3 text-right text-white/70">{val}</td>
                           </tr>
                         ))}
                         <tr style={{ borderTop: "2px solid oklch(0.55 0.18 250 / 60%)", background: "oklch(0.22 0.03 250)" }}>
@@ -1118,7 +1118,7 @@ export default function Home() {
                   {/* Subscription badge */}
                   <div className="flex flex-wrap gap-2">
                     {["£44.90 every 2 months", "One jar = 2 months", "£22.45 / month", "Less than 75p a day"].map((badge) => (
-                      <span key={badge} className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: "oklch(0.3 0.12 250 / 60%)", color: "oklch(0.85 0.1 250)", border: "1px solid oklch(0.55 0.18 250 / 40%)" }}>{badge}</span>
+                      <span key={badge} className="text-sm font-semibold px-4 py-2 rounded-full" style={{ background: "oklch(0.3 0.12 250 / 60%)", color: "oklch(0.85 0.1 250)", border: "1px solid oklch(0.55 0.18 250 / 40%)" }}>{badge}</span>
                     ))}
                   </div>
                 </div>
@@ -1133,12 +1133,12 @@ export default function Home() {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔬</span>
-                  <span className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Why Lavié Labs?</span>
+                  <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Why Lavié Labs?</span>
                 </div>
                 {pvOpen === "why" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
               </button>
               {pvOpen === "why" && (
-                <div className="px-5 pb-5 flex flex-col gap-3">
+                <div className="px-5 pb-6 flex flex-col gap-4">
                   <div className="coaching-note flex gap-2 items-start">
                     <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                     <p className="text-sm leading-relaxed">Pick the point that fits the customer. Dryness / no results → Point 1. Wants fast results → Point 2. Value for money → Point 3. Feels unsupported → Point 4.</p>
@@ -1164,10 +1164,10 @@ export default function Home() {
                     <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
                       <button
                         onClick={() => setWhyOpen(whyOpen === i ? null : i)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-left"
+                        className="w-full flex items-center justify-between px-4 py-4 text-left"
                         style={{ background: "oklch(0.22 0.03 250)" }}
                       >
-                        <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{point.label}</span>
+                        <span className="text-base font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{point.label}</span>
                         {whyOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
                       </button>
                       {whyOpen === i && (
@@ -1189,12 +1189,12 @@ export default function Home() {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💬</span>
-                  <span className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Price Reframes</span>
+                  <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Price Reframes</span>
                 </div>
                 {pvOpen === "reframes" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
               </button>
               {pvOpen === "reframes" && (
-                <div className="px-5 pb-5 flex flex-col gap-3">
+                <div className="px-5 pb-6 flex flex-col gap-4">
                   <div className="coaching-note flex gap-2 items-start">
                     <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                     <p className="text-sm leading-relaxed">Never apologise for the price. Say it with confidence. You are offering a £50 starter kit for £4.95 — that is an extraordinary offer. Own it.</p>
@@ -1216,10 +1216,10 @@ export default function Home() {
                     <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
                       <button
                         onClick={() => setReframeOpen(reframeOpen === i ? null : i)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-left"
+                        className="w-full flex items-center justify-between px-4 py-4 text-left"
                         style={{ background: "oklch(0.22 0.03 250)" }}
                       >
-                        <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reframe.label}</span>
+                        <span className="text-base font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reframe.label}</span>
                         {reframeOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
                       </button>
                       {reframeOpen === i && (
