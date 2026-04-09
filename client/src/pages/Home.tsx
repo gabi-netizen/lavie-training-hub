@@ -7,7 +7,7 @@
   - 150ms fade transitions on tab switches
 */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown, ChevronUp, Play, BookOpen, Shield } from "lucide-react";
 
 // ─── VIDEO CDN URLS ───────────────────────────────────────────────────────────
@@ -244,117 +244,123 @@ const PITCH_STAGES = [
 ];
 
 // ─── VIDEO PLAYER COMPONENT ───────────────────────────────────────────────────
+// Strategy: render ALL clips as <video> elements simultaneously, all preloading
+// in parallel. Only the active clip is visible (opacity-100); all others are
+// opacity-0 but already buffered. Switching is instant — no load gap at all.
 function VideoPlayer({ clips }: { clips: string[] }) {
   const [currentClip, setCurrentClip] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const shouldPlayRef = useRef(false);
+  const [readyCount, setReadyCount] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
-  // Reset when objection changes
+  // Reset everything when the objection changes
   useEffect(() => {
     setCurrentClip(0);
     setPlaying(false);
-    setLoading(false);
-    shouldPlayRef.current = false;
+    setReadyCount(0);
+    setFinished(false);
+    videoRefs.current.forEach((v) => {
+      if (v) { v.pause(); v.currentTime = 0; }
+    });
   }, [clips]);
 
-  // When clip index changes, load the new src
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (shouldPlayRef.current) {
-      setLoading(true);
-      video.load();
-    }
-  }, [currentClip]);
+  const handleCanPlayThrough = useCallback(() => {
+    setReadyCount((n) => n + 1);
+  }, []);
 
-  // onCanPlay fires once the browser has buffered enough to play
-  const handleCanPlay = () => {
-    const video = videoRef.current;
-    if (!video || !shouldPlayRef.current) return;
-    setLoading(false);
-    video.play().catch(() => {});
-  };
-
-  const handleEnded = () => {
-    if (currentClip < clips.length - 1) {
-      setCurrentClip((c) => c + 1);
+  const handleEnded = useCallback((idx: number) => {
+    if (idx < clips.length - 1) {
+      // Advance to next clip instantly — it's already buffered
+      setCurrentClip(idx + 1);
+      const next = videoRefs.current[idx + 1];
+      if (next) {
+        next.currentTime = 0;
+        next.play().catch(() => {});
+      }
     } else {
-      shouldPlayRef.current = false;
       setPlaying(false);
-      setLoading(false);
+      setFinished(true);
     }
-  };
+  }, [clips.length]);
 
   const handlePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    shouldPlayRef.current = true;
+    const first = videoRefs.current[0];
+    if (!first) return;
     setPlaying(true);
-    setLoading(true);
+    setFinished(false);
     setCurrentClip(0);
-    video.load();
+    // Pause & reset all clips first
+    videoRefs.current.forEach((v) => { if (v) { v.pause(); v.currentTime = 0; } });
+    first.play().catch(() => {});
   };
 
-  const handleReplay = () => {
-    shouldPlayRef.current = true;
-    setPlaying(true);
-    setLoading(true);
-    setCurrentClip(0);
-    const video = videoRef.current;
-    if (video) video.load();
-  };
+  const allReady = readyCount >= clips.length;
 
   return (
     <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "9/16", maxHeight: "340px" }}>
-      <video
-        ref={videoRef}
-        src={clips[currentClip]}
-        className="w-full h-full object-cover"
-        onEnded={handleEnded}
-        onCanPlay={handleCanPlay}
-        onError={() => { setLoading(false); }}
-        playsInline
-        controls={playing && !loading}
-      />
 
-      {/* Play overlay — shown before first play */}
-      {!playing && (
-        <button
-          onClick={handlePlay}
-          className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 hover:bg-black/40 transition-colors"
-        >
-          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-            <Play className="w-7 h-7 text-white ml-1" fill="white" />
-          </div>
-          <span className="text-white/80 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-            {clips.length} clips · ~{clips.length * 8}s
-          </span>
-        </button>
-      )}
+      {/* All clips rendered simultaneously, only active one is visible */}
+      {clips.map((src, idx) => (
+        <video
+          key={src}
+          ref={(el) => { videoRefs.current[idx] = el; }}
+          src={src}
+          preload="auto"
+          playsInline
+          muted={false}
+          onCanPlayThrough={handleCanPlayThrough}
+          onEnded={() => handleEnded(idx)}
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-100"
+          style={{ opacity: playing && currentClip === idx ? 1 : 0, zIndex: playing && currentClip === idx ? 1 : 0 }}
+        />
+      ))}
 
-      {/* Loading spinner between clips */}
-      {playing && loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
-          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        </div>
-      )}
-
-      {/* Clip counter */}
-      {playing && !loading && (
-        <div className="absolute bottom-2 right-2 bg-black/60 rounded-full px-2 py-0.5 text-xs text-white/70">
+      {/* Controls overlay on top of active clip */}
+      {playing && (
+        <div className="absolute bottom-2 right-2 z-10 bg-black/60 rounded-full px-2 py-0.5 text-xs text-white/70">
           {currentClip + 1} / {clips.length}
         </div>
       )}
 
-      {/* Replay button after all clips finish */}
-      {!playing && currentClip === clips.length - 1 && (
+      {/* Initial play overlay */}
+      {!playing && !finished && (
         <button
-          onClick={handleReplay}
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-4 py-1.5 text-xs text-white font-medium"
+          onClick={handlePlay}
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/70 hover:bg-black/50 transition-colors"
         >
-          ↺ Replay
+          {!allReady ? (
+            <>
+              <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span className="text-white/60 text-xs" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                Loading {readyCount}/{clips.length}…
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+                <Play className="w-7 h-7 text-white ml-1" fill="white" />
+              </div>
+              <span className="text-white/80 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                {clips.length} clips · ~{clips.length * 8}s
+              </span>
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Replay overlay after all clips finish */}
+      {finished && (
+        <button
+          onClick={handlePlay}
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/70 hover:bg-black/50 transition-colors"
+        >
+          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+            <span className="text-white text-2xl">↺</span>
+          </div>
+          <span className="text-white/80 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            Replay
+          </span>
         </button>
       )}
     </div>
