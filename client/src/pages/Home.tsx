@@ -400,6 +400,47 @@ function ScriptSection({ items }: { items: { type: string; text: string }[] }) {
   );
 }
 
+// ─── FULL CALL SCRIPT DATA ───────────────────────────────────────────────────
+const FULL_SCRIPT_LINES: { type: "say" | "note"; text: string }[] = [
+  { type: "say", text: "Hi [Name], my name is [Your Name] calling from Lavie Labs — how are you today? I'm calling because you recently expressed interest in our skincare range, and I just wanted to have a quick chat to find out a little more about you and your skin." },
+  { type: "note", text: "Build warmth. Let her talk. Listen." },
+  { type: "say", text: "If you could wave a magic wand and change one thing about your skin — just one thing — what would it be? What would make you feel absolutely amazing when you look in the mirror?" },
+  { type: "note", text: "Write down her exact answer. Every pitch and close must tie back to this one answer." },
+  { type: "say", text: "How long have you been dealing with that? And have you tried anything before to help with it?" },
+  { type: "note", text: "Let her talk. The more she describes the problem, the more she wants the solution." },
+  { type: "say", text: "So based on what you've just told me about [her concern], I want to tell you about something that I think is going to genuinely change how your skin feels. This isn't just another moisturiser." },
+  { type: "say", text: "Matinika is a medical-grade formula with the highest concentration of Hyaluronic Acid available without a prescription. What that means for you is that tight, dry feeling is going to disappear. You're going to wake up with skin that feels plump, bouncy, and genuinely hydrated — the kind of glow that makes you feel confident going completely makeup-free." },
+  { type: "say", text: "High-street creams typically contain around 5% Hyaluronic Acid. Matinika contains 32%. That is the difference between surface hydration and deep, lasting change in your skin." },
+  { type: "say", text: "Alongside Matinika, we also have Oulala — our medical-grade retinol serum. Retinol is clinically proven to smooth fine lines and improve skin texture. What you'll notice is that you wake up looking genuinely refreshed — that plump, youthful radiance that most people spend years trying to find." },
+  { type: "say", text: "And for the eye area — which is usually the first place we see tiredness and ageing — we have Ashkara. It's essentially like eight hours of sleep in a bottle. You'll look wide awake, bright-eyed, and refreshed every single morning." },
+  { type: "say", text: "Everything I've just described — [repeat her magic wand answer] — that is exactly what this range is designed to do for your skin specifically." },
+  { type: "note", text: "Pause. Let that land. Then move to the offer." },
+  { type: "say", text: "Here is what I'd love to do for you today. I want to send you the full Matinika cream — worth £59 — completely free. All I ask is £4.95 to cover our premium 48-hour tracked delivery with signature on arrival. That is it. No catch, no commitment." },
+  { type: "say", text: "After your 21 days, if you love it — and I genuinely believe you will — it automatically continues as a subscription so you never run out. But you are in complete control. Cancel, pause, or change at any time with one click or one email. Most of our ladies keep it because they fall in love with their skin." },
+  { type: "say", text: "Brilliant! Let me take your details and get this sent out to you. I'm so excited for you to start seeing real changes in your skin, especially with [her concern]. Can I start with your full name?" },
+  { type: "note", text: "Stop talking. Do not add anything. Just take the details." },
+];
+
+// ─── FULL SCRIPT COMPONENT ───────────────────────────────────────────────────
+function FullCallScript() {
+  return (
+    <div className="flex flex-col gap-4">
+      {FULL_SCRIPT_LINES.map((line, i) =>
+        line.type === "say" ? (
+          <div key={i} className="script-block">
+            <p className="text-base leading-relaxed">"{line.text}"</p>
+          </div>
+        ) : (
+          <div key={i} className="coaching-note flex gap-2 items-start">
+            <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+            <p className="text-sm leading-relaxed">{line.text}</p>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 // ─── PITCH FULL SCRIPT (no accordion, continuous flow) ───────────────────────
 function PitchFullScript() {
   return (
@@ -449,7 +490,7 @@ function PitchFullScript() {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript">("objections");
   const [activeObjId, setActiveObjId] = useState<number | null>(null);
 
   const activeObj = OBJECTIONS.find((o) => o.id === activeObjId);
@@ -482,10 +523,17 @@ export default function Home() {
         </button>
         <button
           onClick={() => setActiveTab("pitch")}
-          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "pitch" ? "tab-active" : "tab-inactive"}`}
+          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "pitch" ? "tab-active" : "tab-inactive"}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           The Pitch
+        </button>
+        <button
+          onClick={() => setActiveTab("fullscript")}
+          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "fullscript" ? "tab-active" : "tab-inactive"}`}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Full Script
         </button>
       </div>
 
@@ -545,6 +593,16 @@ export default function Home() {
               Full Sales Script
             </p>
             <PitchFullScript />
+          </div>
+        )}
+
+        {/* ── FULL SCRIPT TAB ── */}
+        {activeTab === "fullscript" && (
+          <div className="fade-in flex flex-col gap-3">
+            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+              Complete call — opening to close
+            </p>
+            <FullCallScript />
           </div>
         )}
       </main>
