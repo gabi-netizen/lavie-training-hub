@@ -598,7 +598,7 @@ const LIVE_CALL_SECTIONS = [
       { type: "label", text: "Oulala Retinol Serum (Fine Lines/Texture):" },
       { type: "say", text: "The second product I'm including in your kit is our Oulala Face and Neck Retinol Serum. Retinol is the gold standard for anti-aging. What this is going to do for you is gently sweep away all those tired, dead skin cells that make our complexion look dull. You are going to literally see your skin transforming — tighter, significantly smoother, and those deeper lines you mentioned are going to start softening. You're going to wake up looking refreshed, with that plump, youthful radiance we all want." },
       { type: "label", text: "OR — Ashkara Eye Serum (Dark Circles/Puffiness):" },
-      { type: "say", text: "Because you specifically mentioned wanting to target [dark circles / puffy bags / fine lines around the eyes], I am making sure to include our Ashkara Eye Serum in your kit. When you use this daily, it's going to smooth out those fine lines, visibly reduce that morning puffiness, and brighten up those dark circles. It's essentially like eight hours of sleep in a bottle — making you look wide awake and refreshed." },
+      { type: "say", text: "Because you specifically mentioned wanting to target [dark circles / hooded eye lids / puffy bags / fine lines around the eyes], I am making sure to include our Ashkara Eye Serum in your kit. When you use this daily, it's going to smooth out those fine lines, visibly reduce that morning puffiness, and brighten up those dark circles. It's essentially like eight hours of sleep in a bottle — making you look wide awake and refreshed." },
     ],
   },
   {
