@@ -725,20 +725,6 @@ export default function Home() {
           Objection Trainer
         </button>
         <button
-          onClick={() => setActiveTab("pitch")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "pitch" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          The Pitch
-        </button>
-        <button
-          onClick={() => setActiveTab("fullscript")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "fullscript" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Full Script
-        </button>
-        <button
           onClick={() => setActiveTab("livescript")}
           className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "livescript" ? "tab-active" : "tab-inactive"}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -796,27 +782,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── PITCH TAB ── */}
-        {activeTab === "pitch" && (
-          <div className="fade-in flex flex-col gap-3">
-            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
-              Full Sales Script
-            </p>
-            <PitchFullScript />
-          </div>
-        )}
-
-        {/* ── FULL SCRIPT TAB ── */}
-        {activeTab === "fullscript" && (
-          <div className="fade-in flex flex-col gap-3">
-            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
-              Complete call — opening to close
-            </p>
-            <FullCallScript />
-          </div>
-        )}
-
-        {/* ── LIVE CALL SCRIPT TAB ── */}
         {activeTab === "livescript" && (
           <div className="fade-in flex flex-col gap-3">
             <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
