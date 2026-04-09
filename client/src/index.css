@@ -3,6 +3,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* 
+  DESIGN PHILOSOPHY: Dark Command Center
+  - Deep navy background for focus during live calls
+  - Color-coded objection buttons: navy blue, teal, burgundy
+  - Space Grotesk for headings (bold, technical), DM Sans for body
+  - Subtle glow effects on active states
+  - 150ms fade transitions on tab switches
+*/
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -27,90 +36,39 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-:root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
+  --radius: 0.75rem;
+  --background: oklch(0.13 0.025 250);
+  --foreground: oklch(0.95 0.005 250);
+  --card: oklch(0.18 0.025 250);
+  --card-foreground: oklch(0.95 0.005 250);
+  --popover: oklch(0.18 0.025 250);
+  --popover-foreground: oklch(0.95 0.005 250);
+  --primary: oklch(0.55 0.18 250);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.22 0.02 250);
+  --secondary-foreground: oklch(0.85 0.005 250);
+  --muted: oklch(0.22 0.02 250);
+  --muted-foreground: oklch(0.6 0.015 250);
+  --accent: oklch(0.55 0.18 250);
+  --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
-}
-
-.dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.55 0.18 250);
+  --color-chart-1: oklch(0.55 0.18 250);
+  --color-chart-2: oklch(0.55 0.15 180);
+  --color-chart-3: oklch(0.45 0.15 20);
+  --color-chart-4: oklch(0.65 0.12 130);
+  --color-chart-5: oklch(0.55 0.18 300);
+  --sidebar: oklch(0.16 0.025 250);
+  --sidebar-foreground: oklch(0.95 0.005 250);
+  --sidebar-primary: oklch(0.55 0.18 250);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.22 0.02 250);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+  --sidebar-ring: oklch(0.55 0.18 250);
 }
 
 @layer base {
@@ -119,6 +77,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -134,25 +93,13 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
+    max-width: 480px;
   }
 
   .flex {
@@ -160,18 +107,94 @@
     min-width: 0;
   }
 
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
+  /* Objection button color variants */
+  .btn-obj1 {
+    background: linear-gradient(135deg, oklch(0.3 0.12 250), oklch(0.22 0.1 250));
+    border: 1px solid oklch(0.45 0.15 250 / 60%);
+    color: white;
+    box-shadow: 0 0 0 0 oklch(0.55 0.18 250 / 0%);
+    transition: all 0.15s ease;
+  }
+  .btn-obj1:hover, .btn-obj1.active {
+    background: linear-gradient(135deg, oklch(0.38 0.16 250), oklch(0.28 0.14 250));
+    box-shadow: 0 0 16px oklch(0.55 0.18 250 / 40%);
+    border-color: oklch(0.6 0.2 250 / 80%);
+    transform: translateY(-1px);
   }
 
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
+  .btn-obj2 {
+    background: linear-gradient(135deg, oklch(0.3 0.1 180), oklch(0.22 0.08 180));
+    border: 1px solid oklch(0.45 0.12 180 / 60%);
+    color: white;
+    transition: all 0.15s ease;
+  }
+  .btn-obj2:hover, .btn-obj2.active {
+    background: linear-gradient(135deg, oklch(0.38 0.13 180), oklch(0.28 0.11 180));
+    box-shadow: 0 0 16px oklch(0.5 0.15 180 / 40%);
+    border-color: oklch(0.55 0.15 180 / 80%);
+    transform: translateY(-1px);
+  }
+
+  .btn-obj3 {
+    background: linear-gradient(135deg, oklch(0.3 0.1 20), oklch(0.22 0.08 20));
+    border: 1px solid oklch(0.45 0.12 20 / 60%);
+    color: white;
+    transition: all 0.15s ease;
+  }
+  .btn-obj3:hover, .btn-obj3.active {
+    background: linear-gradient(135deg, oklch(0.38 0.13 20), oklch(0.28 0.11 20));
+    box-shadow: 0 0 16px oklch(0.5 0.15 20 / 40%);
+    border-color: oklch(0.55 0.15 20 / 80%);
+    transform: translateY(-1px);
+  }
+
+  .tab-active {
+    border-bottom: 2px solid oklch(0.65 0.18 250);
+    color: oklch(0.9 0.01 250);
+  }
+
+  .tab-inactive {
+    border-bottom: 2px solid transparent;
+    color: oklch(0.55 0.01 250);
+  }
+
+  .script-block {
+    background: oklch(0.16 0.02 250);
+    border-left: 3px solid oklch(0.55 0.18 250 / 60%);
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 1rem 1.25rem;
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1.7;
+    color: oklch(0.88 0.005 250);
+  }
+
+  .coaching-note {
+    background: oklch(0.2 0.03 60 / 30%);
+    border: 1px solid oklch(0.5 0.1 60 / 40%);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: oklch(0.8 0.05 60);
+    font-size: 0.85rem;
+  }
+
+  .pitch-card {
+    background: oklch(0.18 0.025 250);
+    border: 1px solid oklch(1 0 0 / 8%);
+    border-radius: 0.75rem;
+    transition: all 0.15s ease;
+  }
+  .pitch-card:hover {
+    background: oklch(0.22 0.03 250);
+    border-color: oklch(0.55 0.18 250 / 40%);
+    transform: translateY(-1px);
+  }
+
+  .fade-in {
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
