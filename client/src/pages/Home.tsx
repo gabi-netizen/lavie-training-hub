@@ -542,7 +542,7 @@ const LIVE_CALL_SECTIONS = [
     id: "intro",
     icon: "📞",
     title: "Introduction & Discovery",
-    subtitle: "High energy, no pauses, confidence, say it with a smile!",
+    subtitle: "🔥 HIGH ENERGY — NO PAUSES — CONFIDENCE — SAY IT WITH A SMILE! 🔥",
     items: [
       { type: "say", text: "Hi [Name], it's [Your Name] from Lavie Labs. We're a medical-grade skincare company working in partnership with UK Best Offers. We're calling today to send you a complimentary Anti-Aging Starter Kit to try!" },
       { type: "say", text: "Because our products are medical-grade and highly active, I just need to ask a few quick questions to make sure we send you the perfect match for your skin. Would you say your skin is more on the dry side, combination, or oily?" },
@@ -658,9 +658,11 @@ function LiveCallScript() {
               <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {section.title}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
-                {section.subtitle}
-              </p>
+              {section.subtitle && (
+                <p className="text-base font-black tracking-wide mt-1" style={{ color: "oklch(0.82 0.18 65)", textShadow: "0 0 12px oklch(0.82 0.18 65 / 0.5)", letterSpacing: "0.04em" }}>
+                  {section.subtitle}
+                </p>
+              )}
             </div>
           </div>
           {/* Items */}
