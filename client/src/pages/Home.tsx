@@ -569,7 +569,7 @@ const LIVE_CALL_SECTIONS = [
       { type: "say", text: "Do you currently have a skincare routine you follow morning and night? What are you using right now?" },
       { type: "note", text: "Listen actively. Compliment their effort, no matter how small." },
       { type: "say", text: "I love that you have a routine! Taking that time for yourself is half the battle. The other half is making sure you are using powerful active ingredients which you will receive using medical grade products." },
-      { type: "say", text: "Tell me, do any of the products you're using right now contain Hyaluronic Acid? Have you heard of it?" },
+      { type: "say", text: "Tell me, are you familiar with Hyaluronic Acid? Have you heard of it?" },
       { type: "say", text: "Hyaluronic Acid is actually something our bodies produce naturally. Think of it like a sponge that holds water inside your skin. It's what gives young skin that plump, bouncy, glowing look." },
       { type: "say", text: "The catch is, after we turn 25, our bodies stop making as much of it. That's when we start noticing our skin feeling drier, looking a bit duller, and those fine lines start creeping in. Our goal is simply to give that hydration back to your skin, so it can look and feel plump, smooth, and radiant again." },
     ],
