@@ -691,9 +691,114 @@ function LiveCallScript() {
   );
 }
 
+// ─── DIAGNOSTICS DATA ───────────────────────────────────────────────────────
+const DIAGNOSTICS = [
+  {
+    icon: "🗣️",
+    symptomShort: "Can't get into the conversation",
+    symptom: "The customer gives one-word answers. The call feels flat. You cannot get any momentum going.",
+    rootCause: "Tone, energy, or pacing issue. You may be speaking too fast, too quietly, or sounding like you are reading from a script.",
+    fixes: [
+      "Slow down by 20%. Pause after every sentence.",
+      "Smile physically — it changes your voice instantly.",
+      "Drop your pitch lower. A deeper, calmer voice builds trust.",
+      "Use her name once in the first 30 seconds.",
+    ],
+    powerLine: "[Name], I'm so glad I caught you today — I've got something really exciting I want to share with you.",
+  },
+  {
+    icon: "📵",
+    symptomShort: "Customer hangs up or disengages early",
+    symptom: "She says 'I'm busy' or 'not interested' within the first 60 seconds.",
+    rootCause: "The opening does not create curiosity. It sounds like a sales call, not a personal call.",
+    fixes: [
+      "Lead with the gift, not the product: 'I'm calling to send you something complimentary.'",
+      "Never say 'I'm calling to tell you about our products.'",
+      "Create a pattern interrupt — say something unexpected.",
+    ],
+    powerLine: "I'm not here to sell you anything today — I'm actually calling because we want to send you something completely free.",
+  },
+  {
+    icon: "🤔",
+    symptomShort: "She agrees but won't buy",
+    symptom: "She says 'that sounds lovely' and 'yes, yes' but hesitates at the close.",
+    rootCause: "Emotional buy-in is missing. She has not connected the product to her specific problem. The Magic Wand answer was never tied back.",
+    fixes: [
+      "Go back to her Magic Wand answer. Repeat it word for word.",
+      "Make it personal: 'This is literally designed for exactly what you described.'",
+      "Create soft urgency: 'We only have a limited number of starter kits available this week.'",
+    ],
+    powerLine: "[Name], you told me you want [her exact words]. This is exactly what Matinika is going to do for you. Let's get this sent out today.",
+  },
+  {
+    icon: "❓",
+    symptomShort: "She asks too many questions",
+    symptom: "She asks about ingredients, side effects, competitors, return policy — the call becomes an interrogation.",
+    rootCause: "Trust has not been established. She is in research mode, not buying mode.",
+    fixes: [
+      "Answer briefly, then redirect: 'Great question — what matters most is what it's going to do for your skin.'",
+      "Bring in social proof: 'We have thousands of customers on Trustpilot who felt the same way before they tried it.'",
+      "Do not over-explain. Every extra detail creates a new objection.",
+    ],
+    powerLine: "I completely understand — and the best way to answer all of that is just to try it. That is exactly why we do the free trial.",
+  },
+  {
+    icon: "📧",
+    symptomShort: 'She says "send me an email"',
+    symptom: "She asks you to email her the information instead of continuing the call.",
+    rootCause: "She wants to exit the call politely. This is a soft objection, not a genuine request for information.",
+    fixes: [
+      "Do not agree immediately. Acknowledge and re-engage.",
+      "Say: 'Of course — and while I have you, can I just ask one quick question?'",
+      "Then ask the Magic Wand question. Get her talking again.",
+      "If she insists — send the email AND book a follow-up call in the same breath.",
+    ],
+    powerLine: "Absolutely, I'll send that over right now. And just while I have you for one second — if you could change just one thing about your skin, what would it be?",
+  },
+  {
+    icon: "😰",
+    symptomShort: "I feel like I'm selling, not helping",
+    symptom: "You feel uncomfortable. The conversation feels pushy. You are losing confidence mid-call.",
+    rootCause: "You have slipped into pitch mode instead of consultation mode. You are talking about the product, not about her.",
+    fixes: [
+      "Stop. Ask a question. Get her talking.",
+      "Remind yourself: 'I am a skincare concierge, not a salesperson.'",
+      "Every sentence should be about her skin, her goal, her result.",
+      "Use 'you' three times more than 'I' or 'we.'",
+    ],
+    powerLine: "I just want to make sure I'm giving you exactly what's right for your skin — can I ask you one more thing?",
+  },
+  {
+    icon: "⏳",
+    symptomShort: "She needs to think about it",
+    symptom: "She says 'let me think about it' or 'I'll call you back.'",
+    rootCause: "There is an unspoken objection she has not voiced. She is not saying no — she is saying she needs more certainty.",
+    fixes: [
+      "Do not accept it. Gently ask: 'Of course — can I ask what's making you hesitate?'",
+      "Listen. The real objection will come out.",
+      "Remind her it is completely risk-free: 'There is genuinely nothing to lose — it is just £4.95 for the postage.'",
+      "Offer a soft close: 'Why don't we get it sent out, and if you change your mind during the 21 days, you can cancel with one email?'",
+    ],
+    powerLine: "I completely respect that. Can I just ask — is it the subscription you're unsure about, or is there something else on your mind?",
+  },
+  {
+    icon: "💸",
+    symptomShort: "She says it's too expensive",
+    symptom: "She objects to the £4.95 or the ongoing subscription price.",
+    rootCause: "She does not yet see the value. The price feels bigger than the benefit in her mind.",
+    fixes: [
+      "Anchor to the full value first: 'The full kit is worth over £100 — today you are getting it for £4.95.'",
+      "Break down the subscription: 'That is less than £1.50 a day for medical-grade skincare.'",
+      "Compare to what she is already spending: 'Most of our ladies were spending £30–£40 a month on products that were not working.'",
+    ],
+    powerLine: "I completely understand — and when you think about it, £44.95 every two months works out to less than a coffee a day. And you are getting medical-grade results that actually show in the mirror.",
+  },
+];
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics">("objections");
+  const [activeDiagnostic, setActiveDiagnostic] = useState<number | null>(null);
   const [activeObjId, setActiveObjId] = useState<number | null>(null);
 
   const activeObj = OBJECTIONS.find((o) => o.id === activeObjId);
@@ -723,6 +828,13 @@ export default function Home() {
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Objection Trainer
+        </button>
+        <button
+          onClick={() => setActiveTab("diagnostics")}
+          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "diagnostics" ? "tab-active" : "tab-inactive"}`}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Call Diagnostics
         </button>
         <button
           onClick={() => setActiveTab("livescript")}
@@ -778,6 +890,108 @@ export default function Home() {
                   <ScriptSection items={activeObj.script} />
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CALL DIAGNOSTICS TAB ── */}
+        {activeTab === "diagnostics" && (
+          <div className="fade-in flex flex-col gap-4">
+            {activeDiagnostic === null ? (
+              <>
+                <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Quick Reference
+                </p>
+                <div className="rounded-xl overflow-hidden border" style={{ borderColor: "oklch(0.28 0.04 250)" }}>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ background: "oklch(0.2 0.04 250)" }}>
+                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.7 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Symptom</th>
+                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.7 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Root Cause</th>
+                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.7 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Fix</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ["Can't get into the conversation", "Tone / energy / pacing", "Voice + opening lines"],
+                        ["Customer hangs up early", "Opening not creating curiosity", "Change the approach"],
+                        ["She agrees but won't buy", "Weak urgency / close", "Closing techniques"],
+                        ["She asks too many questions", "Trust not built", "Social proof"],
+                        ['She says "send me an email"', "Wants to exit politely", "Re-engage technique"],
+                        ["I feel like I'm selling", "Pitch mode, not consultation", "Talk like a concierge"],
+                        ["She needs to think about it", "Unspoken objection", "Uncover & reassure"],
+                        ["She says it's too expensive", "Value not clear yet", "Anchor & break down"],
+                      ].map(([symptom, cause, fix], i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? "oklch(0.16 0.025 250)" : "oklch(0.18 0.03 250)", borderTop: "1px solid oklch(0.22 0.03 250)" }}>
+                          <td className="px-3 py-2 text-white/80">{symptom}</td>
+                          <td className="px-3 py-2" style={{ color: "oklch(0.75 0.12 60)" }}>{cause}</td>
+                          <td className="px-3 py-2" style={{ color: "oklch(0.75 0.18 145)" }}>{fix}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="text-sm uppercase tracking-widest font-semibold mt-2" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Tap for full diagnostic
+                </p>
+                <div className="flex flex-col gap-3">
+                  {DIAGNOSTICS.map((d, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveDiagnostic(i)}
+                      className="w-full rounded-xl px-4 py-3 text-left flex items-center justify-between"
+                      style={{ background: "oklch(0.18 0.04 250)", border: "1px solid oklch(0.28 0.04 250)" }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="text-lg">{d.icon}</span>
+                        <span className="text-sm font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{d.symptomShort}</span>
+                      </span>
+                      <span style={{ color: "oklch(0.55 0.01 250)" }}>›</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setActiveDiagnostic(null)}
+                  className="text-sm font-semibold flex items-center gap-1"
+                  style={{ color: "oklch(0.65 0.18 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  ← Back to Diagnostics
+                </button>
+                {(() => {
+                  const d = DIAGNOSTICS[activeDiagnostic];
+                  return (
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{d.symptomShort}</h2>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.18 0.06 15)", border: "1px solid oklch(0.35 0.1 15)" }}>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.65 0.18 15)" }}>Symptom</p>
+                        <p className="text-sm text-white/80 leading-relaxed">{d.symptom}</p>
+                      </div>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.18 0.06 60)", border: "1px solid oklch(0.35 0.1 60)" }}>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.75 0.15 60)" }}>Root Cause</p>
+                        <p className="text-sm text-white/80 leading-relaxed">{d.rootCause}</p>
+                      </div>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.16 0.06 145)", border: "1px solid oklch(0.35 0.12 145)" }}>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "oklch(0.75 0.2 145)" }}>Fix It Now</p>
+                        <ul className="flex flex-col gap-2">
+                          {d.fixes.map((fix, fi) => (
+                            <li key={fi} className="text-sm leading-relaxed flex gap-2" style={{ color: "oklch(0.85 0.15 145)" }}>
+                              <span>→</span><span>{fix}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.16 0.06 250)", border: "1px solid oklch(0.45 0.18 250)" }}>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.7 0.18 250)" }}>💬 Power Line</p>
+                        <p className="text-sm font-semibold leading-relaxed italic" style={{ color: "oklch(0.92 0.05 250)" }}>"{d.powerLine}"</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
             )}
           </div>
         )}
