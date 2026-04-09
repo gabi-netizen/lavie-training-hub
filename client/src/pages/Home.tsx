@@ -844,7 +844,10 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue">("objections");
+  const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
+  const [whyOpen, setWhyOpen] = useState<number | null>(null);
+  const [reframeOpen, setReframeOpen] = useState<number | null>(null);
   const [activeDiagnostic, setActiveDiagnostic] = useState<number | null>(null);
   const [activeObjId, setActiveObjId] = useState<number | null>(null);
 
@@ -885,10 +888,17 @@ export default function Home() {
         </button>
         <button
           onClick={() => setActiveTab("livescript")}
-          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "livescript" ? "tab-active" : "tab-inactive"}`}
+          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "livescript" ? "tab-active" : "tab-inactive"}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Live Call Script
+        </button>
+        <button
+          onClick={() => setActiveTab("productvalue")}
+          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "productvalue" ? "tab-active" : "tab-inactive"}`}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Product Value
         </button>
       </div>
 
@@ -1049,6 +1059,180 @@ export default function Home() {
               Benefit-Driven Sales Script — Full Call Flow
             </p>
             <LiveCallScript />
+          </div>
+        )}
+
+        {/* ── PRODUCT VALUE TAB ── */}
+        {activeTab === "productvalue" && (
+          <div className="fade-in flex flex-col gap-3">
+
+            {/* ── Section 1: Value Stack ── */}
+            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+              <button
+                onClick={() => setPvOpen(pvOpen === "stack" ? null : "stack")}
+                className="w-full flex items-center justify-between px-5 py-4 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">💰</span>
+                  <span className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Value Stack</span>
+                </div>
+                {pvOpen === "stack" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
+              </button>
+              {pvOpen === "stack" && (
+                <div className="px-5 pb-5 flex flex-col gap-4">
+                  <div className="coaching-note flex gap-2 items-start">
+                    <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p className="text-sm leading-relaxed">Say the total value OUT LOUD before you say the price. "This starter kit has a value of £50." Then pause. Let that land. THEN say "and today it comes to you for just £4.95."</p>
+                  </div>
+                  {/* Value table */}
+                  <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                          <th className="text-left px-4 py-2 text-white font-semibold">What She Receives</th>
+                          <th className="text-right px-4 py-2 text-white font-semibold">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          ["Matinika Hyaluronic Acid Serum", "included"],
+                          ["Oulala Advanced Anti-Ageing Cream", "included"],
+                          ["Ashkara Intensive Eye Serum", "included"],
+                        ].map(([name, val], i) => (
+                          <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                            <td className="px-4 py-2 text-white/80">{name}</td>
+                            <td className="px-4 py-2 text-right text-white/60">{val}</td>
+                          </tr>
+                        ))}
+                        <tr style={{ borderTop: "2px solid oklch(0.55 0.18 250 / 60%)", background: "oklch(0.22 0.03 250)" }}>
+                          <td className="px-4 py-3 font-bold text-white">Starter Kit Total Value</td>
+                          <td className="px-4 py-3 text-right font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>£50</td>
+                        </tr>
+                        <tr style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: "oklch(0.25 0.08 250)" }}>
+                          <td className="px-4 py-3 font-bold text-white">She Pays Today</td>
+                          <td className="px-4 py-3 text-right font-bold text-white">£4.95</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Subscription badge */}
+                  <div className="flex flex-wrap gap-2">
+                    {["£44.90 every 2 months", "One jar = 2 months", "£22.45 / month", "Less than 75p a day"].map((badge) => (
+                      <span key={badge} className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: "oklch(0.3 0.12 250 / 60%)", color: "oklch(0.85 0.1 250)", border: "1px solid oklch(0.55 0.18 250 / 40%)" }}>{badge}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Section 2: Why Lavié Labs ── */}
+            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+              <button
+                onClick={() => setPvOpen(pvOpen === "why" ? null : "why")}
+                className="w-full flex items-center justify-between px-5 py-4 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔬</span>
+                  <span className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Why Lavié Labs?</span>
+                </div>
+                {pvOpen === "why" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
+              </button>
+              {pvOpen === "why" && (
+                <div className="px-5 pb-5 flex flex-col gap-3">
+                  <div className="coaching-note flex gap-2 items-start">
+                    <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p className="text-sm leading-relaxed">Pick the point that fits the customer. Dryness / no results → Point 1. Wants fast results → Point 2. Value for money → Point 3. Feels unsupported → Point 4.</p>
+                  </div>
+                  {[
+                    {
+                      label: "Point 1 — Medical-Grade Concentration",
+                      text: "What makes Lavié Labs different is the concentration of active ingredients. Our Matinika serum is formulated at a medical-grade level — the kind of concentration that is typically only available through dermatologists or medical clinics. That is why it actually works where other products have not. It penetrates the deeper layers of the skin, not just the surface.",
+                    },
+                    {
+                      label: "Point 2 — This Is a Process, Not a Quick Fix",
+                      text: "Because our products contain a high concentration of active ingredients, your skin goes through an adjustment period. That is completely normal — and it is actually a sign that the ingredients are working at a deeper level. We always say: this is not a one-time fix. It is a journey. Your skin is learning to work with medical-grade ingredients, and over time, that is where the real, lasting change happens. We are here with you every step of the way.",
+                    },
+                    {
+                      label: "Point 3 — One Jar, Two Months",
+                      text: "One jar of Matinika lasts a full two months — morning and evening. That is by design. We formulated it so that you are using exactly the right amount each time, not more, not less. Nothing is wasted. And because the subscription ships every two months, you never run out.",
+                    },
+                    {
+                      label: "Point 4 — We Stay With You",
+                      text: "What also makes us different is that we do not just send you a product and disappear. We follow up. We check in. We make sure your skin is responding the way it should. That personalised support is part of what you are getting — and you cannot put a price on that.",
+                    },
+                  ].map((point, i) => (
+                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                      <button
+                        onClick={() => setWhyOpen(whyOpen === i ? null : i)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left"
+                        style={{ background: "oklch(0.22 0.03 250)" }}
+                      >
+                        <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{point.label}</span>
+                        {whyOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
+                      </button>
+                      {whyOpen === i && (
+                        <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                          <p className="text-base leading-relaxed">"{point.text}"</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Section 3: Price Reframes ── */}
+            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+              <button
+                onClick={() => setPvOpen(pvOpen === "reframes" ? null : "reframes")}
+                className="w-full flex items-center justify-between px-5 py-4 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">💬</span>
+                  <span className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Price Reframes</span>
+                </div>
+                {pvOpen === "reframes" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
+              </button>
+              {pvOpen === "reframes" && (
+                <div className="px-5 pb-5 flex flex-col gap-3">
+                  <div className="coaching-note flex gap-2 items-start">
+                    <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p className="text-sm leading-relaxed">Never apologise for the price. Say it with confidence. You are offering a £50 starter kit for £4.95 — that is an extraordinary offer. Own it.</p>
+                  </div>
+                  {[
+                    {
+                      label: "Reframe 1 — The Daily Breakdown",
+                      text: "I completely understand. When you break it down, the subscription works out to less than 75p a day. That is less than a cup of tea. And instead of a cup of tea, you are investing in medical-grade skincare that is actually going to show results in the mirror.",
+                    },
+                    {
+                      label: "Reframe 2 — The Value Anchor",
+                      text: "I hear you — and I just want to remind you that this starter kit has a value of £50. Today you are getting all of that for £4.95. We are essentially giving it to you to try, because we are that confident in what it is going to do for your skin.",
+                    },
+                    {
+                      label: "Reframe 3 — Two Months, One Jar",
+                      text: "And remember — this is not a monthly subscription. It is every two months. One jar covers you completely for two full months, morning and evening. So when you think about it as £22.45 a month, that is genuinely exceptional value for what you are getting.",
+                    },
+                  ].map((reframe, i) => (
+                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                      <button
+                        onClick={() => setReframeOpen(reframeOpen === i ? null : i)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left"
+                        style={{ background: "oklch(0.22 0.03 250)" }}
+                      >
+                        <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reframe.label}</span>
+                        {reframeOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
+                      </button>
+                      {reframeOpen === i && (
+                        <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                          <p className="text-base leading-relaxed">"{reframe.text}"</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         )}
       </main>
