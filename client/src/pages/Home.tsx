@@ -243,11 +243,41 @@ const PITCH_STAGES = [
   },
 ];
 
+// ─── SUBTITLE TEXT PER CLIP ─────────────────────────────────────────────────
+const OBJ1_SUBTITLES = [
+  "The customer asks: 'Is this a subscription?' Here is exactly what you say: I'm so glad you asked!",
+  "Yes, after your 21-day free trial, it automatically transitions into a subscription so you never run out of your cream.",
+  "But here is the best part: you are in complete control. You can cancel, pause, or change it at any time with just one click or a quick email.",
+  "Most of our ladies just keep it going because they fall in love with how their skin looks — and it locks in your 30% VIP discount forever.",
+  "Does that make sense? Then stop talking. That pause is where the sale is won.",
+  "Golden rule: never get defensive about the subscription. Be proud of it — it is a benefit, not a trap.",
+];
+
+const OBJ2_SUBTITLES = [
+  "Objection two — the customer says: 'I need to think about it.' Here is what you say:",
+  "I completely understand. Usually this comes down to one of two things: they aren't sure the cream will work, or they're worried about giving card details. Which one is it for you?",
+  "If they doubt the product: That is exactly why we do the 21-day free trial. You pay nothing for the product — just £4.95 postage. Zero risk, zero commitment.",
+  "If they hesitate about card details: I completely understand — and I respect that. Let me reassure you: Lavie Labs is a fully regulated UK company.",
+  "We have thousands of happy customers who have shared their results on Trustpilot and across the web. Your details are completely safe — we use fully encrypted, secure payment processing.",
+  "You are in complete control. Cancel at any time with one email or one click.",
+  "The only reason we ask for £4.95 is to cover our premium 48-hour tracked delivery with signature on arrival. Nothing hidden, nothing complicated.",
+];
+
+const OBJ3_SUBTITLES = [
+  "Objection three — the customer says: 'I have too many products.' Here is what you say: I hear that all the time — and I completely understand.",
+  "But let me ask you something: if your cabinet is full, it probably means those products promised you results and didn't fully deliver. Am I right? — Wait for them to agree.",
+  "That is exactly why I'm not here to add another jar to your collection.",
+  "My goal is to replace three of those products with one medical-grade cream that actually gives you the results you've been looking for — that plump, hydrated, glowing skin you deserve.",
+  "The product is completely free for twenty-one days. You don't have to throw anything away, you don't have to commit to anything. Just put Matinika on your skin for three weeks.",
+  "Those twenty-one days aren't just a trial — they are the beginning of a personalised skincare journey. We watch how your skin responds and work with you to get exactly the right results.",
+  "That is what makes Lavie Labs different — we don't just send you a cream and disappear. We are with you every step of the way.",
+];
+
 // ─── VIDEO PLAYER COMPONENT ───────────────────────────────────────────────────
 // Strategy: render ALL clips as <video> elements simultaneously, all preloading
 // in parallel. Only the active clip is visible (opacity-100); all others are
 // opacity-0 but already buffered. Switching is instant — no load gap at all.
-function VideoPlayer({ clips }: { clips: string[] }) {
+function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string[] }) {
   const [currentClip, setCurrentClip] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [readyCount, setReadyCount] = useState(0);
@@ -298,6 +328,7 @@ function VideoPlayer({ clips }: { clips: string[] }) {
   const allReady = readyCount >= clips.length;
 
   return (
+    <>
     <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "9/16", maxHeight: "340px" }}>
 
       {/* All clips rendered simultaneously, only active one is visible */}
@@ -364,6 +395,23 @@ function VideoPlayer({ clips }: { clips: string[] }) {
         </button>
       )}
     </div>
+
+    {/* Subtitle / script line below the video */}
+    {subtitles && playing && subtitles[currentClip] && (
+      <div
+        className="mt-3 rounded-lg px-4 py-3 text-sm leading-relaxed"
+        style={{
+          background: "oklch(0.18 0.02 250 / 0.9)",
+          border: "1px solid oklch(0.35 0.04 250 / 0.5)",
+          color: "oklch(0.92 0.01 250)",
+          fontFamily: "'DM Sans', sans-serif",
+          lineHeight: "1.6",
+        }}
+      >
+        {subtitles[currentClip]}
+      </div>
+    )}
+    </>
   );
 }
 
@@ -564,10 +612,10 @@ export default function Home() {
             {/* Active Objection Panel */}
             {activeObj && (
               <div className="fade-in flex flex-col gap-4 mt-2">
-                {/* Video */}
-                <div className="flex justify-center">
+                {/* Video + Subtitle */}
+                <div className="flex flex-col items-center gap-0">
                   <div style={{ width: "100%", maxWidth: "240px" }}>
-                    <VideoPlayer clips={activeObj.clips} />
+                    <VideoPlayer clips={activeObj.clips} subtitles={activeObj.id === 1 ? OBJ1_SUBTITLES : activeObj.id === 2 ? OBJ2_SUBTITLES : OBJ3_SUBTITLES} />
                   </div>
                 </div>
 
