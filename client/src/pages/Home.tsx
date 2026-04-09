@@ -375,7 +375,7 @@ function ScriptSection({ items }: { items: { type: string; text: string }[] }) {
         if (item.type === "quote") {
           return (
             <div key={i} className="script-block">
-              <p className="text-sm leading-relaxed">"{item.text}"</p>
+              <p className="text-base leading-relaxed">"{item.text}"</p>
             </div>
           );
         }
@@ -383,13 +383,13 @@ function ScriptSection({ items }: { items: { type: string; text: string }[] }) {
           return (
             <div key={i} className="coaching-note flex gap-2 items-start">
               <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-              <p className="text-xs leading-relaxed">{item.text}</p>
+              <p className="text-sm leading-relaxed">{item.text}</p>
             </div>
           );
         }
         if (item.type === "label") {
           return (
-            <p key={i} className="text-xs font-semibold uppercase tracking-wider mt-1" style={{ color: "oklch(0.7 0.1 60)", fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p key={i} className="text-sm font-semibold uppercase tracking-wider mt-1" style={{ color: "oklch(0.7 0.1 60)", fontFamily: "'Space Grotesk', sans-serif" }}>
               {item.text}
             </p>
           );
@@ -400,55 +400,49 @@ function ScriptSection({ items }: { items: { type: string; text: string }[] }) {
   );
 }
 
-// ─── PITCH STAGE CARD ─────────────────────────────────────────────────────────
-function PitchStageCard({ stage }: { stage: typeof PITCH_STAGES[0] }) {
-  const [open, setOpen] = useState(false);
-
+// ─── PITCH FULL SCRIPT (no accordion, continuous flow) ───────────────────────
+function PitchFullScript() {
   return (
-    <div className="pitch-card overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 p-4 text-left"
-      >
-        <span className="text-2xl">{stage.icon}</span>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {stage.title}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>
-            {stage.subtitle}
-          </p>
-        </div>
-        {open ? (
-          <ChevronUp className="w-4 h-4 shrink-0" style={{ color: "oklch(0.6 0.01 250)" }} />
-        ) : (
-          <ChevronDown className="w-4 h-4 shrink-0" style={{ color: "oklch(0.6 0.01 250)" }} />
-        )}
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 flex flex-col gap-4 fade-in border-t border-white/5 pt-4">
-          {stage.steps.map((step, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              <p
-                className="text-xs font-semibold uppercase tracking-wider"
-                style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {step.label}
+    <div className="flex flex-col gap-6">
+      {PITCH_STAGES.map((stage) => (
+        <div key={stage.id} className="flex flex-col gap-4">
+          {/* Stage heading */}
+          <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+            <span className="text-2xl">{stage.icon}</span>
+            <div>
+              <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {stage.title}
               </p>
-              <div className="script-block">
-                <p className="text-sm leading-relaxed">"{step.script}"</p>
-              </div>
-              {step.note && (
-                <div className="coaching-note flex gap-2 items-start">
-                  <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-                  <p className="text-xs leading-relaxed">{step.note}</p>
-                </div>
-              )}
+              <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>
+                {stage.subtitle}
+              </p>
             </div>
-          ))}
+          </div>
+
+          {/* Steps */}
+          <div className="flex flex-col gap-4">
+            {stage.steps.map((step, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <p
+                  className="text-sm font-semibold uppercase tracking-wider"
+                  style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {step.label}
+                </p>
+                <div className="script-block">
+                  <p className="text-base leading-relaxed">"{step.script}"</p>
+                </div>
+                {step.note && (
+                  <div className="coaching-note flex gap-2 items-start">
+                    <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p className="text-sm leading-relaxed">{step.note}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -501,7 +495,7 @@ export default function Home() {
         {/* ── OBJECTION TRAINER TAB ── */}
         {activeTab === "objections" && (
           <div className="fade-in flex flex-col gap-4">
-            <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
               Tap the objection you're facing
             </p>
 
@@ -511,7 +505,7 @@ export default function Home() {
                 <button
                   key={obj.id}
                   onClick={() => setActiveObjId(activeObjId === obj.id ? null : obj.id)}
-                  className={`${obj.btnClass} ${activeObjId === obj.id ? "active" : ""} w-full rounded-xl px-5 py-4 text-left font-semibold text-sm`}
+                  className={`${obj.btnClass} ${activeObjId === obj.id ? "active" : ""} w-full rounded-xl px-5 py-4 text-left font-semibold text-base`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {obj.label}
@@ -532,7 +526,7 @@ export default function Home() {
                 {/* Script */}
                 <div className="flex flex-col gap-2">
                   <p
-                    className="text-xs uppercase tracking-widest font-semibold"
+                    className="text-sm uppercase tracking-widest font-semibold"
                     style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     Full Script
@@ -547,12 +541,10 @@ export default function Home() {
         {/* ── PITCH TAB ── */}
         {activeTab === "pitch" && (
           <div className="fade-in flex flex-col gap-3">
-            <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
-              Tap a stage to expand the script
+            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+              Full Sales Script
             </p>
-            {PITCH_STAGES.map((stage) => (
-              <PitchStageCard key={stage.id} stage={stage} />
-            ))}
+            <PitchFullScript />
           </div>
         )}
       </main>
