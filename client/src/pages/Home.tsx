@@ -536,9 +536,161 @@ function PitchFullScript() {
   );
 }
 
+// ─── LIVE CALL SCRIPT DATA ───────────────────────────────────────────────────
+const LIVE_CALL_SECTIONS = [
+  {
+    id: "intro",
+    icon: "📞",
+    title: "Introduction & Discovery",
+    subtitle: "High energy, no pauses, confidence, say it with a smile!",
+    items: [
+      { type: "say", text: "Hi [Name], it's [Your Name] from Lavie Labs. We're a medical-grade skincare company working in partnership with UK Best Offers. We're calling today to send you a complimentary Anti-Aging Starter Kit to try!" },
+      { type: "say", text: "Because our products are medical-grade and highly active, I just need to ask a few quick questions to make sure we send you the perfect match for your skin. Would you say your skin is more on the dry side, combination, or oily?" },
+      { type: "note", text: "Listen and adapt based on their answer. Focus on how the skin FEELS to them." },
+      { type: "label", text: "If Dry:" },
+      { type: "say", text: "Have you always had drier skin, or is this a recent change where your skin just feels like it's lost its bounce and hydration?" },
+      { type: "say", text: "Do you ever get that tight, uncomfortable feeling right after you step out of the shower?" },
+      { type: "say", text: "Are there specific areas that feel rough or flaky, where makeup just doesn't sit right?" },
+      { type: "label", text: "If Combination:" },
+      { type: "say", text: "Has it always been combination, or did you used to have oilier skin that has changed over time?" },
+      { type: "say", text: "Do you find your T-zone gets shiny by midday while your cheeks feel tight?" },
+      { type: "label", text: "If Oily:" },
+      { type: "say", text: "Have you always struggled with oily skin?" },
+      { type: "say", text: "Do you find yourself having to blot or powder throughout the day to keep the shine down?" },
+      { type: "say", text: "Are you prone to breakouts, or do you have any stubborn post-blemish marks you'd love to fade?" },
+    ],
+  },
+  {
+    id: "routine",
+    icon: "🧴",
+    title: "Routine & Education",
+    subtitle: "Build rapport and introduce Hyaluronic Acid",
+    items: [
+      { type: "say", text: "Do you currently have a skincare routine you follow morning and night? What are you using right now?" },
+      { type: "note", text: "Listen actively. Compliment their effort, no matter how small." },
+      { type: "say", text: "I love that you have a routine! Taking that time for yourself is half the battle. The other half is just making sure the ingredients are actually working hard for you so you see real changes in the mirror." },
+      { type: "say", text: "Tell me, do any of the products you're using right now contain Hyaluronic Acid? Have you heard of it?" },
+      { type: "say", text: "Hyaluronic Acid is actually something our bodies produce naturally. Think of it like a sponge that holds water inside your skin. It's what gives young skin that plump, bouncy, glowing look." },
+      { type: "say", text: "The catch is, after we turn 25, our bodies stop making as much of it. That's when we start noticing our skin feeling drier, looking a bit duller, and those fine lines start creeping in. Our goal is simply to give that hydration back to your skin, so it can look and feel plump, smooth, and radiant again." },
+    ],
+  },
+  {
+    id: "magicwand",
+    icon: "✨",
+    title: "The Magic Wand Question",
+    subtitle: "Crucial for emotional buy-in — listen carefully",
+    items: [
+      { type: "say", text: "I always like to ask my clients a direct question: If you had a magic wand and could improve just ONE thing about your skin right now when you look in the mirror, what would it be? What result would make you feel amazing?" },
+      { type: "note", text: "Listen carefully. Recap their exact words to show you understand their pain point." },
+      { type: "say", text: "So just to make sure I'm completely understanding you... the main thing you want to achieve is [insert their goal: e.g., softening those lines around your mouth / getting rid of that tight, dry feeling / brightening up dull skin]. Did I get that right?" },
+    ],
+  },
+  {
+    id: "products",
+    icon: "💎",
+    title: "Product Presentation",
+    subtitle: "Benefit-driven — always tie back to their magic wand answer",
+    items: [
+      { type: "label", text: "Matinika (Day & Night Cream):" },
+      { type: "say", text: "Based on what you just told me about wanting to [insert their goal], the first product I am so excited to send you is called Matinika. Now, I could bore you with the science and tell you it has 32% active Hyaluronic Acid compared to the 5% you might find in high street brands, but what really matters is what it's going to do for you." },
+      { type: "say", text: "The very first time you put this on, you're going to notice the texture. It's incredibly silky and lightweight. It doesn't sit heavy on your face; your skin just drinks it right up. Instantly, that tight, dry feeling is going to vanish. Your skin is going to feel incredibly soft, deeply nourished, and you're going to have this beautiful, healthy glow that lasts all day long." },
+      { type: "say", text: "We have clients telling us constantly that they finally feel confident going makeup-free because their skin just looks so healthy and hydrated." },
+      { type: "label", text: "Oulala Retinol Serum (Fine Lines/Texture):" },
+      { type: "say", text: "The second product I'm including in your kit is our Oulala Face and Neck Retinol Serum. Retinol is the gold standard for anti-aging. What this is going to do for you is gently sweep away all those tired, dead skin cells that make our complexion look dull. You are going to literally see your skin transforming — tighter, significantly smoother, and those deeper lines you mentioned are going to start softening. You're going to wake up looking refreshed, with that plump, youthful radiance we all want." },
+      { type: "label", text: "OR — Ashkara Eye Serum (Dark Circles/Puffiness):" },
+      { type: "say", text: "Because you specifically mentioned wanting to target [dark circles / puffy bags / fine lines around the eyes], I am making sure to include our Ashkara Eye Serum in your kit. When you use this daily, it's going to smooth out those fine lines, visibly reduce that morning puffiness, and brighten up those dark circles. It's essentially like eight hours of sleep in a bottle — making you look wide awake and refreshed." },
+    ],
+  },
+  {
+    id: "socialproof",
+    icon: "⭐",
+    title: "Social Proof & Website Walkthrough",
+    subtitle: "Show the website, build trust visually",
+    items: [
+      { type: "say", text: "I want to show you exactly what you'll be receiving. I've just sent an email to [Email Address]. Could you let me know when that pops up? It will be from Lavie Labs." },
+      { type: "say", text: "Fantastic. If you click the link to our website, you'll see our homepage. We are incredibly proud of our rating on Trustpilot — we have thousands of happy customers who have shared their results there and across the web. I am going to be your personal skincare concierge — if you ever need anything, I'm right here." },
+      { type: "say", text: "If you scroll down just a bit, you'll see some Before & After photos of real women using our products. Take a look at those. Do any of those transformations stand out to you?" },
+      { type: "note", text: "Guide them to see the results they want." },
+      { type: "say", text: "Look at the brightness in their skin. You can see how much softer their fine lines look, and they all have that gorgeous, healthy glow. That is exactly the result we are aiming for with your skin using the Matinika and the [Oulala/Ashkara]." },
+    ],
+  },
+  {
+    id: "offer",
+    icon: "🎁",
+    title: "The Offer & Close",
+    subtitle: "Confident, clear, no hesitation",
+    items: [
+      { type: "say", text: "Here is how this works: We are sending you a 21-day, completely risk-free trial of the Matinika, alongside a starter size of the serum. We want you to feel the textures, see the glow, and experience the results in your own mirror without any pressure." },
+      { type: "say", text: "If for any reason you don't absolutely love how your skin feels, you can pause or cancel at any time, no questions asked." },
+      { type: "say", text: "Once you fall in love with the results, as a VIP client, you unlock a permanent 30% discount. So instead of paying the normal £59 for a two-month supply of Matinika, it comes all the way down to just £44.95 every 60 days." },
+      { type: "say", text: "We send everything via our premium 48-hour tracked delivery with signature on arrival, so your package is always safe and in your hands. We just ask you to cover the small £4.95 postage fee today." },
+      { type: "say", text: "I am so excited for you to start seeing real changes in your skin, especially with [reiterate their main concern]. Are you ready to give your skin the hydration it deserves and try this out?" },
+      { type: "note", text: "Process payment. Stop talking. Do not add anything." },
+      { type: "say", text: "Will you be using Visa, Mastercard, or Amex for the £4.95 postage?" },
+    ],
+  },
+  {
+    id: "confirmation",
+    icon: "✅",
+    title: "Confirmation & Usage Instructions",
+    subtitle: "Warm close — set expectations and build excitement",
+    items: [
+      { type: "say", text: "Perfect. Just to summarise for our recorded line: Today it is just £4.95 for the premium tracked shipping. You are receiving your Matinika and your starter [Oulala/Ashkara]." },
+      { type: "say", text: "In 21 days, if you're loving your results — and I know you will be — your subscription will begin and you'll receive your next supply at your exclusive 30% VIP discount." },
+      { type: "say", text: "For best results, use the Matinika morning and night on clean skin. Apply a small amount — a little goes a long way — and gently massage it in until fully absorbed. Follow with the [Oulala/Ashkara] serum. You should start noticing a difference in how your skin feels within the first few days." },
+      { type: "say", text: "I'm going to send you a confirmation email right now with all the details, your order number, and my direct contact information. If you ever have any questions, please don't hesitate to reach out — I am your personal skincare concierge and I am here for you." },
+      { type: "say", text: "I am so excited for you to start this journey. Enjoy your beautiful new skin!" },
+      { type: "note", text: "End the call warmly. The customer should feel excited, not sold to." },
+    ],
+  },
+];
+
+// ─── LIVE CALL SCRIPT COMPONENT ──────────────────────────────────────────────
+function LiveCallScript() {
+  return (
+    <div className="flex flex-col gap-6">
+      {LIVE_CALL_SECTIONS.map((section) => (
+        <div key={section.id} className="flex flex-col gap-3">
+          {/* Section heading */}
+          <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+            <span className="text-xl">{section.icon}</span>
+            <div>
+              <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {section.title}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
+                {section.subtitle}
+              </p>
+            </div>
+          </div>
+          {/* Items */}
+          <div className="flex flex-col gap-3">
+            {section.items.map((item, i) =>
+              item.type === "say" ? (
+                <div key={i} className="script-block">
+                  <p className="text-base leading-relaxed">"{item.text}"</p>
+                </div>
+              ) : item.type === "label" ? (
+                <p key={i} className="text-sm font-bold uppercase tracking-wider mt-1" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {item.text}
+                </p>
+              ) : (
+                <div key={i} className="coaching-note flex gap-2 items-start">
+                  <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                  <p className="text-sm leading-relaxed">{item.text}</p>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript">("objections");
   const [activeObjId, setActiveObjId] = useState<number | null>(null);
 
   const activeObj = OBJECTIONS.find((o) => o.id === activeObjId);
@@ -578,10 +730,17 @@ export default function Home() {
         </button>
         <button
           onClick={() => setActiveTab("fullscript")}
-          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "fullscript" ? "tab-active" : "tab-inactive"}`}
+          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "fullscript" ? "tab-active" : "tab-inactive"}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Full Script
+        </button>
+        <button
+          onClick={() => setActiveTab("livescript")}
+          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "livescript" ? "tab-active" : "tab-inactive"}`}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Live Call Script
         </button>
       </div>
 
@@ -651,6 +810,16 @@ export default function Home() {
               Complete call — opening to close
             </p>
             <FullCallScript />
+          </div>
+        )}
+
+        {/* ── LIVE CALL SCRIPT TAB ── */}
+        {activeTab === "livescript" && (
+          <div className="fade-in flex flex-col gap-3">
+            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+              Benefit-Driven Sales Script — Full Call Flow
+            </p>
+            <LiveCallScript />
           </div>
         )}
       </main>
