@@ -274,99 +274,135 @@ const OBJ3_SUBTITLES = [
 ];
 
 // ─── VIDEO PLAYER COMPONENT ───────────────────────────────────────────────────
-// Strategy: render ALL clips as <video> elements simultaneously, all preloading
-// in parallel. Only the active clip is visible (opacity-100); all others are
-// opacity-0 but already buffered. Switching is instant — no load gap at all.
+// Strategy: dual-buffer A/B swap. Two <video> elements sit on top of each other.
+// While A plays, B silently preloads the next clip. When A's timeupdate fires
+// within 0.25 s of its end, we instantly show B (already at frame 0) and start
+// it — eliminating the decode/seek gap entirely. Then B becomes the new active
+// and A preloads the clip after that, and so on.
 function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string[] }) {
   const [currentClip, setCurrentClip] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const nextVideoRef = useRef<HTMLVideoElement | null>(null);
+  // activeSlot: which of the two <video> elements is currently shown (0 = A, 1 = B)
+  const [activeSlot, setActiveSlot] = useState(0);
+  const videoRefs = useRef<[HTMLVideoElement | null, HTMLVideoElement | null]>([null, null]);
   const clipIndexRef = useRef(0);
+  const swappedRef = useRef(false); // prevent double-swap per clip
+
+  const getActive = () => videoRefs.current[activeSlot];
+  const getInactive = () => videoRefs.current[activeSlot === 0 ? 1 : 0];
 
   // Reset when objection changes
   useEffect(() => {
     clipIndexRef.current = 0;
+    swappedRef.current = false;
     setCurrentClip(0);
     setPlaying(false);
     setFinished(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.src = clips[0];
-      videoRef.current.load();
-    }
-    if (nextVideoRef.current) {
-      nextVideoRef.current.src = clips[1] || "";
-      nextVideoRef.current.load();
-    }
+    setActiveSlot(0);
+    videoRefs.current.forEach((v) => { if (v) { v.pause(); v.removeAttribute("src"); v.load(); } });
+    const a = videoRefs.current[0];
+    const b = videoRefs.current[1];
+    if (a) { a.src = clips[0]; a.load(); }
+    if (b && clips[1]) { b.src = clips[1]; b.load(); }
   }, [clips]);
 
-  const advanceClip = useCallback(() => {
-    const next = clipIndexRef.current + 1;
-    if (next < clips.length) {
-      clipIndexRef.current = next;
-      setCurrentClip(next);
-      // Swap: the preloaded next video becomes the active one
-      if (videoRef.current && nextVideoRef.current) {
-        // Copy preloaded src into main player and play immediately
-        videoRef.current.src = nextVideoRef.current.src;
-        videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(() => {});
-        // Preload the one after that
-        const afterNext = next + 1;
-        if (afterNext < clips.length) {
-          nextVideoRef.current.src = clips[afterNext];
-          nextVideoRef.current.load();
+  // Called by timeupdate — swap ~0.25 s before end
+  const handleTimeUpdate = useCallback(() => {
+    const active = getActive();
+    if (!active || swappedRef.current) return;
+    const remaining = active.duration - active.currentTime;
+    if (!isNaN(remaining) && remaining < 0.25 && remaining > 0) {
+      swappedRef.current = true;
+      const nextIdx = clipIndexRef.current + 1;
+      if (nextIdx < clips.length) {
+        const inactive = getInactive();
+        if (inactive && inactive.readyState >= 3) {
+          // Inactive is ready — swap immediately
+          inactive.currentTime = 0;
+          inactive.play().catch(() => {});
+          setActiveSlot((s) => (s === 0 ? 1 : 0));
+          clipIndexRef.current = nextIdx;
+          setCurrentClip(nextIdx);
+          // Preload the one after next into the now-background slot
+          const afterNext = nextIdx + 1;
+          if (afterNext < clips.length) {
+            active.pause();
+            active.src = clips[afterNext];
+            active.load();
+          }
+          swappedRef.current = false;
         }
+        // If inactive not ready yet, fall through to onEnded as safety net
+      }
+    }
+  }, [clips, activeSlot]);
+
+  // Safety net: if timeupdate swap didn't fire in time
+  const handleEnded = useCallback(() => {
+    if (swappedRef.current) { swappedRef.current = false; return; } // already swapped
+    const nextIdx = clipIndexRef.current + 1;
+    if (nextIdx < clips.length) {
+      const inactive = getInactive();
+      if (inactive) {
+        inactive.currentTime = 0;
+        inactive.play().catch(() => {});
+      }
+      setActiveSlot((s) => (s === 0 ? 1 : 0));
+      clipIndexRef.current = nextIdx;
+      setCurrentClip(nextIdx);
+      const afterNext = nextIdx + 1;
+      const active = getActive();
+      if (active && afterNext < clips.length) {
+        active.pause();
+        active.src = clips[afterNext];
+        active.load();
       }
     } else {
       setPlaying(false);
       setFinished(true);
     }
-  }, [clips]);
+  }, [clips, activeSlot]);
 
   const handlePlay = () => {
     clipIndexRef.current = 0;
+    swappedRef.current = false;
     setCurrentClip(0);
+    setActiveSlot(0);
     setPlaying(true);
     setFinished(false);
-    if (videoRef.current) {
-      videoRef.current.src = clips[0];
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
-    if (nextVideoRef.current && clips[1]) {
-      nextVideoRef.current.src = clips[1];
-      nextVideoRef.current.load();
-    }
+    const a = videoRefs.current[0];
+    const b = videoRefs.current[1];
+    if (a) { a.src = clips[0]; a.currentTime = 0; a.play().catch(() => {}); }
+    if (b && clips[1]) { b.src = clips[1]; b.load(); }
   };
 
   return (
     <>
     <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "9/16", maxHeight: "340px" }}>
 
-      {/* Single active video element */}
+      {/* Slot A */}
       <video
-        ref={videoRef}
-        src={clips[0]}
+        ref={(el) => { videoRefs.current[0] = el; }}
         preload="auto"
         playsInline
-        muted={false}
-        onEnded={advanceClip}
+        muted={activeSlot !== 0}
+        onTimeUpdate={activeSlot === 0 ? handleTimeUpdate : undefined}
+        onEnded={activeSlot === 0 ? handleEnded : undefined}
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: playing ? 1 : 0 }}
+        style={{ opacity: playing && activeSlot === 0 ? 1 : 0, zIndex: activeSlot === 0 ? 2 : 1 }}
       />
 
-      {/* Hidden preload element for next clip */}
+      {/* Slot B */}
       <video
-        ref={nextVideoRef}
-        src={clips[1] || ""}
+        ref={(el) => { videoRefs.current[1] = el; }}
         preload="auto"
         playsInline
-        muted
+        muted={activeSlot !== 1}
+        onTimeUpdate={activeSlot === 1 ? handleTimeUpdate : undefined}
+        onEnded={activeSlot === 1 ? handleEnded : undefined}
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: 0, pointerEvents: "none", zIndex: -1 }}
+        style={{ opacity: playing && activeSlot === 1 ? 1 : 0, zIndex: activeSlot === 1 ? 2 : 1 }}
       />
 
       {/* Clip counter */}
