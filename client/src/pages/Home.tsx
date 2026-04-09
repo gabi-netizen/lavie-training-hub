@@ -659,7 +659,7 @@ function LiveCallScript() {
                 {section.title}
               </p>
               {section.subtitle && (
-                <p className="text-base font-black tracking-wide mt-1" style={{ color: "oklch(0.82 0.18 65)", textShadow: "0 0 12px oklch(0.82 0.18 65 / 0.5)", letterSpacing: "0.04em" }}>
+                <p className="text-base font-black tracking-wide mt-1" style={{ color: "oklch(0.82 0.22 145)", textShadow: "0 0 12px oklch(0.65 0.22 145 / 0.4)", letterSpacing: "0.04em" }}>
                   {section.subtitle}
                 </p>
               )}
