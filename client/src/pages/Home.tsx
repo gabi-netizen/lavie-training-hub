@@ -247,37 +247,63 @@ const PITCH_STAGES = [
 function VideoPlayer({ clips }: { clips: string[] }) {
   const [currentClip, setCurrentClip] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const shouldPlayRef = useRef(false);
 
+  // Reset when objection changes
   useEffect(() => {
     setCurrentClip(0);
     setPlaying(false);
+    setLoading(false);
+    shouldPlayRef.current = false;
   }, [clips]);
+
+  // When clip index changes, load the new src
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (shouldPlayRef.current) {
+      setLoading(true);
+      video.load();
+    }
+  }, [currentClip]);
+
+  // onCanPlay fires once the browser has buffered enough to play
+  const handleCanPlay = () => {
+    const video = videoRef.current;
+    if (!video || !shouldPlayRef.current) return;
+    setLoading(false);
+    video.play().catch(() => {});
+  };
 
   const handleEnded = () => {
     if (currentClip < clips.length - 1) {
       setCurrentClip((c) => c + 1);
     } else {
+      shouldPlayRef.current = false;
       setPlaying(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.load();
-      if (playing) {
-        videoRef.current.play().catch(() => {});
-      }
-    }
-  }, [currentClip]);
-
   const handlePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    shouldPlayRef.current = true;
     setPlaying(true);
+    setLoading(true);
     setCurrentClip(0);
-    if (videoRef.current) {
-      videoRef.current.load();
-      videoRef.current.play().catch(() => {});
-    }
+    video.load();
+  };
+
+  const handleReplay = () => {
+    shouldPlayRef.current = true;
+    setPlaying(true);
+    setLoading(true);
+    setCurrentClip(0);
+    const video = videoRef.current;
+    if (video) video.load();
   };
 
   return (
@@ -287,9 +313,13 @@ function VideoPlayer({ clips }: { clips: string[] }) {
         src={clips[currentClip]}
         className="w-full h-full object-cover"
         onEnded={handleEnded}
+        onCanPlay={handleCanPlay}
+        onError={() => { setLoading(false); }}
         playsInline
-        controls={playing}
+        controls={playing && !loading}
       />
+
+      {/* Play overlay — shown before first play */}
       {!playing && (
         <button
           onClick={handlePlay}
@@ -303,10 +333,29 @@ function VideoPlayer({ clips }: { clips: string[] }) {
           </span>
         </button>
       )}
-      {playing && (
+
+      {/* Loading spinner between clips */}
+      {playing && loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
+          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Clip counter */}
+      {playing && !loading && (
         <div className="absolute bottom-2 right-2 bg-black/60 rounded-full px-2 py-0.5 text-xs text-white/70">
           {currentClip + 1} / {clips.length}
         </div>
+      )}
+
+      {/* Replay button after all clips finish */}
+      {!playing && currentClip === clips.length - 1 && (
+        <button
+          onClick={handleReplay}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-4 py-1.5 text-xs text-white font-medium"
+        >
+          ↺ Replay
+        </button>
       )}
     </div>
   );
