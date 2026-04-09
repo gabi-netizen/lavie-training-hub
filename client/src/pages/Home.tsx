@@ -1082,7 +1082,7 @@ export default function Home() {
                 <div className="px-5 pb-6 flex flex-col gap-5">
                   <div className="coaching-note flex gap-2 items-start">
                     <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p className="text-sm leading-relaxed">Say the total value OUT LOUD before you say the price. "This starter kit has a value of £50." Then pause. Let that land. THEN say "and today it comes to you for just £4.95."</p>
+                    <p className="text-sm leading-relaxed">Tell her the product is completely FREE — she only covers the shipping. Say it with confidence: "We are so confident in what this is going to do for your skin that we are sending you the full starter kit at no cost. The only thing you pay is £4.95 for shipping." Then pause. Let that land.</p>
                   </div>
                   {/* Value table */}
                   <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
@@ -1109,7 +1109,7 @@ export default function Home() {
                           <td className="px-4 py-3 text-right font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>£50</td>
                         </tr>
                         <tr style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: "oklch(0.25 0.08 250)" }}>
-                          <td className="px-4 py-3 font-bold text-white">She Pays Today</td>
+                          <td className="px-4 py-3 font-bold text-white">Shipping Only</td>
                           <td className="px-4 py-3 text-right font-bold text-white">£4.95</td>
                         </tr>
                       </tbody>
