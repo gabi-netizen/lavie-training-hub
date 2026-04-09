@@ -908,7 +908,7 @@ export default function Home() {
         {/* ── OBJECTION TRAINER TAB ── */}
         {activeTab === "objections" && (
           <div className="fade-in flex flex-col gap-4">
-            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-sm uppercase tracking-widest font-semibold text-center" style={{ color: "oklch(0.92 0.005 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
               Tap the objection you're facing
             </p>
 
