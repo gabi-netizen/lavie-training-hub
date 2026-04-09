@@ -582,7 +582,7 @@ const LIVE_CALL_SECTIONS = [
     items: [
       { type: "say", text: "I always like to ask my clients this question: If you had a magic wand and could improve just ONE thing about your skin right now when you look in the mirror, what would it be? What result would make you feel amazing? It could be the eye area — some puffiness, lines, or dark circles — or it could be elasticity, or lines and wrinkles. What would your choice be?" },
       { type: "note", text: "Listen carefully. Recap their exact words to show you understand their pain point." },
-      { type: "say", text: "So just to make sure I'm completely understanding you... the main thing you want to achieve is [insert their goal: e.g., softening those lines around your mouth / getting rid of that tight, dry feeling / brightening up dull skin]. Did I get that right?" },
+      { type: "say", text: "So just to clarify, you would like to soften the lines around your mouth and treat the dry skin and get it looking more radiant. Did I get that right?" },
     ],
   },
   {
