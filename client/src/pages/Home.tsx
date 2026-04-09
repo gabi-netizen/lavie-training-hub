@@ -611,6 +611,7 @@ const LIVE_CALL_SECTIONS = [
       { type: "say", text: "Fantastic. If you click the link to our website, you'll see our homepage. We are incredibly proud of our rating on Trustpilot — we have thousands of happy customers who have shared their results there and across the web. I am going to be your personal skincare concierge — if you ever need anything, I'm right here." },
       { type: "say", text: "If you scroll down just a bit, you'll see some Before & After photos of real women using our products. Take a look at those. Do any of those transformations stand out to you?" },
       { type: "note", text: "Guide them to see the results they want." },
+      { type: "note", text: "🎁 Compare the women on our website with your customer's needs!" },
       { type: "say", text: "Look at the brightness in their skin. You can see how much softer their fine lines look, and they all have that gorgeous, healthy glow. That is exactly the result we are aiming for with your skin using the Matinika and the [Oulala/Ashkara]." },
     ],
   },
