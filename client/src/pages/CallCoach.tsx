@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
@@ -220,6 +220,16 @@ function EditDetailsModal({
     (initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed"
   );
   const [saved, setSaved] = useState(false);
+
+  // Sync form state whenever the modal opens (handles reopening with fresh data)
+  useEffect(() => {
+    if (open) {
+      setRepName(initialRepName ?? "");
+      setCallDate(initialCallDate ? new Date(initialCallDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]);
+      setCloseStatus((initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed");
+      setSaved(false);
+    }
+  }, [open, initialRepName, initialCallDate, initialCloseStatus]);
   const utils = trpc.useUtils();
   const updateDetails = trpc.callCoach.updateCallDetails.useMutation({
     onSuccess: async () => {
@@ -339,11 +349,11 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
         </Button>
         <div className="flex-1">
           <h2 className="text-xl font-semibold text-white">{analysis.fileName ?? "Call Recording"}</h2>
-          {analysis.repName && (
+          {(analysis.repName || analysis.callDate || analysis.closeStatus) && (
             <p className="text-xs text-slate-400 mt-0.5">
-              {analysis.repName}
-              {analysis.callDate && ` · ${new Date(analysis.callDate).toLocaleDateString()}`}
-              {analysis.closeStatus && ` · ${{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}`}
+              {analysis.repName && <span>{analysis.repName}</span>}
+              {analysis.callDate && <span>{analysis.repName ? " · " : ""}{new Date(analysis.callDate).toLocaleDateString()}</span>}
+              {analysis.closeStatus && <span>{(analysis.repName || analysis.callDate) ? " · " : ""}{{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}</span>}
             </p>
           )}
           <div className={`flex items-center gap-2 text-sm mt-1 ${status.color}`}>

@@ -56,5 +56,5 @@
 - [x] Add admin Feedback Review panel to see all flagged issues
 
 ## Edit Call Details
-- [ ] Add updateCallDetails tRPC procedure (repName, callDate, closeStatus)
-- [ ] Add "Edit Details" button in AnalysisReport to update close status, rep name, call date
+- [x] Add updateCallDetails tRPC procedure (repName, callDate, closeStatus)
+- [x] Add "Edit Details" button in AnalysisReport to update close status, rep name, call date
