@@ -1,7 +1,7 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import OpenAI from "openai";
 import { getDb } from "./db";
-import { callAnalyses } from "../drizzle/schema";
+import { callAnalyses, aiFeedback } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY ?? "" });
@@ -332,4 +332,51 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string) 
       errorMessage: message,
     });
   }
+}
+
+// ─── AI FEEDBACK ─────────────────────────────────────────────────────
+
+export interface FeedbackInput {
+  analysisId: number;
+  userId: number;
+  section: "overall" | "script_compliance" | "tone" | "talk_ratio" | "recommendations" | "transcript" | "other";
+  issue: string;
+  comment: string | null;
+}
+
+export async function submitFeedback(input: FeedbackInput): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(aiFeedback).values({
+    analysisId: input.analysisId,
+    userId: input.userId,
+    section: input.section,
+    issue: input.issue,
+    comment: input.comment,
+  });
+}
+
+export interface FeedbackSummaryItem {
+  id: number;
+  analysisId: number;
+  userId: number;
+  section: string;
+  issue: string;
+  comment: string | null;
+  createdAt: Date;
+}
+
+export async function getFeedbackSummary(): Promise<FeedbackSummaryItem[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(aiFeedback).orderBy(aiFeedback.createdAt);
+  return rows.map(r => ({
+    id: r.id,
+    analysisId: r.analysisId,
+    userId: r.userId,
+    section: r.section,
+    issue: r.issue,
+    comment: r.comment ?? null,
+    createdAt: r.createdAt,
+  }));
 }

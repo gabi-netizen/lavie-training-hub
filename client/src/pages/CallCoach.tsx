@@ -21,11 +21,21 @@ import {
   ArrowLeft,
   Trophy,
   Medal,
+  Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface CallAnalysisReport {
@@ -70,9 +80,123 @@ function qualityBadge(quality: "strong" | "weak" | "missing") {
   return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/40">Missing</Badge>;
 }
 
+// ─── FLAG FEEDBACK MODAL ─────────────────────────────────────────────────────
+function FlagFeedbackModal({
+  analysisId,
+  open,
+  onClose,
+}: {
+  analysisId: number;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [section, setSection] = useState<string>("overall");
+  const [issue, setIssue] = useState("");
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const submitFeedback = trpc.callCoach.submitFeedback.useMutation({
+    onSuccess: () => setSubmitted(true),
+  });
+
+  const handleSubmit = () => {
+    if (!issue.trim()) return;
+    submitFeedback.mutate({
+      analysisId,
+      section: section as "overall" | "script_compliance" | "tone" | "talk_ratio" | "recommendations" | "transcript" | "other",
+      issue: issue.trim(),
+      comment: comment.trim() || undefined,
+    });
+  };
+
+  const handleClose = () => {
+    setSubmitted(false);
+    setIssue("");
+    setComment("");
+    setSection("overall");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="bg-[#0F1923] border-slate-700 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <Flag className="w-5 h-5 text-amber-400" />
+            Flag Incorrect Analysis
+          </DialogTitle>
+        </DialogHeader>
+        {submitted ? (
+          <div className="py-8 text-center space-y-3">
+            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+            <p className="text-slate-200 font-medium">Thank you for the feedback!</p>
+            <p className="text-slate-400 text-sm">This helps us improve the AI over time.</p>
+            <Button onClick={handleClose} className="mt-4 bg-teal-600 hover:bg-teal-500">Close</Button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Which section is incorrect?</label>
+                <Select value={section} onValueChange={setSection}>
+                  <SelectTrigger className="bg-[#1a2535] border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a2535] border-slate-600">
+                    <SelectItem value="overall">Overall Score</SelectItem>
+                    <SelectItem value="script_compliance">Script Compliance</SelectItem>
+                    <SelectItem value="tone">Tone & Confidence</SelectItem>
+                    <SelectItem value="talk_ratio">Talk Ratio</SelectItem>
+                    <SelectItem value="recommendations">Recommendations</SelectItem>
+                    <SelectItem value="transcript">Transcript</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">What's wrong? <span className="text-red-400">*</span></label>
+                <input
+                  type="text"
+                  value={issue}
+                  onChange={e => setIssue(e.target.value)}
+                  placeholder="e.g. Score is too high, the rep didn't actually close"
+                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  maxLength={512}
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Additional notes (optional)</label>
+                <Textarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  placeholder="Any extra context that would help improve the AI..."
+                  className="bg-[#1a2535] border-slate-600 text-white placeholder:text-slate-500 resize-none"
+                  rows={3}
+                  maxLength={2000}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={handleClose} className="text-slate-400">Cancel</Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!issue.trim() || submitFeedback.isPending}
+                className="bg-amber-600 hover:bg-amber-500 text-white"
+              >
+                {submitFeedback.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}
+                Submit Flag
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── ANALYSIS REPORT VIEW ─────────────────────────────────────────────────────
 function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: () => void }) {
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
   const { data: analysis, isLoading } = trpc.callCoach.getAnalysis.useQuery(
     { id: analysisId },
     { refetchInterval: (query) => {
@@ -291,6 +415,23 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
                 )}
               </Card>
             )}
+          {/* Flag as Incorrect button */}
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFlagModal(true)}
+              className="text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 gap-2"
+            >
+              <Flag className="w-4 h-4" />
+              Flag incorrect analysis
+            </Button>
+          </div>
+          <FlagFeedbackModal
+            analysisId={analysisId}
+            open={showFlagModal}
+            onClose={() => setShowFlagModal(false)}
+          />
           </div>
         );
       })()}
@@ -675,11 +816,84 @@ function Leaderboard() {
   );
 }
 
+// ─── FEEDBACK REVIEW (ADMIN) ─────────────────────────────────────────────────
+function FeedbackReview() {
+  const { data: feedbacks, isLoading } = trpc.callCoach.getFeedbackSummary.useQuery();
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (!feedbacks?.length) return (
+    <div className="text-center py-12 text-slate-500">
+      <Flag className="w-10 h-10 mx-auto mb-3 opacity-40" />
+      <p>No feedback submitted yet.</p>
+      <p className="text-xs mt-2 text-slate-600">When reps flag incorrect analysis, it will appear here.</p>
+    </div>
+  );
+
+  const sectionColors: Record<string, string> = {
+    overall: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+    script_compliance: "bg-purple-500/20 text-purple-300 border-purple-500/40",
+    tone: "bg-pink-500/20 text-pink-300 border-pink-500/40",
+    talk_ratio: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+    recommendations: "bg-teal-500/20 text-teal-300 border-teal-500/40",
+    transcript: "bg-orange-500/20 text-orange-300 border-orange-500/40",
+    other: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+  };
+
+  // Count by section
+  const sectionCounts: Record<string, number> = {};
+  for (const f of feedbacks) {
+    sectionCounts[f.section] = (sectionCounts[f.section] ?? 0) + 1;
+  }
+  const topSection = Object.entries(sectionCounts).sort((a, b) => b[1] - a[1])[0];
+
+  return (
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-[#0F1923] border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-amber-400">{feedbacks.length}</div>
+            <div className="text-xs text-slate-400 mt-1">Total Flags</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#0F1923] border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-lg font-bold text-slate-200 capitalize">{topSection?.[0]?.replace("_", " ") ?? "—"}</div>
+            <div className="text-xs text-slate-400 mt-1">Most Flagged Section</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tip for improvement */}
+      <div className="rounded-lg bg-teal-500/10 border border-teal-500/30 p-4 text-sm text-teal-300">
+        💡 <strong>How to use this:</strong> Review the flags below, identify patterns, and share them with the AI trainer to improve the prompt. After 10+ flags, patterns become clear.
+      </div>
+
+      {/* Feedback list */}
+      <div className="space-y-3">
+        {[...feedbacks].reverse().map((f) => (
+          <Card key={f.id} className="bg-[#0F1923] border-slate-700">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className={sectionColors[f.section] ?? sectionColors.other}>{f.section.replace("_", " ")}</Badge>
+                <span className="text-xs text-slate-500">{new Date(f.createdAt).toLocaleString()}</span>
+                <span className="text-xs text-slate-500">· Call #{f.analysisId}</span>
+              </div>
+              <p className="text-slate-200 text-sm font-medium">{f.issue}</p>
+              {f.comment && <p className="text-slate-400 text-xs leading-relaxed">{f.comment}</p>}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 export default function CallCoach() {
   const { user, loading, isAuthenticated } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "leaderboard" | "manager">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "leaderboard" | "manager" | "feedback">("upload");
   const utils = trpc.useUtils();
 
   if (loading) {
@@ -772,7 +986,7 @@ export default function CallCoach() {
             { id: "upload", label: "Upload Call" },
             { id: "my-calls", label: "My Calls" },
             { id: "leaderboard", label: "\uD83C\uDFC6 Leaderboard" },
-            ...(isAdmin ? [{ id: "manager", label: "Manager View" }] : []),
+            ...(isAdmin ? [{ id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -800,6 +1014,7 @@ export default function CallCoach() {
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} />}
         {activeTab === "leaderboard" && <Leaderboard />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
+        {activeTab === "feedback" && isAdmin && <FeedbackReview />}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import {
   createCallAnalysisRecord,
   getCallAnalysisById,
@@ -7,6 +7,8 @@ import {
   listAllCallAnalyses,
   processCallAnalysis,
   getLeaderboard,
+  submitFeedback,
+  getFeedbackSummary,
 } from "../callAnalysis";
 
 export const callCoachRouter = router({
@@ -66,4 +68,36 @@ export const callCoachRouter = router({
 
       return { analysisId };
     }),
+
+  /**
+   * Submit feedback flagging an inaccurate AI analysis section.
+   * Any logged-in user (rep or manager) can submit.
+   */
+  submitFeedback: protectedProcedure
+    .input(
+      z.object({
+        analysisId: z.number(),
+        section: z.enum(["overall", "script_compliance", "tone", "talk_ratio", "recommendations", "transcript", "other"]),
+        issue: z.string().min(1).max(512),
+        comment: z.string().max(2000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await submitFeedback({
+        analysisId: input.analysisId,
+        userId: ctx.user.id,
+        section: input.section,
+        issue: input.issue,
+        comment: input.comment ?? null,
+      });
+      return { success: true };
+    }),
+
+  /**
+   * Admin-only: get all feedback submissions grouped by section,
+   * useful for identifying patterns and improving the AI prompt.
+   */
+  getFeedbackSummary: adminProcedure.query(async () => {
+    return getFeedbackSummary();
+  }),
 });

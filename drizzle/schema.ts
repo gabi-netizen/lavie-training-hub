@@ -62,3 +62,25 @@ export const callAnalyses = mysqlTable("call_analyses", {
 
 export type CallAnalysis = typeof callAnalyses.$inferSelect;
 export type InsertCallAnalysis = typeof callAnalyses.$inferInsert;
+
+/**
+ * AI Feedback table — stores flags/corrections submitted by reps and managers
+ * to help improve the AI prompt over time.
+ */
+export const aiFeedback = mysqlTable("ai_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The analysis being flagged */
+  analysisId: int("analysisId").notNull(),
+  /** The user submitting the feedback */
+  userId: int("userId").notNull(),
+  /** Which section is incorrect: overall, script_compliance, tone, talk_ratio, recommendations, transcript, other */
+  section: mysqlEnum("section", ["overall", "script_compliance", "tone", "talk_ratio", "recommendations", "transcript", "other"]).notNull(),
+  /** What the issue is */
+  issue: varchar("issue", { length: 512 }).notNull(),
+  /** Optional free-text comment */
+  comment: text("comment"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiFeedback = typeof aiFeedback.$inferSelect;
+export type InsertAiFeedback = typeof aiFeedback.$inferInsert;
