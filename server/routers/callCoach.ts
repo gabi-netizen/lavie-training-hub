@@ -30,7 +30,7 @@ export const callCoachRouter = router({
       return analysis;
     }),
 
-  getAllAnalyses: adminProcedure.query(async () => {
+  getAllAnalyses: protectedProcedure.query(async () => {
     return listAllCallAnalyses();
   }),
 

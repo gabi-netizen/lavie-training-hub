@@ -89,3 +89,7 @@
 - [x] Display call type badge in analysis report header
 - [x] Add call type filter to manager dashboard
 - [x] Separate leaderboard by call type (Opening tab / Retention tab)
+
+## Manager View Access
+- [x] Allow all authenticated users to see Manager View tab (remove admin-only restriction)
+- [x] Update getAllAnalyses tRPC procedure from adminProcedure to protectedProcedure

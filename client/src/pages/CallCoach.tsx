@@ -1243,7 +1243,8 @@ export default function CallCoach() {
             { id: "upload", label: "Upload Call" },
             { id: "my-calls", label: "My Calls" },
             { id: "leaderboard", label: "\uD83C\uDFC6 Leaderboard" },
-            ...(isAdmin ? [{ id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
+            { id: "manager", label: "Manager View" },
+            ...(isAdmin ? [{ id: "feedback", label: "🚩 AI Feedback" }] : []),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1270,7 +1271,7 @@ export default function CallCoach() {
         )}
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} />}
         {activeTab === "leaderboard" && <Leaderboard />}
-        {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
+        {activeTab === "manager" && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}
       </div>
     </div>
