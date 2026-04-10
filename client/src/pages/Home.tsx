@@ -844,7 +844,7 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"home" | "objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "install" | "objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("home");
   const [rapportOpen, setRapportOpen] = useState<number | null>(null);
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
@@ -1023,6 +1023,122 @@ export default function Home() {
             <div className="rounded-xl px-4 py-4 text-center" style={{ background: "oklch(0.18 0.04 250)", border: "1px solid oklch(0.45 0.18 250 / 25%)" }}>
               <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"The best reps don't sell products."</p>
               <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.1 250)" }}>They solve problems. They build trust. Then the sale happens naturally.</p>
+            </div>
+
+            {/* Install CTA */}
+            <button
+              onClick={() => setActiveTab("install")}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold transition-all"
+              style={{ color: "oklch(0.55 0.08 250)", border: "1px dashed oklch(0.3 0.05 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <span>📲</span> How to install this app on your phone
+            </button>
+          </div>
+        )}
+
+        {/* ── INSTALL INSTRUCTIONS TAB ── */}
+        {activeTab === "install" && (
+          <div className="fade-in flex flex-col gap-6 pt-2">
+            {/* Back button */}
+            <button
+              onClick={() => setActiveTab("home")}
+              className="flex items-center gap-2 text-sm font-semibold w-fit"
+              style={{ color: "oklch(0.65 0.1 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <ChevronDown className="w-4 h-4 rotate-90" /> Back to Home
+            </button>
+
+            {/* Header */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.55 0.18 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Setup</p>
+              <h2 className="text-2xl font-black text-white" style={{ fontFamily: "'Playfair Display', serif" }}>Add the app to<br />your home screen</h2>
+              <p className="text-sm" style={{ color: "oklch(0.65 0.04 250)" }}>Takes 30 seconds. Do it once and you're done.</p>
+            </div>
+
+            {/* iPhone Instructions */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💜</span>
+                <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>iPhone (Safari only)</p>
+              </div>
+              {[
+                { num: "1", icon: "🌐", title: "Open in Safari", desc: "Make sure you're using Safari — not Chrome or another browser. Copy the link and paste it in Safari if needed." },
+                { num: "2", icon: "⬆️", title: "Tap the Share button", desc: 'At the bottom of the screen, tap the square with an arrow pointing up ⬆️. If you don\'t see it, scroll up slightly.' },
+                { num: "3", icon: "➕", title: "Tap \"Add to Home Screen\"", desc: 'Scroll down in the menu that appears and tap "Add to Home Screen". Then tap Add in the top right corner.' },
+              ].map((step) => (
+                <div key={step.num} className="flex gap-3 rounded-xl px-4 py-4" style={{ background: "oklch(0.17 0.04 250)", border: "1px solid oklch(0.3 0.06 250)" }}>
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-black"
+                    style={{ background: "oklch(0.55 0.22 250)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {step.num}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.icon} {step.title}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.65 0.04 250)" }}>{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px" style={{ background: "oklch(0.25 0.04 250)" }} />
+              <p className="text-xs font-semibold" style={{ color: "oklch(0.45 0.05 250)", fontFamily: "'Space Grotesk', sans-serif" }}>OR</p>
+              <div className="flex-1 h-px" style={{ background: "oklch(0.25 0.04 250)" }} />
+            </div>
+
+            {/* Android Instructions */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🟢</span>
+                <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Android (Chrome)</p>
+              </div>
+              {[
+                { num: "1", icon: "🌐", title: "Open in Chrome", desc: "Make sure you're using Chrome. Paste the app link in the Chrome address bar." },
+                { num: "2", icon: "⋮", title: "Tap the 3 dots menu", desc: "Tap the three dots ⋮ in the top right corner of Chrome to open the menu." },
+                { num: "3", icon: "➕", title: "Tap \"Add to Home Screen\"", desc: 'Select "Add to Home Screen" from the menu and confirm. The app will appear on your home screen instantly.' },
+              ].map((step) => (
+                <div key={step.num} className="flex gap-3 rounded-xl px-4 py-4" style={{ background: "oklch(0.17 0.04 180)", border: "1px solid oklch(0.3 0.06 180)" }}>
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-black"
+                    style={{ background: "oklch(0.55 0.18 180)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {step.num}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.icon} {step.title}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.65 0.04 250)" }}>{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Result card */}
+            <div className="rounded-xl px-4 py-4 flex items-center gap-3" style={{ background: "oklch(0.17 0.05 80)", border: "1px solid oklch(0.45 0.15 80 / 40%)" }}>
+              <span className="text-2xl">✅</span>
+              <div>
+                <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>That's it — you're set.</p>
+                <p className="text-xs" style={{ color: "oklch(0.65 0.06 80)" }}>The Lavié Labs icon will appear on your home screen. Tap it to open the app — no browser, no URL, full screen.</p>
+              </div>
+            </div>
+
+            {/* Link to copy */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "oklch(0.5 0.06 250)", fontFamily: "'Space Grotesk', sans-serif" }}>App link</p>
+              <div
+                className="rounded-xl px-4 py-3 flex items-center justify-between"
+                style={{ background: "oklch(0.16 0.03 250)", border: "1px solid oklch(0.28 0.05 250)" }}
+              >
+                <p className="text-xs font-mono" style={{ color: "oklch(0.72 0.1 250)" }}>lavietrain-se3fvyjn.manus.space</p>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText("https://lavietrain-se3fvyjn.manus.space"); }}
+                  className="text-xs font-semibold px-3 py-1 rounded-lg"
+                  style={{ background: "oklch(0.55 0.22 250)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         )}
