@@ -1,20 +1,15 @@
 import { z } from "zod";
-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
-import { storagePut } from "../storage";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import {
   createCallAnalysisRecord,
   getCallAnalysisById,
   listCallAnalysesByUser,
   listAllCallAnalyses,
   processCallAnalysis,
+  getLeaderboard,
 } from "../callAnalysis";
 
 export const callCoachRouter = router({
-  /**
-   * Get a signed upload URL — frontend POSTs audio bytes to /api/call-upload
-   * This procedure creates the DB record and returns the analysis ID.
-   * The actual upload happens via the /api/call-upload REST endpoint.
-   */
   getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
     return listCallAnalysesByUser(ctx.user.id);
   }),
@@ -24,7 +19,6 @@ export const callCoachRouter = router({
     .query(async ({ ctx, input }) => {
       const analysis = await getCallAnalysisById(input.id);
       if (!analysis) return null;
-      // Reps can only see their own; admins can see all
       if (ctx.user.role !== "admin" && analysis.userId !== ctx.user.id) {
         return null;
       }
@@ -35,9 +29,14 @@ export const callCoachRouter = router({
     return listAllCallAnalyses();
   }),
 
+  /** Public leaderboard — visible to all logged-in users */
+  getLeaderboard: protectedProcedure.query(async () => {
+    return getLeaderboard();
+  }),
+
   /**
    * Called by the frontend after a successful file upload.
-   * Kicks off the async analysis pipeline.
+   * Accepts metadata: repName, callDate, closeStatus.
    */
   startAnalysis: protectedProcedure
     .input(
@@ -45,18 +44,22 @@ export const callCoachRouter = router({
         audioFileKey: z.string(),
         audioFileUrl: z.string(),
         fileName: z.string(),
+        repName: z.string().optional(),
+        callDate: z.string().optional(), // ISO date string
+        closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const analysisId = await createCallAnalysisRecord({
         userId: ctx.user.id,
-        repName: ctx.user.name ?? null,
+        repName: input.repName ?? ctx.user.name ?? null,
         audioFileKey: input.audioFileKey,
         audioFileUrl: input.audioFileUrl,
         fileName: input.fileName,
+        callDate: input.callDate ? new Date(input.callDate) : null,
+        closeStatus: input.closeStatus ?? null,
       });
 
-      // Kick off async — don't await so the response is immediate
       processCallAnalysis(analysisId, input.audioFileUrl).catch(err =>
         console.error("[callCoach] processCallAnalysis error:", err)
       );

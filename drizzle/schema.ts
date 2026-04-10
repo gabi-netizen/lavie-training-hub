@@ -38,6 +38,10 @@ export const callAnalyses = mysqlTable("call_analyses", {
   audioFileUrl: text("audioFileUrl").notNull(),
   /** Original filename */
   fileName: varchar("fileName", { length: 256 }),
+  /** Date of the actual call (not upload date) */
+  callDate: timestamp("callDate"),
+  /** Close status: closed, not_closed, follow_up */
+  closeStatus: mysqlEnum("closeStatus", ["closed", "not_closed", "follow_up"]),
   /** Duration in seconds */
   durationSeconds: float("durationSeconds"),
   /** Status: pending → transcribing → analyzing → done → error */

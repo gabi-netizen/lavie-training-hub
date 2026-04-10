@@ -164,6 +164,8 @@ export async function createCallAnalysisRecord(data: {
   audioFileKey: string;
   audioFileUrl: string;
   fileName: string;
+  callDate?: Date | null;
+  closeStatus?: "closed" | "not_closed" | "follow_up" | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -174,6 +176,8 @@ export async function createCallAnalysisRecord(data: {
     audioFileKey: data.audioFileKey,
     audioFileUrl: data.audioFileUrl,
     fileName: data.fileName,
+    callDate: data.callDate ?? null,
+    closeStatus: data.closeStatus ?? null,
     status: "pending",
   });
 
@@ -216,6 +220,85 @@ export async function listAllCallAnalyses() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.select().from(callAnalyses).orderBy(callAnalyses.createdAt);
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────────────────────────
+export interface LeaderboardEntry {
+  repName: string;
+  userId: number;
+  totalCalls: number;
+  avgScore: number | null;
+  closedCalls: number;
+  closeRate: number; // 0-100
+  trend: "up" | "down" | "stable"; // based on last 3 vs previous 3 calls
+  recentScores: number[]; // last 5 scores
+  isReliable: boolean; // true if 5+ calls
+}
+
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const all = await db.select().from(callAnalyses)
+    .where(eq(callAnalyses.status, "done"))
+    .orderBy(callAnalyses.createdAt);
+
+  // Group by userId
+  type CallRow = (typeof all)[number];
+  const byUser = new Map<number, CallRow[]>();
+  for (const row of all) {
+    if (!byUser.has(row.userId)) byUser.set(row.userId, []);
+    byUser.get(row.userId)!.push(row);
+  }
+
+  const entries: LeaderboardEntry[] = [];
+
+  for (const [userId, calls] of Array.from(byUser.entries())) {
+    const repName = calls[calls.length - 1]?.repName ?? `Rep #${userId}`;
+    const scoredCalls = calls.filter((c: CallRow) => c.overallScore != null);
+    const scores: number[] = scoredCalls.map((c: CallRow) => c.overallScore as number);
+    const avgScore = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : null;
+
+    const closedCalls = calls.filter(c => c.closeStatus === "closed").length;
+    const closeRate = calls.length > 0
+      ? Math.round((closedCalls / calls.length) * 100)
+      : 0;
+
+    // Trend: compare avg of last 3 vs avg of previous 3
+    let trend: "up" | "down" | "stable" = "stable";
+    if (scores.length >= 6) {
+      const recent = scores.slice(-3);
+      const prev = scores.slice(-6, -3);
+      const recentAvg = recent.reduce((a, b) => a + b, 0) / 3;
+      const prevAvg = prev.reduce((a, b) => a + b, 0) / 3;
+      if (recentAvg - prevAvg > 3) trend = "up";
+      else if (prevAvg - recentAvg > 3) trend = "down";
+    }
+
+    entries.push({
+      repName,
+      userId,
+      totalCalls: calls.length,
+      avgScore,
+      closedCalls,
+      closeRate,
+      trend,
+      recentScores: scores.slice(-5),
+      isReliable: calls.length >= 5,
+    });
+  }
+
+  // Sort by avgScore desc, then totalCalls desc
+  entries.sort((a, b) => {
+    if (a.avgScore == null && b.avgScore == null) return 0;
+    if (a.avgScore == null) return 1;
+    if (b.avgScore == null) return -1;
+    return b.avgScore - a.avgScore;
+  });
+
+  return entries;
 }
 
 // ─── FULL PIPELINE ────────────────────────────────────────────────────────────

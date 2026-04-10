@@ -15,6 +15,13 @@
       "when": 1775817035861,
       "tag": "0001_safe_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775820131106,
+      "tag": "0002_complex_star_brand",
+      "breakpoints": true
     }
   ]
 }

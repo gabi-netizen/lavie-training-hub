@@ -39,3 +39,10 @@
 - [x] Add "AI Coach" card to home screen navigation
 - [x] Write vitest tests for callAnalysis module
 - [x] Add "What AI can and cannot do" disclaimer card to AI Call Coach page
+
+## Call Coach Enhancements
+- [x] Add repName, callDate, closeStatus fields to call_analyses schema
+- [x] Update upload form with metadata fields (rep name, date, close status)
+- [x] Update server procedures to store and return metadata
+- [x] Build Leaderboard page: rankings with medals, call count, close rate, Most Improved badge
+- [x] Add Leaderboard tab visible to all users in AI Call Coach

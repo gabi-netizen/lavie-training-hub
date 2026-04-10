@@ -9,6 +9,8 @@ import {
   XCircle,
   Clock,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Mic,
   Star,
   AlertTriangle,
@@ -17,6 +19,8 @@ import {
   BarChart3,
   Users,
   ArrowLeft,
+  Trophy,
+  Medal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -296,9 +300,13 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
 
 // ─── UPLOAD ZONE ─────────────────────────────────────────────────────────────
 function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [repName, setRepName] = useState(user?.name ?? "");
+  const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
   const inputRef = useRef<HTMLInputElement>(null);
   const startAnalysis = trpc.callCoach.startAnalysis.useMutation();
 
@@ -319,14 +327,21 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         throw new Error(err.error ?? "Upload failed");
       }
       const { fileKey, url, fileName } = await res.json();
-      const { analysisId } = await startAnalysis.mutateAsync({ audioFileKey: fileKey, audioFileUrl: url, fileName });
+      const { analysisId } = await startAnalysis.mutateAsync({
+        audioFileKey: fileKey,
+        audioFileUrl: url,
+        fileName,
+        repName: repName || undefined,
+        callDate: callDate || undefined,
+        closeStatus: closeStatus || undefined,
+      });
       onUploaded(analysisId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
     }
-  }, [startAnalysis, onUploaded]);
+  }, [startAnalysis, onUploaded, repName, callDate, closeStatus]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -337,6 +352,46 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
 
   return (
     <div className="space-y-4">
+      {/* Metadata fields */}
+      <Card className="bg-[#0F1923] border-slate-700">
+        <CardContent className="p-4 space-y-3">
+          <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Call Details</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400">Rep Name</label>
+              <input
+                type="text"
+                value={repName}
+                onChange={e => setRepName(e.target.value)}
+                placeholder="Your name"
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400">Call Date</label>
+              <input
+                type="date"
+                value={callDate}
+                onChange={e => setCallDate(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400">Close Status</label>
+              <select
+                value={closeStatus}
+                onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500"
+              >
+                <option value="closed">✅ Closed</option>
+                <option value="not_closed">❌ Not Closed</option>
+                <option value="follow_up">🔄 Follow-up</option>
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div
         className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer ${
           isDragging ? "border-teal-400 bg-teal-400/10" : "border-slate-600 hover:border-slate-500 hover:bg-slate-800/30"
@@ -517,11 +572,114 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
   );
 }
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+/// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
+function Leaderboard() {
+  const { data: entries, isLoading } = trpc.callCoach.getLeaderboard.useQuery(undefined, {
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (!entries?.length) return (
+    <div className="text-center py-12 text-slate-500">
+      <Trophy className="w-10 h-10 mx-auto mb-3 opacity-40" />
+      <p>No calls analysed yet. Be the first to upload!</p>
+      <p className="text-xs mt-2 text-slate-600">Minimum 5 calls required for a reliable ranking.</p>
+    </div>
+  );
+
+  const medals = ["\uD83E\uDD47", "\uD83E\uDD48", "\uD83E\uDD49"];
+
+  // Find most improved (reliable entries only, with upward trend)
+  const mostImproved = entries.filter(e => e.isReliable && e.trend === "up")[0];
+
+  const trendIcon = (trend: string) => {
+    if (trend === "up") return <TrendingUp className="w-4 h-4 text-emerald-400" />;
+    if (trend === "down") return <TrendingDown className="w-4 h-4 text-red-400" />;
+    return <Minus className="w-4 h-4 text-slate-500" />;
+  };
+
+  const closeStatusLabel = (rate: number) => {
+    if (rate >= 60) return <span className="text-emerald-400">{rate}%</span>;
+    if (rate >= 30) return <span className="text-amber-400">{rate}%</span>;
+    return <span className="text-red-400">{rate}%</span>;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Disclaimer */}
+      <div className="text-xs text-slate-500 italic text-center">
+        Rankings are based on AI scores only. Minimum 5 analysed calls required for a reliable ranking.
+        <br />Reps with fewer than 5 calls are shown but marked as unranked.
+      </div>
+
+      {/* Most Improved badge */}
+      {mostImproved && (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+          <span className="text-2xl">\uD83D\uDE80</span>
+          <div>
+            <p className="text-emerald-400 text-sm font-bold">Most Improved</p>
+            <p className="text-slate-300 text-sm">{mostImproved.repName} — score trending up over last 6 calls</p>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard table */}
+      <div className="space-y-2">
+        {entries.map((entry, i) => (
+          <div
+            key={entry.userId}
+            className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+              i === 0 && entry.isReliable
+                ? "bg-amber-500/10 border-amber-500/30"
+                : i === 1 && entry.isReliable
+                ? "bg-slate-400/10 border-slate-400/30"
+                : i === 2 && entry.isReliable
+                ? "bg-orange-500/10 border-orange-500/30"
+                : "bg-[#0F1923] border-slate-700"
+            }`}
+          >
+            {/* Rank */}
+            <div className="w-8 text-center flex-shrink-0">
+              {entry.isReliable && i < 3
+                ? <span className="text-xl">{medals[i]}</span>
+                : <span className="text-slate-500 text-sm font-bold">#{i + 1}</span>
+              }
+            </div>
+
+            {/* Name & stats */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-slate-200 font-semibold text-sm">{entry.repName}</p>
+                {!entry.isReliable && (
+                  <Badge className="text-xs bg-slate-700/50 text-slate-400 border-slate-600">Unranked &lt;5 calls</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs text-slate-500">{entry.totalCalls} calls</span>
+                <span className="text-xs text-slate-500">Close rate: {closeStatusLabel(entry.closeRate)}</span>
+              </div>
+            </div>
+
+            {/* Score & trend */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {trendIcon(entry.trend)}
+              {entry.avgScore != null
+                ? <span className={`text-xl font-bold ${scoreColor(entry.avgScore)}`}>{entry.avgScore}</span>
+                : <span className="text-slate-500 text-sm">—</span>
+              }
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 export default function CallCoach() {
   const { user, loading, isAuthenticated } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "manager">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "leaderboard" | "manager">("upload");
   const utils = trpc.useUtils();
 
   if (loading) {
@@ -613,6 +771,7 @@ export default function CallCoach() {
           {[
             { id: "upload", label: "Upload Call" },
             { id: "my-calls", label: "My Calls" },
+            { id: "leaderboard", label: "\uD83C\uDFC6 Leaderboard" },
             ...(isAdmin ? [{ id: "manager", label: "Manager View" }] : []),
           ].map((tab) => (
             <button
@@ -639,6 +798,7 @@ export default function CallCoach() {
           />
         )}
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} />}
+        {activeTab === "leaderboard" && <Leaderboard />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
       </div>
     </div>
