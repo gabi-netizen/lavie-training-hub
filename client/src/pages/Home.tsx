@@ -845,7 +845,7 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"home" | "install" | "objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "install" | "objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport" | "callbackhandling">("home");
   const [rapportOpen, setRapportOpen] = useState<number | null>(null);
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
@@ -876,12 +876,13 @@ export default function Home() {
       {activeTab !== "home" && (
         <div className="flex border-b border-white/8 overflow-x-auto scrollbar-none" style={{ background: "oklch(0.16 0.025 250)" }}>
           {([
-            { id: "livescript",   label: "Live Call Script",  num: "1" },
-            { id: "rapport",      label: "Rapport",           num: "2" },
-            { id: "cheatsheet",   label: "Cheat Sheet",       num: "3" },
-            { id: "objections",   label: "Objections",        num: "4" },
-            { id: "productvalue", label: "Product Value",     num: "5" },
-            { id: "diagnostics",  label: "Call Diagnostics",  num: "6" },
+            { id: "livescript",        label: "Live Call Script",   num: "1" },
+            { id: "callbackhandling",  label: "Call Back Handling", num: "2" },
+            { id: "rapport",           label: "Rapport",            num: "3" },
+            { id: "cheatsheet",        label: "Cheat Sheet",        num: "4" },
+            { id: "objections",        label: "Objections",         num: "5" },
+            { id: "productvalue",      label: "Product Value",      num: "6" },
+            { id: "diagnostics",       label: "Call Diagnostics",   num: "7" },
           ] as { id: typeof activeTab; label: string; num: string }[]).map((tab) => (
             <button
               key={tab.id}
@@ -946,8 +947,18 @@ export default function Home() {
                   border: "oklch(0.45 0.18 250 / 35%)",
                 },
                 {
-                  id: "rapport",
+                  id: "callbackhandling",
                   num: "2",
+                  title: "Call Back Handling",
+                  desc: "She asked you to call back. Here's exactly how to win her.",
+                  icon: "📲",
+                  accent: "oklch(0.68 0.2 145)",
+                  bg: "oklch(0.17 0.05 145)",
+                  border: "oklch(0.45 0.18 145 / 35%)",
+                },
+                {
+                  id: "rapport",
+                  num: "3",
                   title: "Rapport",
                   desc: "Stop reading. Start connecting. How to make her feel heard.",
                   icon: "🤝",
@@ -957,7 +968,7 @@ export default function Home() {
                 },
                 {
                   id: "cheatsheet",
-                  num: "3",
+                  num: "4",
                   title: "Cheat Sheet",
                   desc: "Quick reference for pitch, walkthrough, and close. Keep this open during the call.",
                   icon: "⚡",
@@ -967,7 +978,7 @@ export default function Home() {
                 },
                 {
                   id: "objections",
-                  num: "4",
+                  num: "5",
                   title: "Objections",
                   desc: "She's pushing back. Tap the objection and get the exact response.",
                   icon: "🛡️",
@@ -977,7 +988,7 @@ export default function Home() {
                 },
                 {
                   id: "productvalue",
-                  num: "5",
+                  num: "6",
                   title: "Product Value",
                   desc: "Deep product knowledge. Know what you're selling inside out.",
                   icon: "🧔",
@@ -987,7 +998,7 @@ export default function Home() {
                 },
                 {
                   id: "diagnostics",
-                  num: "6",
+                  num: "7",
                   title: "Call Diagnostics",
                   desc: "Review what went wrong. Use this after the call to get better.",
                   icon: "🔍",
@@ -2150,6 +2161,131 @@ export default function Home() {
               <div className="coaching-note flex gap-2 items-start">
                 <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-sm leading-relaxed">Killer 5 is the most common. Reps are scared of silence and keep talking after the close. Silence is part of the close — don't fill it.</p>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── CALL BACK HANDLING ── */}
+        {activeTab === "callbackhandling" && (
+          <div className="fade-in flex flex-col gap-6">
+
+            {/* Intro */}
+            <div className="coaching-note flex gap-2 items-start">
+              <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+              <p className="text-sm leading-relaxed">She asked you to call back — that means she was interested. Your job now is to re-open the door, remind her why she cared, and close. Don't apologise for calling. You're doing her a favour.</p>
+            </div>
+
+            {/* Step 1 */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">👋</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Step 1 — Re-establish Rapport</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Remind her who you are — warmly, not formally</p>
+                </div>
+              </div>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.68 0.2 145)", fontFamily: "'Space Grotesk', sans-serif" }}>Say this</p>
+                <p className="text-sm leading-relaxed text-white/90 italic">&ldquo;Hi [Name], it's [Your Name] calling from Lavié Labs — we spoke earlier about your skin. I just wanted to check in and see if you had any questions for me.&rdquo;</p>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Keep it light and warm. Don't say &ldquo;I'm calling back as you requested&rdquo; — it sounds transactional. Sound like you're genuinely checking in on her.</p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🎯</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Step 2 — Recap Her Goal &amp; Skin Issue</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Anchor her emotionally before you pitch again</p>
+                </div>
+              </div>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.68 0.2 145)", fontFamily: "'Space Grotesk', sans-serif" }}>Say this</p>
+                <p className="text-sm leading-relaxed text-white/90 italic">&ldquo;When we spoke earlier, you mentioned that [her skin issue — e.g. dryness, fine lines, dullness]. You said if you could change one thing, it would be [her magic wand answer]. I've been thinking about that — and I genuinely believe Matinika is exactly what your skin needs.&rdquo;</p>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Use her exact words — not your interpretation. If she said &ldquo;tired-looking&rdquo;, say &ldquo;tired-looking&rdquo;. This tells her you actually listened.</p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🤔</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Step 3 — Handle the Delay</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Address why she asked for a callback — without being pushy</p>
+                </div>
+              </div>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.68 0.2 145)", fontFamily: "'Space Grotesk', sans-serif" }}>Say this</p>
+                <p className="text-sm leading-relaxed text-white/90 italic">&ldquo;I know you wanted a little time to think — totally understandable. Did anything come up for you, or did you have any questions about how it all works?&rdquo;</p>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Then stop talking. Let her answer. Whatever she says — that's your objection to handle. If she has none, move straight to the close.</p>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🎯</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Step 4 — Re-close</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Same confidence as the first call — no apology</p>
+                </div>
+              </div>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.68 0.2 145)", fontFamily: "'Space Grotesk', sans-serif" }}>Say this</p>
+                <p className="text-sm leading-relaxed text-white/90 italic">&ldquo;So here's what I'd love to do — I want to send you the full Matinika cream completely free. All I ask is £4.95 to cover our premium tracked delivery. That's it. No commitment, no catch. Shall we get that sent out to you today?&rdquo;</p>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">After the close — stop. Do not add anything. The silence is part of the close. Let her fill it.</p>
+              </div>
+            </div>
+
+            {/* Key Rules */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">📋</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Golden Rules</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    rule: "Never apologise for calling back",
+                    detail: "You're not bothering her — you're following up on something she was interested in. Confidence signals value.",
+                  },
+                  {
+                    rule: "If she doesn't answer — leave a voicemail",
+                    detail: "\"Hi [Name], it's [Your Name] from Lavié Labs. I had a quick thought about what you mentioned earlier — give me a call back when you get a chance.\" Keep it short, keep it curious.",
+                  },
+                  {
+                    rule: "Maximum 3 callback attempts",
+                    detail: "Attempt 1: same day. Attempt 2: next day. Attempt 3: 2 days later. After 3 — move on. Chasing beyond this damages your credibility.",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.45 0.18 145 / 40%)" }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.2 0.06 145)" }}>
+                      <span style={{ color: "oklch(0.68 0.2 145)" }}>✓</span>
+                      <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.rule}</p>
+                    </div>
+                    <div className="px-4 py-3" style={{ background: "oklch(0.16 0.02 250)" }}>
+                      <p className="text-sm leading-relaxed" style={{ color: "oklch(0.75 0.05 250)" }}>{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

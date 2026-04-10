@@ -93,3 +93,8 @@
 ## Manager View Access
 - [x] Allow all authenticated users to see Manager View tab (remove admin-only restriction)
 - [x] Update getAllAnalyses tRPC procedure from adminProcedure to protectedProcedure
+
+## Call Back Handling Section
+- [x] Create Call Back Handling section in Home.tsx with 4 steps and key rules
+- [x] Add callbackhandling to activeTab type and top navigation tabs
+- [x] Add Call Back Handling card to Home.tsx between Live Call Script and Rapport
