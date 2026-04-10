@@ -376,6 +376,11 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
               {analysis.closeStatus && <span>{(analysis.repName || analysis.callDate) ? " · " : ""}{{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}</span>}
             </p>
           )}
+          {analysis.callType && CALL_TYPE_LABELS[analysis.callType] && (
+            <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded border mt-1 ${CALL_TYPE_LABELS[analysis.callType].color}`}>
+              {CALL_TYPE_LABELS[analysis.callType].label}
+            </span>
+          )}
           {analysis.lastEditedByName && (
             <p className="text-xs text-slate-500 mt-0.5 italic">
               Last edited by {analysis.lastEditedByName}{analysis.lastEditedAt ? ` · ${new Date(analysis.lastEditedAt).toLocaleString()}` : ""}
@@ -613,6 +618,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [repName, setRepName] = useState(user?.name ?? "");
   const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
+  const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
   const inputRef = useRef<HTMLInputElement>(null);
   const startAnalysis = trpc.callCoach.startAnalysis.useMutation();
 
@@ -640,6 +646,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         repName: repName || undefined,
         callDate: callDate || undefined,
         closeStatus: closeStatus || undefined,
+        callType,
       });
       onUploaded(analysisId);
     } catch (err) {
@@ -647,7 +654,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
     } finally {
       setUploading(false);
     }
-  }, [startAnalysis, onUploaded, repName, callDate, closeStatus]);
+  }, [startAnalysis, onUploaded, repName, callDate, closeStatus, callType]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -662,6 +669,31 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
       <Card className="bg-[#0F1923] border-slate-700">
         <CardContent className="p-4 space-y-3">
           <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Call Details</p>
+          {/* Call Type selector — full width, prominent */}
+          <div className="space-y-1">
+            <label className="text-xs text-slate-400">Call Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: "opening", label: "📞 Opening", desc: "New sale" },
+                { value: "retention_cancel_trial", label: "🔄 Cancel Trial", desc: "Save the trial" },
+                { value: "retention_win_back", label: "💎 Win Back", desc: "Re-engage" },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCallType(opt.value)}
+                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                    callType === opt.value
+                      ? "border-teal-500 bg-teal-500/15 text-teal-300"
+                      : "border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{opt.label}</div>
+                  <div className="text-xs opacity-70 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-slate-400">Rep Name</label>
@@ -785,7 +817,14 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
 }
 
 // ─── MANAGER DASHBOARD ────────────────────────────────────────────────────────
+const CALL_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  opening: { label: "📞 Opening", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
+  retention_cancel_trial: { label: "🔄 Cancel Trial", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
+  retention_win_back: { label: "💎 Win Back", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
+};
+
 function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
+  const [filterType, setFilterType] = useState<"all" | "opening" | "retention_cancel_trial" | "retention_win_back">("all");
   const { data: analyses, isLoading } = trpc.callCoach.getAllAnalyses.useQuery(undefined, {
     refetchInterval: 10000,
   });
@@ -798,12 +837,13 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
     </div>
   );
 
-  const done = analyses.filter(a => a.status === "done");
+  const filtered = filterType === "all" ? analyses : analyses.filter(a => a.callType === filterType);
+  const done = filtered.filter(a => a.status === "done");
   const avgScore = done.length ? Math.round(done.reduce((s, a) => s + (a.overallScore ?? 0), 0) / done.length) : 0;
 
   // Group by rep
   const byRep: Record<string, typeof analyses> = {};
-  for (const a of analyses) {
+  for (const a of filtered) {
     const name = a.repName ?? "Unknown";
     if (!byRep[name]) byRep[name] = [];
     byRep[name].push(a);
@@ -811,6 +851,27 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
 
   return (
     <div className="space-y-6">
+      {/* Call type filter */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          { value: "all", label: "All Calls" },
+          { value: "opening", label: "📞 Opening" },
+          { value: "retention_cancel_trial", label: "🔄 Cancel Trial" },
+          { value: "retention_win_back", label: "💎 Win Back" },
+        ] as const).map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => setFilterType(opt.value)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+              filterType === opt.value
+                ? "bg-teal-600 text-white border-teal-500"
+                : "bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
       {/* Team stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="bg-[#0F1923] border-slate-700">
@@ -862,7 +923,14 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                    a.status === "error" ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> :
                    <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                      {a.callType && CALL_TYPE_LABELS[a.callType] && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded border flex-shrink-0 ${CALL_TYPE_LABELS[a.callType].color}`}>
+                          {CALL_TYPE_LABELS[a.callType].label}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-slate-500 text-xs">
                       {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
                       {new Date(a.createdAt).toLocaleString()}
@@ -883,7 +951,8 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
 
 /// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 function Leaderboard() {
-  const { data: entries, isLoading } = trpc.callCoach.getLeaderboard.useQuery(undefined, {
+  const [leaderboardTab, setLeaderboardTab] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
+  const { data: entries, isLoading } = trpc.callCoach.getLeaderboard.useQuery({ callType: leaderboardTab }, {
     refetchInterval: 30000,
   });
 
@@ -915,6 +984,26 @@ function Leaderboard() {
 
   return (
     <div className="space-y-4">
+      {/* Call type tab switcher */}
+      <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl border border-slate-700">
+        {([
+          { value: "opening", label: "📞 Opening" },
+          { value: "retention_cancel_trial", label: "🔄 Cancel Trial" },
+          { value: "retention_win_back", label: "💎 Win Back" },
+        ] as const).map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setLeaderboardTab(tab.value)}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+              leaderboardTab === tab.value
+                ? "bg-teal-600 text-white"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       {/* Disclaimer */}
       <div className="text-xs text-slate-500 italic text-center">
         Rankings are based on AI scores only. Minimum 5 analysed calls required for a reliable ranking.

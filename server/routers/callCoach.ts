@@ -12,6 +12,8 @@ import {
   updateCallDetails,
 } from "../callAnalysis";
 
+const callTypeSchema = z.enum(["opening", "retention_cancel_trial", "retention_win_back"]);
+
 export const callCoachRouter = router({
   getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
     return listCallAnalysesByUser(ctx.user.id);
@@ -32,14 +34,16 @@ export const callCoachRouter = router({
     return listAllCallAnalyses();
   }),
 
-  /** Public leaderboard — visible to all logged-in users */
-  getLeaderboard: protectedProcedure.query(async () => {
-    return getLeaderboard();
-  }),
+  /** Public leaderboard — visible to all logged-in users, optionally filtered by callType */
+  getLeaderboard: protectedProcedure
+    .input(z.object({ callType: callTypeSchema.optional() }).optional())
+    .query(async ({ input }) => {
+      return getLeaderboard(input?.callType);
+    }),
 
   /**
    * Called by the frontend after a successful file upload.
-   * Accepts metadata: repName, callDate, closeStatus.
+   * Accepts metadata: repName, callDate, closeStatus, callType.
    */
   startAnalysis: protectedProcedure
     .input(
@@ -50,9 +54,11 @@ export const callCoachRouter = router({
         repName: z.string().optional(),
         callDate: z.string().optional(), // ISO date string
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
+        callType: callTypeSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const callType = input.callType ?? "opening";
       const analysisId = await createCallAnalysisRecord({
         userId: ctx.user.id,
         repName: input.repName ?? ctx.user.name ?? null,
@@ -61,9 +67,10 @@ export const callCoachRouter = router({
         fileName: input.fileName,
         callDate: input.callDate ? new Date(input.callDate) : null,
         closeStatus: input.closeStatus ?? null,
+        callType,
       });
 
-      processCallAnalysis(analysisId, input.audioFileUrl).catch(err =>
+      processCallAnalysis(analysisId, input.audioFileUrl, callType).catch(err =>
         console.error("[callCoach] processCallAnalysis error:", err)
       );
 
@@ -71,7 +78,7 @@ export const callCoachRouter = router({
     }),
 
   /**
-   * Update call metadata (repName, callDate, closeStatus) after upload.
+   * Update call metadata (repName, callDate, closeStatus, callType) after upload.
    * Owner or admin can edit.
    */
   updateCallDetails: protectedProcedure
@@ -82,6 +89,7 @@ export const callCoachRouter = router({
         callDate: z.string().optional(),
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
         customerName: z.string().optional(),
+        callType: callTypeSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -96,6 +104,7 @@ export const callCoachRouter = router({
         callDate: input.callDate ? new Date(input.callDate) : undefined,
         closeStatus: input.closeStatus,
         customerName: input.customerName,
+        callType: input.callType,
         lastEditedByUserId: ctx.user.id,
         lastEditedByName: ctx.user.name ?? ctx.user.email ?? `User #${ctx.user.id}`,
       });
