@@ -48,9 +48,13 @@
 - [x] Add Leaderboard tab visible to all users in AI Call Coach
 
 ## AI Feedback & Training System
-- [ ] Add callDuration field to call_analyses schema (auto-detected from audio)
-- [ ] Add ai_feedback table (analysisId, userId, section, issue, comment)
-- [ ] Add server procedures: submitFeedback, getFeedbackSummary (admin)
-- [ ] Add "Flag as incorrect" button to analysis report with feedback modal
+- [x] Add callDuration field to call_analyses schema (auto-detected from audio)
+- [x] Add ai_feedback table (analysisId, userId, section, issue, comment)
+- [x] Add server procedures: submitFeedback, getFeedbackSummary (admin)
+- [x] Add "Flag as incorrect" button to analysis report with feedback modal
 - [ ] Add avg call duration per rep to leaderboard and manager view
-- [ ] Add admin Feedback Review panel to see all flagged issues
+- [x] Add admin Feedback Review panel to see all flagged issues
+
+## Edit Call Details
+- [ ] Add updateCallDetails tRPC procedure (repName, callDate, closeStatus)
+- [ ] Add "Edit Details" button in AnalysisReport to update close status, rep name, call date

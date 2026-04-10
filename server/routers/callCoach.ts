@@ -9,6 +9,7 @@ import {
   getLeaderboard,
   submitFeedback,
   getFeedbackSummary,
+  updateCallDetails,
 } from "../callAnalysis";
 
 export const callCoachRouter = router({
@@ -67,6 +68,34 @@ export const callCoachRouter = router({
       );
 
       return { analysisId };
+    }),
+
+  /**
+   * Update call metadata (repName, callDate, closeStatus) after upload.
+   * Owner or admin can edit.
+   */
+  updateCallDetails: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        repName: z.string().optional(),
+        callDate: z.string().optional(),
+        closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const analysis = await getCallAnalysisById(input.id);
+      if (!analysis) throw new Error("Not found");
+      if (ctx.user.role !== "admin" && analysis.userId !== ctx.user.id) {
+        throw new Error("Forbidden");
+      }
+      await updateCallDetails({
+        id: input.id,
+        repName: input.repName,
+        callDate: input.callDate ? new Date(input.callDate) : undefined,
+        closeStatus: input.closeStatus,
+      });
+      return { success: true };
     }),
 
   /**

@@ -193,10 +193,115 @@ function FlagFeedbackModal({
   );
 }
 
+// ─── EDIT DETAILS MODAL ──────────────────────────────────────────────────────
+function EditDetailsModal({
+  analysisId,
+  initialRepName,
+  initialCallDate,
+  initialCloseStatus,
+  open,
+  onClose,
+  onSaved,
+}: {
+  analysisId: number;
+  initialRepName?: string | null;
+  initialCallDate?: Date | null;
+  initialCloseStatus?: string | null;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [repName, setRepName] = useState(initialRepName ?? "");
+  const [callDate, setCallDate] = useState(() => {
+    if (!initialCallDate) return new Date().toISOString().split("T")[0];
+    return new Date(initialCallDate).toISOString().split("T")[0];
+  });
+  const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up">(
+    (initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed"
+  );
+  const [saved, setSaved] = useState(false);
+  const utils = trpc.useUtils();
+  const updateDetails = trpc.callCoach.updateCallDetails.useMutation({
+    onSuccess: async () => {
+      await utils.callCoach.getAnalysis.invalidate({ id: analysisId });
+      await utils.callCoach.getMyAnalyses.invalidate();
+      await utils.callCoach.getAllAnalyses.invalidate();
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); onSaved(); }, 1200);
+    },
+  });
+
+  const handleClose = () => { setSaved(false); onClose(); };
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && handleClose()}>
+      <DialogContent className="bg-[#0F1923] border-slate-700 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-white">Edit Call Details</DialogTitle>
+        </DialogHeader>
+        {saved ? (
+          <div className="py-8 text-center space-y-2">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+            <p className="text-slate-200 font-medium">Details updated!</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Rep Name</label>
+                <input
+                  type="text"
+                  value={repName}
+                  onChange={e => setRepName(e.target.value)}
+                  placeholder="Rep name"
+                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Call Date</label>
+                <input
+                  type="date"
+                  value={callDate}
+                  onChange={e => setCallDate(e.target.value)}
+                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Close Status</label>
+                <select
+                  value={closeStatus}
+                  onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
+                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                >
+                  <option value="closed">✅ Closed</option>
+                  <option value="not_closed">❌ Not Closed</option>
+                  <option value="follow_up">🔄 Follow-up</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={handleClose} className="text-slate-400">Cancel</Button>
+              <Button
+                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus })}
+                disabled={updateDetails.isPending}
+                className="bg-teal-600 hover:bg-teal-500 text-white"
+              >
+                {updateDetails.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── ANALYSIS REPORT VIEW ─────────────────────────────────────────────────────
 function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: () => void }) {
   const [showTranscript, setShowTranscript] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const { data: analysis, isLoading } = trpc.callCoach.getAnalysis.useQuery(
     { id: analysisId },
     { refetchInterval: (query) => {
@@ -234,10 +339,25 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
         </Button>
         <div className="flex-1">
           <h2 className="text-xl font-semibold text-white">{analysis.fileName ?? "Call Recording"}</h2>
+          {analysis.repName && (
+            <p className="text-xs text-slate-400 mt-0.5">
+              {analysis.repName}
+              {analysis.callDate && ` · ${new Date(analysis.callDate).toLocaleDateString()}`}
+              {analysis.closeStatus && ` · ${{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}`}
+            </p>
+          )}
           <div className={`flex items-center gap-2 text-sm mt-1 ${status.color}`}>
             {status.icon}
             <span>{status.label}</span>
-            {analysis.durationSeconds && (
+          <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowEditModal(true)}
+          className="text-slate-400 hover:text-teal-400 text-xs border border-slate-700 hover:border-teal-500"
+        >
+          ✏️ Edit Details
+        </Button>
+          {analysis.durationSeconds && (
               <span className="text-slate-500 ml-2">
                 · {Math.floor((analysis.durationSeconds ?? 0) / 60)}m {Math.round((analysis.durationSeconds ?? 0) % 60)}s
               </span>
@@ -428,13 +548,22 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
             </Button>
           </div>
           <FlagFeedbackModal
-            analysisId={analysisId}
-            open={showFlagModal}
-            onClose={() => setShowFlagModal(false)}
-          />
-          </div>
-        );
-      })()}
+          analysisId={analysisId}
+          open={showFlagModal}
+          onClose={() => setShowFlagModal(false)}
+        />
+        <EditDetailsModal
+          analysisId={analysisId}
+          initialRepName={analysis.repName}
+          initialCallDate={analysis.callDate}
+          initialCloseStatus={analysis.closeStatus}
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSaved={() => setShowEditModal(false)}
+        />
+        </div>
+      );
+    })()}
     </div>
   );
 }

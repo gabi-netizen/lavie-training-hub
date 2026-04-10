@@ -380,3 +380,23 @@ export async function getFeedbackSummary(): Promise<FeedbackSummaryItem[]> {
     createdAt: r.createdAt,
   }));
 }
+
+// ─── UPDATE CALL DETAILS ──────────────────────────────────────────────────────
+
+export interface UpdateCallDetailsInput {
+  id: number;
+  repName?: string;
+  callDate?: Date;
+  closeStatus?: "closed" | "not_closed" | "follow_up";
+}
+
+export async function updateCallDetails(input: UpdateCallDetailsInput): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updates: Record<string, unknown> = {};
+  if (input.repName !== undefined) updates.repName = input.repName;
+  if (input.callDate !== undefined) updates.callDate = input.callDate;
+  if (input.closeStatus !== undefined) updates.closeStatus = input.closeStatus;
+  if (Object.keys(updates).length === 0) return;
+  await db.update(callAnalyses).set(updates).where(eq(callAnalyses.id, input.id));
+}
