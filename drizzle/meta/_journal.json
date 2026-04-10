@@ -8,6 +8,13 @@
       "when": 1775803465582,
       "tag": "0000_careless_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1775817035861,
+      "tag": "0001_safe_justice",
+      "breakpoints": true
     }
   ]
 }

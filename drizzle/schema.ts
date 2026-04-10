@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { float, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,36 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Call analyses table — stores AI analysis results for each uploaded call recording.
+ */
+export const callAnalyses = mysqlTable("call_analyses", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The user (rep) who uploaded this call */
+  userId: int("userId").notNull(),
+  repName: varchar("repName", { length: 256 }),
+  /** S3 file key for the audio file */
+  audioFileKey: varchar("audioFileKey", { length: 512 }).notNull(),
+  audioFileUrl: text("audioFileUrl").notNull(),
+  /** Original filename */
+  fileName: varchar("fileName", { length: 256 }),
+  /** Duration in seconds */
+  durationSeconds: float("durationSeconds"),
+  /** Status: pending → transcribing → analyzing → done → error */
+  status: mysqlEnum("status", ["pending", "transcribing", "analyzing", "done", "error"]).default("pending").notNull(),
+  /** Full transcript from Deepgram */
+  transcript: text("transcript"),
+  /** Rep speech percentage (0-100) */
+  repSpeechPct: float("repSpeechPct"),
+  /** Overall score (0-100) */
+  overallScore: float("overallScore"),
+  /** JSON string of the full analysis report */
+  analysisJson: text("analysisJson"),
+  /** Error message if status=error */
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CallAnalysis = typeof callAnalyses.$inferSelect;
+export type InsertCallAnalysis = typeof callAnalyses.$inferInsert;

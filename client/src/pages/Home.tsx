@@ -8,6 +8,7 @@
 */
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Link } from "wouter";
 import { ChevronDown, ChevronUp, Play, BookOpen, Shield, Home as HomeIcon } from "lucide-react";
 
 // ─── VIDEO CDN URLS ───────────────────────────────────────────────────────────
@@ -1018,6 +1019,29 @@ export default function Home() {
                 </button>
               ))}
             </div>
+
+            {/* AI Coach CTA */}
+            <Link href="/ai-coach">
+              <button
+                className="w-full text-left rounded-xl px-4 py-4 flex items-start gap-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ background: "oklch(0.17 0.06 180)", border: "1px solid oklch(0.45 0.18 180 / 40%)" }}
+              >
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                  <span className="text-xl">🤖</span>
+                  <span
+                    className="text-xs font-black w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ background: "oklch(0.55 0.2 180)", color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: "9px" }}
+                  >
+                    AI
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 flex-1">
+                  <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>AI Call Coach</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "oklch(0.6 0.04 250)" }}>Upload a call recording — AI analyses your script, tone, and gives you 3 coaching tips.</p>
+                </div>
+                <ChevronDown className="w-4 h-4 shrink-0 mt-1 -rotate-90" style={{ color: "oklch(0.55 0.2 180)" }} />
+              </button>
+            </Link>
 
             {/* Motivational footer */}
             <div className="rounded-xl px-4 py-4 text-center" style={{ background: "oklch(0.18 0.04 250)", border: "1px solid oklch(0.45 0.18 250 / 25%)" }}>

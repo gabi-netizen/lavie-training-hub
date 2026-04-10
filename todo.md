@@ -27,3 +27,14 @@
 - [ ] User progress tracking (which sections viewed)
 - [ ] Admin panel for managing content
 - [ ] Push notifications for new training content
+- [x] Remove user approval requirement — allow all users to access without owner approval (platform-level: site is set to Public)
+
+## AI Call Coach Feature
+- [x] Add DEEPGRAM_API_KEY and OPENAI_API_KEY as secrets
+- [x] Add call_analyses table to database schema
+- [x] Build server: file upload endpoint (/api/call-upload), Deepgram transcription, OpenAI GPT-4 analysis
+- [x] Build tRPC procedures: startAnalysis, getAnalysis, getMyAnalyses, getAllAnalyses (manager)
+- [x] Build AI Call Coach UI: upload zone + analysis report view with scores/recommendations
+- [x] Build manager dashboard: list all reps' calls with team avg score and per-rep breakdown
+- [x] Add "AI Coach" card to home screen navigation
+- [x] Write vitest tests for callAnalysis module
