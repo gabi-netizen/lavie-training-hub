@@ -573,6 +573,41 @@ export default function CallCoach() {
           </p>
         </div>
 
+        {/* AI Capabilities Disclaimer */}
+        <div className="rounded-xl border border-slate-700 overflow-hidden">
+          <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.18 0.04 250)" }}>
+            <span className="text-base">⚠️</span>
+            <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>What this AI can — and cannot — do</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-700/60">
+            {/* Can do */}
+            <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.15 0.04 160 / 60%)" }}>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-400" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>✅ Reliable — use these insights</p>
+              <ul className="space-y-1.5 text-xs text-slate-300 leading-relaxed">
+                <li>• <strong>Talk/listen ratio</strong> — how much of the call you spoke vs. listened (accurate)</li>
+                <li>• <strong>Script stage detection</strong> — did you cover Opening, Pitch, Close? (good accuracy)</li>
+                <li>• <strong>Keyword spotting</strong> — did you mention trial, subscription, price? (accurate)</li>
+                <li>• <strong>Full transcript</strong> — word-for-word record of the call (95%+ accuracy)</li>
+                <li>• <strong>Obvious frustration signals</strong> — strong negative language, raised objections (good)</li>
+              </ul>
+            </div>
+            {/* Cannot do */}
+            <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.15 0.04 15 / 50%)" }}>
+              <p className="text-xs font-bold uppercase tracking-widest text-red-400" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>❌ Unreliable — do not base decisions on these</p>
+              <ul className="space-y-1.5 text-xs text-slate-300 leading-relaxed">
+                <li>• <strong>Tone of voice / warmth</strong> — AI reads words, not true vocal emotion</li>
+                <li>• <strong>Rapport quality</strong> — whether the customer genuinely connected with you</li>
+                <li>• <strong>Subtle hesitation or sarcasm</strong> — easily missed without human context</li>
+                <li>• <strong>"Why" the call was lost</strong> — AI sees patterns, not root causes</li>
+                <li>• <strong>Overall rep quality</strong> — one score cannot capture a rep's full ability</li>
+              </ul>
+            </div>
+          </div>
+          <div className="px-4 py-2.5 text-xs text-slate-500 italic" style={{ background: "oklch(0.14 0.02 250)" }}>
+            Use this tool as a starting point for coaching conversations — not as a final verdict. Always listen to the call yourself before making performance decisions.
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-1 bg-slate-800/50 rounded-lg p-1">
           {[

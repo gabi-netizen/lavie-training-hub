@@ -38,3 +38,4 @@
 - [x] Build manager dashboard: list all reps' calls with team avg score and per-rep breakdown
 - [x] Add "AI Coach" card to home screen navigation
 - [x] Write vitest tests for callAnalysis module
+- [x] Add "What AI can and cannot do" disclaimer card to AI Call Coach page
