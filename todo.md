@@ -58,3 +58,10 @@
 ## Edit Call Details
 - [x] Add updateCallDetails tRPC procedure (repName, callDate, closeStatus)
 - [x] Add "Edit Details" button in AnalysisReport to update close status, rep name, call date
+
+## Last Edited By Feature
+- [x] Add lastEditedByUserId and lastEditedByName columns to call_analyses schema
+- [x] Update updateCallDetails helper to accept and store lastEditedBy info
+- [x] Update updateCallDetails tRPC procedure to pass ctx.user info to helper
+- [x] Display 'Last Edited By' in the analysis report header
+- [x] Run pnpm db:push to migrate schema

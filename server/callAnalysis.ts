@@ -388,6 +388,8 @@ export interface UpdateCallDetailsInput {
   repName?: string;
   callDate?: Date;
   closeStatus?: "closed" | "not_closed" | "follow_up";
+  lastEditedByUserId?: number;
+  lastEditedByName?: string;
 }
 
 export async function updateCallDetails(input: UpdateCallDetailsInput): Promise<void> {
@@ -397,6 +399,10 @@ export async function updateCallDetails(input: UpdateCallDetailsInput): Promise<
   if (input.repName !== undefined) updates.repName = input.repName;
   if (input.callDate !== undefined) updates.callDate = input.callDate;
   if (input.closeStatus !== undefined) updates.closeStatus = input.closeStatus;
-  if (Object.keys(updates).length === 0) return;
+  if (input.lastEditedByUserId !== undefined) updates.lastEditedByUserId = input.lastEditedByUserId;
+  if (input.lastEditedByName !== undefined) updates.lastEditedByName = input.lastEditedByName;
+  // Always stamp the edit time when any detail is changed
+  updates.lastEditedAt = new Date();
+  if (Object.keys(updates).length === 1) return; // only lastEditedAt — nothing meaningful changed
   await db.update(callAnalyses).set(updates).where(eq(callAnalyses.id, input.id));
 }

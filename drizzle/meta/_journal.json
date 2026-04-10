@@ -29,6 +29,20 @@
       "when": 1775821215334,
       "tag": "0003_light_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1775823476995,
+      "tag": "0004_nifty_clea",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1775823561783,
+      "tag": "0005_wise_junta",
+      "breakpoints": true
     }
   ]
 }

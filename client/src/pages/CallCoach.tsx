@@ -356,6 +356,11 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
               {analysis.closeStatus && <span>{(analysis.repName || analysis.callDate) ? " · " : ""}{{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}</span>}
             </p>
           )}
+          {analysis.lastEditedByName && (
+            <p className="text-xs text-slate-500 mt-0.5 italic">
+              Last edited by {analysis.lastEditedByName}{analysis.lastEditedAt ? ` · ${new Date(analysis.lastEditedAt).toLocaleString()}` : ""}
+            </p>
+          )}
           <div className={`flex items-center gap-2 text-sm mt-1 ${status.color}`}>
             {status.icon}
             <span>{status.label}</span>

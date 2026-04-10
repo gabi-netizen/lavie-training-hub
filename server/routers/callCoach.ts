@@ -94,6 +94,8 @@ export const callCoachRouter = router({
         repName: input.repName,
         callDate: input.callDate ? new Date(input.callDate) : undefined,
         closeStatus: input.closeStatus,
+        lastEditedByUserId: ctx.user.id,
+        lastEditedByName: ctx.user.name ?? ctx.user.email ?? `User #${ctx.user.id}`,
       });
       return { success: true };
     }),

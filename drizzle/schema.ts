@@ -56,6 +56,12 @@ export const callAnalyses = mysqlTable("call_analyses", {
   analysisJson: text("analysisJson"),
   /** Error message if status=error */
   errorMessage: text("errorMessage"),
+  /** User ID of the person who last edited the call details (repName/callDate/closeStatus) */
+  lastEditedByUserId: int("lastEditedByUserId"),
+  /** Display name of the person who last edited the call details */
+  lastEditedByName: varchar("lastEditedByName", { length: 256 }),
+  /** Timestamp of the most recent manual edit to call details */
+  lastEditedAt: timestamp("lastEditedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
