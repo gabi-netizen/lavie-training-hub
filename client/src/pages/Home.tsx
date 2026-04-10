@@ -844,7 +844,8 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("objections");
+  const [rapportOpen, setRapportOpen] = useState<number | null>(null);
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
   const [reframeOpen, setReframeOpen] = useState<number | null>(null);
@@ -902,10 +903,17 @@ export default function Home() {
         </button>
         <button
           onClick={() => setActiveTab("cheatsheet")}
-          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "cheatsheet" ? "tab-active" : "tab-inactive"}`}
+          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "cheatsheet" ? "tab-active" : "tab-inactive"}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Cheat Sheet
+        </button>
+        <button
+          onClick={() => setActiveTab("rapport")}
+          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "rapport" ? "tab-active" : "tab-inactive"}`}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Rapport
         </button>
       </div>
 
@@ -1487,6 +1495,414 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── RAPPORT TAB ── */}
+        {activeTab === "rapport" && (
+          <div className="fade-in flex flex-col gap-6">
+
+            {/* ── BLOCK 1: Stop Reading the Script ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🚨</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Rule #1: Stop Reading the Script</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">She doesn't know what's written in your script. But she knows exactly when you're reading it.</p>
+              </div>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-sm leading-relaxed text-white/80">When you read from a script, your customer hears three things:</p>
+                <div className="flex flex-col gap-2">
+                  {[
+                    "\"This isn't personal — he says this to everyone.\"",
+                    "\"He's not listening to me — he's just waiting for his turn to speak.\"",
+                    "\"This is a sales call, not a conversation.\"",
+                  ].map((line, i) => (
+                    <div key={i} className="flex gap-3 items-start">
+                      <span className="text-base shrink-0" style={{ color: "oklch(0.65 0.2 15)" }}>✗</span>
+                      <p className="text-sm leading-relaxed italic" style={{ color: "oklch(0.75 0.05 250)" }}>{line}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-white/80 pt-1 border-t border-white/10">The moment she feels that — she's gone. Not because of the product. Because she didn't feel like anyone was actually talking to her.</p>
+                <div className="rounded-lg px-4 py-3 mt-1" style={{ background: "oklch(0.22 0.04 250)", border: "1px solid oklch(0.45 0.18 250 / 40%)" }}>
+                  <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Rule</p>
+                  <p className="text-sm leading-relaxed mt-1" style={{ color: "oklch(0.85 0.08 250)" }}>The script is the map — not the road. Knowing it by heart is not enough. You need to forget it exists and talk to the person in front of you.</p>
+                </div>
+              </div>
+              {/* Comparison table */}
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.65 0.18 15)", width: "50%" }}>Rep Reading the Script</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "50%" }}>Rep Having a Conversation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ["Flat, even tone — no variation", "Tone rises and falls with her energy"],
+                      ["Rushes through without pausing", "Pauses after every key sentence"],
+                      ["Doesn't react to what she said", "Picks up on one word she used and runs with it"],
+                      ["Moves to the next line regardless", "Responds to what actually just happened"],
+                      ["Sounds like a robot", "Sounds like a friend who knows skincare"],
+                    ].map(([bad, good], i) => (
+                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.6 0.08 15)" }}>{bad}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{good}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">The script tells you WHAT to say. Rapport tells you HOW to say it. You need both — but rapport comes first.</p>
+              </div>
+            </div>
+
+            {/* ── BLOCK 2: The 3-Second Rule ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🎭</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The 3-Second Rule</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>First impressions — your voice is the door</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Before you've said a single word — she's already decided whether she wants to talk to you. Your voice is the door.</p>
+              </div>
+              <div className="rounded-xl px-4 py-4" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-sm leading-relaxed text-white/80">The first 3 seconds of the call decide everything that follows. Your customer is asking herself one question:</p>
+                <p className="text-base font-bold text-white mt-3 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"Do I want to talk to this person?"</p>
+              </div>
+              {/* Voice signals table */}
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "20%" }}>Signal</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "38%" }}>What She Hears</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "42%" }}>What to Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ["Energy", "\"Is she happy I picked up?\"", "Smile physically before you speak — it changes your voice instantly"],
+                      ["Pace", "\"Is she rushing to get this over with?\"", "Speak 20% slower than feels natural to you"],
+                      ["Tone", "\"Is she talking to me or to everyone?\"", "Drop your pitch lower — a calm, warm voice builds trust immediately"],
+                    ].map(([signal, hears, doThis], i) => (
+                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                        <td className="px-3 py-3 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{signal}</td>
+                        <td className="px-3 py-3 italic" style={{ color: "oklch(0.7 0.05 250)" }}>{hears}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{doThis}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Opening lines */}
+              <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Your Opening Line — Pick the Style That Fits You</p>
+              <p className="text-sm" style={{ color: "oklch(0.6 0.01 250)" }}>Every version includes who you are, where you're calling from, and why. The energy and delivery is yours to own.</p>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    style: "Warm & Excited",
+                    line: "Hi [Name]! It's [Your Name] calling from Lavie Labs — we're a medical-grade skincare company and I'm calling today because we'd love to send you a complimentary Anti-Aging Starter Kit to try. So glad I caught you!",
+                  },
+                  {
+                    style: "Confident & Direct",
+                    line: "Hi [Name], it's [Your Name] from Lavie Labs. We're a medical-grade skincare company and the reason I'm calling is we want to send you a complimentary starter kit — completely free of charge. Do you have two minutes?",
+                  },
+                  {
+                    style: "Friendly & Curious",
+                    line: "Hi [Name]! It's [Your Name] from Lavie Labs — we're a medical-grade skincare company. I'm calling because we've just launched something really exciting and I specifically wanted to reach out to you today — do you have two minutes?",
+                  },
+                  {
+                    style: "Launch Campaign",
+                    line: "Hi [Name], it's [Your Name] calling from Lavie Labs. We're a medical-grade skincare company and the reason I'm calling you today is that we've just upgraded our hero product, Matinika, and we've launched a specific campaign targeting women we know are exactly the right fit for it — women who take their skin seriously — and we'd love to send you a complimentary starter kit to try. I just wanted to make sure you heard about it directly from us.",
+                  },
+                  {
+                    style: "Luxury & Exclusive",
+                    line: "Hi [Name], it's [Your Name] from Lavie Labs. We're a medical-grade skincare company. We've just improved the formula of our hero product, Matinika, and we've launched a specific campaign for women we believe are exactly our target audience — women we think will truly get the most out of what this product does. That's the reason I'm calling you today.",
+                  },
+                  {
+                    style: "Soft & Personal",
+                    line: "Hi [Name], it's [Your Name] calling from Lavie Labs. We specialise in medical-grade skincare and I'm reaching out personally today because we'd love to send you one of our complimentary starter kits to try at home.",
+                  },
+                  {
+                    style: "High Energy",
+                    line: "[Name]! Hi, it's [Your Name] from Lavie Labs — we're a medical-grade skincare company and I am so excited to tell you why I'm calling. We are sending out complimentary Anti-Aging Starter Kits and I really wanted to make sure you got yours!",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                    <button
+                      onClick={() => setRapportOpen(rapportOpen === i ? null : i)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left"
+                      style={{ background: "oklch(0.22 0.03 250)" }}
+                    >
+                      <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.style}</span>
+                      {rapportOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
+                    </button>
+                    {rapportOpen === i && (
+                      <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                        <p className="text-base leading-relaxed">"{item.line}"</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Whichever opener you choose — pause after the first sentence. Give her one second to respond. That pause is what turns a sales call into a conversation.</p>
+              </div>
+            </div>
+
+            {/* ── BLOCK 3: Mirror & Match ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🧐</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Mirror & Match</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Speak her language</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">People buy from people they feel are like them. Mirror & Match isn't a trick — it's respect.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    number: "1",
+                    title: "Speaking Pace",
+                    body: "She speaks fast? Match it. Slow? Slow down. Don't force her to run at your pace.",
+                  },
+                  {
+                    number: "2",
+                    title: "Tone & Energy",
+                    body: "She's quiet and matter-of-fact? Be professional and calm. She's warm and chatty? Be warm and enthusiastic.",
+                  },
+                  {
+                    number: "3",
+                    title: "Her Exact Words",
+                    body: "She said \"moisturiser\"? Don't say \"hydration product.\" She said \"tired\"? Use the word \"tired\" — not \"lack of radiance.\" Echo her language back.",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl px-4 py-4 flex gap-3 items-start" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                    <span className="text-sm font-black shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "oklch(0.3 0.12 250)", color: "oklch(0.85 0.1 250)", fontFamily: "'Space Grotesk', sans-serif" }}>{item.number}</span>
+                    <div>
+                      <p className="text-sm font-bold text-white mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</p>
+                      <p className="text-sm leading-relaxed text-white/80">{item.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Example */}
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.16 0.02 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Example from a real call</p>
+                <p className="text-sm italic" style={{ color: "oklch(0.75 0.05 250)" }}>Customer: "My skin just looks so tired lately..."</p>
+                <div className="flex gap-2 items-start">
+                  <span style={{ color: "oklch(0.65 0.2 15)" }} className="text-base shrink-0">✗</span>
+                  <p className="text-sm leading-relaxed" style={{ color: "oklch(0.6 0.08 15)" }}>"Great! So our product contains retinol which improves skin texture and..."</p>
+                </div>
+                <div className="flex gap-2 items-start">
+                  <span style={{ color: "oklch(0.75 0.2 145)" }} className="text-base shrink-0">✓</span>
+                  <p className="text-sm leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>"Tired — I completely get that. Tell me more, when do you notice it the most?"</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">The good rep echoed her exact word — "tired." She felt heard. That's everything.</p>
+              </div>
+            </div>
+
+            {/* ── BLOCK 4: The Magic Words ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">💬</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Magic Words</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Phrases that make her feel genuinely heard</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">These are not script lines. These are tools you weave into the conversation naturally — based on what she just said. Use them one at a time, not all in one call.</p>
+              </div>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "52%" }}>Phrase</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "48%" }}>When to Use It</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ["\"I completely understand what you mean.\"", "When she describes a skin concern"],
+                      ["\"Tell me more about that...\"", "When she says something important — let her keep going"],
+                      ["\"You're not alone in that — I hear this from so many women.\"", "When she feels like her problem is unique"],
+                      ["\"That makes complete sense.\"", "When she explains why she's hesitant"],
+                      ["\"Great question.\"", "Before answering any question she asks"],
+                      ["\"That's exactly why I'm calling you today.\"", "When she describes exactly what the product solves"],
+                      ["\"Let me just make sure I've got this right...\"", "Before summarising her need back to her"],
+                      ["\"[Name], do you know what...\"", "When you want to create a personal moment"],
+                    ].map(([phrase, when], i) => (
+                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                        <td className="px-3 py-3 font-semibold leading-relaxed" style={{ color: "oklch(0.88 0.05 250)" }}>{phrase}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.75 0.12 145)" }}>{when}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Golden rule: after every one of these phrases — stop. Let her speak. The silence after "Tell me more" is worth more than any script line.</p>
+              </div>
+            </div>
+
+            {/* ── BLOCK 5: AER Formula ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">👂</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Listening Formula: AER</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Acknowledge → Empathise → Redirect</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">The best reps speak less than 40% of the call. The rest? They listen.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    letter: "A",
+                    label: "Acknowledge",
+                    desc: "Repeat back what she said in her own words. Don't interpret — reflect.",
+                    example: "\"So you're saying your skin feels really dry, especially in the morning — is that right?\"",
+                    color: "oklch(0.65 0.18 250)",
+                    bg: "oklch(0.18 0.06 250)",
+                    border: "oklch(0.45 0.18 250 / 40%)",
+                  },
+                  {
+                    letter: "E",
+                    label: "Empathise",
+                    desc: "Tell her you understand — and that it makes sense.",
+                    example: "\"That's really uncomfortable, especially when you just want to feel good about yourself when you wake up.\"",
+                    color: "oklch(0.75 0.15 60)",
+                    bg: "oklch(0.18 0.06 60)",
+                    border: "oklch(0.45 0.15 60 / 40%)",
+                  },
+                  {
+                    letter: "R",
+                    label: "Redirect",
+                    desc: "Now — and only now — connect what she said to the product.",
+                    example: "\"That's exactly why I'm so excited to tell you about Matinika — because that is precisely what it does for dry skin.\"",
+                    color: "oklch(0.75 0.2 145)",
+                    bg: "oklch(0.16 0.06 145)",
+                    border: "oklch(0.45 0.18 145 / 40%)",
+                  },
+                ].map((item) => (
+                  <div key={item.letter} className="rounded-xl px-4 py-4 flex flex-col gap-2" style={{ background: item.bg, border: `1px solid ${item.border}` }}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-black" style={{ color: item.color, fontFamily: "'Space Grotesk', sans-serif" }}>{item.letter}</span>
+                      <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.label}</span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-white/80">{item.desc}</p>
+                    <p className="text-sm leading-relaxed italic" style={{ color: item.color }}>e.g. {item.example}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Full example */}
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.16 0.02 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Full Example</p>
+                <p className="text-sm italic" style={{ color: "oklch(0.75 0.05 250)" }}>Customer: "I've tried so many creams and nothing ever works. I'm honestly giving up."</p>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.65 0.18 250)" }}>A: </span><span className="text-white/80">"So you've tried a lot of products and haven't seen real results — is that right?"</span></p>
+                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.75 0.15 60)" }}>E: </span><span className="text-white/80">"That's genuinely frustrating — spending money and time and not seeing a change. I completely understand."</span></p>
+                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>R: </span><span className="text-white/80">"And that's exactly why Lavie Labs works differently. This isn't another off-the-shelf cream. It's a medical-grade concentration that works at a completely different level."</span></p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Notice: we didn't mention the product until she felt heard. That's the correct order. Always.</p>
+              </div>
+            </div>
+
+            {/* ── BLOCK 6: Rapport Killers ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">⚡</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Rapport Killers</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>5 mistakes that destroy the connection instantly</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">These are mistakes reps make every single day without realising. Read this list before every shift.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    title: "Killer 1 — Jumping to the pitch before she's finished",
+                    bad: "Her: \"My skin is so dry lately...\" → You: \"Great! So Matinika has 32% Hyaluronic Acid which...\"",
+                    good: "\"Dry — tell me more. When do you notice it the most?\"",
+                  },
+                  {
+                    title: "Killer 2 — Saying \"I understand\" without proving it",
+                    bad: "\"I understand, so our product...\"",
+                    good: "\"I understand — you're saying your skin feels tight and rough, especially in winter. Is that right?\"",
+                  },
+                  {
+                    title: "Killer 3 — Talking about the product before talking about her",
+                    bad: "Starting the pitch before she's told you what's bothering her",
+                    good: "Magic Wand question first — always. The product comes after you know what she needs.",
+                  },
+                  {
+                    title: "Killer 4 — Using words she didn't use",
+                    bad: "She said \"tired\" → You said \"lack of radiance\"",
+                    good: "Echo her exact word back. \"Tired\" means \"tired.\" Don't translate it.",
+                  },
+                  {
+                    title: "Killer 5 — Talking after the close",
+                    bad: "\"Brilliant! So we'll send you the kit, and we also have... and you can also... and just so you know...\"",
+                    good: "After \"Will you be using Visa, Mastercard, or Amex?\" — stop. Say nothing. Let her answer.",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.35 0.1 15 / 60%)" }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.2 0.06 15)" }}>
+                      <span style={{ color: "oklch(0.65 0.2 15)" }}>💀</span>
+                      <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</p>
+                    </div>
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "oklch(0.16 0.02 250)" }}>
+                      <div className="flex gap-2 items-start">
+                        <span className="text-sm shrink-0" style={{ color: "oklch(0.65 0.2 15)" }}>✗</span>
+                        <p className="text-sm leading-relaxed italic" style={{ color: "oklch(0.6 0.08 15)" }}>{item.bad}</p>
+                      </div>
+                      <div className="flex gap-2 items-start">
+                        <span className="text-sm shrink-0" style={{ color: "oklch(0.75 0.2 145)" }}>✓</span>
+                        <p className="text-sm leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{item.good}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Killer 5 is the most common. Reps are scared of silence and keep talking after the close. Silence is part of the close — don't fill it.</p>
               </div>
             </div>
 
