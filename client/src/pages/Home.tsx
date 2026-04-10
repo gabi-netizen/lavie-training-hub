@@ -8,7 +8,7 @@
 */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ChevronDown, ChevronUp, Play, BookOpen, Shield } from "lucide-react";
+import { ChevronDown, ChevronUp, Play, BookOpen, Shield, Home as HomeIcon } from "lucide-react";
 
 // ─── VIDEO CDN URLS ───────────────────────────────────────────────────────────
 const OBJ1_CLIPS = [
@@ -844,7 +844,7 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("livescript");
+  const [activeTab, setActiveTab] = useState<"home" | "objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("home");
   const [rapportOpen, setRapportOpen] = useState<number | null>(null);
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
@@ -871,40 +871,161 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex border-b border-white/8 overflow-x-auto scrollbar-none" style={{ background: "oklch(0.16 0.025 250)" }}>
-        {([
-          { id: "livescript",   label: "Live Call Script",  num: "1" },
-          { id: "rapport",      label: "Rapport",           num: "2" },
-          { id: "cheatsheet",   label: "Cheat Sheet",       num: "3" },
-          { id: "objections",   label: "Objections",        num: "4" },
-          { id: "productvalue", label: "Product Value",     num: "5" },
-          { id: "diagnostics",  label: "Call Diagnostics",  num: "6" },
-        ] as { id: typeof activeTab; label: string; num: string }[]).map((tab, i, arr) => (
+      {/* Tabs — hidden on home screen */}
+      {activeTab !== "home" && (
+        <div className="flex border-b border-white/8 overflow-x-auto scrollbar-none" style={{ background: "oklch(0.16 0.025 250)" }}>
+          {([
+            { id: "livescript",   label: "Live Call Script",  num: "1" },
+            { id: "rapport",      label: "Rapport",           num: "2" },
+            { id: "cheatsheet",   label: "Cheat Sheet",       num: "3" },
+            { id: "objections",   label: "Objections",        num: "4" },
+            { id: "productvalue", label: "Product Value",     num: "5" },
+            { id: "diagnostics",  label: "Call Diagnostics",  num: "6" },
+          ] as { id: typeof activeTab; label: string; num: string }[]).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 py-3 px-4 text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${activeTab === tab.id ? "tab-active" : "tab-inactive"}`}
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <span
+                className="text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: activeTab === tab.id ? "oklch(0.55 0.22 250)" : "oklch(0.38 0.08 250)",
+                  color: "white",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontSize: "9px",
+                }}
+              >
+                {tab.num}
+              </span>
+              {tab.label}
+            </button>
+          ))}
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 py-3 px-4 text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${activeTab === tab.id ? "tab-active" : "tab-inactive"}`}
+            onClick={() => setActiveTab("home")}
+            className="flex items-center gap-1.5 py-3 px-4 text-sm font-semibold whitespace-nowrap transition-colors shrink-0 tab-inactive ml-auto"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            <span
-              className="text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-              style={{
-                background: activeTab === tab.id ? "oklch(0.55 0.22 250)" : "oklch(0.28 0.04 250)",
-                color: activeTab === tab.id ? "white" : "oklch(0.5 0.05 250)",
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: "9px",
-              }}
-            >
-              {tab.num}
-            </span>
-            {tab.label}
+            <HomeIcon className="w-3.5 h-3.5" />
           </button>
-        ))}
-      </div>
+        </div>
+      )}
+
 
       {/* Content */}
       <main className="flex-1 px-4 py-5 max-w-lg mx-auto w-full">
+
+        {/* ── HOME SCREEN ── */}
+        {activeTab === "home" && (
+          <div className="fade-in flex flex-col gap-8 pt-4">
+            {/* Hero headline */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.55 0.18 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Lavié Labs — Training Hub</p>
+              <h2 className="text-3xl font-black leading-tight text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Every great call<br />starts before<br /><span style={{ color: "oklch(0.72 0.2 250)" }}>you dial.</span>
+              </h2>
+              <p className="text-sm leading-relaxed" style={{ color: "oklch(0.62 0.04 250)" }}>
+                You don't need a perfect script. You need the right mindset, the right words, and the confidence to use them. Everything you need is right here.
+              </p>
+            </div>
+
+            {/* Section cards */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.45 0.06 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Where do you want to start?</p>
+              {([
+                {
+                  id: "livescript",
+                  num: "1",
+                  title: "Live Call Script",
+                  desc: "The full word-for-word call flow. Open this before you dial.",
+                  icon: "📞",
+                  accent: "oklch(0.55 0.22 250)",
+                  bg: "oklch(0.18 0.06 250)",
+                  border: "oklch(0.45 0.18 250 / 35%)",
+                },
+                {
+                  id: "rapport",
+                  num: "2",
+                  title: "Rapport",
+                  desc: "Stop reading. Start connecting. How to make her feel heard.",
+                  icon: "🤝",
+                  accent: "oklch(0.72 0.18 180)",
+                  bg: "oklch(0.17 0.05 180)",
+                  border: "oklch(0.45 0.15 180 / 35%)",
+                },
+                {
+                  id: "cheatsheet",
+                  num: "3",
+                  title: "Cheat Sheet",
+                  desc: "Quick reference for pitch, walkthrough, and close. Keep this open during the call.",
+                  icon: "⚡",
+                  accent: "oklch(0.78 0.18 80)",
+                  bg: "oklch(0.17 0.05 80)",
+                  border: "oklch(0.5 0.15 80 / 35%)",
+                },
+                {
+                  id: "objections",
+                  num: "4",
+                  title: "Objections",
+                  desc: "She's pushing back. Tap the objection and get the exact response.",
+                  icon: "🛡️",
+                  accent: "oklch(0.65 0.2 15)",
+                  bg: "oklch(0.17 0.05 15)",
+                  border: "oklch(0.45 0.18 15 / 35%)",
+                },
+                {
+                  id: "productvalue",
+                  num: "5",
+                  title: "Product Value",
+                  desc: "Deep product knowledge. Know what you're selling inside out.",
+                  icon: "🧔",
+                  accent: "oklch(0.72 0.18 300)",
+                  bg: "oklch(0.17 0.05 300)",
+                  border: "oklch(0.45 0.15 300 / 35%)",
+                },
+                {
+                  id: "diagnostics",
+                  num: "6",
+                  title: "Call Diagnostics",
+                  desc: "Review what went wrong. Use this after the call to get better.",
+                  icon: "🔍",
+                  accent: "oklch(0.65 0.12 250)",
+                  bg: "oklch(0.16 0.03 250)",
+                  border: "oklch(0.4 0.1 250 / 35%)",
+                },
+              ] as { id: string; num: string; title: string; desc: string; icon: string; accent: string; bg: string; border: string }[]).map((card) => (
+                <button
+                  key={card.id}
+                  onClick={() => setActiveTab(card.id as typeof activeTab)}
+                  className="w-full text-left rounded-xl px-4 py-4 flex items-start gap-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  style={{ background: card.bg, border: `1px solid ${card.border}` }}
+                >
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <span className="text-xl">{card.icon}</span>
+                    <span
+                      className="text-xs font-black w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: card.accent, color: "white", fontFamily: "'Space Grotesk', sans-serif", fontSize: "9px" }}
+                    >
+                      {card.num}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 flex-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{card.title}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.6 0.04 250)" }}>{card.desc}</p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 shrink-0 mt-1 -rotate-90" style={{ color: card.accent }} />
+                </button>
+              ))}
+            </div>
+
+            {/* Motivational footer */}
+            <div className="rounded-xl px-4 py-4 text-center" style={{ background: "oklch(0.18 0.04 250)", border: "1px solid oklch(0.45 0.18 250 / 25%)" }}>
+              <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"The best reps don't sell products."</p>
+              <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.1 250)" }}>They solve problems. They build trust. Then the sale happens naturally.</p>
+            </div>
+          </div>
+        )}
 
         {/* ── OBJECTION TRAINER TAB ── */}
         {activeTab === "objections" && (
