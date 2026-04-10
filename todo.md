@@ -74,3 +74,6 @@
 - [x] Add customerName to Edit Details modal for manual override
 - [x] Display customer name in analysis report header and manager view
 - [x] Run pnpm db:push to migrate schema
+
+## Flag Button Visibility
+- [x] Make "Flag Incorrect Analysis" button always visible (remove hover-only visibility), keep blue/white colors

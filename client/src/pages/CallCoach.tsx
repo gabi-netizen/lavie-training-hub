@@ -576,7 +576,7 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
               variant="ghost"
               size="sm"
               onClick={() => setShowFlagModal(true)}
-              className="text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 gap-2"
+              className="text-white bg-blue-700 hover:bg-blue-600 hover:text-white gap-2 border border-blue-500"
             >
               <Flag className="w-4 h-4" />
               Flag incorrect analysis
