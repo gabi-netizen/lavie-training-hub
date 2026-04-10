@@ -199,6 +199,7 @@ function EditDetailsModal({
   initialRepName,
   initialCallDate,
   initialCloseStatus,
+  initialCustomerName,
   open,
   onClose,
   onSaved,
@@ -207,6 +208,7 @@ function EditDetailsModal({
   initialRepName?: string | null;
   initialCallDate?: Date | null;
   initialCloseStatus?: string | null;
+  initialCustomerName?: string | null;
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -219,6 +221,7 @@ function EditDetailsModal({
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up">(
     (initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed"
   );
+  const [customerName, setCustomerName] = useState(initialCustomerName ?? "");
   const [saved, setSaved] = useState(false);
 
   // Sync form state whenever the modal opens (handles reopening with fresh data)
@@ -227,9 +230,10 @@ function EditDetailsModal({
       setRepName(initialRepName ?? "");
       setCallDate(initialCallDate ? new Date(initialCallDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]);
       setCloseStatus((initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed");
+      setCustomerName(initialCustomerName ?? "");
       setSaved(false);
     }
-  }, [open, initialRepName, initialCallDate, initialCloseStatus]);
+  }, [open, initialRepName, initialCallDate, initialCloseStatus, initialCustomerName]);
   const utils = trpc.useUtils();
   const updateDetails = trpc.callCoach.updateCallDetails.useMutation({
     onSuccess: async () => {
@@ -257,6 +261,16 @@ function EditDetailsModal({
         ) : (
           <>
             <div className="space-y-4 py-2">
+              <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Customer Name</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Auto-extracted from call, or enter manually"
+                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
               <div>
                 <label className="text-slate-300 text-sm mb-1.5 block">Rep Name</label>
                 <input
@@ -292,7 +306,7 @@ function EditDetailsModal({
             <DialogFooter>
               <Button variant="ghost" onClick={handleClose} className="text-slate-400">Cancel</Button>
               <Button
-                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus })}
+                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined })}
                 disabled={updateDetails.isPending}
                 className="bg-teal-600 hover:bg-teal-500 text-white"
               >
@@ -349,6 +363,12 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
         </Button>
         <div className="flex-1">
           <h2 className="text-xl font-semibold text-white">{analysis.fileName ?? "Call Recording"}</h2>
+          {analysis.customerName && (
+            <p className="text-sm text-teal-300 font-medium mt-0.5">
+              👤 {analysis.customerName}
+              {!analysis.repName && !analysis.callDate && !analysis.closeStatus ? null : <span className="text-slate-500 font-normal"> (customer)</span>}
+            </p>
+          )}
           {(analysis.repName || analysis.callDate || analysis.closeStatus) && (
             <p className="text-xs text-slate-400 mt-0.5">
               {analysis.repName && <span>{analysis.repName}</span>}
@@ -572,6 +592,7 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
           initialRepName={analysis.repName}
           initialCallDate={analysis.callDate}
           initialCloseStatus={analysis.closeStatus}
+          initialCustomerName={analysis.customerName}
           open={showEditModal}
           onClose={() => setShowEditModal(false)}
           onSaved={() => setShowEditModal(false)}
@@ -842,7 +863,10 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                    <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
-                    <p className="text-slate-500 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
+                    <p className="text-slate-500 text-xs">
+                      {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
+                      {new Date(a.createdAt).toLocaleString()}
+                    </p>
                   </div>
                   {a.overallScore != null && (
                     <span className={`text-sm font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</span>

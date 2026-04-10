@@ -98,6 +98,7 @@ export interface CallAnalysisReport {
   toneScore: number; // 0-100
   closingAttempted: boolean;
   magicWandUsed: boolean;
+  customerName: string | null; // extracted from transcript, null if not found
 }
 
 export async function analyseCallWithAI(
@@ -141,8 +142,11 @@ Analyse this sales call and return a JSON object with this exact structure:
   "scriptComplianceScore": <number 0-100>,
   "toneScore": <number 0-100>,
   "closingAttempted": <bool>,
-  "magicWandUsed": <bool>
+  "magicWandUsed": <bool>,
+  "customerName": "<first name of the customer if mentioned in the call, otherwise null>"
 }
+
+IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
 
 Be specific, actionable, and encouraging. Focus on Lavie Labs script compliance.`;
 
@@ -194,6 +198,7 @@ export async function updateCallAnalysisStatus(
     overallScore: number;
     analysisJson: string;
     errorMessage: string;
+    customerName: string;
   }>
 ) {
   const db = await getDb();
@@ -318,12 +323,14 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string) 
     await updateCallAnalysisStatus(analysisId, { status: "analyzing" });
     const report = await analyseCallWithAI(transcript, repSpeechPct, durationSeconds / 60);
 
-    // Step 3: Save results
-    await updateCallAnalysisStatus(analysisId, {
+    // Step 3: Save results (including AI-extracted customer name)
+    const savePayload: Parameters<typeof updateCallAnalysisStatus>[1] = {
       status: "done",
       overallScore: report.overallScore,
       analysisJson: JSON.stringify(report),
-    });
+    };
+    if (report.customerName) savePayload.customerName = report.customerName;
+    await updateCallAnalysisStatus(analysisId, savePayload);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[CallAnalysis] Failed for id=${analysisId}:`, message);
@@ -388,6 +395,7 @@ export interface UpdateCallDetailsInput {
   repName?: string;
   callDate?: Date;
   closeStatus?: "closed" | "not_closed" | "follow_up";
+  customerName?: string;
   lastEditedByUserId?: number;
   lastEditedByName?: string;
 }
@@ -399,6 +407,7 @@ export async function updateCallDetails(input: UpdateCallDetailsInput): Promise<
   if (input.repName !== undefined) updates.repName = input.repName;
   if (input.callDate !== undefined) updates.callDate = input.callDate;
   if (input.closeStatus !== undefined) updates.closeStatus = input.closeStatus;
+  if (input.customerName !== undefined) updates.customerName = input.customerName;
   if (input.lastEditedByUserId !== undefined) updates.lastEditedByUserId = input.lastEditedByUserId;
   if (input.lastEditedByName !== undefined) updates.lastEditedByName = input.lastEditedByName;
   // Always stamp the edit time when any detail is changed

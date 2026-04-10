@@ -43,6 +43,13 @@
       "when": 1775823561783,
       "tag": "0005_wise_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1775824841549,
+      "tag": "0006_wide_vengeance",
+      "breakpoints": true
     }
   ]
 }

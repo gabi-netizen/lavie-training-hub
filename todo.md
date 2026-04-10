@@ -65,3 +65,12 @@
 - [x] Update updateCallDetails tRPC procedure to pass ctx.user info to helper
 - [x] Display 'Last Edited By' in the analysis report header
 - [x] Run pnpm db:push to migrate schema
+
+## Customer Name Auto-Extraction
+- [x] Add customerName column to call_analyses schema
+- [x] Update CallAnalysisReport interface to include customerName field
+- [x] Update AI prompt to extract customer name from transcript
+- [x] Store extracted customerName after analysis
+- [x] Add customerName to Edit Details modal for manual override
+- [x] Display customer name in analysis report header and manager view
+- [x] Run pnpm db:push to migrate schema

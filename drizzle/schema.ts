@@ -56,6 +56,8 @@ export const callAnalyses = mysqlTable("call_analyses", {
   analysisJson: text("analysisJson"),
   /** Error message if status=error */
   errorMessage: text("errorMessage"),
+  /** Customer name extracted from the call transcript by AI, or manually set */
+  customerName: varchar("customerName", { length: 256 }),
   /** User ID of the person who last edited the call details (repName/callDate/closeStatus) */
   lastEditedByUserId: int("lastEditedByUserId"),
   /** Display name of the person who last edited the call details */

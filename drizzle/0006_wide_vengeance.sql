@@ -1,0 +1,1 @@
+ALTER TABLE `call_analyses` ADD `customerName` varchar(256);
