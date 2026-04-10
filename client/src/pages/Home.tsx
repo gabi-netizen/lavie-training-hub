@@ -921,18 +921,18 @@ export default function Home() {
           <div className="fade-in flex flex-col gap-8 pt-4">
             {/* Hero headline */}
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.55 0.18 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Lavié Labs — Training Hub</p>
-              <h2 className="text-3xl font-black leading-tight text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Every great call<br />starts before<br /><span style={{ color: "oklch(0.72 0.2 250)" }}>you dial.</span>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.7 0.08 250)", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.12em" }}>Lavié Labs — Training Hub</p>
+              <h2 className="text-4xl font-black leading-tight text-white" style={{ fontFamily: "'Playfair Display', serif", lineHeight: "1.15" }}>
+                Every great call<br />starts before<br /><span style={{ color: "oklch(0.92 0.04 80)", fontStyle: "italic" }}>you dial.</span>
               </h2>
-              <p className="text-sm leading-relaxed" style={{ color: "oklch(0.62 0.04 250)" }}>
+              <p className="text-sm leading-relaxed" style={{ color: "oklch(0.72 0.03 250)" }}>
                 You don't need a perfect script. You need the right mindset, the right words, and the confidence to use them. Everything you need is right here.
               </p>
             </div>
 
             {/* Section cards */}
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.45 0.06 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Where do you want to start?</p>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.65 0.06 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Where do you want to start?</p>
               {([
                 {
                   id: "livescript",
