@@ -844,7 +844,7 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet">("objections");
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
   const [reframeOpen, setReframeOpen] = useState<number | null>(null);
@@ -895,10 +895,17 @@ export default function Home() {
         </button>
         <button
           onClick={() => setActiveTab("productvalue")}
-          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "productvalue" ? "tab-active" : "tab-inactive"}`}
+          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "productvalue" ? "tab-active" : "tab-inactive"}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Product Value
+        </button>
+        <button
+          onClick={() => setActiveTab("cheatsheet")}
+          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "cheatsheet" ? "tab-active" : "tab-inactive"}`}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Cheat Sheet
         </button>
       </div>
 
@@ -1235,6 +1242,257 @@ export default function Home() {
 
           </div>
         )}
+        {/* ── LIVE CALL CHEAT SHEET TAB ── */}
+        {activeTab === "cheatsheet" && (
+          <div className="fade-in flex flex-col gap-5">
+
+            {/* Header note */}
+            <div className="coaching-note flex gap-2 items-start">
+              <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+              <p className="text-sm leading-relaxed">Keep this open on your screen during every call. Find any stage in one second.</p>
+            </div>
+
+            {/* ── Section 1: Opening & Discovery ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">📞</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>1. Opening & Discovery</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.82 0.22 145)", fontWeight: 700 }}>Build trust — high energy — smile through the phone</p>
+                </div>
+              </div>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "28%" }}>Stage</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "42%" }}>What to Say</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "30%" }}>Your Goal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        stage: "The Intro",
+                        say: "\"Hi [Name], it's [Your Name] from Lavie Labs. We're calling today to send you a complimentary Anti-Aging Starter Kit to try!\"",
+                        goal: "High energy, big smile. Get them excited immediately.",
+                      },
+                      {
+                        stage: "Skin Type",
+                        say: "\"Because our products are medical-grade, is your skin more on the dry side, combination, or oily?\"",
+                        goal: "Listen to how their skin feels to them.",
+                      },
+                      {
+                        stage: "The Routine",
+                        say: "\"Do you currently have a skincare routine? What are you using right now?\"",
+                        goal: "Compliment their effort. Ask if they use Hyaluronic Acid.",
+                      },
+                      {
+                        stage: "Magic Wand",
+                        say: "\"If you had a magic wand and could improve just ONE thing about your skin right now, what would it be?\"",
+                        goal: "WRITE DOWN their exact answer. You will use this to close.",
+                        goalHighlight: true,
+                      },
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                        <td className="px-3 py-3 font-semibold text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.stage}</td>
+                        <td className="px-3 py-3 text-white/80 leading-relaxed">{row.say}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: row.goalHighlight ? "oklch(0.82 0.22 145)" : "oklch(0.75 0.12 145)", fontWeight: row.goalHighlight ? 700 : 400 }}>{row.goal}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── Section 2: The Pitch ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">✨</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>2. The Pitch</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Match the product to their Magic Wand answer</p>
+                </div>
+              </div>
+              <div className="coaching-note flex gap-2 items-start">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-sm leading-relaxed">Sell the BENEFIT, not the feature. Always tie back to what they told you in the Magic Wand question.</p>
+              </div>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "28%" }}>Product</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.6 0.08 15)", width: "30%" }}>Feature (don't focus here)</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "42%" }}>Benefit — Say This!</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        product: "Matinika (Day & Night)",
+                        feature: "32% Hyaluronic Acid",
+                        benefit: "\"That tight, dry feeling is going to vanish. Your skin will feel incredibly soft, deeply nourished, and you'll have a beautiful, healthy glow all day.\"",
+                      },
+                      {
+                        product: "Oulala (Retinol Serum)",
+                        feature: "Sweeps away dead skin cells",
+                        benefit: "\"You are going to wake up looking refreshed, with that plump, youthful radiance. It significantly softens those deeper lines.\"",
+                      },
+                      {
+                        product: "Ashkara (Eye Serum)",
+                        feature: "Intense hydration for thin skin",
+                        benefit: "\"It visibly reduces morning puffiness and brightens dark circles. Apply mornings and evenings.\"",
+                      },
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                        <td className="px-3 py-3 font-semibold text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.product}</td>
+                        <td className="px-3 py-3" style={{ color: "oklch(0.55 0.06 15)" }}>{row.feature}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{row.benefit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── Section 3: Website Walkthrough ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">⭐</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>3. Website Walkthrough</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Social proof — build trust visually</p>
+                </div>
+              </div>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "25%" }}>Step</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "40%" }}>What to Say</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "35%" }}>What to Look For</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        step: "Send Email",
+                        say: "\"I've just sent an email to [Email]. Could you let me know when that pops up?\"",
+                        look: "Wait for confirmation.",
+                      },
+                      {
+                        step: "Trustpilot",
+                        say: "\"If you click the link, you'll see our homepage. We are incredibly proud of our 4.5-star rating on Trustpilot.\"",
+                        look: "Establish authority and trust.",
+                      },
+                      {
+                        step: "Before & Afters",
+                        say: "\"Scroll down to the Before & After photos. Do any of those transformations stand out to you?\"",
+                        look: "🎁 Compare the women on our website with your customer's needs!",
+                        lookHighlight: true,
+                      },
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
+                        <td className="px-3 py-3 font-semibold text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.step}</td>
+                        <td className="px-3 py-3 text-white/80 leading-relaxed">{row.say}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: row.lookHighlight ? "oklch(0.82 0.22 145)" : "oklch(0.75 0.12 145)", fontWeight: row.lookHighlight ? 700 : 400 }}>{row.look}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── Section 4: Offer & Close ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🎁</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>4. The Offer & Close</p>
+                  <p className="text-sm mt-0.5 font-black tracking-wide" style={{ color: "oklch(0.82 0.22 145)", textShadow: "0 0 12px oklch(0.65 0.22 145 / 0.4)" }}>Read word-for-word. Do NOT improvise. Do NOT say "only."</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    step: "The Free Trial",
+                    icon: "🧪",
+                    script: "We are sending you a 21-day, completely risk-free trial of the Matinika, alongside a starter size of the serum. We want you to feel the textures and see the glow in your own mirror.",
+                  },
+                  {
+                    step: "The Subscription",
+                    icon: "🔄",
+                    script: "After 21 days, it automatically becomes a subscription of £44.95 every 60 days — locking in your 30% VIP discount. But you are in complete control and can cancel at any time.",
+                  },
+                  {
+                    step: "The Shipping",
+                    icon: "📦",
+                    script: "Because these are high-value ingredients, we send everything via DHL Express so it arrives safely in 2 working days. We just ask you to cover the £4.95 postage fee today.",
+                  },
+                  {
+                    step: "The Close",
+                    icon: "✅",
+                    script: "I am so excited for you to start seeing real changes, especially with [Insert their Magic Wand answer]. Are you ready to give your skin the hydration it deserves?",
+                    highlight: true,
+                  },
+                  {
+                    step: "The Payment",
+                    icon: "💳",
+                    script: "Will you be using Visa, Mastercard, or Amex for the £4.95 postage?",
+                    highlight: true,
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl px-4 py-4 flex gap-3 items-start" style={{ background: item.highlight ? "oklch(0.18 0.06 145 / 0.5)" : "oklch(0.18 0.025 250)", border: `1px solid ${item.highlight ? "oklch(0.45 0.18 145 / 0.5)" : "oklch(1 0 0 / 10%)"}` }}>
+                    <span className="text-lg shrink-0 mt-0.5">{item.icon}</span>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: item.highlight ? "oklch(0.75 0.2 145)" : "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>{item.step}</p>
+                      <p className="text-base leading-relaxed text-white/90">"{item.script}"</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Section 5: Quick Objection Handling ── */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                <span className="text-xl">🛡️</span>
+                <div>
+                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>5. Quick Objection Handling</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Emergency responses — find the objection and read the response</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {[
+                  {
+                    objection: "\"Is this a subscription?\"",
+                    response: "Yes, after your 21-day free trial, it transitions into a subscription so you never run out. But here is the best part: you are in complete control. You can cancel or pause at any time with one click. Most ladies keep it going because they love the results.",
+                  },
+                  {
+                    objection: "\"I need to think about it.\"",
+                    response: "I completely understand. Usually, when my clients say that, it comes down to one of two things: either they aren't sure the cream will work, or they are worried about the £4.95 shipping fee. Which one is it for you?",
+                  },
+                  {
+                    objection: "\"I have too many products.\"",
+                    response: "I hear that all the time! My goal isn't to add another jar to your cabinet; my goal is to replace three of those jars with one medical-grade product that actually works. Since it's free for 21 days, why not let my cream prove itself?",
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                    <div className="px-4 py-3" style={{ background: "oklch(0.22 0.04 250)" }}>
+                      <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>If they say: {item.objection}</p>
+                    </div>
+                    <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                      <p className="text-base leading-relaxed">"{item.response}"</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </main>
     </div>
   );
