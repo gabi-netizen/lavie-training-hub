@@ -844,7 +844,7 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("objections");
+  const [activeTab, setActiveTab] = useState<"objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("livescript");
   const [rapportOpen, setRapportOpen] = useState<number | null>(null);
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
@@ -872,49 +872,35 @@ export default function Home() {
       </header>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/8 px-4" style={{ background: "oklch(0.16 0.025 250)" }}>
-        <button
-          onClick={() => setActiveTab("objections")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "objections" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Objection Trainer
-        </button>
-        <button
-          onClick={() => setActiveTab("diagnostics")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "diagnostics" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Call Diagnostics
-        </button>
-        <button
-          onClick={() => setActiveTab("livescript")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "livescript" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Live Call Script
-        </button>
-        <button
-          onClick={() => setActiveTab("productvalue")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "productvalue" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Product Value
-        </button>
-        <button
-          onClick={() => setActiveTab("cheatsheet")}
-          className={`py-3 px-1 mr-6 text-sm font-semibold transition-colors ${activeTab === "cheatsheet" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Cheat Sheet
-        </button>
-        <button
-          onClick={() => setActiveTab("rapport")}
-          className={`py-3 px-1 text-sm font-semibold transition-colors ${activeTab === "rapport" ? "tab-active" : "tab-inactive"}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Rapport
-        </button>
+      <div className="flex border-b border-white/8 overflow-x-auto scrollbar-none" style={{ background: "oklch(0.16 0.025 250)" }}>
+        {([
+          { id: "livescript",   label: "Live Call Script",  num: "1" },
+          { id: "rapport",      label: "Rapport",           num: "2" },
+          { id: "cheatsheet",   label: "Cheat Sheet",       num: "3" },
+          { id: "objections",   label: "Objections",        num: "4" },
+          { id: "productvalue", label: "Product Value",     num: "5" },
+          { id: "diagnostics",  label: "Call Diagnostics",  num: "6" },
+        ] as { id: typeof activeTab; label: string; num: string }[]).map((tab, i, arr) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 py-3 px-4 text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${activeTab === tab.id ? "tab-active" : "tab-inactive"}`}
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            <span
+              className="text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+              style={{
+                background: activeTab === tab.id ? "oklch(0.55 0.22 250)" : "oklch(0.28 0.04 250)",
+                color: activeTab === tab.id ? "white" : "oklch(0.5 0.05 250)",
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: "9px",
+              }}
+            >
+              {tab.num}
+            </span>
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Content */}
