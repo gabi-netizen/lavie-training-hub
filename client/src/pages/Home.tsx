@@ -1320,7 +1320,7 @@ export default function Home() {
                 <div className="px-5 pb-6 flex flex-col gap-5">
                   <div className="coaching-note flex gap-2 items-start">
                     <Shield className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p className="text-sm leading-relaxed">Tell her the product is completely FREE — she only covers the shipping. Say it with confidence: "We are so confident in what this is going to do for your skin that we are sending you the full starter kit at no cost. The only thing you pay is £4.95 for shipping." Then pause. Let that land.</p>
+                    <p className="text-sm leading-relaxed font-semibold">Say the total value OUT LOUD before you say the price. &ldquo;This starter kit has a value of £50.&rdquo; Then pause. Let that land.</p>
                   </div>
                   {/* Value table */}
                   <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
