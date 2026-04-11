@@ -10,6 +10,7 @@ import CallCoach from "./pages/CallCoach";
 import Dialler from "./pages/Dialler";
 import Customers from "./pages/Customers";
 import ContactCard from "./pages/ContactCard";
+import ProfileSettings from "./pages/ProfileSettings";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -76,6 +77,9 @@ function Router() {
         <Route path={"/leaderboard"}>
           {() => { window.history.replaceState(null, "", "/ai-coach?tab=leaderboard"); return <CallCoach />; }}
         </Route>
+
+        {/* Profile settings — all authenticated users */}
+        <Route path={"/profile"} component={ProfileSettings} />
 
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />

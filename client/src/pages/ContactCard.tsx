@@ -187,6 +187,17 @@ export default function ContactCard() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
+  const clickToCallMutation = trpc.contacts.clickToCall.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success("📞 CloudTalk is calling you now — pick up to connect to the customer");
+      } else {
+        toast.error(data.message ?? "Click-to-call failed");
+      }
+    },
+    onError: (err) => toast.error(err.message ?? "Click-to-call failed"),
+  });
+
   const sendEmailMutation = trpc.contacts.sendEmail.useMutation({
     onSuccess: (data) => {
       if (data.success) {
@@ -250,11 +261,8 @@ export default function ContactCard() {
       toast.error("No phone number on file");
       return;
     }
-    // Dispatch to FloatingDialler (works from any page)
-    window.dispatchEvent(
-      new CustomEvent("cloudtalk:dial", { detail: { phone: contact.phone } })
-    );
-    toast.success(`Dialling ${contact.phone}…`);
+    // Use CloudTalk API click-to-call — CloudTalk calls the agent first, then the customer
+    clickToCallMutation.mutate({ contactId });
   };
 
   return (
@@ -297,10 +305,11 @@ export default function ContactCard() {
         {contact.phone && (
           <button
             onClick={handleCallNow}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold text-sm transition-colors shadow-sm shrink-0"
+            disabled={clickToCallMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-semibold text-sm transition-colors shadow-sm shrink-0"
           >
             <Phone size={15} />
-            Call Now
+            {clickToCallMutation.isPending ? "Calling…" : "Call Now"}
           </button>
         )}
       </div>
@@ -523,11 +532,12 @@ export default function ContactCard() {
             {/* Primary: Call */}
             <button
               onClick={handleCallNow}
-              className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-sm mb-3"
+              disabled={clickToCallMutation.isPending}
+              className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-bold text-sm transition-colors shadow-sm mb-3"
             >
               <Phone size={16} />
-              Call Now
-              {contact.phone && (
+              {clickToCallMutation.isPending ? "Calling…" : "Call Now"}
+              {contact.phone && !clickToCallMutation.isPending && (
                 <span className="ml-1 text-xs font-mono opacity-80 truncate max-w-[100px]">
                   {contact.phone}
                 </span>

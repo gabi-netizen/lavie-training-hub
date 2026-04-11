@@ -227,3 +227,10 @@
 - [x] Create FloatingDialler component (minimized by default, expand/collapse toggle, persists on all pages)
 - [x] Add FloatingDialler to AppLayout
 - [x] Update ContactCard "Call Now" to postMessage to the floating iframe
+
+## True Click-to-Call (CloudTalk API)
+- [x] Add cloudtalkAgentId column to users table and migrate
+- [x] Add profile settings page where agents can set their CloudTalk Agent ID
+- [x] Add clickToCall tRPC procedure (POST /calls/create.json with agent_id + callee_number)
+- [x] Update ContactCard Call Now to use clickToCall procedure (no iframe needed)
+- [x] Show CloudTalk agent list in profile settings for easy ID selection

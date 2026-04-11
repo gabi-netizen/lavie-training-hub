@@ -24,6 +24,11 @@ import {
   getLists,
   getAutomations,
 } from "../activecampaign";
+import { clickToCall, getCloudTalkAgents } from "../cloudtalk";
+import { protectedProcedure } from "../_core/trpc";
+import { getDb } from "../db";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 // Admin email for notifications
 const ADMIN_EMAIL = "gabriel@lavielabs.com";
@@ -261,13 +266,12 @@ export const contactsRouter = router({
       return { success: ok };
     }),
 
-  // ─── Sync a single contact to ActiveCampaign manually ────────────────────
+    // ─── Sync a single contact to ActiveCampaign manually ────────────────────
   syncToAC: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const contact = await getContact(input.id);
       if (!contact) return { success: false, error: "Contact not found" };
-
       const result = await syncContactToAC({
         name: contact.name,
         email: contact.email ?? undefined,
@@ -277,7 +281,63 @@ export const contactsRouter = router({
         agentName: contact.agentName ?? undefined,
         source: contact.source ?? undefined,
       });
-
       return { success: result.success, contactId: result.contactId };
     }),
+
+  // ─── Click-to-Call via CloudTalk API ─────────────────────────────────────
+  // Initiates an outbound call: CloudTalk calls the agent first, then the customer.
+  clickToCall: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      // Always read fresh from DB to avoid stale session data
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+      const [freshUser] = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      const agentId = freshUser?.cloudtalkAgentId;
+
+      if (!agentId) {
+        return {
+          success: false,
+          message: "You haven't set your CloudTalk Agent ID yet. Go to Profile Settings to add it.",
+        };
+      }
+
+      // Get the contact's phone number
+      const contact = await getContact(input.contactId);
+      if (!contact?.phone) {
+        return { success: false, message: "Contact has no phone number" };
+      }
+
+      // Normalize phone: ensure it starts with + and contains only digits
+      const rawPhone = contact.phone.replace(/[\s\-().]/g, "");
+      const phone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
+
+      return clickToCall(agentId, phone);
+    }),
+
+  // ─── Get CloudTalk agents list (for profile setup) ───────────────────────
+  cloudtalkAgents: protectedProcedure.query(async () => {
+    return getCloudTalkAgents();
+  }),
+
+  // ─── Update current user's CloudTalk Agent ID ─────────────────────────────
+  setCloudtalkAgentId: protectedProcedure
+    .input(z.object({ cloudtalkAgentId: z.string().max(32) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+      await db
+        .update(users)
+        .set({ cloudtalkAgentId: input.cloudtalkAgentId || null })
+        .where(eq(users.id, ctx.user.id));
+      return { success: true };
+    }),
+
+  // ─── Get current user's profile (including cloudtalkAgentId) ─────────────
+  myProfile: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return ctx.user;
+    const [user] = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+    return user ?? ctx.user;
+  }),
 });

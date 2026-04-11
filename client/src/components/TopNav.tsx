@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ContactRound,
   ShieldCheck,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -124,6 +125,14 @@ export default function TopNav() {
                   </span>
                 )}
               </div>
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-800 hover:bg-gray-50 transition-colors"
+              >
+                <Settings size={14} />
+                Profile Settings
+              </Link>
               <button
                 onClick={() => { setMenuOpen(false); logout(); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-800 hover:bg-gray-50 transition-colors"

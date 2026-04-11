@@ -20,6 +20,8 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  /** CloudTalk Agent ID for click-to-call (e.g. 178617) */
+  cloudtalkAgentId: varchar("cloudtalkAgentId", { length: 32 }),
 });
 
 export type User = typeof users.$inferSelect;

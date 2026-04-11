@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `cloudtalkAgentId` varchar(32);
