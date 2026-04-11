@@ -52,17 +52,23 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   const duration = result?.metadata?.duration ?? 0;
 
   // Calculate rep speech percentage using diarization
-  // Speaker 0 is typically the rep (first speaker)
+  // The rep is the speaker with the MOST total speech time (they drive the call).
+  // We cannot assume Speaker 0 is always the rep — Deepgram assigns IDs by first appearance.
   const utterances: any[] = result?.results?.utterances ?? [];
-  let repSpeechTime = 0;
+  const speakerTimes: Record<number, number> = {};
   let totalSpeechTime = 0;
 
   for (const utt of utterances) {
     const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
     totalSpeechTime += uttDuration;
-    if (utt.speaker === 0) {
-      repSpeechTime += uttDuration;
-    }
+    const spk = utt.speaker ?? 0;
+    speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
+  }
+
+  // Rep = speaker with most speech time
+  let repSpeechTime = 0;
+  if (Object.keys(speakerTimes).length > 0) {
+    repSpeechTime = Math.max(...Object.values(speakerTimes));
   }
 
   const repSpeechPct = totalSpeechTime > 0

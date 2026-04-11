@@ -103,3 +103,7 @@
 - [x] Show talk ratio badge in Manager View per-call rows
 - [x] Show talk ratio badge in My Calls list rows
 - [x] Show talk ratio prominently in AnalysisReport header stats
+
+## Talk Ratio Fix
+- [x] Fix repSpeechPct: now identifies rep as the speaker with most total speech time (not hardcoded Speaker 0)
+- [x] Redesign TalkRatioBadge: visual mini-bar + percentage + color-coded label (Good / Too much / Too passive)

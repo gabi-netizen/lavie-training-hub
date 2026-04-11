@@ -75,19 +75,33 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
 }
 
 // ─── TALK RATIO BADGE ─────────────────────────────────────────────────────────
+// repPct = % of total speech time spoken by the rep (dominant speaker)
+// Ideal range: 40–60%. >65% = rep talks too much. <30% = rep too passive.
 function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
   if (repPct == null) return null;
-  const custPct = 100 - repPct;
-  const repRound = Math.round(repPct);
-  const custRound = Math.round(custPct);
-  // Ideal: rep speaks 40-55%. Too much (>65%) = talks over customer. Too little (<30%) = passive.
-  let cls = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-  if (repRound > 65) cls = "bg-red-500/20 text-red-300 border-red-500/40";
-  else if (repRound < 30) cls = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+  const rep = Math.round(repPct);
+  const cust = 100 - rep;
+  let color = "text-emerald-400";
+  let barColor = "bg-emerald-500";
+  let label = "Good ratio";
+  if (rep > 65) { color = "text-red-400"; barColor = "bg-red-500"; label = "Rep talks too much"; }
+  else if (rep < 30) { color = "text-amber-400"; barColor = "bg-amber-500"; label = "Rep too passive"; }
   return (
-    <Badge className={`text-xs font-mono ${cls}`} title="Rep% vs Customer% talk time">
-      🎤 {repRound}% / 👤 {custRound}%
-    </Badge>
+    <span
+      className="inline-flex items-center gap-1.5 text-xs border border-slate-600 rounded px-2 py-0.5 bg-slate-800/60"
+      title={`Rep spoke ${rep}% of the call, customer ${cust}%`}
+    >
+      <span className="text-slate-400">Talk:</span>
+      {/* mini bar */}
+      <span className="relative inline-block w-14 h-2 rounded-full bg-slate-700 overflow-hidden">
+        <span
+          className={`absolute left-0 top-0 h-full rounded-full ${barColor}`}
+          style={{ width: `${rep}%` }}
+        />
+      </span>
+      <span className={`font-semibold ${color}`}>{rep}%</span>
+      <span className="text-slate-500">rep</span>
+    </span>
   );
 }
 
