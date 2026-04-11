@@ -203,3 +203,7 @@
 
 ## ContactCard Action Panel
 - [x] Redesign ContactCard: centralized Call/WhatsApp/Email/SMS action buttons near customer name, with quick call status change
+
+## CRM Desktop Optimization
+- [x] Contacts list: desktop-first layout, wider table, proper column widths, no mobile stacking
+- [x] ContactCard: desktop-first 3-column layout, better proportions, full screen space utilization

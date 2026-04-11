@@ -240,21 +240,53 @@ export default function ContactCard() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ── Top breadcrumb bar ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3">
+      {/* ── Top header bar ── */}
+      <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center gap-4">
         <button
           onClick={() => navigate("/contacts")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors shrink-0"
         >
-          <ArrowLeft size={14} />
-          Contacts
+          <ArrowLeft size={15} />
+          Back
         </button>
-        <span className="text-gray-300">/</span>
-        <span className="text-sm font-semibold text-gray-800">{contact.name}</span>
+        <div className="w-px h-5 bg-gray-200" />
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-indigo-600">{contact.name.charAt(0).toUpperCase()}</span>
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-base font-bold text-gray-900 truncate">{contact.name}</h1>
+            {contact.phone && <p className="text-xs text-gray-400 font-mono">{contact.phone}</p>}
+          </div>
+          {contact.leadType && (
+            <span className={cn(
+              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border shrink-0",
+              LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-600 border-gray-200"
+            )}>
+              {contact.leadType}
+            </span>
+          )}
+          <span className={cn(
+            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
+            STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-600"
+          )}>
+            {STATUS_LABELS[contact.status] ?? contact.status}
+          </span>
+        </div>
+        {/* Quick call from header */}
+        {contact.phone && (
+          <button
+            onClick={handleCallNow}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold text-sm transition-colors shadow-sm shrink-0"
+          >
+            <Phone size={15} />
+            Call Now
+          </button>
+        )}
       </div>
 
       {/* ── 3-column body ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] h-[calc(100vh-112px)]">
+      <div className="grid grid-cols-[300px_1fr_320px] h-[calc(100vh-112px)]">
 
         {/* ══════════════════════════════════════════════════
             LEFT — Identity panel

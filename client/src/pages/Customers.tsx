@@ -8,18 +8,16 @@ import {
   Phone,
   ChevronDown,
   X,
-  Plus,
-  User,
-  Clock,
-  FileText,
   Filter,
   RefreshCw,
   AlertCircle,
+  Users,
+  TrendingUp,
+  PhoneCall,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,12 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Contact {
@@ -51,296 +44,99 @@ interface Contact {
   updatedAt: Date;
 }
 
-interface ContactWithNotes extends Contact {
-  callNotes: {
-    id: number;
-    contactId: number;
-    agentName?: string | null;
-    note: string;
-    statusAtTime?: string | null;
-    createdAt: Date;
-  }[];
-}
-
-// ─── Lead Type Badge ──────────────────────────────────────────────────────────
-function LeadTypeBadge({ type }: { type?: string | null }) {
-  if (!type) return null;
-  const t = type.toLowerCase();
-  let cls = "bg-slate-700 text-slate-200";
-  if (t.includes("pre cycle") || t.includes("pre-cycle")) cls = "bg-amber-600/80 text-amber-100";
-  else if (t.includes("live sub")) cls = "bg-emerald-600/80 text-emerald-100";
-  else if (t.includes("cancel") || t.includes("declined")) cls = "bg-rose-600/80 text-rose-100";
-  else if (t.includes("cycle 1")) cls = "bg-sky-600/80 text-sky-100";
-  else if (t.includes("cycle 2")) cls = "bg-indigo-600/80 text-indigo-100";
-  else if (t.includes("cycle 3")) cls = "bg-violet-600/80 text-violet-100";
-  else if (t.includes("warm")) cls = "bg-orange-500/80 text-orange-100";
-  else if (t.includes("owned")) cls = "bg-teal-600/80 text-teal-100";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cls}`}>
-      {type}
-    </span>
-  );
-}
-
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    new: { label: "New", cls: "bg-slate-600 text-slate-200" },
-    open: { label: "Open", cls: "bg-blue-600/80 text-blue-100" },
-    working: { label: "Working", cls: "bg-yellow-600/80 text-yellow-100" },
-    assigned: { label: "Assigned", cls: "bg-purple-600/80 text-purple-100" },
-    done_deal: { label: "Done Deal", cls: "bg-emerald-500/90 text-white font-semibold" },
-    retained_sub: { label: "Retained Sub", cls: "bg-teal-500/90 text-white font-semibold" },
-    cancelled_sub: { label: "Cancelled Sub", cls: "bg-rose-600/80 text-rose-100" },
-    closed: { label: "Closed", cls: "bg-slate-700 text-slate-400" },
-  };
-  const s = map[status] ?? { label: status, cls: "bg-slate-700 text-slate-300" };
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${s.cls}`}>
-      {s.label}
-    </span>
-  );
-}
-
-// ─── CSV Parser ───────────────────────────────────────────────────────────────
+// ─── CSV helpers ──────────────────────────────────────────────────────────────
 function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.trim().split(/\r?\n/);
+  const lines = text.split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, "").toLowerCase());
+  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
   return lines.slice(1).map(line => {
-    // Handle quoted fields
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        inQuotes = !inQuotes;
-      } else if (ch === "," && !inQuotes) {
-        values.push(current.trim());
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-    values.push(current.trim());
+    const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
     const row: Record<string, string> = {};
     headers.forEach((h, i) => { row[h] = values[i] ?? ""; });
     return row;
   });
 }
 
-// Map CSV column names to our schema fields
 function mapCsvRow(row: Record<string, string>) {
-  const get = (...keys: string[]) => {
+  const find = (...keys: string[]) => {
     for (const k of keys) {
-      const v = row[k] ?? row[k.toLowerCase()] ?? "";
-      if (v) return v;
+      const val = Object.entries(row).find(([key]) => key.toLowerCase().includes(k.toLowerCase()))?.[1];
+      if (val) return val;
     }
-    return "";
+    return undefined;
   };
   return {
-    name: get("name", "full name", "customer name", "contact name"),
-    email: get("email", "email address"),
-    phone: get("phone", "mobile", "telephone", "tel", "phone number", "mobile number"),
-    leadType: get("lead type", "type of lead", "leadtype", "type"),
-    status: get("status"),
-    agentName: get("agent", "agent name", "rep", "rep name", "assigned to"),
-    notes: get("notes", "rob notes", "comments", "note"),
-    source: get("source", "data source"),
-    leadDate: get("date", "lead date", "created", "created date"),
+    name: find("name", "full name", "customer") ?? "",
+    phone: find("phone", "mobile", "tel", "number"),
+    email: find("email", "mail"),
+    leadType: find("lead type", "leadtype", "type", "lead"),
+    status: find("status"),
+    agentName: find("agent", "rep", "assigned"),
+    source: find("source", "campaign"),
+    importedNotes: find("notes", "note", "comment", "rob"),
+    leadDate: find("lead date", "date", "created"),
   };
 }
 
-// ─── Customer Card Modal ──────────────────────────────────────────────────────
-function CustomerCard({
-  contactId,
-  onClose,
-  onDial,
-}: {
-  contactId: number;
-  onClose: () => void;
-  onDial?: (phone: string, name: string) => void;
-}) {
-  const utils = trpc.useUtils();
-  const { data: contact, isLoading } = trpc.contacts.get.useQuery({ id: contactId });
-  const updateMutation = trpc.contacts.update.useMutation({
-    onSuccess: () => utils.contacts.get.invalidate({ id: contactId }),
-  });
-  const addNoteMutation = trpc.contacts.addNote.useMutation({
-    onSuccess: () => {
-      utils.contacts.get.invalidate({ id: contactId });
-      setNewNote("");
-    },
-  });
+// ─── Colour maps ──────────────────────────────────────────────────────────────
+const LEAD_TYPE_COLOURS: Record<string, string> = {
+  "Pre Cycle":               "bg-amber-100 text-amber-700 border border-amber-200",
+  "Pre-Cycle-Cancelled":     "bg-orange-100 text-orange-700 border border-orange-200",
+  "Pre-Cycle-Decline":       "bg-red-100 text-red-700 border border-red-200",
+  "Cycle 1":                 "bg-sky-100 text-sky-700 border border-sky-200",
+  "Cycle 2":                 "bg-indigo-100 text-indigo-700 border border-indigo-200",
+  "Cycle 3+":                "bg-violet-100 text-violet-700 border border-violet-200",
+  "Cancel 2+ Cycle":         "bg-red-100 text-red-700 border border-red-200",
+  "Live Sub 3 Days":         "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  "Live Sub 7 Days":         "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  "Live Sub 14days+":        "bg-green-100 text-green-700 border border-green-200",
+  "Live Sub 2nd+":           "bg-green-100 text-green-700 border border-green-200",
+  "Live Sub Declined 2nd+":  "bg-yellow-100 text-yellow-700 border border-yellow-200",
+  "Owned Sub":               "bg-teal-100 text-teal-700 border border-teal-200",
+  "Same day as charge cancel":"bg-rose-100 text-rose-700 border border-rose-200",
+  "Warm lead":               "bg-lime-100 text-lime-700 border border-lime-200",
+  "Other":                   "bg-gray-100 text-gray-600 border border-gray-200",
+};
 
-  const [newNote, setNewNote] = useState("");
-  const [editStatus, setEditStatus] = useState<string | null>(null);
+const STATUS_COLOURS: Record<string, string> = {
+  new:           "bg-gray-100 text-gray-600",
+  open:          "bg-blue-100 text-blue-700",
+  working:       "bg-amber-100 text-amber-700",
+  assigned:      "bg-purple-100 text-purple-700",
+  done_deal:     "bg-green-100 text-green-700",
+  retained_sub:  "bg-emerald-100 text-emerald-700",
+  cancelled_sub: "bg-red-100 text-red-700",
+  closed:        "bg-gray-100 text-gray-400",
+};
 
-  const handleStatusChange = (val: string) => {
-    setEditStatus(val);
-    updateMutation.mutate({ id: contactId, status: val as any });
-  };
+const STATUS_LABELS: Record<string, string> = {
+  new:           "New",
+  open:          "Open",
+  working:       "Working",
+  assigned:      "Assigned",
+  done_deal:     "Done Deal",
+  retained_sub:  "Retained Sub",
+  cancelled_sub: "Cancelled Sub",
+  closed:        "Closed",
+};
 
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
-    addNoteMutation.mutate({
-      contactId,
-      note: newNote.trim(),
-      statusAtTime: contact?.status,
-    });
-    toast.success("Note saved");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <RefreshCw className="animate-spin text-slate-400" />
-      </div>
-    );
-  }
-  if (!contact) return null;
-
-  const statusOptions = [
-    { value: "new", label: "New" },
-    { value: "open", label: "Open" },
-    { value: "working", label: "Working" },
-    { value: "assigned", label: "Assigned" },
-    { value: "done_deal", label: "Done Deal" },
-    { value: "retained_sub", label: "Retained Sub" },
-    { value: "cancelled_sub", label: "Cancelled Sub" },
-    { value: "closed", label: "Closed" },
-  ];
-
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function LeadTypeBadge({ type }: { type?: string | null }) {
+  if (!type) return <span className="text-gray-300">—</span>;
+  const cls = LEAD_TYPE_COLOURS[type] ?? "bg-gray-100 text-gray-600 border border-gray-200";
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">{contact.name}</h2>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <LeadTypeBadge type={contact.leadType} />
-            <StatusBadge status={editStatus ?? contact.status} />
-          </div>
-        </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
-          <X size={20} />
-        </button>
-      </div>
+    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap", cls)}>
+      {type}
+    </span>
+  );
+}
 
-      {/* Contact Details */}
-      <div className="bg-[#1a2535] rounded-lg p-4 space-y-2">
-        {contact.phone && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-300">
-              <Phone size={14} className="text-slate-500" />
-              <span className="font-mono text-sm">{contact.phone}</span>
-            </div>
-            {onDial && (
-              <Button
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-7 px-3"
-                onClick={() => onDial(contact.phone!, contact.name)}
-              >
-                <Phone size={12} className="mr-1" /> Call
-              </Button>
-            )}
-          </div>
-        )}
-        {contact.email && (
-          <div className="flex items-center gap-2 text-slate-300 text-sm">
-            <span className="text-slate-500">✉</span>
-            <span>{contact.email}</span>
-          </div>
-        )}
-        {contact.agentName && (
-          <div className="flex items-center gap-2 text-slate-300 text-sm">
-            <User size={14} className="text-slate-500" />
-            <span>{contact.agentName}</span>
-          </div>
-        )}
-        {contact.source && (
-          <div className="text-xs text-slate-500">Source: {contact.source}</div>
-        )}
-        {contact.leadDate && (
-          <div className="text-xs text-slate-500">
-            Lead date: {new Date(contact.leadDate).toLocaleDateString("en-GB")}
-          </div>
-        )}
-      </div>
-
-      {/* Status Update */}
-      <div>
-        <label className="text-xs text-slate-400 mb-1 block">Update Status</label>
-        <Select
-          value={editStatus ?? contact.status}
-          onValueChange={handleStatusChange}
-        >
-          <SelectTrigger className="bg-[#1a2535] border-slate-600 text-white text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-[#1a2535] border-slate-600">
-            {statusOptions.map(o => (
-              <SelectItem key={o.value} value={o.value} className="text-white">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Imported Notes */}
-      {contact.importedNotes && (
-        <div className="bg-amber-900/20 border border-amber-700/30 rounded-lg p-3">
-          <div className="text-xs text-amber-400 mb-1 font-medium">Imported Notes</div>
-          <p className="text-sm text-amber-200">{contact.importedNotes}</p>
-        </div>
-      )}
-
-      {/* Add Note */}
-      <div>
-        <label className="text-xs text-slate-400 mb-1 block">Add Call Note</label>
-        <Textarea
-          value={newNote}
-          onChange={e => setNewNote(e.target.value)}
-          placeholder="What happened on this call?"
-          className="bg-[#1a2535] border-slate-600 text-white text-sm min-h-[80px] resize-none"
-        />
-        <Button
-          size="sm"
-          className="mt-2 bg-[#2a7de1] hover:bg-[#1a6dd1] text-white text-xs"
-          onClick={handleAddNote}
-          disabled={!newNote.trim() || addNoteMutation.isPending}
-        >
-          <Plus size={12} className="mr-1" />
-          Save Note
-        </Button>
-      </div>
-
-      {/* Call History */}
-      {contact.callNotes && contact.callNotes.length > 0 && (
-        <div>
-          <div className="text-xs text-slate-400 mb-2 font-medium flex items-center gap-1">
-            <Clock size={12} /> Call History ({contact.callNotes.length})
-          </div>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {contact.callNotes.map(n => (
-              <div key={n.id} className="bg-[#1a2535] rounded-lg p-3 text-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-slate-400 text-xs">
-                    {n.agentName ?? "Rep"} · {new Date(n.createdAt).toLocaleString("en-GB", {
-                      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
-                    })}
-                  </span>
-                  {n.statusAtTime && <StatusBadge status={n.statusAtTime} />}
-                </div>
-                <p className="text-slate-200">{n.note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+function StatusBadge({ status }: { status: string }) {
+  const cls = STATUS_COLOURS[status] ?? "bg-gray-100 text-gray-500";
+  return (
+    <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap", cls)}>
+      {STATUS_LABELS[status] ?? status}
+    </span>
   );
 }
 
@@ -353,7 +149,6 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [search, setSearch] = useState("");
   const [filterLeadType, setFilterLeadType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -362,7 +157,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
-    limit: 100,
+    limit: 200,
   });
 
   const importMutation = trpc.contacts.import.useMutation({
@@ -394,198 +189,264 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       importMutation.mutate({ rows });
     };
     reader.readAsText(file);
-    // Reset input so same file can be re-uploaded
     e.target.value = "";
-  }, [importMutation, toast]);
+  }, [importMutation]);
 
   const activeFilters = [filterLeadType, filterStatus].filter(Boolean).length;
 
+  // Stats
+  const totalContacts = contacts.length;
+  const dealsDone = contacts.filter((c: Contact) => c.status === "done_deal").length;
+  const working = contacts.filter((c: Contact) => c.status === "working" || c.status === "open").length;
+  const callbacks = contacts.filter((c: Contact) => c.callbackAt).length;
+
   return (
-    <div className="flex flex-col h-full bg-[#0F1923] text-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
-        <h1 className="text-lg font-bold text-white">Contacts</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-slate-600 text-slate-300 hover:text-white text-xs h-8"
-            onClick={() => refetch()}
-          >
-            <RefreshCw size={12} className="mr-1" />
-            Refresh
-          </Button>
-          <Button
-            size="sm"
-            className="bg-[#2a7de1] hover:bg-[#1a6dd1] text-white text-xs h-8"
-            onClick={() => fileRef.current?.click()}
-            disabled={importing}
-          >
-            {importing ? (
-              <RefreshCw size={12} className="mr-1 animate-spin" />
-            ) : (
-              <Upload size={12} className="mr-1" />
-            )}
-            Import CSV
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
+    <div className="min-h-screen bg-gray-50">
+
+      {/* ── Page Header ── */}
+      <div className="bg-white border-b border-gray-200 px-8 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Manage and track your customer leads</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-gray-300 text-gray-600 hover:text-gray-900 h-9"
+              onClick={() => refetch()}
+            >
+              <RefreshCw size={14} className="mr-1.5" />
+              Refresh
+            </Button>
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 font-semibold"
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+            >
+              {importing ? (
+                <RefreshCw size={14} className="mr-1.5 animate-spin" />
+              ) : (
+                <Upload size={14} className="mr-1.5" />
+              )}
+              Import CSV
+            </Button>
+            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-4 mt-5">
+          {[
+            { icon: Users,      label: "Total Contacts", value: totalContacts, colour: "text-indigo-600 bg-indigo-50" },
+            { icon: TrendingUp, label: "Done Deals",      value: dealsDone,    colour: "text-green-600 bg-green-50" },
+            { icon: PhoneCall,  label: "In Progress",     value: working,      colour: "text-amber-600 bg-amber-50" },
+            { icon: UserCheck,  label: "Callbacks Set",   value: callbacks,    colour: "text-purple-600 bg-purple-50" },
+          ].map(({ icon: Icon, label, value, colour }) => (
+            <div key={label} className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
+              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", colour)}>
+                <Icon size={18} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900 leading-none">{value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="px-4 py-3 space-y-2 border-b border-slate-700/30">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+      {/* ── Search & Filters ── */}
+      <div className="bg-white border-b border-gray-200 px-8 py-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by name, phone, or email…"
-              className="pl-8 bg-[#1a2535] border-slate-600 text-white placeholder:text-slate-500 text-sm h-9"
+              className="pl-9 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 text-sm h-9 focus-visible:ring-indigo-400"
             />
           </div>
+
           <Button
-            size="sm"
             variant="outline"
-            className={`border-slate-600 text-xs h-9 px-3 ${activeFilters > 0 ? "border-[#2a7de1] text-[#2a7de1]" : "text-slate-400"}`}
+            size="sm"
+            className={cn(
+              "border-gray-200 text-gray-600 h-9 px-3 gap-1.5",
+              activeFilters > 0 && "border-indigo-300 text-indigo-600 bg-indigo-50"
+            )}
             onClick={() => setShowFilters(!showFilters)}
           >
-            <Filter size={12} className="mr-1" />
-            Filters {activeFilters > 0 && `(${activeFilters})`}
-            <ChevronDown size={12} className="ml-1" />
-          </Button>
-        </div>
-
-        {showFilters && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Select value={filterLeadType} onValueChange={setFilterLeadType}>
-              <SelectTrigger className="bg-[#1a2535] border-slate-600 text-white text-xs h-8 w-44">
-                <SelectValue placeholder="All lead types" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1a2535] border-slate-600 max-h-60">
-                <SelectItem value="" className="text-slate-400 text-xs">All lead types</SelectItem>
-                {meta?.leadTypes.map(lt => (
-                  <SelectItem key={lt} value={lt} className="text-white text-xs">{lt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="bg-[#1a2535] border-slate-600 text-white text-xs h-8 w-36">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1a2535] border-slate-600">
-                <SelectItem value="" className="text-slate-400 text-xs">All statuses</SelectItem>
-                {meta?.statuses.map(s => (
-                  <SelectItem key={s} value={s} className="text-white text-xs">{s.replace(/_/g, " ")}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
+            <Filter size={14} />
+            Filters
             {activeFilters > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-slate-400 hover:text-white text-xs h-8 px-2"
-                onClick={() => { setFilterLeadType(""); setFilterStatus(""); }}
-              >
-                <X size={12} className="mr-1" /> Clear
-              </Button>
+              <span className="bg-indigo-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                {activeFilters}
+              </span>
             )}
-          </div>
-        )}
+            <ChevronDown size={13} />
+          </Button>
+
+          {showFilters && (
+            <>
+              <Select value={filterLeadType} onValueChange={setFilterLeadType}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
+                  <SelectValue placeholder="All lead types" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 max-h-64">
+                  <SelectItem value="" className="text-gray-500 text-sm">All lead types</SelectItem>
+                  {meta?.leadTypes.map(lt => (
+                    <SelectItem key={lt} value={lt} className="text-gray-800 text-sm">{lt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="" className="text-gray-500 text-sm">All statuses</SelectItem>
+                  {meta?.statuses.map(s => (
+                    <SelectItem key={s} value={s} className="text-gray-800 text-sm">{STATUS_LABELS[s] ?? s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {activeFilters > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-gray-700 h-9 px-2 gap-1"
+                  onClick={() => { setFilterLeadType(""); setFilterStatus(""); }}
+                >
+                  <X size={13} /> Clear
+                </Button>
+              )}
+            </>
+          )}
+
+          <span className="ml-auto text-sm text-gray-400">
+            {isLoading ? "Loading…" : `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`}
+          </span>
+        </div>
       </div>
 
-      {/* Contact Count */}
-      <div className="px-4 py-2 text-xs text-slate-500">
-        {isLoading ? "Loading…" : `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`}
-      </div>
-
-      {/* Contact List */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Table ── */}
+      <div className="px-8 py-6">
         {isLoading ? (
-          <div className="flex items-center justify-center h-32 text-slate-500">
-            <RefreshCw className="animate-spin mr-2" size={16} /> Loading contacts…
+          <div className="flex items-center justify-center h-48 text-gray-400">
+            <RefreshCw className="animate-spin mr-2" size={18} /> Loading contacts…
           </div>
         ) : contacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-500 gap-3">
-            <AlertCircle size={32} className="text-slate-600" />
-            <div className="text-center">
-              <p className="font-medium">No contacts found</p>
-              <p className="text-xs mt-1">Import a CSV file to get started</p>
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
+              <AlertCircle size={28} className="text-gray-300" />
             </div>
+            <div className="text-center">
+              <p className="font-semibold text-gray-600">No contacts found</p>
+              <p className="text-sm mt-1">Import a CSV file to get started, or clear your filters</p>
+            </div>
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white mt-2"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload size={14} className="mr-1.5" /> Import CSV
+            </Button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-700/30">
-            {contacts.map((c: Contact) => (
-              <div
-                key={c.id}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-[#1a2535] cursor-pointer transition-colors"
-                onClick={() => navigate(`/contacts/${c.id}`)}
-              >
-                {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-[#2a3545] flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold text-slate-300">
-                    {c.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* Table header */}
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[240px]">Name</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[160px]">Lead Type</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[130px]">Status</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[150px]">Phone</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[140px]">Agent</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[110px]">Lead Date</th>
+                  <th className="px-4 py-3.5 w-[60px]"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {contacts.map((c: Contact) => (
+                  <tr
+                    key={c.id}
+                    className="hover:bg-indigo-50/40 cursor-pointer transition-colors group"
+                    onClick={() => navigate(`/contacts/${c.id}`)}
+                  >
+                    {/* Name + avatar */}
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-indigo-600">
+                            {c.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{c.name}</p>
+                          {c.email && <p className="text-xs text-gray-400 truncate max-w-[160px]">{c.email}</p>}
+                        </div>
+                      </div>
+                    </td>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-white text-sm truncate">{c.name}</span>
-                    <LeadTypeBadge type={c.leadType} />
-                  </div>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    {c.phone && (
-                      <span className="text-xs text-slate-400 font-mono">{c.phone}</span>
-                    )}
-                    {c.agentName && (
-                      <span className="text-xs text-slate-500">{c.agentName}</span>
-                    )}
-                  </div>
-                </div>
+                    {/* Lead type */}
+                    <td className="px-4 py-3.5">
+                      <LeadTypeBadge type={c.leadType} />
+                    </td>
 
-                {/* Status + Call */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={c.status} />
-                  {c.phone && onDial && (
-                    <button
-                      className="w-7 h-7 rounded-full bg-emerald-600/20 hover:bg-emerald-600/40 flex items-center justify-center text-emerald-400 transition-colors"
-                      onClick={e => { e.stopPropagation(); onDial(c.phone!, c.name); }}
-                      title="Click to call"
-                    >
-                      <Phone size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                    {/* Status */}
+                    <td className="px-4 py-3.5">
+                      <StatusBadge status={c.status} />
+                    </td>
+
+                    {/* Phone */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-sm text-gray-600 font-mono">{c.phone ?? "—"}</span>
+                    </td>
+
+                    {/* Agent */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-sm text-gray-600">{c.agentName ?? "—"}</span>
+                    </td>
+
+                    {/* Source */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-sm text-gray-500">{c.source ?? "—"}</span>
+                    </td>
+
+                    {/* Lead Date */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-xs text-gray-400">
+                        {c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}
+                      </span>
+                    </td>
+
+                    {/* Call button */}
+                    <td className="px-4 py-3.5">
+                      {c.phone && onDial && (
+                        <button
+                          className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-500 flex items-center justify-center text-green-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={e => { e.stopPropagation(); onDial(c.phone!, c.name); }}
+                          title="Click to call"
+                        >
+                          <Phone size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-
-      {/* Customer Card Modal */}
-      <Dialog open={selectedId !== null} onOpenChange={open => !open && setSelectedId(null)}>
-        <DialogContent className="bg-[#0F1923] border-slate-700 text-white max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Customer Card</DialogTitle>
-          </DialogHeader>
-          {selectedId !== null && (
-            <CustomerCard
-              contactId={selectedId}
-              onClose={() => setSelectedId(null)}
-              onDial={onDial}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
