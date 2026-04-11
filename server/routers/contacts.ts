@@ -15,6 +15,7 @@ import {
   sendStatusChangeNotification,
   sendImportSummary,
   sendAdminAlert,
+  sendEmailToContact,
 } from "../email";
 import {
   syncContactToAC,
@@ -59,6 +60,7 @@ export const contactsRouter = router({
         status: z.enum(CONTACT_STATUSES).optional(),
         agentName: z.string().optional(),
         leadType: z.string().optional(),
+        agentEmail: z.string().optional(),
         callbackAt: z.date().optional(),
         importedNotes: z.string().optional(),
         // For email notifications
@@ -215,6 +217,47 @@ export const contactsRouter = router({
           "Status": "Connected ✅",
         },
       });
+      return { success: ok };
+    }),
+
+  // ─── Send email from agent to contact ──────────────────────────────────────
+  sendEmail: adminProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        subject: z.string().min(1, "Subject is required"),
+        body: z.string().min(1, "Message body is required"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const contact = await getContact(input.contactId);
+      if (!contact) return { success: false, error: "Contact not found" };
+      if (!contact.email) return { success: false, error: "Contact has no email address" };
+
+      // Derive agent slug from name (lowercase, first name only)
+      const agentName = ctx.user.name ?? "Lavie Labs";
+      const agentSlug = agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "");
+
+      const ok = await sendEmailToContact({
+        agentName,
+        agentSlug,
+        contactEmail: contact.email,
+        contactName: contact.name,
+        subject: input.subject,
+        body: input.body,
+      });
+
+      if (ok) {
+        // Log the email as a call note
+        await addCallNote({
+          contactId: input.contactId,
+          userId: ctx.user.id,
+          agentName,
+          note: `📧 Email sent — Subject: "${input.subject}"`,
+          statusAtTime: contact.status ?? undefined,
+        });
+      }
+
       return { success: ok };
     }),
 

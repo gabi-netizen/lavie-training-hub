@@ -105,7 +105,7 @@ export async function getContact(id: number) {
 // ─── Update Contact ────────────────────────────────────────────────────────────
 export async function updateContact(
   id: number,
-  updates: Partial<Pick<Contact, "status" | "agentName" | "leadType" | "callbackAt" | "importedNotes">>
+  updates: Partial<Pick<Contact, "status" | "agentName" | "agentEmail" | "leadType" | "callbackAt" | "importedNotes">>
 ) {
   const db = await getDb();
   if (!db) return null;

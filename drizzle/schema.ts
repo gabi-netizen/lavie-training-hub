@@ -125,6 +125,8 @@ export const contacts = mysqlTable("contacts", {
   ]).default("new").notNull(),
   /** Agent name assigned to this contact */
   agentName: varchar("agentName", { length: 256 }),
+  /** Agent sub-address email e.g. trial+matthew@lavielabs.com — used as From address when emailing this contact */
+  agentEmail: varchar("agentEmail", { length: 320 }),
   /** User ID of the assigned agent (if they have an account) */
   assignedUserId: int("assignedUserId"),
   /** Original notes from the CSV (reason for cancellation etc.) */

@@ -24,7 +24,10 @@ import {
   PhoneOff,
   ChevronDown,
   MessageSquare,
+  Send,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -178,6 +181,26 @@ export default function ContactCard() {
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("connected");
   const [statusOpen, setStatusOpen] = useState(false);
+
+  // Email compose state
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+
+  const sendEmailMutation = trpc.contacts.sendEmail.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success("Email sent successfully ✅");
+        setEmailOpen(false);
+        setEmailSubject("");
+        setEmailBody("");
+        refetch();
+      } else {
+        toast.error((data as any).error ?? "Failed to send email");
+      }
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to send email"),
+  });
 
   if (isLoading) {
     return (
@@ -529,7 +552,10 @@ export default function ContactCard() {
 
               {/* Email */}
               <button
-                onClick={() => contact.email && window.open(`mailto:${contact.email}`)}
+                onClick={() => {
+                  if (!contact.email) { toast.error("No email address on file"); return; }
+                  setEmailOpen((v) => !v);
+                }}
                 disabled={!contact.email}
                 className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -551,6 +577,59 @@ export default function ContactCard() {
               </button>
             </div>
           </div>
+
+          {/* ── Email Compose Panel ── */}
+          {emailOpen && (
+            <div className="p-5 border-b border-gray-100 bg-blue-50">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                  Compose Email
+                </p>
+                <button
+                  onClick={() => setEmailOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              {contact.email && (
+                <p className="text-xs text-gray-500 mb-3">
+                  To: <span className="font-medium text-gray-700">{contact.email}</span>
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
+                <Input
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Subject"
+                  className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+                />
+                <Textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Write your message here…"
+                  className="min-h-[120px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+                />
+                <Button
+                  onClick={() => {
+                    if (!emailSubject.trim()) { toast.error("Please enter a subject"); return; }
+                    if (!emailBody.trim()) { toast.error("Please enter a message"); return; }
+                    sendEmailMutation.mutate({
+                      contactId,
+                      subject: emailSubject.trim(),
+                      body: emailBody.trim(),
+                    });
+                  }}
+                  disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailBody.trim()}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full flex items-center gap-2"
+                >
+                  <Send size={13} />
+                  {sendEmailMutation.isPending ? "Sending…" : "Send Email"}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* ── Integrations (admin only) ── */}
           <div className="p-5 border-b border-gray-100">

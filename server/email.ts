@@ -254,6 +254,97 @@ export async function sendImportSummary(options: {
 }
 
 /**
+ * Send an email from an agent to a customer contact.
+ * The From address is trial+[agentSlug]@lavielabs.com so replies
+ * route back through trial@lavielabs.com → Zoho Desk.
+ */
+export async function sendEmailToContact(options: {
+  agentName: string;
+  agentSlug: string; // e.g. "gabi", "matthew"
+  contactEmail: string;
+  contactName: string;
+  subject: string;
+  body: string;
+  replyTo?: string;
+}): Promise<boolean> {
+  const apiKey = ENV.postmarkApiKey;
+  if (!apiKey) {
+    console.error("[Email] POSTMARK_API_KEY not set");
+    return false;
+  }
+
+  const fromAddress = `${options.agentName} at Lavie Labs <trial+${options.agentSlug}@lavielabs.com>`;
+  const replyToAddress = options.replyTo ?? "trial@lavielabs.com";
+
+  // Wrap the body in a clean HTML template
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: #0F1923; padding: 24px 32px; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; }
+    .header p { color: #8899aa; margin: 4px 0 0; font-size: 13px; }
+    .body { padding: 32px; }
+    .body p { color: #333; line-height: 1.7; margin: 0 0 16px; white-space: pre-wrap; }
+    .footer { background: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; }
+    .footer p { color: #94a3b8; font-size: 12px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Lavie Labs</h1>
+      <p>Message from ${options.agentName}</p>
+    </div>
+    <div class="body">
+      <p>Hi ${options.contactName},</p>
+      <p>${options.body.replace(/\n/g, "<br>")}</p>
+    </div>
+    <div class="footer">
+      <p>You received this email from ${options.agentName} at Lavie Labs. To reply, simply respond to this email.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const response = await fetch(POSTMARK_API_URL, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-Postmark-Server-Token": apiKey,
+      },
+      body: JSON.stringify({
+        From: fromAddress,
+        To: options.contactEmail,
+        Subject: options.subject,
+        HtmlBody: htmlBody,
+        TextBody: `Hi ${options.contactName},\n\n${options.body}\n\n-- ${options.agentName}, Lavie Labs`,
+        ReplyTo: replyToAddress,
+        Tag: "agent-to-contact",
+        MessageStream: "outbound",
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json() as { Message: string };
+      console.error("[Email] Postmark error (agent email):", error.Message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[Email] Failed to send agent email:", err);
+    return false;
+  }
+}
+
+/**
  * General notification to admin (e.g. deal closed, important event)
  */
 export async function sendAdminAlert(options: {

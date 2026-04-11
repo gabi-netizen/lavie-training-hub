@@ -207,3 +207,10 @@
 ## CRM Desktop Optimization
 - [x] Contacts list: desktop-first layout, wider table, proper column widths, no mobile stacking
 - [x] ContactCard: desktop-first 3-column layout, better proportions, full screen space utilization
+
+## Agent Email System (trial+[agent]@lavielabs.com)
+- [ ] Add agentEmail field to contacts DB schema and migrate
+- [ ] Add sendEmailToContact tRPC procedure (sends via Postmark from trial+agent address)
+- [ ] Add compose email modal in ContactCard with subject + body fields
+- [ ] Show agent sub-address in ContactCard left panel
+- [ ] Add agent email column to Contacts list

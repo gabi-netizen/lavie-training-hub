@@ -1,0 +1,1 @@
+ALTER TABLE `contacts` ADD `agentEmail` varchar(320);
