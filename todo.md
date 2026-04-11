@@ -111,3 +111,9 @@
 ## Talk Ratio Legend
 - [x] Change "Talk:" and "rep" label colors to white in TalkRatioBadge
 - [x] Add a prominent TalkRatioLegend card (in English) visible on the AI Coach page above the tabs, showing the 3 color zones
+
+## Prominent Talk Ratio in Report Header
+- [x] Add a right-side panel in AnalysisReport header with: large Talk Ratio visual + Deal Status (Closed / Follow-up / Not Closed) displayed prominently
+
+## Prominent Talk Ratio + Deal Status in Report Header
+- [x] Add right-side panel in AnalysisReport header: large Talk Ratio circular gauge + Deal Status badge (Closed Deal / Follow-up / Not Closed)
