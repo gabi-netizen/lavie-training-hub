@@ -74,6 +74,23 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
   return <Badge className={`text-xs ${info.cls}`}>{info.label}</Badge>;
 }
 
+// ─── TALK RATIO BADGE ─────────────────────────────────────────────────────────
+function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
+  if (repPct == null) return null;
+  const custPct = 100 - repPct;
+  const repRound = Math.round(repPct);
+  const custRound = Math.round(custPct);
+  // Ideal: rep speaks 40-55%. Too much (>65%) = talks over customer. Too little (<30%) = passive.
+  let cls = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+  if (repRound > 65) cls = "bg-red-500/20 text-red-300 border-red-500/40";
+  else if (repRound < 30) cls = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+  return (
+    <Badge className={`text-xs font-mono ${cls}`} title="Rep% vs Customer% talk time">
+      🎤 {repRound}% / 👤 {custRound}%
+    </Badge>
+  );
+}
+
 // ─── SCORE COLOUR ─────────────────────────────────────────────────────────────
 function scoreColor(score: number) {
   if (score >= 75) return "text-emerald-400";
@@ -415,9 +432,10 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
               {analysis.closeStatus && <span>{(analysis.repName || analysis.callDate) ? " · " : ""}{{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}</span>}
             </p>
           )}
-          {analysis.callType && (
-            <div className="mt-1">
+          {(analysis.callType || analysis.repSpeechPct != null) && (
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
               <CallTypeBadge callType={analysis.callType} />
+              <TalkRatioBadge repPct={analysis.repSpeechPct} />
             </div>
           )}
           {analysis.lastEditedByName && (
@@ -853,6 +871,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-slate-200 text-sm font-medium truncate">{a.fileName ?? "Recording"}</p>
               <CallTypeBadge callType={a.callType} />
+              <TalkRatioBadge repPct={a.repSpeechPct} />
             </div>
             <p className="text-slate-500 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
           </div>
@@ -980,6 +999,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
                             <CallTypeBadge callType={a.callType} />
+                            <TalkRatioBadge repPct={a.repSpeechPct} />
                           </div>
                           <p className="text-slate-500 text-xs">
                             {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}

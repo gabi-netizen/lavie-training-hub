@@ -97,3 +97,9 @@
 - [x] Fix Manager View to group calls by repName (not userId) so every call appears regardless of who uploaded it
 - [x] Calls with no repName should appear under "Unknown Rep" group
 - [x] Add expand/collapse toggle to show all calls per rep (previously limited to 5)
+
+## Talk Ratio Visibility
+- [x] Add TalkRatioBadge component showing Rep% vs Customer% with color coding
+- [x] Show talk ratio badge in Manager View per-call rows
+- [x] Show talk ratio badge in My Calls list rows
+- [x] Show talk ratio prominently in AnalysisReport header stats
