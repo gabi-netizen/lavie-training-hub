@@ -92,3 +92,8 @@
 - [x] Add delete button in AnalysisReport for error-status calls
 - [x] Add delete button in MyCalls list for error-status calls
 - [x] After delete, navigate back to upload tab
+
+## Manager View — Show All Calls
+- [x] Fix Manager View to group calls by repName (not userId) so every call appears regardless of who uploaded it
+- [x] Calls with no repName should appear under "Unknown Rep" group
+- [x] Add expand/collapse toggle to show all calls per rep (previously limited to 5)

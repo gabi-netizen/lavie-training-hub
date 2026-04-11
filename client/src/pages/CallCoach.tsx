@@ -884,10 +884,20 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
 }
 
 // ─── MANAGER DASHBOARD ────────────────────────────────────────────────────────
+const MANAGER_PREVIEW_COUNT = 5;
 function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
+  const [expandedReps, setExpandedReps] = useState<Set<string>>(new Set());
   const { data: analyses, isLoading } = trpc.callCoach.getAllAnalyses.useQuery(undefined, {
     refetchInterval: 10000,
   });
+
+  const toggleRep = (name: string) => {
+    setExpandedReps(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
 
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
   if (!analyses?.length) return (
@@ -951,30 +961,49 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
               {repAvg != null && <Progress value={repAvg} className="h-1.5 mt-2" />}
             </CardHeader>
             <CardContent className="space-y-2 pt-0">
-              {[...repCalls].reverse().slice(0, 5).map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 cursor-pointer transition-colors"
-                  onClick={() => onSelect(a.id)}
-                >
-                  {a.status === "done" ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /> :
-                   a.status === "error" ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> :
-                   <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
-                      <CallTypeBadge callType={a.callType} />
-                    </div>
-                    <p className="text-slate-500 text-xs">
-                      {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
-                      {new Date(a.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                  {a.overallScore != null && (
-                    <span className={`text-sm font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</span>
-                  )}
-                </div>
-              ))}
+              {(() => {
+                const sorted = [...repCalls].reverse();
+                const isExpanded = expandedReps.has(repName);
+                const visible = isExpanded ? sorted : sorted.slice(0, MANAGER_PREVIEW_COUNT);
+                return (
+                  <>
+                    {visible.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 cursor-pointer transition-colors"
+                        onClick={() => onSelect(a.id)}
+                      >
+                        {a.status === "done" ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /> :
+                         a.status === "error" ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> :
+                         <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                            <CallTypeBadge callType={a.callType} />
+                          </div>
+                          <p className="text-slate-500 text-xs">
+                            {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
+                            {new Date(a.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {a.overallScore != null && (
+                          <span className={`text-sm font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</span>
+                        )}
+                      </div>
+                    ))}
+                    {sorted.length > MANAGER_PREVIEW_COUNT && (
+                      <button
+                        onClick={() => toggleRep(repName)}
+                        className="w-full text-xs text-teal-400 hover:text-teal-300 py-1.5 text-center transition-colors"
+                      >
+                        {isExpanded
+                          ? `▲ Show less`
+                          : `▼ Show all ${sorted.length} calls`}
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         );
