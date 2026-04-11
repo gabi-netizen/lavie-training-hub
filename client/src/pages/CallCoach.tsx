@@ -1362,11 +1362,299 @@ function FeedbackReview() {
   );
 }
 
+// ─── TEAM DASHBOARD ─────────────────────────────────────────────────────────
+type RepProfileData = {
+  repName: string;
+  userId: number;
+  totalCalls: number;
+  allTimeAvg: number | null;
+  last10Avg: number | null;
+  trendIndicator: "improving" | "stable" | "declining";
+  trendDelta: number;
+  rank: number;
+  totalReps: number;
+  closeRate: number;
+  avgTalkRatio: number | null;
+  scriptComplianceAvg: number | null;
+  toneAvg: number | null;
+  scoreHistory: { date: string; score: number }[];
+  bestCall: { id: number; score: number; fileName: string | null; date: string } | null;
+  worstCall: { id: number; score: number; fileName: string | null; date: string } | null;
+  isReliable: boolean;
+};
+
+function TrendIndicator({ trend, delta }: { trend: "improving" | "stable" | "declining"; delta: number }) {
+  if (trend === "improving") return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-2 py-0.5">
+      <TrendingUp className="w-3 h-3" /> +{delta} Improving
+    </span>
+  );
+  if (trend === "declining") return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 bg-red-500/15 border border-red-500/30 rounded-full px-2 py-0.5">
+      <TrendingDown className="w-3 h-3" /> {delta} Declining
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 bg-slate-500/15 border border-slate-600/30 rounded-full px-2 py-0.5">
+      <Minus className="w-3 h-3" /> Stable
+    </span>
+  );
+}
+
+function RepInitials({ name }: { name: string }) {
+  const parts = name.trim().split(" ");
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+  return (
+    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+      {initials}
+    </div>
+  );
+}
+
+function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () => void }) {
+  const rankMedals = ["🥇", "🥈", "🥉"];
+  const rankLabel = rep.rank <= 3 && rep.isReliable ? rankMedals[rep.rank - 1] : `#${rep.rank}`;
+
+  // Build mini sparkline data
+  const chartData = rep.scoreHistory.slice(-10).map((h, i) => ({ call: i + 1, score: h.score, date: h.date }));
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="bg-[#0A1628] border-slate-700 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-white">
+            <RepInitials name={rep.repName} />
+            <div>
+              <div className="text-lg font-bold">{rep.repName}</div>
+              <div className="flex items-center gap-2 mt-1">
+                {rep.allTimeAvg != null && <RepStatusBadge score={rep.allTimeAvg} size="md" />}
+                <span className="text-slate-500 text-xs">{rankLabel} of {rep.totalReps} reps</span>
+              </div>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5 mt-2">
+          {/* Dual score row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4 text-center">
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">All-Time Avg</p>
+              <p className={`text-3xl font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-slate-500"}`}>
+                {rep.allTimeAvg ?? "—"}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{rep.totalCalls} calls total</p>
+            </div>
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4 text-center">
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Last 10 Avg</p>
+              <p className={`text-3xl font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-slate-500"}`}>
+                {rep.last10Avg ?? "—"}
+              </p>
+              <div className="mt-1">
+                <TrendIndicator trend={rep.trendIndicator} delta={Math.abs(rep.trendDelta)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Score history sparkline */}
+          {chartData.length >= 2 && (
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4">
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-3">Score History (last 10 calls)</p>
+              <div className="h-24">
+                <svg viewBox={`0 0 ${chartData.length * 40} 80`} className="w-full h-full" preserveAspectRatio="none">
+                  {/* Grid line at 70 */}
+                  <line x1="0" y1={80 - (70 / 100) * 80} x2={chartData.length * 40} y2={80 - (70 / 100) * 80}
+                    stroke="rgba(20,184,166,0.2)" strokeDasharray="4,4" strokeWidth="1" />
+                  {/* Score line */}
+                  <polyline
+                    points={chartData.map((d, i) => `${i * 40 + 20},${80 - (d.score / 100) * 80}`).join(" ")}
+                    fill="none" stroke="#14b8a6" strokeWidth="2" strokeLinejoin="round"
+                  />
+                  {/* Dots */}
+                  {chartData.map((d, i) => (
+                    <circle key={i} cx={i * 40 + 20} cy={80 - (d.score / 100) * 80} r="4"
+                      fill={d.score >= 70 ? "#10b981" : d.score >= 55 ? "#f59e0b" : "#ef4444"}
+                      stroke="#0A1628" strokeWidth="2"
+                    />
+                  ))}
+                </svg>
+              </div>
+              <div className="flex justify-between text-xs text-slate-600 mt-1">
+                <span>Oldest</span><span className="text-teal-500/60">— 70 target</span><span>Latest</span>
+              </div>
+            </div>
+          )}
+
+          {/* Category breakdown */}
+          <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4 space-y-3">
+            <p className="text-xs text-slate-400 uppercase tracking-widest">Category Breakdown</p>
+            {[
+              { label: "Script Compliance", value: rep.scriptComplianceAvg, icon: "📋" },
+              { label: "Tone & Delivery", value: rep.toneAvg, icon: "🎙️" },
+              { label: "Talk Ratio", value: rep.avgTalkRatio, icon: "🗣️", suffix: "% rep" },
+            ].map(({ label, value, icon, suffix }) => (
+              <div key={label} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-300">{icon} {label}</span>
+                  <span className={`text-xs font-bold ${value != null ? scoreColor(value) : "text-slate-500"}`}>
+                    {value != null ? `${value}${suffix ?? ""}` : "—"}
+                  </span>
+                </div>
+                {value != null && !suffix && (
+                  <Progress value={value} className="h-1.5" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
+              <p className="text-xs text-slate-500 mb-1">Close Rate</p>
+              <p className={`text-lg font-bold ${rep.closeRate >= 60 ? "text-emerald-400" : rep.closeRate >= 30 ? "text-amber-400" : "text-red-400"}`}>
+                {rep.closeRate}%
+              </p>
+            </div>
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
+              <p className="text-xs text-slate-500 mb-1">Best Score</p>
+              <p className={`text-lg font-bold ${rep.bestCall ? scoreColor(rep.bestCall.score) : "text-slate-500"}`}>
+                {rep.bestCall?.score ?? "—"}
+              </p>
+            </div>
+            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
+              <p className="text-xs text-slate-500 mb-1">Worst Score</p>
+              <p className={`text-lg font-bold ${rep.worstCall ? scoreColor(rep.worstCall.score) : "text-slate-500"}`}>
+                {rep.worstCall?.score ?? "—"}
+              </p>
+            </div>
+          </div>
+
+          {!rep.isReliable && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300">
+              ⚠️ This rep has fewer than 5 analysed calls — stats may not be representative yet.
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-300 hover:bg-slate-700">
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TeamDashboard() {
+  const { data: reps, isLoading } = trpc.callCoach.getTeamDashboard.useQuery();
+  const [selectedRep, setSelectedRep] = useState<RepProfileData | null>(null);
+
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (!reps?.length) return (
+    <div className="text-center py-12 text-slate-500">
+      <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+      <p>No analysed calls yet.</p>
+      <p className="text-xs mt-2 text-slate-600">Once reps upload and analyse calls, their profiles will appear here.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="text-xs text-slate-500 italic text-center">
+        Click any rep card to see their full performance profile. All stats are based on AI-analysed calls only.
+      </div>
+
+      {/* Team summary bar */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
+          <p className="text-xs text-slate-500 mb-1">Total Reps</p>
+          <p className="text-2xl font-bold text-white">{reps.length}</p>
+        </div>
+        <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
+          <p className="text-xs text-slate-500 mb-1">Team Avg</p>
+          {(() => {
+            const scored = reps.filter(r => r.allTimeAvg != null);
+            const teamAvg = scored.length > 0
+              ? Math.round(scored.reduce((a, r) => a + r.allTimeAvg!, 0) / scored.length)
+              : null;
+            return <p className={`text-2xl font-bold ${teamAvg != null ? scoreColor(teamAvg) : "text-slate-500"}`}>{teamAvg ?? "—"}</p>;
+          })()}
+        </div>
+        <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
+          <p className="text-xs text-slate-500 mb-1">Improving</p>
+          <p className="text-2xl font-bold text-emerald-400">{reps.filter(r => r.trendIndicator === "improving").length}</p>
+        </div>
+      </div>
+
+      {/* Rep cards grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {reps.map((rep) => (
+          <button
+            key={rep.userId}
+            onClick={() => setSelectedRep(rep)}
+            className="text-left rounded-xl border border-slate-700 bg-[#0F1923] hover:border-teal-500/50 hover:bg-teal-500/5 transition-all p-4 space-y-3 cursor-pointer group"
+          >
+            {/* Header row */}
+            <div className="flex items-center gap-3">
+              <RepInitials name={rep.repName} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-200 font-semibold text-sm truncate group-hover:text-teal-300 transition-colors">{rep.repName}</p>
+                  {!rep.isReliable && <Badge className="text-xs bg-slate-700/50 text-slate-400 border-slate-600 flex-shrink-0">&lt;5 calls</Badge>}
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">#{rep.rank} of {rep.totalReps} · {rep.totalCalls} calls</p>
+              </div>
+              {rep.allTimeAvg != null && (
+                <div className="text-right flex-shrink-0">
+                  <p className={`text-2xl font-bold ${scoreColor(rep.allTimeAvg)}`}>{rep.allTimeAvg}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Status + trend */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {rep.allTimeAvg != null && <RepStatusBadge score={rep.allTimeAvg} size="sm" />}
+              <TrendIndicator trend={rep.trendIndicator} delta={Math.abs(rep.trendDelta)} />
+            </div>
+
+            {/* Mini stats */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-xs text-slate-500">Last 10</p>
+                <p className={`text-sm font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-slate-500"}`}>
+                  {rep.last10Avg ?? "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Close %</p>
+                <p className={`text-sm font-bold ${rep.closeRate >= 60 ? "text-emerald-400" : rep.closeRate >= 30 ? "text-amber-400" : "text-red-400"}`}>
+                  {rep.closeRate}%
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Talk Ratio</p>
+                <p className={`text-sm font-bold ${rep.avgTalkRatio != null ? (rep.avgTalkRatio >= 40 && rep.avgTalkRatio <= 65 ? "text-emerald-400" : rep.avgTalkRatio > 65 ? "text-red-400" : "text-amber-400") : "text-slate-500"}`}>
+                  {rep.avgTalkRatio != null ? `${rep.avgTalkRatio}%` : "—"}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Rep Profile Modal */}
+      {selectedRep && <RepProfileModal rep={selectedRep} onClose={() => setSelectedRep(null)} />}
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 export default function CallCoach() {
   const { user, loading, isAuthenticated } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "leaderboard" | "manager" | "feedback">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "leaderboard" | "team" | "manager" | "feedback">("upload");
   const utils = trpc.useUtils();
 
   if (loading) {
@@ -1492,7 +1780,8 @@ export default function CallCoach() {
           {[
             { id: "upload", label: "Upload Call" },
             { id: "my-calls", label: "My Calls" },
-            { id: "leaderboard", label: "\uD83C\uDFC6 Leaderboard" },
+            { id: "leaderboard", label: "🏆 Leaderboard" },
+            { id: "team", label: "👥 Team" },
             ...(isAdmin ? [{ id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
           ].map((tab) => (
             <button
@@ -1520,6 +1809,7 @@ export default function CallCoach() {
         )}
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} />}
         {activeTab === "leaderboard" && <Leaderboard />}
+        {activeTab === "team" && <TeamDashboard />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}
       </div>

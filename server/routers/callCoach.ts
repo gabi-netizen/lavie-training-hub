@@ -7,6 +7,7 @@ import {
   listAllCallAnalyses,
   processCallAnalysis,
   getLeaderboard,
+  getTeamDashboard,
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
@@ -36,6 +37,11 @@ export const callCoachRouter = router({
   /** Public leaderboard — visible to all logged-in users */
   getLeaderboard: protectedProcedure.query(async () => {
     return getLeaderboard();
+  }),
+
+  /** Team dashboard — all reps with full stats, visible to all logged-in users */
+  getTeamDashboard: protectedProcedure.query(async () => {
+    return getTeamDashboard();
   }),
 
   /**

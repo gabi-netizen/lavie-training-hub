@@ -446,3 +446,155 @@ export async function deleteFailedAnalysis(id: number): Promise<boolean> {
   await db.delete(callAnalyses).where(eq(callAnalyses.id, id));
   return true;
 }
+
+// ─── REP PROFILE & TEAM DASHBOARD ────────────────────────────────────────────
+
+export interface RepProfileData {
+  repName: string;
+  userId: number;
+  totalCalls: number;
+  allTimeAvg: number | null;
+  last10Avg: number | null;
+  trendIndicator: "improving" | "stable" | "declining";
+  trendDelta: number; // last10Avg - allTimeAvg
+  rank: number; // 1-based rank among all reps
+  totalReps: number;
+  closeRate: number;
+  avgTalkRatio: number | null;
+  scriptComplianceAvg: number | null;
+  toneAvg: number | null;
+  scoreHistory: { date: string; score: number }[]; // all scored calls sorted by date
+  bestCall: { id: number; score: number; fileName: string | null; date: string } | null;
+  worstCall: { id: number; score: number; fileName: string | null; date: string } | null;
+  isReliable: boolean; // true if 5+ calls
+}
+
+export async function getTeamDashboard(): Promise<RepProfileData[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const all = await db.select().from(callAnalyses)
+    .where(eq(callAnalyses.status, "done"))
+    .orderBy(callAnalyses.createdAt);
+
+  type CallRow = (typeof all)[number];
+  const byUser = new Map<number, CallRow[]>();
+  for (const row of all) {
+    if (!byUser.has(row.userId)) byUser.set(row.userId, []);
+    byUser.get(row.userId)!.push(row);
+  }
+
+  // First pass: compute allTimeAvg for ranking
+  const repEntries: Array<{ userId: number; allTimeAvg: number | null; calls: CallRow[] }> = [];
+  for (const [userId, calls] of Array.from(byUser.entries())) {
+    const scored = calls.filter(c => c.overallScore != null);
+    const scores = scored.map(c => c.overallScore as number);
+    const allTimeAvg = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : null;
+    repEntries.push({ userId, allTimeAvg, calls });
+  }
+
+  // Sort by allTimeAvg desc for ranking
+  repEntries.sort((a, b) => {
+    if (a.allTimeAvg == null && b.allTimeAvg == null) return 0;
+    if (a.allTimeAvg == null) return 1;
+    if (b.allTimeAvg == null) return -1;
+    return b.allTimeAvg - a.allTimeAvg;
+  });
+
+  const totalReps = repEntries.length;
+  const profiles: RepProfileData[] = [];
+
+  for (let rankIdx = 0; rankIdx < repEntries.length; rankIdx++) {
+    const { userId, allTimeAvg, calls } = repEntries[rankIdx];
+    const repName = calls[calls.length - 1]?.repName ?? `Rep #${userId}`;
+    const scored = calls.filter(c => c.overallScore != null);
+    const scores = scored.map(c => c.overallScore as number);
+
+    // Last 10 avg
+    const last10Scores = scores.slice(-10);
+    const last10Avg = last10Scores.length > 0
+      ? Math.round(last10Scores.reduce((a, b) => a + b, 0) / last10Scores.length)
+      : null;
+
+    // Trend indicator: compare last10Avg vs allTimeAvg
+    const trendDelta = (last10Avg != null && allTimeAvg != null) ? last10Avg - allTimeAvg : 0;
+    let trendIndicator: "improving" | "stable" | "declining" = "stable";
+    if (trendDelta >= 5) trendIndicator = "improving";
+    else if (trendDelta <= -5) trendIndicator = "declining";
+
+    // Close rate
+    const closedCalls = calls.filter(c => c.closeStatus === "closed").length;
+    const closeRate = calls.length > 0 ? Math.round((closedCalls / calls.length) * 100) : 0;
+
+    // Avg talk ratio
+    const withTalkRatio = calls.filter(c => c.repSpeechPct != null);
+    const avgTalkRatio = withTalkRatio.length > 0
+      ? Math.round(withTalkRatio.reduce((a, c) => a + (c.repSpeechPct as number), 0) / withTalkRatio.length)
+      : null;
+
+    // Category avgs from analysisJson
+    let scriptComplianceTotal = 0, toneTotal = 0, catCount = 0;
+    for (const call of scored) {
+      try {
+        const report = JSON.parse(call.analysisJson ?? "{}") as Partial<CallAnalysisReport>;
+        if (report.scriptComplianceScore != null && report.toneScore != null) {
+          scriptComplianceTotal += report.scriptComplianceScore;
+          toneTotal += report.toneScore;
+          catCount++;
+        }
+      } catch { /* skip malformed */ }
+    }
+    const scriptComplianceAvg = catCount > 0 ? Math.round(scriptComplianceTotal / catCount) : null;
+    const toneAvg = catCount > 0 ? Math.round(toneTotal / catCount) : null;
+
+    // Score history (all scored calls, sorted by date)
+    const scoreHistory = scored.map(c => ({
+      date: (c.createdAt ?? new Date()).toISOString().split("T")[0],
+      score: Math.round(c.overallScore as number),
+    }));
+
+    // Best and worst calls
+    let bestCall: RepProfileData["bestCall"] = null;
+    let worstCall: RepProfileData["worstCall"] = null;
+    if (scored.length > 0) {
+      const best = scored.reduce((a, b) => (a.overallScore! > b.overallScore! ? a : b));
+      const worst = scored.reduce((a, b) => (a.overallScore! < b.overallScore! ? a : b));
+      bestCall = {
+        id: best.id,
+        score: Math.round(best.overallScore!),
+        fileName: best.fileName ?? null,
+        date: (best.createdAt ?? new Date()).toISOString().split("T")[0],
+      };
+      worstCall = {
+        id: worst.id,
+        score: Math.round(worst.overallScore!),
+        fileName: worst.fileName ?? null,
+        date: (worst.createdAt ?? new Date()).toISOString().split("T")[0],
+      };
+    }
+
+    profiles.push({
+      repName,
+      userId,
+      totalCalls: calls.length,
+      allTimeAvg,
+      last10Avg,
+      trendIndicator,
+      trendDelta,
+      rank: rankIdx + 1,
+      totalReps,
+      closeRate,
+      avgTalkRatio,
+      scriptComplianceAvg,
+      toneAvg,
+      scoreHistory,
+      bestCall,
+      worstCall,
+      isReliable: calls.length >= 5,
+    });
+  }
+
+  return profiles;
+}

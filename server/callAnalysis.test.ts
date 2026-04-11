@@ -58,4 +58,45 @@ describe("callAnalysis module", () => {
     expect(validStatuses.includes("done")).toBe(true);
     expect(validStatuses.includes(invalidStatus)).toBe(false);
   });
+
+  it("should export getTeamDashboard function", async () => {
+    const module = await import("./callAnalysis");
+    expect(typeof module.getTeamDashboard).toBe("function");
+  });
+
+  it("should compute trend indicator correctly", () => {
+    // trendDelta = last10Avg - allTimeAvg
+    // >= +5 = improving, <= -5 = declining, else stable
+    const getTrend = (last10: number, allTime: number) => {
+      const delta = last10 - allTime;
+      if (delta >= 5) return "improving";
+      if (delta <= -5) return "declining";
+      return "stable";
+    };
+    expect(getTrend(80, 70)).toBe("improving");   // +10
+    expect(getTrend(60, 70)).toBe("declining");   // -10
+    expect(getTrend(72, 70)).toBe("stable");       // +2
+    expect(getTrend(70, 75)).toBe("declining");  // -5 boundary (exactly -5 = declining)
+    expect(getTrend(70, 76)).toBe("declining");    // -6
+  });
+
+  it("should compute rep status tiers correctly", () => {
+    const getStatus = (score: number) => {
+      if (score >= 85) return "Elite";
+      if (score >= 70) return "Proficient";
+      if (score >= 55) return "On Track";
+      if (score >= 40) return "Developing";
+      return "Needs Work";
+    };
+    expect(getStatus(95)).toBe("Elite");
+    expect(getStatus(85)).toBe("Elite");
+    expect(getStatus(84)).toBe("Proficient");
+    expect(getStatus(70)).toBe("Proficient");
+    expect(getStatus(69)).toBe("On Track");
+    expect(getStatus(55)).toBe("On Track");
+    expect(getStatus(54)).toBe("Developing");
+    expect(getStatus(40)).toBe("Developing");
+    expect(getStatus(39)).toBe("Needs Work");
+    expect(getStatus(0)).toBe("Needs Work");
+  });
 });

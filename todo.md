@@ -134,3 +134,9 @@
 - [x] Replace "avg" label in Manager View with RepStatusBadge (calculated from last 5 calls)
 - [x] Show RepStatusBadge in Leaderboard next to rep score
 - [x] Show RepStatusBadge in My Calls next to individual call score
+
+## Team Performance Dashboard + Rep Profile Card
+- [x] Add server procedure: getTeamDashboard - returns all reps with all-time avg, last-10 avg, trend, category scores, rank, call count
+- [x] Build Team Dashboard tab (new tab in AI Coach) with rep cards grid: avatar initials, name, status badge, trend indicator (Improving/Stable/Declining), score
+- [x] Build Rep Profile Card modal: opens on rep name click, shows score history chart, category breakdown bars, rank in team, talk ratio avg, best/worst call
+- [x] Make Team Dashboard visible to all users (reps + managers), not just admins
