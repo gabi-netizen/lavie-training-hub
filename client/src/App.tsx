@@ -33,6 +33,14 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
+/** Redirects the URL to /ai-coach?tab=X then renders CallCoach */
+function TabRedirect({ tab }: { tab: string }) {
+  useEffect(() => {
+    window.history.replaceState(null, "", `/ai-coach?tab=${tab}`);
+  }, [tab]);
+  return <CallCoach />;
+}
+
 function Router() {
   const { user, loading } = useAuth();
   const isAdmin = !loading && user?.role === "admin";
@@ -72,10 +80,10 @@ function Router() {
 
         {/* Team and Leaderboard deep-link into CallCoach with the right tab */}
         <Route path={"/team"}>
-          {() => { window.history.replaceState(null, "", "/ai-coach?tab=team"); return <CallCoach />; }}
+          {() => <TabRedirect tab="team" />}
         </Route>
         <Route path={"/leaderboard"}>
-          {() => { window.history.replaceState(null, "", "/ai-coach?tab=leaderboard"); return <CallCoach />; }}
+          {() => <TabRedirect tab="leaderboard" />}
         </Route>
 
         {/* Profile settings — all authenticated users */}
@@ -91,7 +99,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

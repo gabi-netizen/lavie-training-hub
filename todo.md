@@ -248,11 +248,16 @@
 - [x] Verify Home.tsx, CallCoach.tsx, Team, Leaderboard on mobile
 
 ## CloudTalk Webhook Automation (Auto AI Analysis)
-- [ ] Research CloudTalk webhook payload format (call-ended event, recording URL)
-- [ ] Build POST /api/webhooks/cloudtalk endpoint (receive call-ended, verify signature)
-- [ ] Auto-download recording from CloudTalk, upload to S3, trigger Deepgram + GPT-4 analysis
-- [ ] Auto-match CloudTalk agent email to app user (cloudtalkAgentId)
-- [ ] Auto-link analysis to contact by phone number
-- [ ] Auto-save AI call summary as call note in ContactCard
-- [ ] Show "Auto-analyzed" badge on calls processed via webhook in AI Coach
-- [ ] Add webhook setup instructions page/modal for admins
+- [x] Research CloudTalk webhook payload format (call-ended event, recording URL)
+- [x] Build POST /api/webhooks/cloudtalk endpoint (receive call-ended, verify signature)
+- [x] Auto-download recording from CloudTalk, upload to S3, trigger Deepgram + GPT-4 analysis
+- [x] Auto-match CloudTalk agent email to app user (cloudtalkAgentId)
+- [x] Auto-link analysis to contact by phone number
+- [x] Auto-save AI call summary as call note in ContactCard
+- [x] Show "Auto-analyzed" badge on calls processed via webhook in AI Coach
+- [x] Add webhook setup instructions page/modal for admins
+
+## CloudTalk Webhook — Gap Fixes
+- [ ] Add webhook secret token verification (CLOUDTALK_WEBHOOK_SECRET env var, reject requests without matching X-CloudTalk-Signature header)
+- [ ] Add agent email-based matching fallback (if cloudtalkAgentId not found, try matching by agent email from CloudTalk payload)
+- [ ] Build admin webhook setup instructions modal (show endpoint URL, required event type, token config steps)
