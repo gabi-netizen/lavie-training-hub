@@ -204,11 +204,11 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     <div className="min-h-screen bg-gray-50">
 
       {/* ── Page Header ── */}
-      <div className="bg-white border-b border-gray-200 px-8 py-5">
+      <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
-            <p className="text-sm text-gray-700 mt-0.5">Manage and track your customer leads</p>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Contacts</h1>
+            <p className="text-sm text-gray-700 mt-0.5 hidden sm:block">Manage and track your customer leads</p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -238,7 +238,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-4 gap-4 mt-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {[
             { icon: Users,      label: "Total Contacts", value: totalContacts, colour: "text-indigo-600 bg-indigo-50" },
             { icon: TrendingUp, label: "Done Deals",      value: dealsDone,    colour: "text-green-600 bg-green-50" },
@@ -259,7 +259,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       </div>
 
       {/* ── Search & Filters ── */}
-      <div className="bg-white border-b border-gray-200 px-8 py-3">
+      <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-800" />
@@ -336,7 +336,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       </div>
 
       {/* ── Table ── */}
-      <div className="px-8 py-6">
+      <div className="px-3 md:px-8 py-4 md:py-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-48 text-gray-800">
             <RefreshCw className="animate-spin mr-2" size={18} /> Loading contacts…
@@ -359,8 +359,40 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             </Button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {/* Table header */}
+          <>
+          {/* ── Mobile card list (< md) ── */}
+          <div className="md:hidden flex flex-col gap-2">
+            {contacts.map((c: Contact) => (
+              <div
+                key={c.id}
+                className="bg-white rounded-xl border-2 border-gray-900 px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-indigo-50 transition-colors"
+                onClick={() => navigate(`/contacts/${c.id}`)}
+              >
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-indigo-600">{c.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900 truncate">{c.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <LeadTypeBadge type={c.leadType} />
+                    <StatusBadge status={c.status} />
+                  </div>
+                  {c.phone && <p className="text-xs text-gray-700 font-mono mt-0.5">{c.phone}</p>}
+                </div>
+                {c.phone && onDial && (
+                  <button
+                    className="w-9 h-9 rounded-full bg-green-100 border-2 border-green-600 flex items-center justify-center text-green-600 shrink-0"
+                    onClick={e => { e.stopPropagation(); onDial(c.phone!, c.name); }}
+                  >
+                    <Phone size={15} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* ── Desktop table (>= md) ── */}
+          <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
@@ -382,13 +414,10 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                     className="hover:bg-indigo-50/40 cursor-pointer transition-colors group border-b-2 border-gray-200 last:border-b-0"
                     onClick={() => navigate(`/contacts/${c.id}`)}
                   >
-                    {/* Name + avatar */}
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-indigo-600">
-                            {c.name.charAt(0).toUpperCase()}
-                          </span>
+                          <span className="text-xs font-bold text-indigo-600">{c.name.charAt(0).toUpperCase()}</span>
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{c.name}</p>
@@ -396,57 +425,22 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                         </div>
                       </div>
                     </td>
-
-                    {/* Lead type */}
-                    <td className="px-4 py-3.5">
-                      <LeadTypeBadge type={c.leadType} />
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3.5">
-                      <StatusBadge status={c.status} />
-                    </td>
-
-                    {/* Phone */}
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm text-gray-800 font-mono">{c.phone ?? "—"}</span>
-                    </td>
-
-                    {/* Agent */}
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm text-gray-800">{c.agentName ?? "—"}</span>
-                    </td>
-
-                    {/* Agent Email */}
+                    <td className="px-4 py-3.5"><LeadTypeBadge type={c.leadType} /></td>
+                    <td className="px-4 py-3.5"><StatusBadge status={c.status} /></td>
+                    <td className="px-4 py-3.5"><span className="text-sm text-gray-800 font-mono">{c.phone ?? "—"}</span></td>
+                    <td className="px-4 py-3.5"><span className="text-sm text-gray-800">{c.agentName ?? "—"}</span></td>
                     <td className="px-4 py-3.5">
                       {c.agentName ? (
-                        <span className="text-xs text-gray-800 font-mono">
-                          trial+{c.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-800">—</span>
-                      )}
+                        <span className="text-xs text-gray-800 font-mono">trial+{c.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com</span>
+                      ) : <span className="text-sm text-gray-800">—</span>}
                     </td>
-
-                    {/* Source */}
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm text-gray-700">{c.source ?? "—"}</span>
-                    </td>
-
-                    {/* Lead Date */}
-                    <td className="px-4 py-3.5">
-                      <span className="text-xs text-gray-800">
-                        {c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}
-                      </span>
-                    </td>
-
-                    {/* Call button */}
+                    <td className="px-4 py-3.5"><span className="text-sm text-gray-700">{c.source ?? "—"}</span></td>
+                    <td className="px-4 py-3.5"><span className="text-xs text-gray-800">{c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}</span></td>
                     <td className="px-4 py-3.5">
                       {c.phone && onDial && (
                         <button
                           className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-500 flex items-center justify-center text-green-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                           onClick={e => { e.stopPropagation(); onDial(c.phone!, c.name); }}
-                          title="Click to call"
                         >
                           <Phone size={14} />
                         </button>
@@ -457,6 +451,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

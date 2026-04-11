@@ -240,3 +240,9 @@
 - [x] TopNav: dark borders on mobile bottom nav tabs
 - [x] ContactCard: dark borders on action buttons and info cards
 - [x] Home.tsx: dark borders on training category cards and nav buttons
+
+## Mobile Responsive Pass
+- [x] Customers.tsx: collapse table to card list on mobile (show name + status + call button)
+- [x] ContactCard.tsx: single-column layout on mobile (stack left/center/right panels)
+- [x] Dialler.tsx: full-screen iframe on mobile, hide Quick Dial panel
+- [x] Verify Home.tsx, CallCoach.tsx, Team, Leaderboard on mobile

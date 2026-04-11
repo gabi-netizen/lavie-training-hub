@@ -1090,7 +1090,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
   return (
     <div className="space-y-6">
       {/* Team stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-teal-600">{analyses.length}</div>
@@ -1322,7 +1322,7 @@ function FeedbackReview() {
   return (
     <div className="space-y-5">
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-amber-600">{feedbacks.length}</div>
@@ -1438,7 +1438,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
 
         <div className="space-y-5 mt-2">
           {/* Dual score row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-center">
               <p className="text-xs text-gray-800 uppercase tracking-widest mb-1">All-Time Avg</p>
               <p className={`text-3xl font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-800"}`}>
@@ -1509,7 +1509,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
               <p className="text-xs text-gray-800 mb-1">Close Rate</p>
               <p className={`text-lg font-bold ${rep.closeRate >= 60 ? "text-emerald-600" : rep.closeRate >= 30 ? "text-amber-600" : "text-red-600"}`}>
@@ -1568,7 +1568,7 @@ function TeamDashboard() {
   return (
     <div className="space-y-4">
       {/* Team summary bar */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
           <p className="text-xs text-gray-800 mb-1">Total Reps</p>
           <p className="text-2xl font-bold text-gray-900">{reps.length}</p>

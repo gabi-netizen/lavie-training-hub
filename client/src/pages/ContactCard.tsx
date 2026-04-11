@@ -269,7 +269,7 @@ export default function ContactCard() {
     <div className="min-h-screen bg-gray-50">
 
       {/* ── Top header bar ── */}
-      <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center gap-4">
+      <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-3 md:py-4 flex items-center gap-3 md:gap-4">
         <button
           onClick={() => navigate("/contacts")}
           className="flex items-center gap-1.5 text-sm text-gray-800 hover:text-gray-700 transition-colors shrink-0"
@@ -315,12 +315,12 @@ export default function ContactCard() {
       </div>
 
       {/* ── 3-column body ── */}
-      <div className="grid grid-cols-[300px_1fr_320px] h-[calc(100vh-112px)]">
+      <div className="flex flex-col md:grid md:grid-cols-[300px_1fr_320px] md:h-[calc(100vh-112px)]">
 
         {/* ══════════════════════════════════════════════════
             LEFT — Identity panel
         ══════════════════════════════════════════════════ */}
-        <aside className="bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
+        <aside className="bg-white border-b md:border-b-0 md:border-r border-gray-200 flex flex-col overflow-y-auto">
           {/* Header */}
           <div className="p-6 border-b border-gray-100 text-center">
             <div className="flex justify-center mb-3">
@@ -401,7 +401,7 @@ export default function ContactCard() {
 
           {/* Call stats */}
           {contact.callNotes.length > 0 && (
-            <div className="p-5 grid grid-cols-2 gap-3">
+            <div className="p-5 grid grid-cols-2 md:grid-cols-2 gap-3">
               <div className="rounded-xl bg-gray-50 border-2 border-gray-900 p-3 text-center">
                 <p className="text-2xl font-bold text-gray-800">{contact.callNotes.length}</p>
                 <p className="text-xs text-gray-800 mt-0.5">Calls</p>
@@ -423,7 +423,7 @@ export default function ContactCard() {
         {/* ══════════════════════════════════════════════════
             MIDDLE — Log call + History
         ══════════════════════════════════════════════════ */}
-        <main className="flex flex-col overflow-hidden bg-gray-50">
+        <main className="flex flex-col md:overflow-hidden bg-gray-50 min-h-[400px] md:min-h-0">
 
           {/* Log call form */}
           <div className="bg-white border-b border-gray-200 p-5">
@@ -523,7 +523,7 @@ export default function ContactCard() {
         {/* ══════════════════════════════════════════════════
             RIGHT — Actions + Lead info
         ══════════════════════════════════════════════════ */}
-        <aside className="bg-white border-l border-gray-200 flex flex-col overflow-y-auto">
+        <aside className="bg-white border-t md:border-t-0 md:border-l border-gray-200 flex flex-col overflow-y-auto">
 
           {/* ── Contact Actions ── */}
           <div className="p-5 border-b border-gray-100">

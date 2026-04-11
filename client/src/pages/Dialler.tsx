@@ -488,19 +488,20 @@ export default function Dialler() {
     <div className="h-[calc(100vh-56px)] bg-gray-50 flex flex-col">
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* CloudTalk iframe */}
-        <div className="flex-shrink-0 relative border-r border-gray-200">
+        {/* CloudTalk iframe — full width on mobile, fixed 420px on desktop */}
+        <div className="flex-shrink-0 relative border-r border-gray-200 w-full md:w-auto">
           <iframe
             ref={iframeRef}
             src="https://phone.cloudtalk.io?partner=lavielabs"
             allow="microphone *; camera *; autoplay *"
-            style={{ width: "420px", height: "100%", border: "none", display: "block" }}
+            className="w-full md:w-[420px] h-full"
+            style={{ border: "none", display: "block" }}
             title="CloudTalk Phone"
           />
         </div>
 
-        {/* Right panel */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white border-l border-gray-200">
+        {/* Right panel — hidden on mobile, visible on desktop */}
+        <div className="hidden md:flex flex-1 flex-col overflow-hidden bg-white border-l border-gray-200">
           {/* Active call — contact card */}
           {currentSession ? (
             <div className="flex-1 p-4 overflow-y-auto">
