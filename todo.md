@@ -145,3 +145,12 @@
 - [x] Fix getTeamDashboard to group by repName (not userId) so all calls appear regardless of who uploaded
 - [x] Convert Team Dashboard UI from card grid to ranked table (sorted #1 top to last bottom)
 - [x] Ensure reps with no userId (uploaded by manager) still appear in the table
+
+## CloudTalk Integration
+- [x] Store CLOUDTALK_API_KEY and CLOUDTALK_API_SECRET as secrets
+- [x] Verify API key works against CloudTalk API
+- [x] Build Dialler page with CloudTalk iframe embed (phone.cloudtalk.io)
+- [x] Add window.postMessage event listener for: ringing, dialing, calling, hangup, ended, contact_info
+- [x] Build contact card popup that auto-opens with caller name, number, company when call starts
+- [x] Add note-taking field on contact card (saved per call)
+- [x] Add new "Dialler" route in App.tsx
