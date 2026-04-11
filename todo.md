@@ -261,3 +261,9 @@
 - [ ] Add webhook secret token verification (CLOUDTALK_WEBHOOK_SECRET env var, reject requests without matching X-CloudTalk-Signature header)
 - [ ] Add agent email-based matching fallback (if cloudtalkAgentId not found, try matching by agent email from CloudTalk payload)
 - [ ] Build admin webhook setup instructions modal (show endpoint URL, required event type, token config steps)
+
+## CloudTalk Call History Integration
+- [x] Add getCallHistory and fetchRecording functions to server/cloudtalk.ts
+- [x] Add callHistory and streamRecording tRPC procedures to contacts router
+- [x] Add CloudTalk Call History accordion panel in ContactCard (answered/missed, duration, agent, recording player)
+- [x] Write vitest tests for CloudTalk call history (568,271 calls confirmed live)
