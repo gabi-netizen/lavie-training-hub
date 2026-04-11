@@ -165,6 +165,27 @@ function scoreBg(score: number) {
   return "bg-red-500/20 border-red-500/40";
 }
 
+// ─── 5-TIER REP STATUS ───────────────────────────────────────────────────────
+function getRepStatus(score: number): { label: string; color: string; bg: string; border: string; emoji: string } {
+  if (score >= 85) return { label: "Elite",       color: "text-teal-300",   bg: "bg-teal-500/20",   border: "border-teal-400/50",   emoji: "💎" };
+  if (score >= 70) return { label: "Proficient",  color: "text-emerald-300",bg: "bg-emerald-500/20",border: "border-emerald-400/50",emoji: "🟢" };
+  if (score >= 55) return { label: "On Track",    color: "text-amber-300",  bg: "bg-amber-500/20",  border: "border-amber-400/50",  emoji: "🟡" };
+  if (score >= 40) return { label: "Developing",  color: "text-orange-300", bg: "bg-orange-500/20", border: "border-orange-400/50", emoji: "🟠" };
+  return              { label: "Needs Work",  color: "text-red-300",    bg: "bg-red-500/20",    border: "border-red-400/50",    emoji: "🔴" };
+}
+
+function RepStatusBadge({ score, size = "sm" }: { score: number; size?: "sm" | "md" }) {
+  const s = getRepStatus(score);
+  const textSize = size === "md" ? "text-sm" : "text-xs";
+  const px = size === "md" ? "px-3 py-1" : "px-2 py-0.5";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border font-semibold ${textSize} ${px} ${s.bg} ${s.border} ${s.color}`}>
+      <span>{s.emoji}</span>
+      <span>{s.label}</span>
+    </span>
+  );
+}
+
 function qualityBadge(quality: "strong" | "weak" | "missing") {
   if (quality === "strong") return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">Strong</Badge>;
   if (quality === "weak") return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40">Weak</Badge>;
@@ -1002,7 +1023,10 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
             <p className="text-slate-500 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
           </div>
           {a.overallScore != null && (
-            <div className={`text-lg font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</div>
+            <div className="flex flex-col items-end gap-1">
+              <div className={`text-lg font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</div>
+              <RepStatusBadge score={Math.round(a.overallScore)} size="sm" />
+            </div>
           )}
           {a.status !== "done" && a.status !== "error" && (
             <span className="text-xs text-slate-500 capitalize">{a.status}</span>
@@ -1099,8 +1123,9 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500">{repCalls.length} calls</span>
                   {repAvg != null && (
-                    <span className={`text-lg font-bold ${scoreColor(repAvg)}`}>{repAvg} avg</span>
+                    <span className={`text-lg font-bold ${scoreColor(repAvg)}`}>{repAvg}</span>
                   )}
+                  {repAvg != null && <RepStatusBadge score={repAvg} size="sm" />}
                 </div>
               </div>
               {repAvg != null && <Progress value={repAvg} className="h-1.5 mt-2" />}
@@ -1247,12 +1272,15 @@ function Leaderboard() {
             </div>
 
             {/* Score & trend */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {trendIcon(entry.trend)}
-              {entry.avgScore != null
-                ? <span className={`text-xl font-bold ${scoreColor(entry.avgScore)}`}>{entry.avgScore}</span>
-                : <span className="text-slate-500 text-sm">—</span>
-              }
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                {trendIcon(entry.trend)}
+                {entry.avgScore != null
+                  ? <span className={`text-xl font-bold ${scoreColor(entry.avgScore)}`}>{entry.avgScore}</span>
+                  : <span className="text-slate-500 text-sm">—</span>
+                }
+              </div>
+              {entry.avgScore != null && <RepStatusBadge score={entry.avgScore} size="sm" />}
             </div>
           </div>
         ))}

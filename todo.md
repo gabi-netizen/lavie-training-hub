@@ -127,3 +127,10 @@
 - [x] Fix TalkRatioBadge tooltip zone order: Green first, then Amber, then Red
 - [x] Fix TalkRatioLegend card zone order: Green first, then Amber, then Red
 - [x] Audit and fix any other colour zone lists in CallCoach.tsx and Home.tsx (Home.tsx had none)
+
+## 5-Tier Rep Status Badge (Needs Work → Developing → On Track → Proficient → Elite)
+- [x] Create getRepStatus(score) helper: 0-39=Needs Work(red), 40-54=Developing(orange), 55-69=On Track(amber), 70-84=Proficient(green), 85-100=Elite(teal/gold)
+- [x] Create RepStatusBadge component showing tier name + colour
+- [x] Replace "avg" label in Manager View with RepStatusBadge (calculated from last 5 calls)
+- [x] Show RepStatusBadge in Leaderboard next to rep score
+- [x] Show RepStatusBadge in My Calls next to individual call score
