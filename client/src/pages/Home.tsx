@@ -860,7 +860,7 @@ export default function Home() {
 
       {/* Tabs — hidden on home screen */}
       {activeTab !== "home" && (
-        <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-none" style={{ background: "white" }}>
+        <div className="flex border-b-2 border-gray-900 overflow-x-auto scrollbar-none" style={{ background: "white" }}>
           {([
             { id: "livescript",   label: "Live Call Script",  num: "1" },
             { id: "rapport",      label: "Rapport",           num: "2" },
@@ -986,7 +986,7 @@ export default function Home() {
                   key={card.id}
                   onClick={() => setActiveTab(card.id as typeof activeTab)}
                   className="w-full text-left rounded-xl px-4 py-4 flex items-start gap-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                  style={{ background: card.bg, border: `1px solid ${card.border}` }}
+                  style={{ background: card.bg, border: "2px solid #111827" }}
                 >
                   <div className="flex flex-col items-center gap-1 shrink-0">
                     <span className="text-xl">{card.icon}</span>

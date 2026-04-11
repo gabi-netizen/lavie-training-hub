@@ -234,3 +234,9 @@
 - [x] Add clickToCall tRPC procedure (POST /calls/create.json with agent_id + callee_number)
 - [x] Update ContactCard Call Now to use clickToCall procedure (no iframe needed)
 - [x] Show CloudTalk agent list in profile settings for easy ID selection
+
+## Dark Border Styling (UI Clarity)
+- [x] Customers.tsx: dark borders on stat cards, buttons (Refresh/Import/Filters), contact rows
+- [x] TopNav: dark borders on mobile bottom nav tabs
+- [x] ContactCard: dark borders on action buttons and info cards
+- [x] Home.tsx: dark borders on training category cards and nav buttons

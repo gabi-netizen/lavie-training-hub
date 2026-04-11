@@ -214,7 +214,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <Button
               variant="outline"
               size="sm"
-              className="border-gray-300 text-gray-800 hover:text-gray-900 h-9"
+              className="border-2 border-gray-900 text-gray-800 hover:text-gray-900 h-9 font-semibold"
               onClick={() => refetch()}
             >
               <RefreshCw size={14} className="mr-1.5" />
@@ -222,7 +222,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             </Button>
             <Button
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 font-semibold"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 font-semibold border-2 border-indigo-800"
               onClick={() => fileRef.current?.click()}
               disabled={importing}
             >
@@ -245,7 +245,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             { icon: PhoneCall,  label: "In Progress",     value: working,      colour: "text-amber-600 bg-amber-50" },
             { icon: UserCheck,  label: "Callbacks Set",   value: callbacks,    colour: "text-purple-600 bg-purple-50" },
           ].map(({ icon: Icon, label, value, colour }) => (
-            <div key={label} className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm">
+            <div key={label} className="flex items-center gap-3 bg-white rounded-xl border-2 border-gray-900 px-4 py-3 shadow-sm">
               <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", colour)}>
                 <Icon size={18} />
               </div>
@@ -275,8 +275,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             variant="outline"
             size="sm"
             className={cn(
-              "border-gray-200 text-gray-800 h-9 px-3 gap-1.5",
-              activeFilters > 0 && "border-indigo-300 text-indigo-600 bg-indigo-50"
+              "border-2 border-gray-900 text-gray-800 h-9 px-3 gap-1.5 font-semibold",
+              activeFilters > 0 && "border-indigo-600 text-indigo-600 bg-indigo-50"
             )}
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -379,7 +379,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 {contacts.map((c: Contact) => (
                   <tr
                     key={c.id}
-                    className="hover:bg-indigo-50/40 cursor-pointer transition-colors group"
+                    className="hover:bg-indigo-50/40 cursor-pointer transition-colors group border-b-2 border-gray-200 last:border-b-0"
                     onClick={() => navigate(`/contacts/${c.id}`)}
                   >
                     {/* Name + avatar */}

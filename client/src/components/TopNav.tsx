@@ -146,7 +146,7 @@ export default function TopNav() {
       </nav>
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t border-gray-200 px-2 py-2 shadow-lg">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t-2 border-gray-900 px-2 py-2 shadow-lg">
         {navItems.map(({ path, label, icon: Icon }) => {
           const active =
             location === path ||
@@ -156,8 +156,10 @@ export default function TopNav() {
             <Link key={path} href={path}>
               <button
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-1 rounded-md transition-colors",
-                  active ? "text-indigo-600" : "text-gray-900 hover:text-gray-700"
+                  "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg border-2 transition-colors",
+                  active
+                    ? "border-indigo-600 text-indigo-600 bg-indigo-50"
+                    : "border-gray-900 text-gray-900 hover:bg-gray-50"
                 )}
               >
                 <Icon size={20} />

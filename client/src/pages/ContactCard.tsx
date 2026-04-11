@@ -402,11 +402,11 @@ export default function ContactCard() {
           {/* Call stats */}
           {contact.callNotes.length > 0 && (
             <div className="p-5 grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
+              <div className="rounded-xl bg-gray-50 border-2 border-gray-900 p-3 text-center">
                 <p className="text-2xl font-bold text-gray-800">{contact.callNotes.length}</p>
                 <p className="text-xs text-gray-800 mt-0.5">Calls</p>
               </div>
-              <div className="rounded-xl bg-green-50 border border-green-100 p-3 text-center">
+              <div className="rounded-xl bg-green-50 border-2 border-gray-900 p-3 text-center">
                 <p className="text-2xl font-bold text-green-600">
                   {contact.callNotes.filter((n) => n.statusAtTime === "sale").length}
                 </p>
@@ -482,7 +482,7 @@ export default function ContactCard() {
                 return (
                   <div
                     key={note.id}
-                    className="bg-white rounded-xl border border-gray-100 p-4 flex gap-4 shadow-sm"
+                    className="bg-white rounded-xl border-2 border-gray-200 p-4 flex gap-4 shadow-sm"
                   >
                     {/* Dot + line */}
                     <div className="flex flex-col items-center pt-1.5 shrink-0">
@@ -554,7 +554,7 @@ export default function ContactCard() {
                   window.open(`https://wa.me/${num}`, "_blank");
                 }}
                 disabled={!contact.phone}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-800 hover:bg-green-50 hover:border-green-300 hover:text-green-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 border-gray-900 text-gray-800 hover:bg-green-50 hover:border-green-600 hover:text-green-700 font-semibold text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {/* WhatsApp icon */}
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -570,7 +570,7 @@ export default function ContactCard() {
                   setEmailOpen((v) => !v);
                 }}
                 disabled={!contact.email}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-800 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 border-gray-900 text-gray-800 hover:bg-blue-50 hover:border-blue-600 hover:text-blue-700 font-semibold text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Mail size={18} />
                 Email
@@ -583,7 +583,7 @@ export default function ContactCard() {
                   window.open(`sms:${contact.phone}`);
                 }}
                 disabled={!contact.phone}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-800 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 border-gray-900 text-gray-800 hover:bg-purple-50 hover:border-purple-600 hover:text-purple-700 font-semibold text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <MessageSquare size={18} />
                 SMS
@@ -651,7 +651,7 @@ export default function ContactCard() {
               <button
                 onClick={() => syncToACMutation.mutate({ id: contactId })}
                 disabled={syncToACMutation.isPending}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 border-gray-900 text-indigo-600 hover:bg-indigo-50 font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Tag size={15} />
                 {syncToACMutation.isPending ? "Syncing…" : "Sync to ActiveCampaign"}
@@ -659,7 +659,7 @@ export default function ContactCard() {
               <button
                 onClick={() => user?.email && sendTestEmailMutation.mutate({ to: user.email })}
                 disabled={sendTestEmailMutation.isPending || !user?.email}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 border-gray-900 text-gray-700 hover:bg-gray-50 font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <CheckCircle2 size={15} />
                 {sendTestEmailMutation.isPending ? "Sending…" : "Send Test Email"}
