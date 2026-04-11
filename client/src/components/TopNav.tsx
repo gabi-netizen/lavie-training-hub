@@ -148,11 +148,11 @@ export default function TopNav() {
               <button
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-3 py-1 rounded-md transition-colors",
-                  active ? "text-indigo-600" : "text-gray-400 hover:text-gray-600"
+                  active ? "text-indigo-600" : "text-gray-900 hover:text-gray-700"
                 )}
               >
                 <Icon size={20} />
-                <span className="text-[10px] font-medium">{label}</span>
+                <span className="text-[10px] font-bold">{label}</span>
               </button>
             </Link>
           );
