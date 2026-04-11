@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
+import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -51,6 +52,11 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // ─── CloudTalk Webhook ─────────────────────────────────────────────────────
+  // CloudTalk sends POST requests here when a call ends.
+  // Must be registered BEFORE tRPC middleware.
+  app.post("/api/webhooks/cloudtalk", handleCloudTalkWebhook);
 
   // ─── File upload endpoint ─────────────────────────────────────────────────
   app.post(

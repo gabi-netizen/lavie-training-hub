@@ -68,6 +68,12 @@ export const callAnalyses = mysqlTable("call_analyses", {
   lastEditedByName: varchar("lastEditedByName", { length: 256 }),
   /** Timestamp of the most recent manual edit to call details */
   lastEditedAt: timestamp("lastEditedAt"),
+  /** Source of the analysis: 'manual' (uploaded by rep) or 'webhook' (auto from CloudTalk) */
+  source: mysqlEnum("source", ["manual", "webhook"]).default("manual").notNull(),
+  /** CloudTalk call UUID — used to deduplicate webhook events */
+  cloudtalkCallId: varchar("cloudtalkCallId", { length: 128 }),
+  /** Contact ID linked to this call (from CRM contacts table) */
+  contactId: int("contactId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

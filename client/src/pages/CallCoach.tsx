@@ -1016,7 +1016,14 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
           {statusIcon(a.status)}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-gray-700 text-sm font-medium truncate">{a.fileName ?? "Recording"}</p>
+              <p className="text-gray-700 text-sm font-medium truncate">
+                {(a as any).source === "webhook"
+                  ? `📞 ${a.customerName ?? a.repName ?? "Auto-analyzed call"}`
+                  : (a.fileName ?? "Recording")}
+              </p>
+              {(a as any).source === "webhook" && (
+                <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full px-2 py-0.5 font-bold">AUTO</span>
+              )}
               <CallTypeBadge callType={a.callType} />
               <TalkRatioBadge repPct={a.repSpeechPct} />
             </div>
@@ -1148,12 +1155,19 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                          <Loader2 className="w-4 h-4 animate-spin text-teal-600 flex-shrink-0" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-gray-800 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                            <p className="text-gray-800 text-sm truncate">
+                              {(a as any).source === "webhook"
+                                ? `📞 ${a.customerName ?? a.repName ?? "Auto-analyzed call"}`
+                                : (a.fileName ?? "Recording")}
+                            </p>
+                            {(a as any).source === "webhook" && (
+                              <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full px-2 py-0.5 font-bold">AUTO</span>
+                            )}
                             <CallTypeBadge callType={a.callType} />
                             <TalkRatioBadge repPct={a.repSpeechPct} />
                           </div>
                           <p className="text-gray-800 text-xs">
-                            {a.customerName && <span className="text-teal-600/80">👤 {a.customerName} · </span>}
+                            {a.customerName && (a as any).source !== "webhook" && <span className="text-teal-600/80">👤 {a.customerName} · </span>}
                             {new Date(a.createdAt).toLocaleString()}
                           </p>
                         </div>

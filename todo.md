@@ -246,3 +246,13 @@
 - [x] ContactCard.tsx: single-column layout on mobile (stack left/center/right panels)
 - [x] Dialler.tsx: full-screen iframe on mobile, hide Quick Dial panel
 - [x] Verify Home.tsx, CallCoach.tsx, Team, Leaderboard on mobile
+
+## CloudTalk Webhook Automation (Auto AI Analysis)
+- [ ] Research CloudTalk webhook payload format (call-ended event, recording URL)
+- [ ] Build POST /api/webhooks/cloudtalk endpoint (receive call-ended, verify signature)
+- [ ] Auto-download recording from CloudTalk, upload to S3, trigger Deepgram + GPT-4 analysis
+- [ ] Auto-match CloudTalk agent email to app user (cloudtalkAgentId)
+- [ ] Auto-link analysis to contact by phone number
+- [ ] Auto-save AI call summary as call note in ContactCard
+- [ ] Show "Auto-analyzed" badge on calls processed via webhook in AI Coach
+- [ ] Add webhook setup instructions page/modal for admins

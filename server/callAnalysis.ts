@@ -177,6 +177,9 @@ export async function createCallAnalysisRecord(data: {
   callDate?: Date | null;
   closeStatus?: "closed" | "not_closed" | "follow_up" | null;
   callType?: "opening" | "retention_cancel_trial" | "retention_win_back" | null;
+  source?: "manual" | "webhook";
+  cloudtalkCallId?: string | null;
+  contactId?: number | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -191,6 +194,9 @@ export async function createCallAnalysisRecord(data: {
     closeStatus: data.closeStatus ?? null,
     callType: data.callType ?? "opening",
     status: "pending",
+    source: data.source ?? "manual",
+    cloudtalkCallId: data.cloudtalkCallId ?? null,
+    contactId: data.contactId ?? null,
   });
 
   return (result as any).insertId as number;
