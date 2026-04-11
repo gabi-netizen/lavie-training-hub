@@ -497,38 +497,43 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
           </div>
 
           {/* Right: Talk Ratio + Deal Status */}
-          <div className="flex flex-row sm:flex-col items-center justify-around sm:justify-center gap-4 px-6 py-4 sm:min-w-[180px] bg-slate-800/30">
+          <div className="flex flex-row sm:flex-col items-center justify-center gap-6 px-8 py-6 sm:min-w-[200px] bg-slate-800/30">
             {/* Talk Ratio */}
             {repPct != null && (
-              <div className="flex flex-col items-center gap-1.5 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Talk Ratio</p>
-                {/* Big circular-style display */}
-                <div className="relative w-20 h-20">
-                  <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-                    <circle cx="40" cy="40" r="32" fill="none" stroke="#1e293b" strokeWidth="8" />
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Talk Ratio</p>
+                {/* Circular gauge */}
+                <div className="relative w-24 h-24">
+                  <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
+                    <circle cx="48" cy="48" r="38" fill="none" stroke="#1e293b" strokeWidth="9" />
                     <circle
-                      cx="40" cy="40" r="32" fill="none"
+                      cx="48" cy="48" r="38" fill="none"
                       stroke={repPct > 65 ? "#ef4444" : repPct < 30 ? "#f59e0b" : "#10b981"}
-                      strokeWidth="8"
-                      strokeDasharray={`${(repPct / 100) * 201} 201`}
+                      strokeWidth="9"
+                      strokeDasharray={`${(repPct / 100) * 239} 239`}
                       strokeLinecap="round"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-xl font-bold leading-none ${ratioColor}`}>{repPct}%</span>
-                    <span className="text-[9px] text-slate-400 mt-0.5">rep</span>
+                    <span className={`text-2xl font-bold leading-none ${ratioColor}`}>{repPct}%</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">rep</span>
                   </div>
                 </div>
-                <p className={`text-xs font-semibold ${ratioColor}`}>{ratioLabel}</p>
-                <p className="text-[10px] text-slate-500">👤 Customer: {custPct}%</p>
+                <p className={`text-xs font-semibold mt-1 ${ratioColor}`}>{ratioLabel}</p>
+                <p className="text-[11px] text-slate-500">👤 Customer: {custPct}%</p>
               </div>
+            )}
+
+            {/* Divider between the two stats */}
+            {repPct != null && dealStatus && (
+              <div className="hidden sm:block w-full h-px bg-slate-700/60 my-1" />
             )}
 
             {/* Deal Status */}
             {dealStatus && (
-              <div className="flex flex-col items-center gap-1.5 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Deal Status</p>
-                <div className={`px-4 py-2 rounded-lg border ${dealStatus.bg} ${dealStatus.border} text-center`}>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Deal Status</p>
+                <div className={`px-5 py-2.5 rounded-lg border ${dealStatus.bg} ${dealStatus.border} text-center min-w-[120px]`}>
                   <p className={`text-sm font-bold ${dealStatus.color}`}>{dealStatus.label}</p>
                 </div>
               </div>
