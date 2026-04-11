@@ -10,6 +10,7 @@ import {
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
+  deleteFailedAnalysis,
 } from "../callAnalysis";
 
 export const callCoachRouter = router({
@@ -128,6 +129,25 @@ export const callCoachRouter = router({
         comment: input.comment ?? null,
       });
       return { success: true };
+    }),
+
+  /**
+   * Delete a failed (error-status) call analysis.
+   * Owner or admin only. Succeeds only if status === 'error'.
+   */
+  deleteAnalysis: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const analysis = await getCallAnalysisById(input.id);
+      if (!analysis) throw new Error("Not found");
+      if (ctx.user.role !== "admin" && analysis.userId !== ctx.user.id) {
+        throw new Error("Forbidden");
+      }
+      if (analysis.status !== "error") {
+        throw new Error("Only failed calls can be deleted");
+      }
+      const deleted = await deleteFailedAnalysis(input.id);
+      return { success: deleted };
     }),
 
   /**

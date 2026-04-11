@@ -353,10 +353,18 @@ function EditDetailsModal({
 }
 
 // ─── ANALYSIS REPORT VIEW ─────────────────────────────────────────────────────
-function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: () => void }) {
+function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number; onBack: () => void; onDeleted?: () => void }) {
   const [showTranscript, setShowTranscript] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const utils = trpc.useUtils();
+  const deleteAnalysis = trpc.callCoach.deleteAnalysis.useMutation({
+    onSuccess: () => {
+      utils.callCoach.getMyAnalyses.invalidate();
+      utils.callCoach.getAllAnalyses.invalidate();
+      if (onDeleted) onDeleted(); else onBack();
+    },
+  });
   const { data: analysis, isLoading } = trpc.callCoach.getAnalysis.useQuery(
     { id: analysisId },
     { refetchInterval: (query) => {
@@ -451,12 +459,28 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
       {analysis.status === "error" && (
         <Card className="bg-red-900/20 border-red-500/40">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 text-red-400">
-              <XCircle className="w-6 h-6 flex-shrink-0" />
-              <div>
+            <div className="flex items-start gap-3 text-red-400">
+              <XCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
                 <p className="font-medium">Analysis failed</p>
-                <p className="text-sm text-red-300 mt-1">{analysis.errorMessage ?? "Unknown error"}</p>
+                <p className="text-sm text-red-300 mt-1 break-words">{analysis.errorMessage ?? "Unknown error"}</p>
               </div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (confirm("Delete this failed call? This cannot be undone.")) {
+                    deleteAnalysis.mutate({ id: analysisId });
+                  }
+                }}
+                disabled={deleteAnalysis.isPending}
+                className="text-red-400 hover:text-red-300 hover:bg-red-900/40 border border-red-500/40 text-xs"
+              >
+                {deleteAnalysis.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                🗑️ Delete Failed Call
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -790,12 +814,18 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   );
 }
 
-// ─── MY CALLS LIST ────────────────────────────────────────────────────────────
+// ─── MY CALLS LIST ─────────────────────────────────────────────────────────────
 function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
+  const utils = trpc.useUtils();
   const { data: analyses, isLoading } = trpc.callCoach.getMyAnalyses.useQuery(undefined, {
     refetchInterval: 5000,
   });
-
+  const deleteAnalysis = trpc.callCoach.deleteAnalysis.useMutation({
+    onSuccess: () => {
+      utils.callCoach.getMyAnalyses.invalidate();
+      utils.callCoach.getAllAnalyses.invalidate();
+    },
+  });
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
   if (!analyses?.length) return (
     <div className="text-center py-12 text-slate-500">
@@ -831,6 +861,21 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
           )}
           {a.status !== "done" && a.status !== "error" && (
             <span className="text-xs text-slate-500 capitalize">{a.status}</span>
+          )}
+          {a.status === "error" && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm("Delete this failed call? This cannot be undone.")) {
+                  deleteAnalysis.mutate({ id: a.id });
+                }
+              }}
+              disabled={deleteAnalysis.isPending}
+              className="text-red-400 hover:text-red-300 text-xs border border-red-500/40 rounded px-2 py-1 hover:bg-red-900/30 transition-colors flex-shrink-0"
+              title="Delete failed call"
+            >
+              🗑️
+            </button>
           )}
         </div>
       ))}
@@ -1150,7 +1195,11 @@ export default function CallCoach() {
     return (
       <div className="min-h-screen bg-[#0A1628] p-4 md:p-8">
         <div className="max-w-3xl mx-auto">
-          <AnalysisReport analysisId={selectedId} onBack={() => setSelectedId(null)} />
+          <AnalysisReport
+            analysisId={selectedId}
+            onBack={() => setSelectedId(null)}
+            onDeleted={() => { setSelectedId(null); setActiveTab("my-calls"); }}
+          />
         </div>
       </div>
     );

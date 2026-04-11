@@ -82,6 +82,13 @@
 - [x] Add Call Type dropdown to Edit Details modal (Opening / Cancel Trial / Win Back)
 
 ## Call Type Visibility Everywhere
-- [ ] Show call type badge in analysis report header (next to rep name, date, close status)
-- [ ] Show call type badge in manager view call rows
-- [ ] Show call type badge in leaderboard call entries
+- [x] Show call type badge in analysis report header (next to rep name, date, close status)
+- [x] Show call type badge in manager view call rows
+- [x] Show call type badge in leaderboard call entries (shown in MyCalls list rows)
+
+## Delete Failed Calls
+- [x] Add deleteAnalysis backend helper (only allows deleting error-status calls)
+- [x] Add deleteAnalysis tRPC procedure (owner or admin, error-status only)
+- [x] Add delete button in AnalysisReport for error-status calls
+- [x] Add delete button in MyCalls list for error-status calls
+- [x] After delete, navigate back to upload tab

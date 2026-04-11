@@ -419,3 +419,24 @@ export async function updateCallDetails(input: UpdateCallDetailsInput): Promise<
   if (Object.keys(updates).length === 1) return; // only lastEditedAt — nothing meaningful changed
   await db.update(callAnalyses).set(updates).where(eq(callAnalyses.id, input.id));
 }
+
+// ─── DELETE FAILED ANALYSIS ───────────────────────────────────────────────────
+/**
+ * Deletes a call analysis record — only allowed when status is "error".
+ * Returns true if deleted, false if not found or not in error state.
+ */
+export async function deleteFailedAnalysis(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [row] = await db.select({ id: callAnalyses.id, status: callAnalyses.status })
+    .from(callAnalyses)
+    .where(eq(callAnalyses.id, id))
+    .limit(1);
+
+  if (!row) return false;
+  if (row.status !== "error") return false;
+
+  await db.delete(callAnalyses).where(eq(callAnalyses.id, id));
+  return true;
+}
