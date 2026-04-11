@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import {
   listContacts,
   getContact,
@@ -13,7 +13,7 @@ import {
 
 export const contactsRouter = router({
   // ─── List contacts with search/filter ─────────────────────────────────────
-  list: publicProcedure
+  list: adminProcedure
     .input(
       z.object({
         search: z.string().optional(),
@@ -30,14 +30,14 @@ export const contactsRouter = router({
     }),
 
   // ─── Get single contact with call notes ───────────────────────────────────
-  get: publicProcedure
+  get: adminProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return getContact(input.id);
     }),
 
   // ─── Update contact status / agent / lead type / callback ─────────────────
-  update: publicProcedure
+  update: adminProcedure
     .input(
       z.object({
         id: z.number(),
@@ -54,7 +54,7 @@ export const contactsRouter = router({
     }),
 
   // ─── Add a call note ──────────────────────────────────────────────────────
-  addNote: publicProcedure
+  addNote: adminProcedure
     .input(
       z.object({
         contactId: z.number(),
@@ -69,7 +69,7 @@ export const contactsRouter = router({
     }),
 
   // ─── Bulk CSV import ──────────────────────────────────────────────────────
-  import: publicProcedure
+  import: adminProcedure
     .input(
       z.object({
         rows: z.array(
@@ -92,7 +92,7 @@ export const contactsRouter = router({
     }),
 
   // ─── Return metadata (lead types, statuses) ───────────────────────────────
-  meta: publicProcedure.query(() => ({
+  meta: adminProcedure.query(() => ({
     leadTypes: LEAD_TYPES,
     statuses: CONTACT_STATUSES,
   })),

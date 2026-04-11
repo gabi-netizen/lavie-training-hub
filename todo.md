@@ -181,3 +181,11 @@
 - [x] CSV import UI: upload button + column mapping + preview before import
 - [x] Click-to-call from Contacts page and Dialler quick-dial panel
 - [x] Quick Dial panel in Dialler right panel (search contacts, dial instantly)
+
+## Role-Based Access Control (Admin vs Agent)
+- [x] Protect contacts tRPC router — all procedures require admin role
+- [x] Protect Dialler page — redirect non-admins to /training
+- [x] Hide Dialler + Contacts tabs from TopNav for non-admin users
+- [x] Add adminProcedure middleware to server/routers.ts
+- [x] Promote owner user to admin in the database (Gabi Lavie already admin)
+- [x] Build full customer card page /contacts/:id with 3-column CRM layout

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -347,6 +348,7 @@ function CustomerCard({
 export default function Customers({ onDial }: { onDial?: (phone: string, name: string) => void }) {
   const utils = trpc.useUtils();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [, navigate] = useLocation();
 
   const [search, setSearch] = useState("");
   const [filterLeadType, setFilterLeadType] = useState("");
@@ -525,7 +527,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               <div
                 key={c.id}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-[#1a2535] cursor-pointer transition-colors"
-                onClick={() => setSelectedId(c.id)}
+                onClick={() => navigate(`/contacts/${c.id}`)}
               >
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-full bg-[#2a3545] flex items-center justify-center flex-shrink-0">
