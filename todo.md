@@ -140,3 +140,8 @@
 - [x] Build Team Dashboard tab (new tab in AI Coach) with rep cards grid: avatar initials, name, status badge, trend indicator (Improving/Stable/Declining), score
 - [x] Build Rep Profile Card modal: opens on rep name click, shows score history chart, category breakdown bars, rank in team, talk ratio avg, best/worst call
 - [x] Make Team Dashboard visible to all users (reps + managers), not just admins
+
+## Team Dashboard Fix — Show All Reps + Table Layout
+- [x] Fix getTeamDashboard to group by repName (not userId) so all calls appear regardless of who uploaded
+- [x] Convert Team Dashboard UI from card grid to ranked table (sorted #1 top to last bottom)
+- [x] Ensure reps with no userId (uploaded by manager) still appear in the table

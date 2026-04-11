@@ -478,21 +478,25 @@ export async function getTeamDashboard(): Promise<RepProfileData[]> {
     .orderBy(callAnalyses.createdAt);
 
   type CallRow = (typeof all)[number];
-  const byUser = new Map<number, CallRow[]>();
+
+  // Group by repName (case-insensitive, trimmed) — same logic as Manager View
+  // Falls back to "Unknown Rep" when repName is null/empty
+  const byRepName = new Map<string, CallRow[]>();
   for (const row of all) {
-    if (!byUser.has(row.userId)) byUser.set(row.userId, []);
-    byUser.get(row.userId)!.push(row);
+    const key = (row.repName?.trim() || "Unknown Rep").toLowerCase();
+    if (!byRepName.has(key)) byRepName.set(key, []);
+    byRepName.get(key)!.push(row);
   }
 
   // First pass: compute allTimeAvg for ranking
-  const repEntries: Array<{ userId: number; allTimeAvg: number | null; calls: CallRow[] }> = [];
-  for (const [userId, calls] of Array.from(byUser.entries())) {
+  const repEntries: Array<{ repKey: string; allTimeAvg: number | null; calls: CallRow[] }> = [];
+  for (const [repKey, calls] of Array.from(byRepName.entries())) {
     const scored = calls.filter(c => c.overallScore != null);
     const scores = scored.map(c => c.overallScore as number);
     const allTimeAvg = scores.length > 0
       ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
       : null;
-    repEntries.push({ userId, allTimeAvg, calls });
+    repEntries.push({ repKey, allTimeAvg, calls });
   }
 
   // Sort by allTimeAvg desc for ranking
@@ -507,8 +511,12 @@ export async function getTeamDashboard(): Promise<RepProfileData[]> {
   const profiles: RepProfileData[] = [];
 
   for (let rankIdx = 0; rankIdx < repEntries.length; rankIdx++) {
-    const { userId, allTimeAvg, calls } = repEntries[rankIdx];
-    const repName = calls[calls.length - 1]?.repName ?? `Rep #${userId}`;
+    const { repKey, allTimeAvg, calls } = repEntries[rankIdx];
+    // Use the most recent non-null repName, or capitalise the key as fallback
+    const repName = calls.slice().reverse().find(c => c.repName?.trim())?.repName
+      ?? repKey.charAt(0).toUpperCase() + repKey.slice(1);
+    // Representative userId: use the most common userId in this group
+    const userId = calls[calls.length - 1]?.userId ?? 0;
     const scored = calls.filter(c => c.overallScore != null);
     const scores = scored.map(c => c.overallScore as number);
 
@@ -577,7 +585,7 @@ export async function getTeamDashboard(): Promise<RepProfileData[]> {
 
     profiles.push({
       repName,
-      userId,
+      userId: userId,
       totalCalls: calls.length,
       allTimeAvg,
       last10Avg,
