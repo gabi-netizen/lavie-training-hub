@@ -189,3 +189,6 @@
 - [x] Add adminProcedure middleware to server/routers.ts
 - [x] Promote owner user to admin in the database (Gabi Lavie already admin)
 - [x] Build full customer card page /contacts/:id with 3-column CRM layout
+
+## ContactCard Redesign
+- [x] Redesign ContactCard with white/light background, professional proportions, clean CRM layout
