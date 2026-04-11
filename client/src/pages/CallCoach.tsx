@@ -91,7 +91,7 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
       className="inline-flex items-center gap-1.5 text-xs border border-slate-600 rounded px-2 py-0.5 bg-slate-800/60"
       title={`Rep spoke ${rep}% of the call, customer ${cust}%`}
     >
-      <span className="text-slate-400">Talk:</span>
+      <span className="text-white font-medium">Talk:</span>
       {/* mini bar */}
       <span className="relative inline-block w-14 h-2 rounded-full bg-slate-700 overflow-hidden">
         <span
@@ -100,7 +100,7 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
         />
       </span>
       <span className={`font-semibold ${color}`}>{rep}%</span>
-      <span className="text-slate-500">rep</span>
+      <span className="text-white">rep</span>
     </span>
   );
 }
@@ -1314,6 +1314,36 @@ export default function CallCoach() {
           </div>
           <div className="px-4 py-2.5 text-xs text-slate-500 italic" style={{ background: "oklch(0.14 0.02 250)" }}>
             Use this tool as a starting point for coaching conversations — not as a final verdict. Always listen to the call yourself before making performance decisions.
+          </div>
+        </div>
+
+        {/* Talk Ratio Legend */}
+        <div className="rounded-xl border border-slate-700 overflow-hidden" style={{ background: "oklch(0.13 0.03 220 / 80%)" }}>
+          <div className="px-4 py-2.5 border-b border-slate-700/60 flex items-center gap-2" style={{ background: "oklch(0.16 0.04 220 / 60%)" }}>
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-200" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>📊 Talk Ratio — What the numbers mean</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-700/60">
+            <div className="px-4 py-3 flex items-start gap-3">
+              <span className="mt-0.5 w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-emerald-400">40–65% rep speaking</p>
+                <p className="text-xs text-slate-400 mt-0.5">Ideal balance — rep leads the call while giving the customer space to talk and engage.</p>
+              </div>
+            </div>
+            <div className="px-4 py-3 flex items-start gap-3">
+              <span className="mt-0.5 w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-red-400">Above 65% rep speaking</p>
+                <p className="text-xs text-slate-400 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
+              </div>
+            </div>
+            <div className="px-4 py-3 flex items-start gap-3">
+              <span className="mt-0.5 w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-amber-400">Below 30% rep speaking</p>
+                <p className="text-xs text-slate-400 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
+              </div>
+            </div>
           </div>
         </div>
 

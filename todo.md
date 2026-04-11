@@ -107,3 +107,7 @@
 ## Talk Ratio Fix
 - [x] Fix repSpeechPct: now identifies rep as the speaker with most total speech time (not hardcoded Speaker 0)
 - [x] Redesign TalkRatioBadge: visual mini-bar + percentage + color-coded label (Good / Too much / Too passive)
+
+## Talk Ratio Legend
+- [x] Change "Talk:" and "rep" label colors to white in TalkRatioBadge
+- [x] Add a prominent TalkRatioLegend card (in English) visible on the AI Coach page above the tabs, showing the 3 color zones
