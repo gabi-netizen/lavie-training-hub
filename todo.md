@@ -267,3 +267,11 @@
 - [x] Add callHistory and streamRecording tRPC procedures to contacts router
 - [x] Add CloudTalk Call History accordion panel in ContactCard (answered/missed, duration, agent, recording player)
 - [x] Write vitest tests for CloudTalk call history (568,271 calls confirmed live)
+
+## Global Call Log Page
+- [ ] Add callLog tRPC procedure: fetch recent calls from CloudTalk (all, not per contact)
+- [ ] Build CallLog.tsx page: table of all calls with date, phone, agent, duration, status, recording play
+- [ ] Match phone numbers to existing contacts and show link to ContactCard when found
+- [ ] Add search/filter by date, status (answered/missed), agent
+- [ ] Add "Call Log" nav link under Dialler section
+- [ ] Register /call-log route in App.tsx

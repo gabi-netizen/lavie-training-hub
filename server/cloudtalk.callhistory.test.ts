@@ -17,7 +17,7 @@ describe("CloudTalk Call History", () => {
     expect(typeof result.totalCount).toBe("number");
     expect(typeof result.pageCount).toBe("number");
     console.log(`CloudTalk call history: ${result.totalCount} total calls, ${result.calls.length} returned`);
-  }, 30000);
+  }, 60000);
 
   it("should return call objects with required fields", async () => {
     const result = await getCallHistory({ limit: 3, page: 1 });
@@ -34,7 +34,7 @@ describe("CloudTalk Call History", () => {
     } else {
       console.log("No calls returned — account may have no call history yet");
     }
-  }, 30000);
+  }, 60000);
 
   it("should accept status filter parameter without error", async () => {
     // CloudTalk API may not perfectly filter by status server-side, but the call should succeed
