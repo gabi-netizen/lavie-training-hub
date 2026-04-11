@@ -1,7 +1,7 @@
 /*
-  DESIGN PHILOSOPHY: Dark Command Center
+  DESIGN PHILOSOPHY: Dark Command Centre
   - Deep navy (#0F1923) background for focus during live calls
-  - Color-coded objection buttons: navy blue, teal, burgundy
+  - Colour-coded objection buttons: navy blue, teal, burgundy
   - Space Grotesk for headings, DM Sans for body
   - Subtle glow effects on active states
   - 150ms fade transitions on tab switches
@@ -592,7 +592,7 @@ const LIVE_CALL_SECTIONS = [
     title: "Introduction & Discovery",
     subtitle: "🔥 HIGH ENERGY — NO PAUSES — CONFIDENCE — SAY IT WITH A SMILE! 🔥",
     items: [
-      { type: "say", text: "Hi [Name], it's [Your Name] from Lavie Labs. We're a medical-grade skincare company working in partnership with UK Best Offers. We're calling today to send you a complimentary Anti-Aging Starter Kit to try!" },
+      { type: "say", text: "Hi [Name], it's [Your Name] from Lavie Labs. We're a medical-grade skincare company working in partnership with UK Best Offers. We're calling today to send you a complimentary Anti-Ageing Starter Kit to try!" },
       { type: "say", text: "Because our products are medical-grade and highly active, I just need to ask a few quick questions to make sure we send you the perfect match for your skin. Would you say your skin is more on the dry side, combination, or oily?" },
       { type: "note", text: "Listen and adapt based on their answer. Focus on how the skin FEELS to them." },
       { type: "label", text: "If Dry:" },
@@ -644,7 +644,7 @@ const LIVE_CALL_SECTIONS = [
       { type: "say", text: "The very first time you put this on, you're going to notice the texture. It's incredibly silky and lightweight. It doesn't sit heavy on your face; your skin just drinks it right up. Instantly, that tight, dry feeling is going to vanish. Your skin is going to feel incredibly soft, deeply nourished, and you're going to have this beautiful, healthy glow that lasts all day long." },
       { type: "say", text: "We have clients telling us constantly that they finally feel confident going makeup-free because their skin just looks so healthy and hydrated." },
       { type: "label", text: "Oulala Retinol Serum (Fine Lines/Texture):" },
-      { type: "say", text: "The second product I'm including in your kit is our Oulala Face and Neck Retinol Serum. Retinol is the gold standard for anti-aging. What this is going to do for you is gently sweep away all those tired, dead skin cells that make our complexion look dull. You are going to literally see your skin transforming — tighter, significantly smoother, and those deeper lines you mentioned are going to start softening. You're going to wake up looking refreshed, with that plump, youthful radiance we all want." },
+      { type: "say", text: "The second product I'm including in your kit is our Oulala Face and Neck Retinol Serum. Retinol is the gold standard for anti-ageing. What this is going to do for you is gently sweep away all those tired, dead skin cells that make our complexion look dull. You are going to literally see your skin transforming — tighter, significantly smoother, and those deeper lines you mentioned are going to start softening. You're going to wake up looking refreshed, with that plump, youthful radiance we all want." },
       { type: "label", text: "OR — Ashkara Eye Serum (Dark Circles/Puffiness):" },
       { type: "say", text: "Because you specifically mentioned wanting to target [dark circles / hooded eye lids / puffy bags / fine lines around the eyes], I am making sure to include our Ashkara Eye Serum in your kit. When you use this daily, it's going to smooth out those fine lines, visibly reduce that morning puffiness, and brighten up those dark circles. Apply the eye serum mornings and evenings." },
     ],
@@ -1529,7 +1529,7 @@ export default function Home() {
                     {[
                       {
                         stage: "The Intro",
-                        say: "\"Hi [Name], it's [Your Name] from Lavie Labs. We're calling today to send you a complimentary Anti-Aging Starter Kit to try!\"",
+                        say: "\"Hi [Name], it's [Your Name] from Lavie Labs. We're calling today to send you a complimentary Anti-Ageing Starter Kit to try!\"",
                         goal: "High energy, big smile. Get them excited immediately.",
                       },
                       {
@@ -1864,7 +1864,7 @@ export default function Home() {
                 {[
                   {
                     style: "Warm & Excited",
-                    line: "Hi [Name]! It's [Your Name] calling from Lavie Labs — we're a medical-grade skincare company and I'm calling today because we'd love to send you a complimentary Anti-Aging Starter Kit to try. So glad I caught you!",
+                    line: "Hi [Name]! It's [Your Name] calling from Lavie Labs — we're a medical-grade skincare company and I'm calling today because we'd love to send you a complimentary Anti-Ageing Starter Kit to try. So glad I caught you!",
                   },
                   {
                     style: "Confident & Direct",
@@ -1888,7 +1888,7 @@ export default function Home() {
                   },
                   {
                     style: "High Energy",
-                    line: "[Name]! Hi, it's [Your Name] from Lavie Labs — we're a medical-grade skincare company and I am so excited to tell you why I'm calling. We are sending out complimentary Anti-Aging Starter Kits and I really wanted to make sure you got yours!",
+                    line: "[Name]! Hi, it's [Your Name] from Lavie Labs — we're a medical-grade skincare company and I am so excited to tell you why I'm calling. We are sending out complimentary Anti-Ageing Starter Kits and I really wanted to make sure you got yours!",
                   },
                 ].map((item, i) => (
                   <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
