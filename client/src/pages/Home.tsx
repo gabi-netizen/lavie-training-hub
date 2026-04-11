@@ -408,7 +408,7 @@ function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string
 
       {/* Clip counter */}
       {playing && (
-        <div className="absolute bottom-2 right-2 z-10 bg-black/60 rounded-full px-2 py-0.5 text-xs text-gray-600">
+        <div className="absolute bottom-2 right-2 z-10 bg-black/60 rounded-full px-2 py-0.5 text-xs text-gray-800">
           {currentClip + 1} / {clips.length}
         </div>
       )}
@@ -1324,7 +1324,7 @@ export default function Home() {
                   <span className="text-2xl">💰</span>
                   <span className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Value Stack</span>
                 </div>
-                {pvOpen === "stack" ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                {pvOpen === "stack" ? <ChevronUp className="w-5 h-5 text-gray-700" /> : <ChevronDown className="w-5 h-5 text-gray-700" />}
               </button>
               {pvOpen === "stack" && (
                 <div className="px-5 pb-6 flex flex-col gap-5">
@@ -1349,7 +1349,7 @@ export default function Home() {
                         ].map(([name, val], i) => (
                           <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
                             <td className="px-4 py-3 text-gray-800">{name}</td>
-                            <td className="px-4 py-3 text-right text-gray-600">{val}</td>
+                            <td className="px-4 py-3 text-right text-gray-800">{val}</td>
                           </tr>
                         ))}
                         <tr style={{ borderTop: "2px solid oklch(0.60 0.15 265 / 60%)", background: "oklch(0.95 0.02 265)" }}>
@@ -1383,7 +1383,7 @@ export default function Home() {
                   <span className="text-2xl">🔬</span>
                   <span className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Why Lavié Labs?</span>
                 </div>
-                {pvOpen === "why" ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                {pvOpen === "why" ? <ChevronUp className="w-5 h-5 text-gray-700" /> : <ChevronDown className="w-5 h-5 text-gray-700" />}
               </button>
               {pvOpen === "why" && (
                 <div className="px-5 pb-6 flex flex-col gap-4">
@@ -1416,7 +1416,7 @@ export default function Home() {
                         style={{ background: "oklch(0.95 0.02 265)" }}
                       >
                         <span className="text-base font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{point.label}</span>
-                        {whyOpen === i ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+                        {whyOpen === i ? <ChevronUp className="w-4 h-4 text-gray-700 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-700 shrink-0" />}
                       </button>
                       {whyOpen === i && (
                         <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>
@@ -1439,7 +1439,7 @@ export default function Home() {
                   <span className="text-2xl">💬</span>
                   <span className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Price Reframes</span>
                 </div>
-                {pvOpen === "reframes" ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                {pvOpen === "reframes" ? <ChevronUp className="w-5 h-5 text-gray-700" /> : <ChevronDown className="w-5 h-5 text-gray-700" />}
               </button>
               {pvOpen === "reframes" && (
                 <div className="px-5 pb-6 flex flex-col gap-4">
@@ -1468,7 +1468,7 @@ export default function Home() {
                         style={{ background: "oklch(0.95 0.02 265)" }}
                       >
                         <span className="text-base font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reframe.label}</span>
-                        {reframeOpen === i ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+                        {reframeOpen === i ? <ChevronUp className="w-4 h-4 text-gray-700 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-700 shrink-0" />}
                       </button>
                       {reframeOpen === i && (
                         <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>
@@ -1884,7 +1884,7 @@ export default function Home() {
                       style={{ background: "oklch(0.95 0.02 265)" }}
                     >
                       <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.style}</span>
-                      {rapportOpen === i ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+                      {rapportOpen === i ? <ChevronUp className="w-4 h-4 text-gray-700 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-700 shrink-0" />}
                     </button>
                     {rapportOpen === i && (
                       <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>

@@ -115,13 +115,13 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
             className="flex flex-col gap-1.5 rounded-xl p-3 shadow-2xl"
             style={{ background: "white", border: "1px solid oklch(0.85 0.03 265)" }}
           >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Talk Ratio Guide</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-800 mb-0.5">Talk Ratio Guide</span>
             {/* Green zone */}
             <span className="flex items-start gap-2">
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.2 145)" }} />
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold" style={{ color: "oklch(0.40 0.20 145)" }}>40–65% rep speaking</span>
-                <span className="text-[10px] text-gray-500 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
+                <span className="text-[10px] text-gray-700 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
               </span>
             </span>
             {/* Amber zone */}
@@ -129,7 +129,7 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.65 0.18 60)" }} />
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold" style={{ color: "oklch(0.8 0.18 60)" }}>Below 30% rep speaking</span>
-                <span className="text-[10px] text-gray-500 leading-snug">Too passive — you're not driving the close.</span>
+                <span className="text-[10px] text-gray-700 leading-snug">Too passive — you're not driving the close.</span>
               </span>
             </span>
             {/* Red zone */}
@@ -137,7 +137,7 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.22 15)" }} />
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold" style={{ color: "oklch(0.7 0.22 15)" }}>Above 65% rep speaking</span>
-                <span className="text-[10px] text-gray-500 leading-snug">Too much — she feels talked at, not heard.</span>
+                <span className="text-[10px] text-gray-700 leading-snug">Too much — she feels talked at, not heard.</span>
               </span>
             </span>
             {/* Arrow pointer */}
@@ -189,7 +189,7 @@ function RepStatusBadge({ score, size = "sm" }: { score: number; size?: "sm" | "
 function qualityBadge(quality: "strong" | "weak" | "missing") {
   if (quality === "strong") return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Strong</Badge>;
   if (quality === "weak") return <Badge className="bg-amber-50 text-amber-700 border-amber-200">Weak</Badge>;
-  return <Badge className="bg-gray-100 text-gray-500 border-gray-200">Missing</Badge>;
+  return <Badge className="bg-gray-100 text-gray-700 border-gray-200">Missing</Badge>;
 }
 
 // ─── FLAG FEEDBACK MODAL ─────────────────────────────────────────────────────
@@ -241,14 +241,14 @@ function FlagFeedbackModal({
           <div className="py-8 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
             <p className="text-gray-700 font-medium">Thank you for the feedback!</p>
-            <p className="text-gray-500 text-sm">This helps us improve the AI over time.</p>
+            <p className="text-gray-700 text-sm">This helps us improve the AI over time.</p>
             <Button onClick={handleClose} className="mt-4 bg-teal-600 hover:bg-teal-500">Close</Button>
           </div>
         ) : (
           <>
             <div className="space-y-4 py-2">
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Which section is incorrect?</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Which section is incorrect?</label>
                 <Select value={section} onValueChange={setSection}>
                   <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue />
@@ -265,30 +265,30 @@ function FlagFeedbackModal({
                 </Select>
               </div>
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">What's wrong? <span className="text-red-600">*</span></label>
+                <label className="text-gray-800 text-sm mb-1.5 block">What's wrong? <span className="text-red-600">*</span></label>
                 <input
                   type="text"
                   value={issue}
                   onChange={e => setIssue(e.target.value)}
                   placeholder="e.g. Score is too high, the rep didn't actually close"
-                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   maxLength={512}
                 />
               </div>
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Additional notes (optional)</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Additional notes (optional)</label>
                 <Textarea
                   value={comment}
                   onChange={e => setComment(e.target.value)}
                   placeholder="Any extra context that would help improve the AI..."
-                  className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 resize-none"
+                  className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-800 resize-none"
                   rows={3}
                   maxLength={2000}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={handleClose} className="text-gray-500">Cancel</Button>
+              <Button variant="ghost" onClick={handleClose} className="text-gray-700">Cancel</Button>
               <Button
                 onClick={handleSubmit}
                 disabled={!issue.trim() || submitFeedback.isPending}
@@ -380,27 +380,27 @@ function EditDetailsModal({
           <>
             <div className="space-y-4 py-2">
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Customer Name</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Customer Name</label>
                 <input
                   type="text"
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   placeholder="Auto-extracted from call, or enter manually"
-                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Rep Name</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Rep Name</label>
                 <input
                   type="text"
                   value={repName}
                   onChange={e => setRepName(e.target.value)}
                   placeholder="Rep name"
-                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Call Date</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Call Date</label>
                 <input
                   type="date"
                   value={callDate}
@@ -409,7 +409,7 @@ function EditDetailsModal({
                 />
               </div>
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Call Type</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Call Type</label>
                 <select
                   value={callType}
                   onChange={e => setCallType(e.target.value as typeof callType)}
@@ -421,7 +421,7 @@ function EditDetailsModal({
                 </select>
               </div>
               <div>
-                <label className="text-gray-600 text-sm mb-1.5 block">Close Status</label>
+                <label className="text-gray-800 text-sm mb-1.5 block">Close Status</label>
                 <select
                   value={closeStatus}
                   onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
@@ -434,7 +434,7 @@ function EditDetailsModal({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={handleClose} className="text-gray-500">Cancel</Button>
+              <Button variant="ghost" onClick={handleClose} className="text-gray-700">Cancel</Button>
               <Button
                 onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined, callType })}
                 disabled={updateDetails.isPending}
@@ -483,7 +483,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
   }
 
   const statusMap = {
-    pending: { icon: <Clock className="w-5 h-5 text-gray-500" />, label: "Queued", color: "text-gray-500" },
+    pending: { icon: <Clock className="w-5 h-5 text-gray-700" />, label: "Queued", color: "text-gray-700" },
     transcribing: { icon: <Loader2 className="w-5 h-5 animate-spin text-blue-600" />, label: "Transcribing audio...", color: "text-blue-600" },
     analyzing: { icon: <Loader2 className="w-5 h-5 animate-spin text-teal-600" />, label: "AI is analysing...", color: "text-teal-600" },
     done: { icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />, label: "Complete", color: "text-emerald-600" },
@@ -514,7 +514,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
       <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
         {/* Back button row */}
         <div className="px-4 pt-3 pb-0">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-500 hover:text-gray-900 -ml-2">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-700 hover:text-gray-900 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
         </div>
@@ -526,12 +526,12 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {analysis.customerName && (
               <p className="text-sm text-teal-600 font-medium">
                 👤 {analysis.customerName}
-                {!analysis.repName && !analysis.callDate && !analysis.closeStatus ? null : <span className="text-gray-400 font-normal"> (customer)</span>}
+                {!analysis.repName && !analysis.callDate && !analysis.closeStatus ? null : <span className="text-gray-800 font-normal"> (customer)</span>}
               </p>
             )}
             {(analysis.repName || analysis.callDate) && (
-              <p className="text-xs text-gray-500">
-                {analysis.repName && <span className="font-medium text-gray-600">{analysis.repName}</span>}
+              <p className="text-xs text-gray-700">
+                {analysis.repName && <span className="font-medium text-gray-800">{analysis.repName}</span>}
                 {analysis.callDate && <span>{analysis.repName ? " · " : ""}{new Date(analysis.callDate).toLocaleDateString()}</span>}
               </p>
             )}
@@ -541,7 +541,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
               </div>
             )}
             {analysis.lastEditedByName && (
-              <p className="text-xs text-gray-400 italic">
+              <p className="text-xs text-gray-800 italic">
                 Last edited by {analysis.lastEditedByName}{analysis.lastEditedAt ? ` · ${new Date(analysis.lastEditedAt).toLocaleString()}` : ""}
               </p>
             )}
@@ -552,12 +552,12 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowEditModal(true)}
-                className="text-gray-500 hover:text-teal-600 text-xs border border-gray-200 hover:border-teal-500"
+                className="text-gray-700 hover:text-teal-600 text-xs border border-gray-200 hover:border-teal-500"
               >
                 ✏️ Edit Details
               </Button>
               {analysis.durationSeconds && (
-                <span className="text-gray-400">
+                <span className="text-gray-800">
                   · {Math.floor((analysis.durationSeconds ?? 0) / 60)}m {Math.round((analysis.durationSeconds ?? 0) % 60)}s
                 </span>
               )}
@@ -569,7 +569,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {/* Talk Ratio */}
             {repPct != null && (
               <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Talk Ratio</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-1">Talk Ratio</p>
                 {/* Circular gauge */}
                 <div className="relative w-24 h-24">
                   <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
@@ -584,11 +584,11 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className={`text-2xl font-bold leading-none ${ratioColor}`}>{repPct}%</span>
-                    <span className="text-[10px] text-gray-500 mt-0.5">rep</span>
+                    <span className="text-[10px] text-gray-700 mt-0.5">rep</span>
                   </div>
                 </div>
                 <p className={`text-xs font-semibold mt-1 ${ratioColor}`}>{ratioLabel}</p>
-                <p className="text-[11px] text-gray-400">👤 Customer: {custPct}%</p>
+                <p className="text-[11px] text-gray-800">👤 Customer: {custPct}%</p>
               </div>
             )}
 
@@ -600,7 +600,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {/* Deal Status */}
             {dealStatus && (
               <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Deal Status</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-1">Deal Status</p>
                 <div className={`px-5 py-2.5 rounded-lg border ${dealStatus.bg} ${dealStatus.border} text-center min-w-[120px]`}>
                   <p className={`text-sm font-bold ${dealStatus.color}`}>{dealStatus.label}</p>
                 </div>
@@ -615,8 +615,8 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-8 text-center space-y-4">
             <Loader2 className="w-12 h-12 animate-spin text-teal-600 mx-auto" />
-            <p className="text-gray-600 text-lg">{status.label}</p>
-            <p className="text-gray-400 text-sm">This usually takes 30–90 seconds depending on call length.</p>
+            <p className="text-gray-800 text-lg">{status.label}</p>
+            <p className="text-gray-800 text-sm">This usually takes 30–90 seconds depending on call length.</p>
           </CardContent>
         </Card>
       )}
@@ -667,7 +667,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                   <CardContent className="p-4 text-center">
                     <div className={`flex justify-center mb-2 ${scoreColor(value ?? 0)}`}>{icon}</div>
                     <div className={`text-3xl font-bold ${scoreColor(value ?? 0)}`}>{Math.round(value ?? 0)}</div>
-                    <div className="text-xs text-gray-500 mt-1">{label}</div>
+                    <div className="text-xs text-gray-700 mt-1">{label}</div>
                   </CardContent>
                 </Card>
               ))}
@@ -686,7 +686,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {/* Summary */}
             <Card className="bg-gray-50 border-gray-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-gray-500 uppercase tracking-wider">Summary</CardTitle>
+                <CardTitle className="text-sm text-gray-700 uppercase tracking-wider">Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 leading-relaxed">{report.summary}</p>
@@ -713,7 +713,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {/* Script Stages */}
             <Card className="bg-gray-50 border-gray-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-gray-500 uppercase tracking-wider">Script Stage Compliance</CardTitle>
+                <CardTitle className="text-sm text-gray-700 uppercase tracking-wider">Script Stage Compliance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {report.stagesDetected.map((stage) => (
@@ -721,7 +721,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                     <div className="flex-shrink-0 mt-0.5">{qualityBadge(stage.quality)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-gray-700 text-sm font-medium">{stage.stage}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">{stage.note}</p>
+                      <p className="text-gray-700 text-xs mt-0.5">{stage.note}</p>
                     </div>
                   </div>
                 ))}
@@ -762,7 +762,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {report.keyMoments?.length > 0 && (
               <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-gray-500 uppercase tracking-wider">Key Moments</CardTitle>
+                  <CardTitle className="text-sm text-gray-700 uppercase tracking-wider">Key Moments</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {report.keyMoments.map((km, i) => (
@@ -772,7 +772,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                       "bg-amber-50 border-amber-500/30"
                     }`}>
                       <p className="text-gray-700 text-sm italic">"{km.moment}"</p>
-                      <p className="text-gray-500 text-xs mt-2">💡 {km.coaching}</p>
+                      <p className="text-gray-700 text-xs mt-2">💡 {km.coaching}</p>
                     </div>
                   ))}
                 </CardContent>
@@ -783,14 +783,14 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             {analysis.transcript && (
               <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2 cursor-pointer" onClick={() => setShowTranscript(!showTranscript)}>
-                  <CardTitle className="text-sm text-gray-500 uppercase tracking-wider flex items-center justify-between">
+                  <CardTitle className="text-sm text-gray-700 uppercase tracking-wider flex items-center justify-between">
                     <span>Full Transcript</span>
                     {showTranscript ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </CardTitle>
                 </CardHeader>
                 {showTranscript && (
                   <CardContent>
-                    <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap font-mono">{analysis.transcript}</p>
+                    <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap font-mono">{analysis.transcript}</p>
                   </CardContent>
                 )}
               </Card>
@@ -889,10 +889,10 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
       {/* Metadata fields */}
       <Card className="bg-gray-50 border-gray-200">
         <CardContent className="p-4 space-y-3">
-          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Call Details</p>
+          <p className="text-xs text-gray-700 uppercase tracking-wider font-semibold">Call Details</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Rep Name</label>
+              <label className="text-xs text-gray-700">Rep Name</label>
               <input
                 type="text"
                 value={repName}
@@ -902,7 +902,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Call Date</label>
+              <label className="text-xs text-gray-700">Call Date</label>
               <input
                 type="date"
                 value={callDate}
@@ -911,7 +911,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Close Status</label>
+              <label className="text-xs text-gray-700">Close Status</label>
               <select
                 value={closeStatus}
                 onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
@@ -923,7 +923,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Call Type</label>
+              <label className="text-xs text-gray-700">Call Type</label>
               <select
                 value={callType}
                 onChange={e => setCallType(e.target.value as typeof callType)}
@@ -961,10 +961,10 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
           </div>
         ) : (
           <div className="space-y-3">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto" />
+            <Upload className="w-12 h-12 text-gray-800 mx-auto" />
             <div>
               <p className="text-gray-700 font-medium">Drop your call recording here</p>
-              <p className="text-gray-400 text-sm mt-1">or click to browse · MP3, WAV, M4A, OGG, WebM · max 50MB</p>
+              <p className="text-gray-800 text-sm mt-1">or click to browse · MP3, WAV, M4A, OGG, WebM · max 50MB</p>
             </div>
           </div>
         )}
@@ -993,7 +993,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
   });
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!analyses?.length) return (
-    <div className="text-center py-12 text-gray-400">
+    <div className="text-center py-12 text-gray-800">
       <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No calls analysed yet. Upload your first recording above.</p>
     </div>
@@ -1020,7 +1020,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
               <CallTypeBadge callType={a.callType} />
               <TalkRatioBadge repPct={a.repSpeechPct} />
             </div>
-            <p className="text-gray-400 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
+            <p className="text-gray-800 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
           </div>
           {a.overallScore != null && (
             <div className="flex flex-col items-end gap-1">
@@ -1029,7 +1029,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
             </div>
           )}
           {a.status !== "done" && a.status !== "error" && (
-            <span className="text-xs text-gray-400 capitalize">{a.status}</span>
+            <span className="text-xs text-gray-800 capitalize">{a.status}</span>
           )}
           {a.status === "error" && (
             <button
@@ -1070,7 +1070,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
 
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!analyses?.length) return (
-    <div className="text-center py-12 text-gray-400">
+    <div className="text-center py-12 text-gray-800">
       <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No calls analysed yet across the team.</p>
     </div>
@@ -1094,19 +1094,19 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-teal-600">{analyses.length}</div>
-            <div className="text-xs text-gray-500 mt-1">Total Calls</div>
+            <div className="text-xs text-gray-700 mt-1">Total Calls</div>
           </CardContent>
         </Card>
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className={`text-2xl font-bold ${scoreColor(avgScore)}`}>{avgScore || "—"}</div>
-            <div className="text-xs text-gray-500 mt-1">Team Avg Score</div>
+            <div className="text-xs text-gray-700 mt-1">Team Avg Score</div>
           </CardContent>
         </Card>
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-gray-700">{Object.keys(byRep).length}</div>
-            <div className="text-xs text-gray-500 mt-1">Active Reps</div>
+            <div className="text-xs text-gray-700 mt-1">Active Reps</div>
           </CardContent>
         </Card>
       </div>
@@ -1121,7 +1121,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-gray-700 text-base">{repName}</CardTitle>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400">{repCalls.length} calls</span>
+                  <span className="text-xs text-gray-800">{repCalls.length} calls</span>
                   {repAvg != null && (
                     <span className={`text-lg font-bold ${scoreColor(repAvg)}`}>{repAvg}</span>
                   )}
@@ -1148,11 +1148,11 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                          <Loader2 className="w-4 h-4 animate-spin text-teal-600 flex-shrink-0" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-gray-600 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                            <p className="text-gray-800 text-sm truncate">{a.fileName ?? "Recording"}</p>
                             <CallTypeBadge callType={a.callType} />
                             <TalkRatioBadge repPct={a.repSpeechPct} />
                           </div>
-                          <p className="text-gray-400 text-xs">
+                          <p className="text-gray-800 text-xs">
                             {a.customerName && <span className="text-teal-600/80">👤 {a.customerName} · </span>}
                             {new Date(a.createdAt).toLocaleString()}
                           </p>
@@ -1191,10 +1191,10 @@ function Leaderboard() {
 
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!entries?.length) return (
-    <div className="text-center py-12 text-gray-400">
+    <div className="text-center py-12 text-gray-800">
       <Trophy className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No calls analysed yet. Be the first to upload!</p>
-      <p className="text-xs mt-2 text-gray-400">Minimum 5 calls required for a reliable ranking.</p>
+      <p className="text-xs mt-2 text-gray-800">Minimum 5 calls required for a reliable ranking.</p>
     </div>
   );
 
@@ -1206,7 +1206,7 @@ function Leaderboard() {
   const trendIcon = (trend: string) => {
     if (trend === "up") return <TrendingUp className="w-4 h-4 text-emerald-600" />;
     if (trend === "down") return <TrendingDown className="w-4 h-4 text-red-600" />;
-    return <Minus className="w-4 h-4 text-gray-400" />;
+    return <Minus className="w-4 h-4 text-gray-800" />;
   };
 
   const closeStatusLabel = (rate: number) => {
@@ -1218,7 +1218,7 @@ function Leaderboard() {
   return (
     <div className="space-y-4">
       {/* Disclaimer */}
-      <div className="text-xs text-gray-400 italic text-center">
+      <div className="text-xs text-gray-800 italic text-center">
         Rankings are based on AI scores only. Minimum 5 analysed calls required for a reliable ranking.
         <br />Reps with fewer than 5 calls are shown but marked as unranked.
       </div>
@@ -1229,7 +1229,7 @@ function Leaderboard() {
           <span className="text-2xl">\uD83D\uDE80</span>
           <div>
             <p className="text-emerald-600 text-sm font-bold">Most Improved</p>
-            <p className="text-gray-600 text-sm">{mostImproved.repName} — score trending up over last 6 calls</p>
+            <p className="text-gray-800 text-sm">{mostImproved.repName} — score trending up over last 6 calls</p>
           </div>
         </div>
       )}
@@ -1253,7 +1253,7 @@ function Leaderboard() {
             <div className="w-8 text-center flex-shrink-0">
               {entry.isReliable && i < 3
                 ? <span className="text-xl">{medals[i]}</span>
-                : <span className="text-gray-400 text-sm font-bold">#{i + 1}</span>
+                : <span className="text-gray-800 text-sm font-bold">#{i + 1}</span>
               }
             </div>
 
@@ -1262,12 +1262,12 @@ function Leaderboard() {
               <div className="flex items-center gap-2">
                 <p className="text-gray-700 font-semibold text-sm">{entry.repName}</p>
                 {!entry.isReliable && (
-                  <Badge className="text-xs bg-gray-100/50 text-gray-500 border-gray-300">Unranked &lt;5 calls</Badge>
+                  <Badge className="text-xs bg-gray-100/50 text-gray-700 border-gray-300">Unranked &lt;5 calls</Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-gray-400">{entry.totalCalls} calls</span>
-                <span className="text-xs text-gray-400">Close rate: {closeStatusLabel(entry.closeRate)}</span>
+                <span className="text-xs text-gray-800">{entry.totalCalls} calls</span>
+                <span className="text-xs text-gray-800">Close rate: {closeStatusLabel(entry.closeRate)}</span>
               </div>
             </div>
 
@@ -1277,7 +1277,7 @@ function Leaderboard() {
                 {trendIcon(entry.trend)}
                 {entry.avgScore != null
                   ? <span className={`text-xl font-bold ${scoreColor(entry.avgScore)}`}>{entry.avgScore}</span>
-                  : <span className="text-gray-400 text-sm">—</span>
+                  : <span className="text-gray-800 text-sm">—</span>
                 }
               </div>
               {entry.avgScore != null && <RepStatusBadge score={entry.avgScore} size="sm" />}
@@ -1295,10 +1295,10 @@ function FeedbackReview() {
 
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!feedbacks?.length) return (
-    <div className="text-center py-12 text-gray-400">
+    <div className="text-center py-12 text-gray-800">
       <Flag className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No feedback submitted yet.</p>
-      <p className="text-xs mt-2 text-gray-400">When reps flag incorrect analysis, it will appear here.</p>
+      <p className="text-xs mt-2 text-gray-800">When reps flag incorrect analysis, it will appear here.</p>
     </div>
   );
 
@@ -1309,7 +1309,7 @@ function FeedbackReview() {
     talk_ratio: "bg-cyan-50 text-cyan-700 border-cyan-200",
     recommendations: "bg-teal-50 text-teal-600 border-teal-500/40",
     transcript: "bg-orange-50 text-orange-700 border-orange-200",
-    other: "bg-gray-100 text-gray-600 border-gray-200",
+    other: "bg-gray-100 text-gray-800 border-gray-200",
   };
 
   // Count by section
@@ -1326,13 +1326,13 @@ function FeedbackReview() {
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-amber-600">{feedbacks.length}</div>
-            <div className="text-xs text-gray-500 mt-1">Total Flags</div>
+            <div className="text-xs text-gray-700 mt-1">Total Flags</div>
           </CardContent>
         </Card>
         <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className="text-lg font-bold text-gray-700 capitalize">{topSection?.[0]?.replace("_", " ") ?? "—"}</div>
-            <div className="text-xs text-gray-500 mt-1">Most Flagged Section</div>
+            <div className="text-xs text-gray-700 mt-1">Most Flagged Section</div>
           </CardContent>
         </Card>
       </div>
@@ -1349,11 +1349,11 @@ function FeedbackReview() {
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={sectionColors[f.section] ?? sectionColors.other}>{f.section.replace("_", " ")}</Badge>
-                <span className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleString()}</span>
-                <span className="text-xs text-gray-400">· Call #{f.analysisId}</span>
+                <span className="text-xs text-gray-800">{new Date(f.createdAt).toLocaleString()}</span>
+                <span className="text-xs text-gray-800">· Call #{f.analysisId}</span>
               </div>
               <p className="text-gray-700 text-sm font-medium">{f.issue}</p>
-              {f.comment && <p className="text-gray-500 text-xs leading-relaxed">{f.comment}</p>}
+              {f.comment && <p className="text-gray-700 text-xs leading-relaxed">{f.comment}</p>}
             </CardContent>
           </Card>
         ))}
@@ -1395,7 +1395,7 @@ function TrendIndicator({ trend, delta }: { trend: "improving" | "stable" | "dec
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
       <Minus className="w-3 h-3" /> Stable
     </span>
   );
@@ -1430,7 +1430,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
               <div className="text-lg font-bold">{rep.repName}</div>
               <div className="flex items-center gap-2 mt-1">
                 {rep.allTimeAvg != null && <RepStatusBadge score={rep.allTimeAvg} size="md" />}
-                <span className="text-gray-400 text-xs">{rankLabel} of {rep.totalReps} reps</span>
+                <span className="text-gray-800 text-xs">{rankLabel} of {rep.totalReps} reps</span>
               </div>
             </div>
           </DialogTitle>
@@ -1440,15 +1440,15 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
           {/* Dual score row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">All-Time Avg</p>
-              <p className={`text-3xl font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-400"}`}>
+              <p className="text-xs text-gray-800 uppercase tracking-widest mb-1">All-Time Avg</p>
+              <p className={`text-3xl font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-800"}`}>
                 {rep.allTimeAvg ?? "—"}
               </p>
-              <p className="text-xs text-gray-400 mt-1">{rep.totalCalls} calls total</p>
+              <p className="text-xs text-gray-800 mt-1">{rep.totalCalls} calls total</p>
             </div>
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Last 10 Avg</p>
-              <p className={`text-3xl font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-gray-400"}`}>
+              <p className="text-xs text-gray-800 uppercase tracking-widest mb-1">Last 10 Avg</p>
+              <p className={`text-3xl font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-gray-800"}`}>
                 {rep.last10Avg ?? "—"}
               </p>
               <div className="mt-1">
@@ -1460,7 +1460,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
           {/* Score history sparkline */}
           {chartData.length >= 2 && (
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Score History (last 10 calls)</p>
+              <p className="text-xs text-gray-700 uppercase tracking-widest mb-3">Score History (last 10 calls)</p>
               <div className="h-24">
                 <svg viewBox={`0 0 ${chartData.length * 40} 80`} className="w-full h-full" preserveAspectRatio="none">
                   {/* Grid line at 70 */}
@@ -1480,7 +1480,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
                   ))}
                 </svg>
               </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-xs text-gray-800 mt-1">
                 <span>Oldest</span><span className="text-teal-500/60">— 70 target</span><span>Latest</span>
               </div>
             </div>
@@ -1488,7 +1488,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
 
           {/* Category breakdown */}
           <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 space-y-3">
-            <p className="text-xs text-gray-500 uppercase tracking-widest">Category Breakdown</p>
+            <p className="text-xs text-gray-700 uppercase tracking-widest">Category Breakdown</p>
             {[
               { label: "Script Compliance", value: rep.scriptComplianceAvg, icon: "📋" },
               { label: "Tone & Delivery", value: rep.toneAvg, icon: "🎙️" },
@@ -1496,8 +1496,8 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
             ].map(({ label, value, icon, suffix }) => (
               <div key={label} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">{icon} {label}</span>
-                  <span className={`text-xs font-bold ${value != null ? scoreColor(value) : "text-gray-400"}`}>
+                  <span className="text-xs text-gray-800">{icon} {label}</span>
+                  <span className={`text-xs font-bold ${value != null ? scoreColor(value) : "text-gray-800"}`}>
                     {value != null ? `${value}${suffix ?? ""}` : "—"}
                   </span>
                 </div>
@@ -1511,20 +1511,20 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Close Rate</p>
+              <p className="text-xs text-gray-800 mb-1">Close Rate</p>
               <p className={`text-lg font-bold ${rep.closeRate >= 60 ? "text-emerald-600" : rep.closeRate >= 30 ? "text-amber-600" : "text-red-600"}`}>
                 {rep.closeRate}%
               </p>
             </div>
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Best Score</p>
-              <p className={`text-lg font-bold ${rep.bestCall ? scoreColor(rep.bestCall.score) : "text-gray-400"}`}>
+              <p className="text-xs text-gray-800 mb-1">Best Score</p>
+              <p className={`text-lg font-bold ${rep.bestCall ? scoreColor(rep.bestCall.score) : "text-gray-800"}`}>
                 {rep.bestCall?.score ?? "—"}
               </p>
             </div>
             <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Worst Score</p>
-              <p className={`text-lg font-bold ${rep.worstCall ? scoreColor(rep.worstCall.score) : "text-gray-400"}`}>
+              <p className="text-xs text-gray-800 mb-1">Worst Score</p>
+              <p className={`text-lg font-bold ${rep.worstCall ? scoreColor(rep.worstCall.score) : "text-gray-800"}`}>
                 {rep.worstCall?.score ?? "—"}
               </p>
             </div>
@@ -1538,7 +1538,7 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-600 hover:bg-gray-100">
+          <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-800 hover:bg-gray-100">
             Close
           </Button>
         </DialogFooter>
@@ -1553,10 +1553,10 @@ function TeamDashboard() {
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!reps?.length) return (
-    <div className="text-center py-12 text-gray-400">
+    <div className="text-center py-12 text-gray-800">
       <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No analysed calls yet.</p>
-      <p className="text-xs mt-2 text-gray-400">Once reps upload and analyse calls, their profiles will appear here.</p>
+      <p className="text-xs mt-2 text-gray-800">Once reps upload and analyse calls, their profiles will appear here.</p>
     </div>
   );
 
@@ -1570,15 +1570,15 @@ function TeamDashboard() {
       {/* Team summary bar */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
-          <p className="text-xs text-gray-400 mb-1">Total Reps</p>
+          <p className="text-xs text-gray-800 mb-1">Total Reps</p>
           <p className="text-2xl font-bold text-gray-900">{reps.length}</p>
         </div>
         <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
-          <p className="text-xs text-gray-400 mb-1">Team Avg</p>
-          <p className={`text-2xl font-bold ${teamAvg != null ? scoreColor(teamAvg) : "text-gray-400"}`}>{teamAvg ?? "—"}</p>
+          <p className="text-xs text-gray-800 mb-1">Team Avg</p>
+          <p className={`text-2xl font-bold ${teamAvg != null ? scoreColor(teamAvg) : "text-gray-800"}`}>{teamAvg ?? "—"}</p>
         </div>
         <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
-          <p className="text-xs text-gray-400 mb-1">Improving</p>
+          <p className="text-xs text-gray-800 mb-1">Improving</p>
           <p className="text-2xl font-bold text-emerald-600">{reps.filter(r => r.trendIndicator === "improving").length}</p>
         </div>
       </div>
@@ -1586,7 +1586,7 @@ function TeamDashboard() {
       {/* Ranked table */}
       <div className="rounded-xl border border-gray-200 overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-2 bg-white/80 border-b border-gray-200 text-xs text-gray-400 font-medium uppercase tracking-wide">
+        <div className="grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-2 bg-white/80 border-b border-gray-200 text-xs text-gray-800 font-medium uppercase tracking-wide">
           <span className="text-center">#</span>
           <span>Rep</span>
           <span className="text-center">Status</span>
@@ -1604,10 +1604,10 @@ function TeamDashboard() {
             className="w-full grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-3 border-b border-gray-200 hover:bg-teal-500/5 hover:border-teal-500/20 transition-all cursor-pointer group text-left items-center last:border-b-0"
           >
             {/* Rank */}
-            <span className="text-center text-gray-400 text-sm font-bold">
+            <span className="text-center text-gray-800 text-sm font-bold">
               {rep.rank <= 3
                 ? ["🥇", "🥈", "🥉"][rep.rank - 1]
-                : <span className="text-gray-400">#{rep.rank}</span>}
+                : <span className="text-gray-800">#{rep.rank}</span>}
             </span>
 
             {/* Name + calls count */}
@@ -1615,16 +1615,16 @@ function TeamDashboard() {
               <div className="flex items-center gap-1.5">
                 <RepInitials name={rep.repName} />
                 <span className="text-gray-700 font-semibold text-sm truncate group-hover:text-teal-600 transition-colors">{rep.repName}</span>
-                {!rep.isReliable && <span className="text-[10px] text-gray-400 flex-shrink-0">({rep.totalCalls})</span>}
+                {!rep.isReliable && <span className="text-[10px] text-gray-800 flex-shrink-0">({rep.totalCalls})</span>}
               </div>
-              {rep.isReliable && <span className="text-[10px] text-gray-400 ml-7">{rep.totalCalls} calls</span>}
+              {rep.isReliable && <span className="text-[10px] text-gray-800 ml-7">{rep.totalCalls} calls</span>}
             </div>
 
             {/* Status badge */}
             <div className="flex justify-center">
               {rep.allTimeAvg != null
                 ? <RepStatusBadge score={rep.allTimeAvg} size="sm" />
-                : <span className="text-gray-400 text-xs">—</span>}
+                : <span className="text-gray-800 text-xs">—</span>}
             </div>
 
             {/* Trend */}
@@ -1633,12 +1633,12 @@ function TeamDashboard() {
             </div>
 
             {/* All-time avg */}
-            <span className={`text-center text-sm font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-400"}`}>
+            <span className={`text-center text-sm font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-800"}`}>
               {rep.allTimeAvg ?? "—"}
             </span>
 
             {/* Last 10 avg */}
-            <span className={`text-center text-sm font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-gray-400"}`}>
+            <span className={`text-center text-sm font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-gray-800"}`}>
               {rep.last10Avg ?? "—"}
             </span>
 
@@ -1650,7 +1650,7 @@ function TeamDashboard() {
         ))}
       </div>
 
-      <p className="text-xs text-gray-400 text-center">Click any row to view the full rep profile. Stats based on AI-analysed calls only.</p>
+      <p className="text-xs text-gray-800 text-center">Click any row to view the full rep profile. Stats based on AI-analysed calls only.</p>
 
       {/* Rep Profile Modal */}
       {selectedRep && <RepProfileModal rep={selectedRep} onClose={() => setSelectedRep(null)} />}
@@ -1690,7 +1690,7 @@ export default function CallCoach() {
         <div className="text-center space-y-4">
           <Mic className="w-12 h-12 text-teal-600 mx-auto" />
           <h2 className="text-gray-900 text-xl font-semibold">AI Call Coach</h2>
-          <p className="text-gray-500">Sign in to analyse your calls</p>
+          <p className="text-gray-700">Sign in to analyse your calls</p>
           <Button asChild className="bg-teal-600 hover:bg-teal-700">
             <a href={getLoginUrl()}>Sign In</a>
           </Button>
@@ -1724,7 +1724,7 @@ export default function CallCoach() {
             <Mic className="w-7 h-7 text-teal-600" />
             AI Call Coach
           </h1>
-          <p className="text-gray-500 mt-1 text-sm">
+          <p className="text-gray-700 mt-1 text-sm">
             Upload a call recording — AI transcribes, analyses script compliance, and gives you actionable coaching.
           </p>
         </div>
@@ -1739,7 +1739,7 @@ export default function CallCoach() {
             {/* Can do */}
             <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.96 0.04 160)" }}>
               <p className="text-xs font-bold uppercase tracking-widest text-emerald-600" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>✅ Reliable — use these insights</p>
-              <ul className="space-y-1.5 text-xs text-gray-600 leading-relaxed">
+              <ul className="space-y-1.5 text-xs text-gray-800 leading-relaxed">
                 <li>• <strong>Talk/listen ratio</strong> — how much of the call you spoke vs. listened (accurate)</li>
                 <li>• <strong>Script stage detection</strong> — did you cover Opening, Pitch, Close? (good accuracy)</li>
                 <li>• <strong>Keyword spotting</strong> — did you mention trial, subscription, price? (accurate)</li>
@@ -1750,7 +1750,7 @@ export default function CallCoach() {
             {/* Cannot do */}
             <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.97 0.03 15)" }}>
               <p className="text-xs font-bold uppercase tracking-widest text-red-600" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>❌ Unreliable — do not base decisions on these</p>
-              <ul className="space-y-1.5 text-xs text-gray-600 leading-relaxed">
+              <ul className="space-y-1.5 text-xs text-gray-800 leading-relaxed">
                 <li>• <strong>Tone of voice / warmth</strong> — AI reads words, not true vocal emotion</li>
                 <li>• <strong>Rapport quality</strong> — whether the customer genuinely connected with you</li>
                 <li>• <strong>Subtle hesitation or sarcasm</strong> — easily missed without human context</li>
@@ -1759,7 +1759,7 @@ export default function CallCoach() {
               </ul>
             </div>
           </div>
-          <div className="px-4 py-2.5 text-xs text-gray-400 italic" style={{ background: "white" }}>
+          <div className="px-4 py-2.5 text-xs text-gray-800 italic" style={{ background: "white" }}>
             Use this tool as a starting point for coaching conversations — not as a final verdict. Always listen to the call yourself before making performance decisions.
           </div>
         </div>
@@ -1774,21 +1774,21 @@ export default function CallCoach() {
               <span className="mt-0.5 w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-emerald-600">40–65% rep speaking</p>
-                <p className="text-xs text-gray-500 mt-0.5">Ideal balance — rep leads the call while giving the customer space to talk and engage.</p>
+                <p className="text-xs text-gray-700 mt-0.5">Ideal balance — rep leads the call while giving the customer space to talk and engage.</p>
               </div>
             </div>
             <div className="px-4 py-3 flex items-start gap-3">
               <span className="mt-0.5 w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-amber-600">Below 30% rep speaking</p>
-                <p className="text-xs text-gray-500 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
+                <p className="text-xs text-gray-700 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
               </div>
             </div>
             <div className="px-4 py-3 flex items-start gap-3">
               <span className="mt-0.5 w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-red-600">Above 65% rep speaking</p>
-                <p className="text-xs text-gray-500 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
+                <p className="text-xs text-gray-700 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
               </div>
             </div>
           </div>
@@ -1809,7 +1809,7 @@ export default function CallCoach() {
               className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? "bg-teal-600 text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
+                  : "text-gray-700 hover:text-gray-700"
               }`}
             >
               {tab.label}

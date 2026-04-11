@@ -77,11 +77,11 @@ function formatNumber(num: string): string {
 // ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 function CallStatusBadge({ status }: { status: CallStatus }) {
   const config = {
-    idle:    { label: "Ready",       color: "bg-gray-100 text-gray-600 border border-gray-200",                   icon: <Phone className="w-3 h-3" /> },
+    idle:    { label: "Ready",       color: "bg-gray-100 text-gray-800 border border-gray-200",                   icon: <Phone className="w-3 h-3" /> },
     ringing: { label: "Incoming",    color: "bg-amber-50 text-amber-700 border border-amber-200",                  icon: <Phone className="w-3 h-3 animate-bounce" /> },
     dialing: { label: "Dialling…",   color: "bg-blue-50 text-blue-700 border border-blue-200",                    icon: <PhoneCall className="w-3 h-3 animate-pulse" /> },
     active:  { label: "On Call",     color: "bg-emerald-50 text-emerald-700 border border-emerald-200",            icon: <Mic className="w-3 h-3 animate-pulse" /> },
-    ended:   { label: "Call Ended",  color: "bg-gray-100 text-gray-500 border border-gray-200",                   icon: <PhoneOff className="w-3 h-3" /> },
+    ended:   { label: "Call Ended",  color: "bg-gray-100 text-gray-700 border border-gray-200",                   icon: <PhoneOff className="w-3 h-3" /> },
   }[status];
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
@@ -138,7 +138,7 @@ function ContactCard({
               {contact?.name ?? formatNumber(session.externalNumber)}
             </h3>
             {contact?.company && (
-              <p className="text-gray-500 text-xs flex items-center gap-1 mt-0.5">
+              <p className="text-gray-700 text-xs flex items-center gap-1 mt-0.5">
                 <Building2 className="w-3 h-3" />
                 {contact.company}
               </p>
@@ -147,7 +147,7 @@ function ContactCard({
           <CallStatusBadge status={session.status} />
         </div>
         {/* Call meta */}
-        <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
+        <div className="mt-3 flex items-center gap-4 text-xs text-gray-800">
           <span className="flex items-center gap-1">
             <Phone className="w-3 h-3" />
             {formatNumber(session.externalNumber)}
@@ -176,7 +176,7 @@ function ContactCard({
         <div className="p-4 border-b border-gray-100 space-y-2">
           {contact.contact_numbers && contact.contact_numbers.length > 1 && (
             <div>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Other Numbers</p>
+              <p className="text-[10px] text-gray-800 uppercase tracking-wide mb-1">Other Numbers</p>
               {contact.contact_numbers.filter(n => n !== session.externalNumber).map((n) => (
                 <p key={n} className="text-gray-700 text-sm">{formatNumber(n)}</p>
               ))}
@@ -184,7 +184,7 @@ function ContactCard({
           )}
           {contact.contact_emails && contact.contact_emails.length > 0 && (
             <div>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Email</p>
+              <p className="text-[10px] text-gray-800 uppercase tracking-wide mb-1">Email</p>
               {contact.contact_emails.map((e) => (
                 <p key={e} className="text-gray-700 text-sm truncate">{e}</p>
               ))}
@@ -195,7 +195,7 @@ function ContactCard({
 
       {/* Notes */}
       <div className="flex-1 p-4 flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-xs text-gray-400 uppercase tracking-wide">
+        <div className="flex items-center gap-2 text-xs text-gray-800 uppercase tracking-wide">
           <FileText className="w-3 h-3" />
           Call Notes
         </div>
@@ -203,9 +203,9 @@ function ContactCard({
           value={session.notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="Type notes during the call… they'll be saved automatically."
-          className="flex-1 min-h-[120px] bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 text-sm resize-none focus:border-indigo-400"
+          className="flex-1 min-h-[120px] bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-800 text-sm resize-none focus:border-indigo-400"
         />
-        <p className="text-[10px] text-gray-400">Notes are saved locally for this session.</p>
+        <p className="text-[10px] text-gray-800">Notes are saved locally for this session.</p>
       </div>
     </div>
   );
@@ -214,9 +214,9 @@ function ContactCard({
 // ─── CALL HISTORY ITEM ────────────────────────────────────────────────────────
 function CallHistoryItem({ session }: { session: CallSession }) {
   const statusIcon = {
-    ended:   <PhoneOff className="w-3 h-3 text-gray-400" />,
+    ended:   <PhoneOff className="w-3 h-3 text-gray-800" />,
     active:  <PhoneCall className="w-3 h-3 text-emerald-500" />,
-    idle:    <Phone className="w-3 h-3 text-gray-400" />,
+    idle:    <Phone className="w-3 h-3 text-gray-800" />,
     ringing: <Phone className="w-3 h-3 text-amber-500" />,
     dialing: <PhoneCall className="w-3 h-3 text-blue-500" />,
   }[session.status];
@@ -227,12 +227,12 @@ function CallHistoryItem({ session }: { session: CallSession }) {
         <p className="text-gray-700 text-xs truncate">
           {session.contact?.name ?? formatNumber(session.externalNumber)}
         </p>
-        <p className="text-gray-400 text-[10px]">
+        <p className="text-gray-800 text-[10px]">
           {session.startedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
         </p>
       </div>
       {session.notes && (
-        <FileText className="w-3 h-3 text-gray-400 flex-shrink-0" />
+        <FileText className="w-3 h-3 text-gray-800 flex-shrink-0" />
       )}
     </div>
   );
@@ -250,7 +250,7 @@ function QuickContactsPanel({ onDial }: { onDial: (phone: string, name: string) 
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <div className="flex items-center gap-2 text-gray-500 text-sm">
+        <div className="flex items-center gap-2 text-gray-700 text-sm">
           <ContactRound className="w-4 h-4" />
           <span>Quick Dial</span>
         </div>
@@ -264,12 +264,12 @@ function QuickContactsPanel({ onDial }: { onDial: (phone: string, name: string) 
       {/* Search */}
       <div className="px-3 py-2 border-b border-gray-100">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-800" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search contacts…"
-            className="pl-7 h-8 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 text-xs"
+            className="pl-7 h-8 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-800 text-xs"
           />
         </div>
       </div>
@@ -277,11 +277,11 @@ function QuickContactsPanel({ onDial }: { onDial: (phone: string, name: string) 
       {/* Contact list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center h-20 text-gray-400 text-xs">
+          <div className="flex items-center justify-center h-20 text-gray-800 text-xs">
             <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading…
           </div>
         ) : contacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-400 text-xs gap-2">
+          <div className="flex flex-col items-center justify-center h-32 text-gray-800 text-xs gap-2">
             <User className="w-6 h-6" />
             {search ? "No contacts match" : "No contacts yet — import a CSV"}
           </div>
@@ -303,7 +303,7 @@ function QuickContactsPanel({ onDial }: { onDial: (phone: string, name: string) 
                     <LeadTypeBadge type={c.leadType} />
                   </div>
                   {c.phone && (
-                    <span className="text-gray-400 text-[10px] font-mono">{c.phone}</span>
+                    <span className="text-gray-800 text-[10px] font-mono">{c.phone}</span>
                   )}
                 </div>
                 {c.phone && (
@@ -474,7 +474,7 @@ export default function Dialler() {
         <div className="text-center space-y-4">
           <Phone className="w-12 h-12 text-indigo-500 mx-auto" />
           <h2 className="text-gray-900 text-xl font-semibold">Lavié Dialler</h2>
-          <p className="text-gray-500">Sign in to access the dialler</p>
+          <p className="text-gray-700">Sign in to access the dialler</p>
           <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white">
             <a href={getLoginUrl()}>Sign In</a>
           </Button>
@@ -520,7 +520,7 @@ export default function Dialler() {
           {/* Call history (always visible at bottom) */}
           {sessionHistory.length > 0 && (
             <div className="border-t border-gray-100 p-4 max-h-52 overflow-y-auto flex-shrink-0 bg-gray-50">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Recent Calls</p>
+              <p className="text-xs text-gray-800 uppercase tracking-wide mb-3">Recent Calls</p>
               <div className="space-y-0">
                 {sessionHistory.map((s) => (
                   <CallHistoryItem key={s.uuid} session={s} />

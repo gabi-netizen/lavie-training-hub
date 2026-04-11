@@ -95,18 +95,18 @@ const LEAD_TYPE_COLOURS: Record<string, string> = {
   "Owned Sub":               "bg-teal-100 text-teal-700 border border-teal-200",
   "Same day as charge cancel":"bg-rose-100 text-rose-700 border border-rose-200",
   "Warm lead":               "bg-lime-100 text-lime-700 border border-lime-200",
-  "Other":                   "bg-gray-100 text-gray-600 border border-gray-200",
+  "Other":                   "bg-gray-100 text-gray-800 border border-gray-200",
 };
 
 const STATUS_COLOURS: Record<string, string> = {
-  new:           "bg-gray-100 text-gray-600",
+  new:           "bg-gray-100 text-gray-800",
   open:          "bg-blue-100 text-blue-700",
   working:       "bg-amber-100 text-amber-700",
   assigned:      "bg-purple-100 text-purple-700",
   done_deal:     "bg-green-100 text-green-700",
   retained_sub:  "bg-emerald-100 text-emerald-700",
   cancelled_sub: "bg-red-100 text-red-700",
-  closed:        "bg-gray-100 text-gray-400",
+  closed:        "bg-gray-100 text-gray-800",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -122,8 +122,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function LeadTypeBadge({ type }: { type?: string | null }) {
-  if (!type) return <span className="text-gray-300">—</span>;
-  const cls = LEAD_TYPE_COLOURS[type] ?? "bg-gray-100 text-gray-600 border border-gray-200";
+  if (!type) return <span className="text-gray-800">—</span>;
+  const cls = LEAD_TYPE_COLOURS[type] ?? "bg-gray-100 text-gray-800 border border-gray-200";
   return (
     <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap", cls)}>
       {type}
@@ -132,7 +132,7 @@ function LeadTypeBadge({ type }: { type?: string | null }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_COLOURS[status] ?? "bg-gray-100 text-gray-500";
+  const cls = STATUS_COLOURS[status] ?? "bg-gray-100 text-gray-700";
   return (
     <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap", cls)}>
       {STATUS_LABELS[status] ?? status}
@@ -208,13 +208,13 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Manage and track your customer leads</p>
+            <p className="text-sm text-gray-700 mt-0.5">Manage and track your customer leads</p>
           </div>
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="sm"
-              className="border-gray-300 text-gray-600 hover:text-gray-900 h-9"
+              className="border-gray-300 text-gray-800 hover:text-gray-900 h-9"
               onClick={() => refetch()}
             >
               <RefreshCw size={14} className="mr-1.5" />
@@ -251,7 +251,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               </div>
               <div>
                 <p className="text-xl font-bold text-gray-900 leading-none">{value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                <p className="text-xs text-gray-700 mt-0.5">{label}</p>
               </div>
             </div>
           ))}
@@ -262,12 +262,12 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       <div className="bg-white border-b border-gray-200 px-8 py-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-800" />
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by name, phone, or email…"
-              className="pl-9 bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 text-sm h-9 focus-visible:ring-indigo-400"
+              className="pl-9 bg-white border-gray-200 text-gray-800 placeholder:text-gray-800 text-sm h-9 focus-visible:ring-indigo-400"
             />
           </div>
 
@@ -275,7 +275,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             variant="outline"
             size="sm"
             className={cn(
-              "border-gray-200 text-gray-600 h-9 px-3 gap-1.5",
+              "border-gray-200 text-gray-800 h-9 px-3 gap-1.5",
               activeFilters > 0 && "border-indigo-300 text-indigo-600 bg-indigo-50"
             )}
             onClick={() => setShowFilters(!showFilters)}
@@ -297,7 +297,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <SelectValue placeholder="All lead types" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 max-h-64">
-                  <SelectItem value="" className="text-gray-500 text-sm">All lead types</SelectItem>
+                  <SelectItem value="" className="text-gray-700 text-sm">All lead types</SelectItem>
                   {meta?.leadTypes.map(lt => (
                     <SelectItem key={lt} value={lt} className="text-gray-800 text-sm">{lt}</SelectItem>
                   ))}
@@ -309,7 +309,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="" className="text-gray-500 text-sm">All statuses</SelectItem>
+                  <SelectItem value="" className="text-gray-700 text-sm">All statuses</SelectItem>
                   {meta?.statuses.map(s => (
                     <SelectItem key={s} value={s} className="text-gray-800 text-sm">{STATUS_LABELS[s] ?? s}</SelectItem>
                   ))}
@@ -320,7 +320,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-gray-400 hover:text-gray-700 h-9 px-2 gap-1"
+                  className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
                   onClick={() => { setFilterLeadType(""); setFilterStatus(""); }}
                 >
                   <X size={13} /> Clear
@@ -329,7 +329,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             </>
           )}
 
-          <span className="ml-auto text-sm text-gray-400">
+          <span className="ml-auto text-sm text-gray-800">
             {isLoading ? "Loading…" : `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`}
           </span>
         </div>
@@ -338,16 +338,16 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       {/* ── Table ── */}
       <div className="px-8 py-6">
         {isLoading ? (
-          <div className="flex items-center justify-center h-48 text-gray-400">
+          <div className="flex items-center justify-center h-48 text-gray-800">
             <RefreshCw className="animate-spin mr-2" size={18} /> Loading contacts…
           </div>
         ) : contacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-4">
+          <div className="flex flex-col items-center justify-center h-64 text-gray-800 gap-4">
             <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-              <AlertCircle size={28} className="text-gray-300" />
+              <AlertCircle size={28} className="text-gray-800" />
             </div>
             <div className="text-center">
-              <p className="font-semibold text-gray-600">No contacts found</p>
+              <p className="font-semibold text-gray-800">No contacts found</p>
               <p className="text-sm mt-1">Import a CSV file to get started, or clear your filters</p>
             </div>
             <Button
@@ -364,14 +364,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[240px]">Name</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[160px]">Lead Type</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[130px]">Status</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[150px]">Phone</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[140px]">Agent</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[200px]">Agent Email</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[110px]">Lead Date</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[240px]">Name</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[160px]">Lead Type</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[130px]">Status</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[150px]">Phone</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[140px]">Agent</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[200px]">Agent Email</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Source</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[110px]">Lead Date</th>
                   <th className="px-4 py-3.5 w-[60px]"></th>
                 </tr>
               </thead>
@@ -392,7 +392,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{c.name}</p>
-                          {c.email && <p className="text-xs text-gray-400 truncate max-w-[160px]">{c.email}</p>}
+                          {c.email && <p className="text-xs text-gray-800 truncate max-w-[160px]">{c.email}</p>}
                         </div>
                       </div>
                     </td>
@@ -409,33 +409,33 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
                     {/* Phone */}
                     <td className="px-4 py-3.5">
-                      <span className="text-sm text-gray-600 font-mono">{c.phone ?? "—"}</span>
+                      <span className="text-sm text-gray-800 font-mono">{c.phone ?? "—"}</span>
                     </td>
 
                     {/* Agent */}
                     <td className="px-4 py-3.5">
-                      <span className="text-sm text-gray-600">{c.agentName ?? "—"}</span>
+                      <span className="text-sm text-gray-800">{c.agentName ?? "—"}</span>
                     </td>
 
                     {/* Agent Email */}
                     <td className="px-4 py-3.5">
                       {c.agentName ? (
-                        <span className="text-xs text-gray-400 font-mono">
+                        <span className="text-xs text-gray-800 font-mono">
                           trial+{c.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com
                         </span>
                       ) : (
-                        <span className="text-sm text-gray-300">—</span>
+                        <span className="text-sm text-gray-800">—</span>
                       )}
                     </td>
 
                     {/* Source */}
                     <td className="px-4 py-3.5">
-                      <span className="text-sm text-gray-500">{c.source ?? "—"}</span>
+                      <span className="text-sm text-gray-700">{c.source ?? "—"}</span>
                     </td>
 
                     {/* Lead Date */}
                     <td className="px-4 py-3.5">
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-800">
                         {c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}
                       </span>
                     </td>

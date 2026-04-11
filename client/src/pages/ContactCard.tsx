@@ -56,18 +56,18 @@ const LEAD_TYPE_COLOURS: Record<string, string> = {
   "Owned Sub": "bg-teal-100 text-teal-700 border-teal-200",
   "Same day as charge cancel": "bg-rose-100 text-rose-700 border-rose-200",
   "Warm lead": "bg-lime-100 text-lime-700 border-lime-200",
-  "Other": "bg-gray-100 text-gray-600 border-gray-200",
+  "Other": "bg-gray-100 text-gray-800 border-gray-200",
 };
 
 const STATUS_COLOURS: Record<string, string> = {
-  new: "bg-gray-100 text-gray-600 border-gray-200",
+  new: "bg-gray-100 text-gray-800 border-gray-200",
   open: "bg-blue-100 text-blue-700 border-blue-200",
   working: "bg-amber-100 text-amber-700 border-amber-200",
   assigned: "bg-purple-100 text-purple-700 border-purple-200",
   done_deal: "bg-green-100 text-green-700 border-green-200",
   retained_sub: "bg-emerald-100 text-emerald-700 border-emerald-200",
   cancelled_sub: "bg-red-100 text-red-700 border-red-200",
-  closed: "bg-gray-100 text-gray-500 border-gray-200",
+  closed: "bg-gray-100 text-gray-700 border-gray-200",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -129,8 +129,8 @@ function Chip({ label, colour }: { label: string; colour: string }) {
 function InfoRow({ icon: Icon, value }: { icon: React.ElementType; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex items-center gap-2.5 text-sm text-gray-600">
-      <Icon size={14} className="text-gray-400 shrink-0" />
+    <div className="flex items-center gap-2.5 text-sm text-gray-800">
+      <Icon size={14} className="text-gray-800 shrink-0" />
       <span className="truncate">{value}</span>
     </div>
   );
@@ -204,7 +204,7 @@ export default function ContactCard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400 bg-gray-50">
+      <div className="flex items-center justify-center h-64 text-gray-800 bg-gray-50">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Loading contact…</p>
@@ -217,7 +217,7 @@ export default function ContactCard() {
     return (
       <div className="flex items-center justify-center h-64 bg-gray-50">
         <div className="text-center">
-          <p className="text-gray-500 font-medium mb-2">Contact not found</p>
+          <p className="text-gray-700 font-medium mb-2">Contact not found</p>
           <button
             onClick={() => navigate("/contacts")}
             className="text-sm text-indigo-600 hover:underline"
@@ -267,7 +267,7 @@ export default function ContactCard() {
       <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center gap-4">
         <button
           onClick={() => navigate("/contacts")}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors shrink-0"
+          className="flex items-center gap-1.5 text-sm text-gray-800 hover:text-gray-700 transition-colors shrink-0"
         >
           <ArrowLeft size={15} />
           Back
@@ -279,19 +279,19 @@ export default function ContactCard() {
           </div>
           <div className="min-w-0">
             <h1 className="text-base font-bold text-gray-900 truncate">{contact.name}</h1>
-            {contact.phone && <p className="text-xs text-gray-400 font-mono">{contact.phone}</p>}
+            {contact.phone && <p className="text-xs text-gray-800 font-mono">{contact.phone}</p>}
           </div>
           {contact.leadType && (
             <span className={cn(
               "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border shrink-0",
-              LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-600 border-gray-200"
+              LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-800 border-gray-200"
             )}>
               {contact.leadType}
             </span>
           )}
           <span className={cn(
             "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
-            STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-600"
+            STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-800"
           )}>
             {STATUS_LABELS[contact.status] ?? contact.status}
           </span>
@@ -327,7 +327,7 @@ export default function ContactCard() {
               {contact.leadType && (
                 <Chip
                   label={contact.leadType}
-                  colour={LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-600 border-gray-200"}
+                  colour={LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-800 border-gray-200"}
                 />
               )}
 
@@ -337,7 +337,7 @@ export default function ContactCard() {
                   onClick={() => setStatusOpen((v) => !v)}
                   className={cn(
                     "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity",
-                    STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-600 border-gray-200"
+                    STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-800 border-gray-200"
                   )}
                 >
                   {STATUS_LABELS[contact.status] ?? contact.status}
@@ -351,7 +351,7 @@ export default function ContactCard() {
                         onClick={() => handleStatusChange(s)}
                         className={cn(
                           "w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors",
-                          contact.status === s ? "font-semibold text-gray-900" : "text-gray-600"
+                          contact.status === s ? "font-semibold text-gray-900" : "text-gray-800"
                         )}
                       >
                         {STATUS_LABELS[s]}
@@ -383,13 +383,13 @@ export default function ContactCard() {
 
           {/* Callback */}
           <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Callback</p>
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Callback</p>
             {contact.callbackAt ? (
               <p className="text-sm font-medium text-amber-600">
                 {new Date(contact.callbackAt).toLocaleString("en-GB")}
               </p>
             ) : (
-              <p className="text-sm text-gray-400 italic">Not scheduled</p>
+              <p className="text-sm text-gray-800 italic">Not scheduled</p>
             )}
           </div>
 
@@ -398,7 +398,7 @@ export default function ContactCard() {
             <div className="p-5 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
                 <p className="text-2xl font-bold text-gray-800">{contact.callNotes.length}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Calls</p>
+                <p className="text-xs text-gray-800 mt-0.5">Calls</p>
               </div>
               <div className="rounded-xl bg-green-50 border border-green-100 p-3 text-center">
                 <p className="text-2xl font-bold text-green-600">
@@ -409,7 +409,7 @@ export default function ContactCard() {
             </div>
           )}
 
-          <p className="px-5 pb-4 text-xs text-gray-300 mt-auto">
+          <p className="px-5 pb-4 text-xs text-gray-800 mt-auto">
             Added {new Date(contact.createdAt).toLocaleDateString("en-GB")}
           </p>
         </aside>
@@ -426,7 +426,7 @@ export default function ContactCard() {
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               placeholder="What happened? Key objections, outcome, next steps…"
-              className="min-h-[88px] text-sm resize-none border-gray-200 text-gray-800 placeholder:text-gray-400 bg-white focus-visible:ring-indigo-400"
+              className="min-h-[88px] text-sm resize-none border-gray-200 text-gray-800 placeholder:text-gray-800 bg-white focus-visible:ring-indigo-400"
             />
             <div className="flex items-center gap-3 mt-3">
               <Select value={noteType} onValueChange={setNoteType}>
@@ -457,15 +457,15 @@ export default function ContactCard() {
 
           {/* Timeline */}
           <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide">
               Call History &amp; Notes
               {contact.callNotes.length > 0 && (
-                <span className="ml-1.5 text-gray-300">({contact.callNotes.length})</span>
+                <span className="ml-1.5 text-gray-800">({contact.callNotes.length})</span>
               )}
             </p>
 
             {contact.callNotes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-300">
+              <div className="flex flex-col items-center justify-center py-20 text-gray-800">
                 <PhoneOff size={36} className="mb-3 opacity-50" />
                 <p className="text-sm font-medium">No call notes yet</p>
                 <p className="text-xs mt-1">Log your first call above</p>
@@ -486,7 +486,7 @@ export default function ContactCard() {
                     {/* Body */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-800">
                           {new Date(note.createdAt).toLocaleString("en-GB")}
                         </span>
                         <span className={cn(
@@ -497,12 +497,12 @@ export default function ContactCard() {
                             ? "bg-blue-100 text-blue-700 border-blue-200"
                             : note.statusAtTime === "no_answer"
                             ? "bg-red-100 text-red-700 border-red-200"
-                            : "bg-gray-100 text-gray-600 border-gray-200"
+                            : "bg-gray-100 text-gray-800 border-gray-200"
                         )}>
                           {outcome.label}
                         </span>
                         {note.agentName && (
-                          <span className="text-xs text-gray-400">· {note.agentName}</span>
+                          <span className="text-xs text-gray-800">· {note.agentName}</span>
                         )}
                       </div>
                       <p className="text-sm text-gray-700 leading-relaxed">{note.note}</p>
@@ -521,7 +521,7 @@ export default function ContactCard() {
 
           {/* ── Contact Actions ── */}
           <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact</p>
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-3">Contact</p>
 
             {/* Primary: Call */}
             <button
@@ -547,7 +547,7 @@ export default function ContactCard() {
                   window.open(`https://wa.me/${num}`, "_blank");
                 }}
                 disabled={!contact.phone}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-green-50 hover:border-green-300 hover:text-green-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-800 hover:bg-green-50 hover:border-green-300 hover:text-green-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {/* WhatsApp icon */}
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -563,7 +563,7 @@ export default function ContactCard() {
                   setEmailOpen((v) => !v);
                 }}
                 disabled={!contact.email}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-800 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Mail size={18} />
                 Email
@@ -576,7 +576,7 @@ export default function ContactCard() {
                   window.open(`sms:${contact.phone}`);
                 }}
                 disabled={!contact.phone}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-gray-200 text-gray-800 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <MessageSquare size={18} />
                 SMS
@@ -593,13 +593,13 @@ export default function ContactCard() {
                 </p>
                 <button
                   onClick={() => setEmailOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-800 hover:text-gray-800 transition-colors"
                 >
                   <X size={14} />
                 </button>
               </div>
               {contact.email && (
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-gray-700 mb-3">
                   To: <span className="font-medium text-gray-700">{contact.email}</span>
                 </p>
               )}
@@ -608,13 +608,13 @@ export default function ContactCard() {
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
                   placeholder="Subject"
-                  className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+                  className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-800 focus-visible:ring-blue-400"
                 />
                 <Textarea
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
                   placeholder="Write your message here…"
-                  className="min-h-[120px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+                  className="min-h-[120px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-800 focus-visible:ring-blue-400"
                 />
                 <Button
                   onClick={() => {
@@ -639,7 +639,7 @@ export default function ContactCard() {
 
           {/* ── Integrations (admin only) ── */}
           <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Integrations</p>
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-3">Integrations</p>
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => syncToACMutation.mutate({ id: contactId })}
@@ -652,7 +652,7 @@ export default function ContactCard() {
               <button
                 onClick={() => user?.email && sendTestEmailMutation.mutate({ to: user.email })}
                 disabled={sendTestEmailMutation.isPending || !user?.email}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <CheckCircle2 size={15} />
                 {sendTestEmailMutation.isPending ? "Sending…" : "Send Test Email"}
@@ -662,7 +662,7 @@ export default function ContactCard() {
 
           {/* Lead Info */}
           <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Lead Info</p>
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-3">Lead Info</p>
             <div className="flex flex-col gap-2.5">
               {[
                 { label: "Lead Type",  value: contact.leadType },
@@ -672,9 +672,9 @@ export default function ContactCard() {
                 { label: "Agent",      value: contact.agentName },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-start gap-2">
-                  <span className="text-xs text-gray-400 shrink-0">{label}</span>
-                  <span className="text-xs text-gray-700 text-right font-medium">
-                    {value ?? <span className="text-gray-300 italic">—</span>}
+                  <span className="text-xs font-semibold text-gray-900 shrink-0">{label}</span>
+                  <span className="text-xs text-gray-900 text-right font-bold">
+                    {value ?? <span className="text-gray-900 italic">—</span>}
                   </span>
                 </div>
               ))}
@@ -684,8 +684,8 @@ export default function ContactCard() {
           {/* Imported Notes */}
           {contact.importedNotes && (
             <div className="p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Imported Notes</p>
-              <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-sm text-gray-700 leading-relaxed border-l-4 border-l-amber-400">
+              <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Imported Notes</p>
+              <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-sm text-gray-900 font-medium leading-relaxed border-l-4 border-l-amber-400">
                 {contact.importedNotes}
               </div>
             </div>

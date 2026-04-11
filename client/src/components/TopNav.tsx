@@ -79,7 +79,7 @@ export default function TopNav() {
                     "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
                     active
                       ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                      : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
                   )}
                 >
                   <Icon size={14} />
@@ -102,7 +102,7 @@ export default function TopNav() {
               </div>
               <span className="text-sm text-gray-700 max-w-[100px] truncate">{user?.name}</span>
               {isAdmin && <ShieldCheck size={12} className="text-indigo-500" />}
-              <ChevronDown size={12} className="text-gray-400" />
+              <ChevronDown size={12} className="text-gray-800" />
             </button>
           ) : (
             <a
@@ -116,7 +116,7 @@ export default function TopNav() {
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-44 rounded-lg border border-gray-200 shadow-lg bg-white py-1 z-50">
               <div className="px-3 py-2 border-b border-gray-100">
-                <p className="text-xs text-gray-400">Signed in as</p>
+                <p className="text-xs text-gray-800">Signed in as</p>
                 <p className="text-sm text-gray-800 font-medium truncate">{user?.name}</p>
                 {isAdmin && (
                   <span className="inline-flex items-center gap-1 mt-1 text-xs text-indigo-600">
@@ -126,7 +126,7 @@ export default function TopNav() {
               </div>
               <button
                 onClick={() => { setMenuOpen(false); logout(); }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-800 hover:bg-gray-50 transition-colors"
               >
                 <LogOut size={14} />
                 Sign out
