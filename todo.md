@@ -209,8 +209,8 @@
 - [x] ContactCard: desktop-first 3-column layout, better proportions, full screen space utilization
 
 ## Agent Email System (trial+[agent]@lavielabs.com)
-- [ ] Add agentEmail field to contacts DB schema and migrate
-- [ ] Add sendEmailToContact tRPC procedure (sends via Postmark from trial+agent address)
-- [ ] Add compose email modal in ContactCard with subject + body fields
-- [ ] Show agent sub-address in ContactCard left panel
-- [ ] Add agent email column to Contacts list
+- [x] Add agentEmail field to contacts DB schema and migrate
+- [x] Add sendEmailToContact tRPC procedure (sends via Postmark from trial+agent address)
+- [x] Add compose email modal in ContactCard with subject + body fields
+- [x] Show agent sub-address in ContactCard left panel
+- [x] Add agent email column to Contacts list

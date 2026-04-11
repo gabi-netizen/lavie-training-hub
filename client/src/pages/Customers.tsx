@@ -369,6 +369,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[130px]">Status</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[150px]">Phone</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[140px]">Agent</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[200px]">Agent Email</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[110px]">Lead Date</th>
                   <th className="px-4 py-3.5 w-[60px]"></th>
@@ -414,6 +415,17 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                     {/* Agent */}
                     <td className="px-4 py-3.5">
                       <span className="text-sm text-gray-600">{c.agentName ?? "—"}</span>
+                    </td>
+
+                    {/* Agent Email */}
+                    <td className="px-4 py-3.5">
+                      {c.agentName ? (
+                        <span className="text-xs text-gray-400 font-mono">
+                          trial+{c.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-300">—</span>
+                      )}
                     </td>
 
                     {/* Source */}

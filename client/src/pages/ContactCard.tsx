@@ -369,6 +369,12 @@ export default function ContactCard() {
             <InfoRow icon={Mail} value={contact.email} />
             <InfoRow icon={Tag} value={contact.source ? `Source: ${contact.source}` : null} />
             <InfoRow icon={User} value={contact.agentName ? `Agent: ${contact.agentName}` : null} />
+            {contact.agentName && (
+              <InfoRow
+                icon={Mail}
+                value={`trial+${contact.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com`}
+              />
+            )}
             <InfoRow
               icon={Calendar}
               value={contact.leadDate ? `Lead: ${new Date(contact.leadDate).toLocaleDateString("en-GB")}` : null}
