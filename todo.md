@@ -214,3 +214,11 @@
 - [x] Add compose email modal in ContactCard with subject + body fields
 - [x] Show agent sub-address in ContactCard left panel
 - [x] Add agent email column to Contacts list
+
+## Light Theme Conversion (Full App)
+- [x] Update global CSS variables in index.css to light theme (white bg, dark text, indigo accents)
+- [x] Redesign TopNav and AppLayout to light theme
+- [x] Redesign Home.tsx (Training page) to light theme
+- [x] Redesign Dialler page to light theme
+- [x] Redesign CallCoach (AI Coach) page to light theme
+- [x] Verify Contacts and ContactCard pages (already light, fix any remaining dark elements)

@@ -4,11 +4,11 @@
 @custom-variant dark (&:is(.dark *));
 
 /* 
-  DESIGN PHILOSOPHY: Dark Command Center
-  - Deep navy background for focus during live calls
-  - Color-coded objection buttons: navy blue, teal, burgundy
-  - Space Grotesk for headings (bold, technical), DM Sans for body
-  - Subtle glow effects on active states
+  DESIGN PHILOSOPHY: Clean Professional Light
+  - White / light-gray backgrounds — airy, modern
+  - Indigo primary accent (oklch 0.50 0.20 265)
+  - Space Grotesk for headings, DM Sans for body
+  - Subtle shadows instead of glow effects
   - 150ms fade transitions on tab switches
 */
 
@@ -37,38 +37,40 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --radius: 0.75rem;
-  --background: oklch(0.13 0.025 250);
-  --foreground: oklch(0.95 0.005 250);
-  --card: oklch(0.18 0.025 250);
-  --card-foreground: oklch(0.95 0.005 250);
-  --popover: oklch(0.18 0.025 250);
-  --popover-foreground: oklch(0.95 0.005 250);
-  --primary: oklch(0.55 0.18 250);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.22 0.02 250);
-  --secondary-foreground: oklch(0.85 0.005 250);
-  --muted: oklch(0.22 0.02 250);
-  --muted-foreground: oklch(0.6 0.015 250);
-  --accent: oklch(0.55 0.18 250);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+
+  /* ── Light palette ── */
+  --background:            oklch(0.98 0.003 265);
+  --foreground:            oklch(0.15 0.02 265);
+  --card:                  oklch(1 0 0);
+  --card-foreground:       oklch(0.15 0.02 265);
+  --popover:               oklch(1 0 0);
+  --popover-foreground:    oklch(0.15 0.02 265);
+  --primary:               oklch(0.50 0.20 265);
+  --primary-foreground:    oklch(0.98 0 0);
+  --secondary:             oklch(0.94 0.01 265);
+  --secondary-foreground:  oklch(0.30 0.02 265);
+  --muted:                 oklch(0.95 0.005 265);
+  --muted-foreground:      oklch(0.50 0.015 265);
+  --accent:                oklch(0.94 0.04 265);
+  --accent-foreground:     oklch(0.30 0.12 265);
+  --destructive:           oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.55 0.18 250);
-  --color-chart-1: oklch(0.55 0.18 250);
+  --border:                oklch(0.88 0.01 265);
+  --input:                 oklch(0.88 0.01 265);
+  --ring:                  oklch(0.50 0.20 265);
+  --color-chart-1: oklch(0.50 0.20 265);
   --color-chart-2: oklch(0.55 0.15 180);
-  --color-chart-3: oklch(0.45 0.15 20);
-  --color-chart-4: oklch(0.65 0.12 130);
+  --color-chart-3: oklch(0.55 0.15 20);
+  --color-chart-4: oklch(0.55 0.15 130);
   --color-chart-5: oklch(0.55 0.18 300);
-  --sidebar: oklch(0.16 0.025 250);
-  --sidebar-foreground: oklch(0.95 0.005 250);
-  --sidebar-primary: oklch(0.55 0.18 250);
+  --sidebar:               oklch(0.97 0.005 265);
+  --sidebar-foreground:    oklch(0.15 0.02 265);
+  --sidebar-primary:       oklch(0.50 0.20 265);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.22 0.02 250);
-  --sidebar-accent-foreground: oklch(0.95 0.005 250);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.55 0.18 250);
+  --sidebar-accent:        oklch(0.93 0.03 265);
+  --sidebar-accent-foreground: oklch(0.30 0.12 265);
+  --sidebar-border:        oklch(0.88 0.01 265);
+  --sidebar-ring:          oklch(0.50 0.20 265);
 }
 
 @layer base {
@@ -78,8 +80,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'DM Sans', sans-serif;
-    font-size: 17px;
-    line-height: 1.75;
+    font-size: 16px;
+    line-height: 1.65;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -101,7 +103,7 @@
     margin-right: auto;
     padding-left: 1rem;
     padding-right: 1rem;
-    max-width: 480px;
+    max-width: 520px;
   }
 
   .flex {
@@ -109,89 +111,94 @@
     min-width: 0;
   }
 
-  /* Objection button color variants */
+  /* Objection button color variants — light versions */
   .btn-obj1 {
-    background: linear-gradient(135deg, oklch(0.3 0.12 250), oklch(0.22 0.1 250));
-    border: 1px solid oklch(0.45 0.15 250 / 60%);
-    color: white;
-    box-shadow: 0 0 0 0 oklch(0.55 0.18 250 / 0%);
+    background: linear-gradient(135deg, oklch(0.92 0.06 265), oklch(0.96 0.04 265));
+    border: 1.5px solid oklch(0.70 0.12 265);
+    color: oklch(0.25 0.15 265);
+    box-shadow: 0 1px 3px oklch(0.50 0.20 265 / 15%);
     transition: all 0.15s ease;
   }
   .btn-obj1:hover, .btn-obj1.active {
-    background: linear-gradient(135deg, oklch(0.38 0.16 250), oklch(0.28 0.14 250));
-    box-shadow: 0 0 16px oklch(0.55 0.18 250 / 40%);
-    border-color: oklch(0.6 0.2 250 / 80%);
+    background: linear-gradient(135deg, oklch(0.50 0.20 265), oklch(0.45 0.18 265));
+    color: white;
+    box-shadow: 0 4px 12px oklch(0.50 0.20 265 / 30%);
+    border-color: oklch(0.50 0.20 265);
     transform: translateY(-1px);
   }
 
   .btn-obj2 {
-    background: linear-gradient(135deg, oklch(0.3 0.1 180), oklch(0.22 0.08 180));
-    border: 1px solid oklch(0.45 0.12 180 / 60%);
-    color: white;
+    background: linear-gradient(135deg, oklch(0.92 0.06 180), oklch(0.96 0.04 180));
+    border: 1.5px solid oklch(0.70 0.12 180);
+    color: oklch(0.25 0.12 180);
     transition: all 0.15s ease;
   }
   .btn-obj2:hover, .btn-obj2.active {
-    background: linear-gradient(135deg, oklch(0.38 0.13 180), oklch(0.28 0.11 180));
-    box-shadow: 0 0 16px oklch(0.5 0.15 180 / 40%);
-    border-color: oklch(0.55 0.15 180 / 80%);
+    background: linear-gradient(135deg, oklch(0.50 0.18 180), oklch(0.45 0.15 180));
+    color: white;
+    box-shadow: 0 4px 12px oklch(0.50 0.15 180 / 30%);
+    border-color: oklch(0.50 0.15 180);
     transform: translateY(-1px);
   }
 
   .btn-obj3 {
-    background: linear-gradient(135deg, oklch(0.3 0.1 20), oklch(0.22 0.08 20));
-    border: 1px solid oklch(0.45 0.12 20 / 60%);
-    color: white;
+    background: linear-gradient(135deg, oklch(0.93 0.06 20), oklch(0.97 0.04 20));
+    border: 1.5px solid oklch(0.70 0.12 20);
+    color: oklch(0.30 0.12 20);
     transition: all 0.15s ease;
   }
   .btn-obj3:hover, .btn-obj3.active {
-    background: linear-gradient(135deg, oklch(0.38 0.13 20), oklch(0.28 0.11 20));
-    box-shadow: 0 0 16px oklch(0.5 0.15 20 / 40%);
-    border-color: oklch(0.55 0.15 20 / 80%);
+    background: linear-gradient(135deg, oklch(0.55 0.18 20), oklch(0.48 0.15 20));
+    color: white;
+    box-shadow: 0 4px 12px oklch(0.55 0.15 20 / 30%);
+    border-color: oklch(0.55 0.15 20);
     transform: translateY(-1px);
   }
 
   .tab-active {
-    border-bottom: 2px solid oklch(0.65 0.18 250);
-    color: oklch(0.9 0.01 250);
+    border-bottom: 2px solid oklch(0.50 0.20 265);
+    color: oklch(0.50 0.20 265);
+    font-weight: 600;
   }
 
   .tab-inactive {
     border-bottom: 2px solid transparent;
-    color: oklch(0.85 0.01 250);
+    color: oklch(0.45 0.02 265);
   }
 
   .script-block {
-    background: oklch(0.16 0.02 250);
-    border-left: 3px solid oklch(0.55 0.18 250 / 60%);
+    background: oklch(0.97 0.01 265);
+    border-left: 3px solid oklch(0.50 0.20 265 / 60%);
     border-radius: 0 0.5rem 0.5rem 0;
     padding: 1.25rem 1.5rem;
     font-family: 'DM Sans', sans-serif;
-    font-size: 1.05rem;
+    font-size: 1rem;
     line-height: 1.85;
-    color: oklch(0.92 0.005 250);
+    color: oklch(0.20 0.02 265);
   }
 
   .coaching-note {
-    background: oklch(0.18 0.18 145 / 25%);
-    border: 1px solid oklch(0.65 0.22 145 / 60%);
+    background: oklch(0.95 0.06 145);
+    border: 1.5px solid oklch(0.65 0.15 145);
     border-radius: 0.5rem;
     padding: 1rem 1.25rem;
-    color: oklch(0.85 0.22 145);
-    font-size: 1rem;
+    color: oklch(0.28 0.15 145);
+    font-size: 0.95rem;
     font-weight: 600;
     line-height: 1.75;
-    box-shadow: 0 0 8px oklch(0.65 0.22 145 / 20%);
   }
 
   .pitch-card {
-    background: oklch(0.18 0.025 250);
-    border: 1px solid oklch(1 0 0 / 8%);
+    background: oklch(1 0 0);
+    border: 1px solid oklch(0.88 0.01 265);
     border-radius: 0.75rem;
     transition: all 0.15s ease;
+    box-shadow: 0 1px 3px oklch(0 0 0 / 6%);
   }
   .pitch-card:hover {
-    background: oklch(0.22 0.03 250);
-    border-color: oklch(0.55 0.18 250 / 40%);
+    background: oklch(0.97 0.02 265);
+    border-color: oklch(0.70 0.12 265);
+    box-shadow: 0 4px 12px oklch(0.50 0.20 265 / 12%);
     transform: translateY(-1px);
   }
 

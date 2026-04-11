@@ -1,7 +1,7 @@
 /*
-  DESIGN PHILOSOPHY: Dark Command Centre
-  - Deep navy (#0F1923) background for focus during live calls
-  - Colour-coded objection buttons: navy blue, teal, burgundy
+  DESIGN PHILOSOPHY: Clean Professional Light
+  - White / light-gray backgrounds — airy, modern
+  - Colour-coded objection buttons: indigo, teal, orange
   - Space Grotesk for headings, DM Sans for body
   - Subtle glow effects on active states
   - 150ms fade transitions on tab switches
@@ -380,7 +380,7 @@ function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string
 
   return (
     <>
-    <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "9/16", maxHeight: "340px" }}>
+    <div className="relative w-full rounded-xl overflow-hidden bg-gray-900" style={{ aspectRatio: "9/16", maxHeight: "340px" }}>
 
       {/* Slot A */}
       <video
@@ -408,7 +408,7 @@ function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string
 
       {/* Clip counter */}
       {playing && (
-        <div className="absolute bottom-2 right-2 z-10 bg-black/60 rounded-full px-2 py-0.5 text-xs text-white/70">
+        <div className="absolute bottom-2 right-2 z-10 bg-black/60 rounded-full px-2 py-0.5 text-xs text-gray-600">
           {currentClip + 1} / {clips.length}
         </div>
       )}
@@ -420,9 +420,9 @@ function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string
           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/70 hover:bg-black/50 transition-colors"
         >
           <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-            <Play className="w-7 h-7 text-white ml-1" fill="white" />
+            <Play className="w-7 h-7 text-gray-900 ml-1" fill="white" />
           </div>
-          <span className="text-white/80 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <span className="text-gray-700 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
             ~{clips.length * 8}s
           </span>
         </button>
@@ -435,9 +435,9 @@ function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string
           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/70 hover:bg-black/50 transition-colors"
         >
           <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-            <span className="text-white text-2xl">↺</span>
+            <span className="text-gray-900 text-2xl">↺</span>
           </div>
-          <span className="text-white/80 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <span className="text-gray-700 text-sm font-medium" style={{ fontFamily: "'DM Sans', sans-serif" }}>
             Replay
           </span>
         </button>
@@ -449,9 +449,9 @@ function VideoPlayer({ clips, subtitles }: { clips: string[]; subtitles?: string
       <div
         className="mt-3 rounded-lg px-4 py-3 text-sm leading-relaxed"
         style={{
-          background: "oklch(0.18 0.02 250 / 0.9)",
-          border: "1px solid oklch(0.35 0.04 250 / 0.5)",
-          color: "oklch(0.92 0.01 250)",
+          background: "oklch(0.97 0.01 265 / 0.95)",
+          border: "1px solid oklch(0.80 0.04 265 / 0.5)",
+          color: "oklch(0.15 0.02 265)",
           fontFamily: "'DM Sans', sans-serif",
           lineHeight: "1.6",
         }}
@@ -544,13 +544,13 @@ function PitchFullScript() {
       {PITCH_STAGES.map((stage) => (
         <div key={stage.id} className="flex flex-col gap-4">
           {/* Stage heading */}
-          <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+          <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
             <span className="text-2xl">{stage.icon}</span>
             <div>
-              <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {stage.title}
               </p>
-              <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>
+              <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>
                 {stage.subtitle}
               </p>
             </div>
@@ -562,7 +562,7 @@ function PitchFullScript() {
               <div key={i} className="flex flex-col gap-2">
                 <p
                   className="text-sm font-semibold uppercase tracking-wider"
-                  style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+                  style={{ color: "oklch(0.50 0.18 265)", fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {step.label}
                 </p>
@@ -701,14 +701,14 @@ function LiveCallScript() {
       {LIVE_CALL_SECTIONS.map((section) => (
         <div key={section.id} className="flex flex-col gap-3">
           {/* Section heading */}
-          <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+          <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
             <span className="text-xl">{section.icon}</span>
             <div>
-              <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {section.title}
               </p>
               {section.subtitle && (
-                <p className="text-base font-black tracking-wide mt-1" style={{ color: "oklch(0.82 0.22 145)", textShadow: "0 0 12px oklch(0.65 0.22 145 / 0.4)", letterSpacing: "0.04em" }}>
+                <p className="text-base font-black tracking-wide mt-1" style={{ color: "oklch(0.45 0.22 145)", letterSpacing: "0.04em" }}>
                   {section.subtitle}
                 </p>
               )}
@@ -722,7 +722,7 @@ function LiveCallScript() {
                   <p className="text-base leading-relaxed">"{item.text}"</p>
                 </div>
               ) : item.type === "label" ? (
-                <p key={i} className="text-sm font-bold uppercase tracking-wider mt-1" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                <p key={i} className="text-sm font-bold uppercase tracking-wider mt-1" style={{ color: "oklch(0.50 0.18 265)", fontFamily: "'Space Grotesk', sans-serif" }}>
                   {item.text}
                 </p>
               ) : (
@@ -856,11 +856,11 @@ export default function Home() {
   const activeObj = OBJECTIONS.find((o) => o.id === activeObjId);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "oklch(0.13 0.025 250)" }}>
+    <div className="min-h-screen flex flex-col bg-gray-50">
 
       {/* Tabs — hidden on home screen */}
       {activeTab !== "home" && (
-        <div className="flex border-b border-white/8 overflow-x-auto scrollbar-none" style={{ background: "oklch(0.16 0.025 250)" }}>
+        <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-none" style={{ background: "white" }}>
           {([
             { id: "livescript",   label: "Live Call Script",  num: "1" },
             { id: "rapport",      label: "Rapport",           num: "2" },
@@ -878,7 +878,7 @@ export default function Home() {
               <span
                 className="text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0"
                 style={{
-                  background: activeTab === tab.id ? "oklch(0.55 0.22 250)" : "oklch(0.38 0.08 250)",
+                  background: activeTab === tab.id ? "oklch(0.50 0.20 265)" : "oklch(0.80 0.05 265)",
                   color: "white",
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontSize: "9px",
@@ -908,18 +908,18 @@ export default function Home() {
           <div className="fade-in flex flex-col gap-8 pt-4">
             {/* Hero headline */}
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.7 0.08 250)", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.12em" }}>Lavié Labs — Training Hub</p>
-              <h2 className="text-4xl font-black leading-tight text-white" style={{ fontFamily: "'Playfair Display', serif", lineHeight: "1.15" }}>
-                Every great call<br />starts before<br /><span style={{ color: "oklch(0.92 0.04 80)", fontStyle: "italic" }}>you dial.</span>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.50 0.20 265)", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.12em" }}>Lavié Labs — Training Hub</p>
+              <h2 className="text-4xl font-black leading-tight text-gray-900" style={{ fontFamily: "'Playfair Display', serif", lineHeight: "1.15" }}>
+                Every great call<br />starts before<br /><span style={{ color: "oklch(0.55 0.18 265)", fontStyle: "italic" }}>you dial.</span>
               </h2>
-              <p className="text-sm leading-relaxed" style={{ color: "oklch(0.72 0.03 250)" }}>
+              <p className="text-sm leading-relaxed" style={{ color: "oklch(0.40 0.02 265)" }}>
                 You don't need a perfect script. You need the right mindset, the right words, and the confidence to use them. Everything you need is right here.
               </p>
             </div>
 
             {/* Section cards */}
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.65 0.06 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Where do you want to start?</p>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.45 0.08 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Where do you want to start?</p>
               {([
                 {
                   id: "livescript",
@@ -928,7 +928,7 @@ export default function Home() {
                   desc: "The full word-for-word call flow. Open this before you dial.",
                   icon: "📞",
                   accent: "oklch(0.55 0.22 250)",
-                  bg: "oklch(0.18 0.06 250)",
+                  bg: "oklch(0.95 0.04 265)",
                   border: "oklch(0.45 0.18 250 / 35%)",
                 },
                 {
@@ -938,7 +938,7 @@ export default function Home() {
                   desc: "Stop reading. Start connecting. How to make her feel heard.",
                   icon: "🤝",
                   accent: "oklch(0.72 0.18 180)",
-                  bg: "oklch(0.17 0.05 180)",
+                  bg: "oklch(0.96 0.03 180)",
                   border: "oklch(0.45 0.15 180 / 35%)",
                 },
                 {
@@ -948,7 +948,7 @@ export default function Home() {
                   desc: "Quick reference for pitch, walkthrough, and close. Keep this open during the call.",
                   icon: "⚡",
                   accent: "oklch(0.78 0.18 80)",
-                  bg: "oklch(0.17 0.05 80)",
+                  bg: "oklch(0.97 0.03 80)",
                   border: "oklch(0.5 0.15 80 / 35%)",
                 },
                 {
@@ -958,7 +958,7 @@ export default function Home() {
                   desc: "She's pushing back. Tap the objection and get the exact response.",
                   icon: "🛡️",
                   accent: "oklch(0.65 0.2 15)",
-                  bg: "oklch(0.17 0.05 15)",
+                  bg: "oklch(0.97 0.03 15)",
                   border: "oklch(0.45 0.18 15 / 35%)",
                 },
                 {
@@ -968,7 +968,7 @@ export default function Home() {
                   desc: "Deep product knowledge. Know what you're selling inside out.",
                   icon: "🧔",
                   accent: "oklch(0.72 0.18 300)",
-                  bg: "oklch(0.17 0.05 300)",
+                  bg: "oklch(0.96 0.03 300)",
                   border: "oklch(0.45 0.15 300 / 35%)",
                 },
                 {
@@ -978,7 +978,7 @@ export default function Home() {
                   desc: "Review what went wrong. Use this after the call to get better.",
                   icon: "🔍",
                   accent: "oklch(0.65 0.12 250)",
-                  bg: "oklch(0.16 0.03 250)",
+                  bg: "oklch(0.97 0.02 265)",
                   border: "oklch(0.4 0.1 250 / 35%)",
                 },
               ] as { id: string; num: string; title: string; desc: string; icon: string; accent: string; bg: string; border: string }[]).map((card) => (
@@ -998,8 +998,8 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5 flex-1">
-                    <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{card.title}</p>
-                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.6 0.04 250)" }}>{card.desc}</p>
+                    <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{card.title}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.45 0.03 265)" }}>{card.desc}</p>
                   </div>
                   <ChevronDown className="w-4 h-4 shrink-0 mt-1 -rotate-90" style={{ color: card.accent }} />
                 </button>
@@ -1010,7 +1010,7 @@ export default function Home() {
             <Link href="/ai-coach">
               <button
                 className="w-full text-left rounded-xl px-4 py-4 flex items-start gap-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{ background: "oklch(0.17 0.06 180)", border: "1px solid oklch(0.45 0.18 180 / 40%)" }}
+                style={{ background: "oklch(0.96 0.04 180)", border: "1px solid oklch(0.65 0.12 180 / 50%)" }}
               >
                 <div className="flex flex-col items-center gap-1 shrink-0">
                   <span className="text-xl">🤖</span>
@@ -1022,24 +1022,24 @@ export default function Home() {
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 flex-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>AI Call Coach</p>
-                  <p className="text-xs leading-relaxed" style={{ color: "oklch(0.6 0.04 250)" }}>Upload a call recording — AI analyses your script, tone, and gives you 3 coaching tips.</p>
+                  <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>AI Call Coach</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "oklch(0.45 0.03 265)" }}>Upload a call recording — AI analyses your script, tone, and gives you 3 coaching tips.</p>
                 </div>
                 <ChevronDown className="w-4 h-4 shrink-0 mt-1 -rotate-90" style={{ color: "oklch(0.55 0.2 180)" }} />
               </button>
             </Link>
 
             {/* Motivational footer */}
-            <div className="rounded-xl px-4 py-4 text-center" style={{ background: "oklch(0.18 0.04 250)", border: "1px solid oklch(0.45 0.18 250 / 25%)" }}>
-              <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"The best reps don't sell products."</p>
-              <p className="text-xs mt-1" style={{ color: "oklch(0.55 0.1 250)" }}>They solve problems. They build trust. Then the sale happens naturally.</p>
+            <div className="rounded-xl px-4 py-4 text-center" style={{ background: "oklch(0.97 0.02 265)", border: "1px solid oklch(0.70 0.10 265 / 40%)" }}>
+              <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"The best reps don't sell products."</p>
+              <p className="text-xs mt-1" style={{ color: "oklch(0.40 0.06 265)" }}>They solve problems. They build trust. Then the sale happens naturally.</p>
             </div>
 
             {/* Install CTA */}
             <button
               onClick={() => setActiveTab("install")}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold transition-all"
-              style={{ color: "oklch(0.55 0.08 250)", border: "1px dashed oklch(0.3 0.05 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+              style={{ color: "oklch(0.45 0.10 265)", border: "1px dashed oklch(0.3 0.05 250)", fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <span>📲</span> How to install this app on your phone
             </button>
@@ -1053,39 +1053,39 @@ export default function Home() {
             <button
               onClick={() => setActiveTab("home")}
               className="flex items-center gap-2 text-sm font-semibold w-fit"
-              style={{ color: "oklch(0.65 0.1 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+              style={{ color: "oklch(0.50 0.15 265)", fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <ChevronDown className="w-4 h-4 rotate-90" /> Back to Home
             </button>
 
             {/* Header */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.55 0.18 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Setup</p>
-              <h2 className="text-2xl font-black text-white" style={{ fontFamily: "'Playfair Display', serif" }}>Add the app to<br />your home screen</h2>
-              <p className="text-sm" style={{ color: "oklch(0.65 0.04 250)" }}>Takes 30 seconds. Do it once and you're done.</p>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.50 0.20 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Setup</p>
+              <h2 className="text-2xl font-black text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Add the app to<br />your home screen</h2>
+              <p className="text-sm" style={{ color: "oklch(0.45 0.03 265)" }}>Takes 30 seconds. Do it once and you're done.</p>
             </div>
 
             {/* iPhone Instructions */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">💜</span>
-                <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>iPhone (Safari only)</p>
+                <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>iPhone (Safari only)</p>
               </div>
               {[
                 { num: "1", icon: "🌐", title: "Open in Safari", desc: "Make sure you're using Safari — not Chrome or another browser. Copy the link and paste it in Safari if needed." },
                 { num: "2", icon: "⬆️", title: "Tap the Share button", desc: 'At the bottom of the screen, tap the square with an arrow pointing up ⬆️. If you don\'t see it, scroll up slightly.' },
                 { num: "3", icon: "➕", title: "Tap \"Add to Home Screen\"", desc: 'Scroll down in the menu that appears and tap "Add to Home Screen". Then tap Add in the top right corner.' },
               ].map((step) => (
-                <div key={step.num} className="flex gap-3 rounded-xl px-4 py-4" style={{ background: "oklch(0.17 0.04 250)", border: "1px solid oklch(0.3 0.06 250)" }}>
+                <div key={step.num} className="flex gap-3 rounded-xl px-4 py-4" style={{ background: "oklch(0.97 0.02 265)", border: "1px solid oklch(0.80 0.04 265)" }}>
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-black"
-                    style={{ background: "oklch(0.55 0.22 250)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
+                    style={{ background: "oklch(0.50 0.20 265)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {step.num}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.icon} {step.title}</p>
-                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.65 0.04 250)" }}>{step.desc}</p>
+                    <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.icon} {step.title}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.45 0.03 265)" }}>{step.desc}</p>
                   </div>
                 </div>
               ))}
@@ -1093,58 +1093,58 @@ export default function Home() {
 
             {/* Divider */}
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px" style={{ background: "oklch(0.25 0.04 250)" }} />
-              <p className="text-xs font-semibold" style={{ color: "oklch(0.45 0.05 250)", fontFamily: "'Space Grotesk', sans-serif" }}>OR</p>
-              <div className="flex-1 h-px" style={{ background: "oklch(0.25 0.04 250)" }} />
+              <div className="flex-1 h-px" style={{ background: "oklch(0.85 0.02 265)" }} />
+              <p className="text-xs font-semibold" style={{ color: "oklch(0.40 0.04 265)", fontFamily: "'Space Grotesk', sans-serif" }}>OR</p>
+              <div className="flex-1 h-px" style={{ background: "oklch(0.85 0.02 265)" }} />
             </div>
 
             {/* Android Instructions */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🟢</span>
-                <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Android (Chrome)</p>
+                <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Android (Chrome)</p>
               </div>
               {[
                 { num: "1", icon: "🌐", title: "Open in Chrome", desc: "Make sure you're using Chrome. Paste the app link in the Chrome address bar." },
                 { num: "2", icon: "⋮", title: "Tap the 3 dots menu", desc: "Tap the three dots ⋮ in the top right corner of Chrome to open the menu." },
                 { num: "3", icon: "➕", title: "Tap \"Add to Home Screen\"", desc: 'Select "Add to Home Screen" from the menu and confirm. The app will appear on your home screen instantly.' },
               ].map((step) => (
-                <div key={step.num} className="flex gap-3 rounded-xl px-4 py-4" style={{ background: "oklch(0.17 0.04 180)", border: "1px solid oklch(0.3 0.06 180)" }}>
+                <div key={step.num} className="flex gap-3 rounded-xl px-4 py-4" style={{ background: "oklch(0.97 0.02 180)", border: "1px solid oklch(0.80 0.04 180)" }}>
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-black"
-                    style={{ background: "oklch(0.55 0.18 180)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
+                    style={{ background: "oklch(0.50 0.18 180)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {step.num}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.icon} {step.title}</p>
-                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.65 0.04 250)" }}>{step.desc}</p>
+                    <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.icon} {step.title}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "oklch(0.45 0.03 265)" }}>{step.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Result card */}
-            <div className="rounded-xl px-4 py-4 flex items-center gap-3" style={{ background: "oklch(0.17 0.05 80)", border: "1px solid oklch(0.45 0.15 80 / 40%)" }}>
+            <div className="rounded-xl px-4 py-4 flex items-center gap-3" style={{ background: "oklch(0.97 0.03 80)", border: "1px solid oklch(0.70 0.12 80 / 50%)" }}>
               <span className="text-2xl">✅</span>
               <div>
-                <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>That's it — you're set.</p>
-                <p className="text-xs" style={{ color: "oklch(0.65 0.06 80)" }}>The Lavié Labs icon will appear on your home screen. Tap it to open the app — no browser, no URL, full screen.</p>
+                <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>That's it — you're set.</p>
+                <p className="text-xs" style={{ color: "oklch(0.45 0.10 80)" }}>The Lavié Labs icon will appear on your home screen. Tap it to open the app — no browser, no URL, full screen.</p>
               </div>
             </div>
 
             {/* Link to copy */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "oklch(0.5 0.06 250)", fontFamily: "'Space Grotesk', sans-serif" }}>App link</p>
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "oklch(0.40 0.05 265)", fontFamily: "'Space Grotesk', sans-serif" }}>App link</p>
               <div
                 className="rounded-xl px-4 py-3 flex items-center justify-between"
-                style={{ background: "oklch(0.16 0.03 250)", border: "1px solid oklch(0.28 0.05 250)" }}
+                style={{ background: "oklch(0.97 0.02 265)", border: "1px solid oklch(0.85 0.03 265)" }}
               >
-                <p className="text-xs font-mono" style={{ color: "oklch(0.72 0.1 250)" }}>lavietrain-se3fvyjn.manus.space</p>
+                <p className="text-xs font-mono" style={{ color: "oklch(0.50 0.18 265)" }}>lavietrain-se3fvyjn.manus.space</p>
                 <button
                   onClick={() => { navigator.clipboard?.writeText("https://lavietrain-se3fvyjn.manus.space"); }}
                   className="text-xs font-semibold px-3 py-1 rounded-lg"
-                  style={{ background: "oklch(0.55 0.22 250)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
+                  style={{ background: "oklch(0.50 0.20 265)", color: "white", fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Copy
                 </button>
@@ -1156,7 +1156,7 @@ export default function Home() {
         {/* ── OBJECTION TRAINER TAB ── */}
         {activeTab === "objections" && (
           <div className="fade-in flex flex-col gap-4">
-            <p className="text-sm uppercase tracking-widest font-semibold text-center" style={{ color: "oklch(0.92 0.005 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-sm uppercase tracking-widest font-semibold text-center" style={{ color: "oklch(0.40 0.02 265)", fontFamily: "'Space Grotesk', sans-serif" }}>
               Tap the objection you're facing
             </p>
 
@@ -1188,7 +1188,7 @@ export default function Home() {
                 <div className="flex flex-col gap-2">
                   <p
                     className="text-sm uppercase tracking-widest font-semibold"
-                    style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    style={{ color: "oklch(0.40 0.02 265)", fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     Full Script
                   </p>
@@ -1204,16 +1204,16 @@ export default function Home() {
           <div className="fade-in flex flex-col gap-4">
             {activeDiagnostic === null ? (
               <>
-                <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.40 0.02 265)", fontFamily: "'Space Grotesk', sans-serif" }}>
                   Quick Reference
                 </p>
-                <div className="rounded-xl overflow-hidden border" style={{ borderColor: "oklch(0.28 0.04 250)" }}>
+                <div className="rounded-xl overflow-hidden border" style={{ borderColor: "oklch(0.85 0.03 265)" }}>
                   <table className="w-full text-xs">
                     <thead>
-                      <tr style={{ background: "oklch(0.2 0.04 250)" }}>
-                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.7 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Symptom</th>
-                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.7 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Root Cause</th>
-                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.7 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Fix</th>
+                      <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.35 0.15 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Symptom</th>
+                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.35 0.15 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Root Cause</th>
+                        <th className="text-left px-3 py-2 font-semibold" style={{ color: "oklch(0.35 0.15 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Fix</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1227,9 +1227,9 @@ export default function Home() {
                         ["She needs to think about it", "Unspoken objection", "Uncover & reassure"],
                         ["She says it's too expensive", "Value not clear yet", "Anchor & break down"],
                       ].map(([symptom, cause, fix], i) => (
-                        <tr key={i} style={{ background: i % 2 === 0 ? "oklch(0.16 0.025 250)" : "oklch(0.18 0.03 250)", borderTop: "1px solid oklch(0.22 0.03 250)" }}>
-                          <td className="px-3 py-2 text-white/80">{symptom}</td>
-                          <td className="px-3 py-2" style={{ color: "oklch(0.75 0.12 60)" }}>{cause}</td>
+                        <tr key={i} style={{ background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white", borderTop: "1px solid oklch(0.22 0.03 250)" }}>
+                          <td className="px-3 py-2 text-gray-700">{symptom}</td>
+                          <td className="px-3 py-2" style={{ color: "oklch(0.50 0.15 60)" }}>{cause}</td>
                           <td className="px-3 py-2" style={{ color: "oklch(0.75 0.18 145)" }}>{fix}</td>
                         </tr>
                       ))}
@@ -1237,7 +1237,7 @@ export default function Home() {
                   </table>
                 </div>
 
-                <p className="text-sm uppercase tracking-widest font-semibold mt-2" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+                <p className="text-sm uppercase tracking-widest font-semibold mt-2" style={{ color: "oklch(0.40 0.02 265)", fontFamily: "'Space Grotesk', sans-serif" }}>
                   Tap for full diagnostic
                 </p>
                 <div className="flex flex-col gap-3">
@@ -1246,13 +1246,13 @@ export default function Home() {
                       key={i}
                       onClick={() => setActiveDiagnostic(i)}
                       className="w-full rounded-xl px-4 py-3 text-left flex items-center justify-between"
-                      style={{ background: "oklch(0.18 0.04 250)", border: "1px solid oklch(0.28 0.04 250)" }}
+                      style={{ background: "oklch(0.97 0.02 265)", border: "1px solid oklch(0.85 0.03 265)" }}
                     >
                       <span className="flex items-center gap-3">
                         <span className="text-lg">{d.icon}</span>
-                        <span className="text-sm font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{d.symptomShort}</span>
+                        <span className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{d.symptomShort}</span>
                       </span>
-                      <span style={{ color: "oklch(0.55 0.01 250)" }}>›</span>
+                      <span style={{ color: "oklch(0.50 0.02 265)" }}>›</span>
                     </button>
                   ))}
                 </div>
@@ -1262,7 +1262,7 @@ export default function Home() {
                 <button
                   onClick={() => setActiveDiagnostic(null)}
                   className="text-sm font-semibold flex items-center gap-1"
-                  style={{ color: "oklch(0.65 0.18 250)", fontFamily: "'Space Grotesk', sans-serif" }}
+                  style={{ color: "oklch(0.50 0.20 265)", fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   ← Back to Diagnostics
                 </button>
@@ -1270,28 +1270,28 @@ export default function Home() {
                   const d = DIAGNOSTICS[activeDiagnostic];
                   return (
                     <div className="flex flex-col gap-3">
-                      <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{d.symptomShort}</h2>
-                      <div className="rounded-xl p-4" style={{ background: "oklch(0.18 0.06 15)", border: "1px solid oklch(0.35 0.1 15)" }}>
+                      <h2 className="text-lg font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{d.symptomShort}</h2>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.97 0.04 15)", border: "1px solid oklch(0.75 0.10 15)" }}>
                         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.65 0.18 15)" }}>Symptom</p>
-                        <p className="text-sm text-white/80 leading-relaxed">{d.symptom}</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{d.symptom}</p>
                       </div>
-                      <div className="rounded-xl p-4" style={{ background: "oklch(0.18 0.06 60)", border: "1px solid oklch(0.35 0.1 60)" }}>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.75 0.15 60)" }}>Root Cause</p>
-                        <p className="text-sm text-white/80 leading-relaxed">{d.rootCause}</p>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.97 0.04 60)", border: "1px solid oklch(0.75 0.10 60)" }}>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.50 0.18 60)" }}>Root Cause</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{d.rootCause}</p>
                       </div>
-                      <div className="rounded-xl p-4" style={{ background: "oklch(0.16 0.06 145)", border: "1px solid oklch(0.35 0.12 145)" }}>
-                        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "oklch(0.75 0.2 145)" }}>Fix It Now</p>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.96 0.05 145)", border: "1px solid oklch(0.70 0.12 145)" }}>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "oklch(0.40 0.20 145)" }}>Fix It Now</p>
                         <ul className="flex flex-col gap-2">
                           {d.fixes.map((fix, fi) => (
-                            <li key={fi} className="text-sm leading-relaxed flex gap-2" style={{ color: "oklch(0.85 0.15 145)" }}>
+                            <li key={fi} className="text-sm leading-relaxed flex gap-2" style={{ color: "oklch(0.40 0.18 145)" }}>
                               <span>→</span><span>{fix}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
-                      <div className="rounded-xl p-4" style={{ background: "oklch(0.16 0.06 250)", border: "1px solid oklch(0.45 0.18 250)" }}>
+                      <div className="rounded-xl p-4" style={{ background: "oklch(0.96 0.04 265)", border: "1px solid oklch(0.65 0.15 265)" }}>
                         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "oklch(0.7 0.18 250)" }}>💬 Power Line</p>
-                        <p className="text-sm font-semibold leading-relaxed italic" style={{ color: "oklch(0.92 0.05 250)" }}>"{d.powerLine}"</p>
+                        <p className="text-sm font-semibold leading-relaxed italic" style={{ color: "oklch(0.20 0.04 265)" }}>"{d.powerLine}"</p>
                       </div>
                     </div>
                   );
@@ -1303,7 +1303,7 @@ export default function Home() {
 
         {activeTab === "livescript" && (
           <div className="fade-in flex flex-col gap-3">
-            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.5 0.01 250)", fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: "oklch(0.40 0.02 265)", fontFamily: "'Space Grotesk', sans-serif" }}>
               Benefit-Driven Sales Script — Full Call Flow
             </p>
             <LiveCallScript />
@@ -1315,16 +1315,16 @@ export default function Home() {
           <div className="fade-in flex flex-col gap-5">
 
             {/* ── Section 1: Value Stack ── */}
-            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.01 265)" }}>
               <button
                 onClick={() => setPvOpen(pvOpen === "stack" ? null : "stack")}
                 className="w-full flex items-center justify-between px-5 py-4 text-left"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💰</span>
-                  <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Value Stack</span>
+                  <span className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Value Stack</span>
                 </div>
-                {pvOpen === "stack" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
+                {pvOpen === "stack" ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
               </button>
               {pvOpen === "stack" && (
                 <div className="px-5 pb-6 flex flex-col gap-5">
@@ -1333,12 +1333,12 @@ export default function Home() {
                     <p className="text-sm leading-relaxed font-semibold">Say the total value OUT LOUD before you say the price. &ldquo;This starter kit has a value of £50.&rdquo; Then pause. Let that land.</p>
                   </div>
                   {/* Value table */}
-                  <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+                  <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                     <table className="w-full text-base">
                       <thead>
-                        <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                          <th className="text-left px-4 py-3 text-white font-semibold">What She Receives</th>
-                          <th className="text-right px-4 py-3 text-white font-semibold">Value</th>
+                        <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                          <th className="text-left px-4 py-3 text-gray-900 font-semibold">What She Receives</th>
+                          <th className="text-right px-4 py-3 text-gray-900 font-semibold">Value</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1347,18 +1347,18 @@ export default function Home() {
                           ["Oulala Advanced Anti-Ageing Cream", "included"],
                           ["Ashkara Intensive Eye Serum", "included"],
                         ].map(([name, val], i) => (
-                          <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                            <td className="px-4 py-3 text-white/90">{name}</td>
-                            <td className="px-4 py-3 text-right text-white/70">{val}</td>
+                          <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                            <td className="px-4 py-3 text-gray-800">{name}</td>
+                            <td className="px-4 py-3 text-right text-gray-600">{val}</td>
                           </tr>
                         ))}
-                        <tr style={{ borderTop: "2px solid oklch(0.55 0.18 250 / 60%)", background: "oklch(0.22 0.03 250)" }}>
-                          <td className="px-4 py-3 font-bold text-white">Starter Kit Total Value</td>
-                          <td className="px-4 py-3 text-right font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>£50</td>
+                        <tr style={{ borderTop: "2px solid oklch(0.60 0.15 265 / 60%)", background: "oklch(0.95 0.02 265)" }}>
+                          <td className="px-4 py-3 font-bold text-gray-900">Starter Kit Total Value</td>
+                          <td className="px-4 py-3 text-right font-bold" style={{ color: "oklch(0.40 0.20 145)" }}>£50</td>
                         </tr>
-                        <tr style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: "oklch(0.25 0.08 250)" }}>
-                          <td className="px-4 py-3 font-bold text-white">Shipping Only</td>
-                          <td className="px-4 py-3 text-right font-bold text-white">£4.95</td>
+                        <tr style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: "oklch(0.92 0.04 265)" }}>
+                          <td className="px-4 py-3 font-bold text-gray-900">Shipping Only</td>
+                          <td className="px-4 py-3 text-right font-bold text-gray-900">£4.95</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1366,7 +1366,7 @@ export default function Home() {
                   {/* Subscription badge */}
                   <div className="flex flex-wrap gap-2">
                     {["£44.90 every 2 months", "One jar = 2 months", "£22.45 / month", "Less than 75p a day"].map((badge) => (
-                      <span key={badge} className="text-sm font-semibold px-4 py-2 rounded-full" style={{ background: "oklch(0.3 0.12 250 / 60%)", color: "oklch(0.85 0.1 250)", border: "1px solid oklch(0.55 0.18 250 / 40%)" }}>{badge}</span>
+                      <span key={badge} className="text-sm font-semibold px-4 py-2 rounded-full" style={{ background: "oklch(0.3 0.12 250 / 60%)", color: "oklch(0.30 0.10 265)", border: "1px solid oklch(0.55 0.18 250 / 40%)" }}>{badge}</span>
                     ))}
                   </div>
                 </div>
@@ -1374,16 +1374,16 @@ export default function Home() {
             </div>
 
             {/* ── Section 2: Why Lavié Labs ── */}
-            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.01 265)" }}>
               <button
                 onClick={() => setPvOpen(pvOpen === "why" ? null : "why")}
                 className="w-full flex items-center justify-between px-5 py-4 text-left"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔬</span>
-                  <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Why Lavié Labs?</span>
+                  <span className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Why Lavié Labs?</span>
                 </div>
-                {pvOpen === "why" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
+                {pvOpen === "why" ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
               </button>
               {pvOpen === "why" && (
                 <div className="px-5 pb-6 flex flex-col gap-4">
@@ -1409,17 +1409,17 @@ export default function Home() {
                       text: "What also makes us different is that we do not just send you a product and disappear. We follow up. We check in. We make sure your skin is responding the way it should. That personalised support is part of what you are getting — and you cannot put a price on that.",
                     },
                   ].map((point, i) => (
-                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                       <button
                         onClick={() => setWhyOpen(whyOpen === i ? null : i)}
                         className="w-full flex items-center justify-between px-4 py-4 text-left"
-                        style={{ background: "oklch(0.22 0.03 250)" }}
+                        style={{ background: "oklch(0.95 0.02 265)" }}
                       >
-                        <span className="text-base font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{point.label}</span>
-                        {whyOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
+                        <span className="text-base font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{point.label}</span>
+                        {whyOpen === i ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
                       </button>
                       {whyOpen === i && (
-                        <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                        <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>
                           <p className="text-base leading-relaxed">"{point.text}"</p>
                         </div>
                       )}
@@ -1430,16 +1430,16 @@ export default function Home() {
             </div>
 
             {/* ── Section 3: Price Reframes ── */}
-            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+            <div className="rounded-xl overflow-hidden" style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.01 265)" }}>
               <button
                 onClick={() => setPvOpen(pvOpen === "reframes" ? null : "reframes")}
                 className="w-full flex items-center justify-between px-5 py-4 text-left"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💬</span>
-                  <span className="font-bold text-lg text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Price Reframes</span>
+                  <span className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Price Reframes</span>
                 </div>
-                {pvOpen === "reframes" ? <ChevronUp className="w-5 h-5 text-white/60" /> : <ChevronDown className="w-5 h-5 text-white/60" />}
+                {pvOpen === "reframes" ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
               </button>
               {pvOpen === "reframes" && (
                 <div className="px-5 pb-6 flex flex-col gap-4">
@@ -1461,17 +1461,17 @@ export default function Home() {
                       text: "And remember — this is not a monthly subscription. It is every two months. One jar covers you completely for two full months, morning and evening. So when you think about it as £22.45 a month, that is genuinely exceptional value for what you are getting.",
                     },
                   ].map((reframe, i) => (
-                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                       <button
                         onClick={() => setReframeOpen(reframeOpen === i ? null : i)}
                         className="w-full flex items-center justify-between px-4 py-4 text-left"
-                        style={{ background: "oklch(0.22 0.03 250)" }}
+                        style={{ background: "oklch(0.95 0.02 265)" }}
                       >
-                        <span className="text-base font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reframe.label}</span>
-                        {reframeOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
+                        <span className="text-base font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{reframe.label}</span>
+                        {reframeOpen === i ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
                       </button>
                       {reframeOpen === i && (
-                        <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                        <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>
                           <p className="text-base leading-relaxed">"{reframe.text}"</p>
                         </div>
                       )}
@@ -1495,20 +1495,20 @@ export default function Home() {
 
             {/* ── Section 1: Opening & Discovery ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">📞</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>1. Opening & Discovery</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.82 0.22 145)", fontWeight: 700 }}>Build trust — high energy — smile through the phone</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>1. Opening & Discovery</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.22 145)", fontWeight: 700 }}>Build trust — high energy — smile through the phone</p>
                 </div>
               </div>
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "28%" }}>Stage</th>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "42%" }}>What to Say</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "30%" }}>Your Goal</th>
+                    <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "28%" }}>Stage</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "42%" }}>What to Say</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.45 0.22 145)", width: "30%" }}>Your Goal</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1535,9 +1535,9 @@ export default function Home() {
                         goalHighlight: true,
                       },
                     ].map((row, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                        <td className="px-3 py-3 font-semibold text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.stage}</td>
-                        <td className="px-3 py-3 text-white/80 leading-relaxed">{row.say}</td>
+                      <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                        <td className="px-3 py-3 font-semibold text-gray-800" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.stage}</td>
+                        <td className="px-3 py-3 text-gray-700 leading-relaxed">{row.say}</td>
                         <td className="px-3 py-3 leading-relaxed" style={{ color: row.goalHighlight ? "oklch(0.82 0.22 145)" : "oklch(0.75 0.12 145)", fontWeight: row.goalHighlight ? 700 : 400 }}>{row.goal}</td>
                       </tr>
                     ))}
@@ -1548,24 +1548,24 @@ export default function Home() {
 
             {/* ── Section 2: The Pitch ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">✨</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>2. The Pitch</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Match the product to their Magic Wand answer</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>2. The Pitch</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>Match the product to their Magic Wand answer</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
                 <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-sm leading-relaxed">Sell the BENEFIT, not the feature. Always tie back to what they told you in the Magic Wand question.</p>
               </div>
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "28%" }}>Product</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.6 0.08 15)", width: "30%" }}>Feature (don't focus here)</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "42%" }}>Benefit — Say This!</th>
+                    <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "28%" }}>Product</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.50 0.12 15)", width: "30%" }}>Feature (don't focus here)</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.45 0.22 145)", width: "42%" }}>Benefit — Say This!</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1586,10 +1586,10 @@ export default function Home() {
                         benefit: "\"It visibly reduces morning puffiness and brightens dark circles. Apply mornings and evenings.\"",
                       },
                     ].map((row, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                        <td className="px-3 py-3 font-semibold text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.product}</td>
-                        <td className="px-3 py-3" style={{ color: "oklch(0.55 0.06 15)" }}>{row.feature}</td>
-                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{row.benefit}</td>
+                      <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                        <td className="px-3 py-3 font-semibold text-gray-800" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.product}</td>
+                        <td className="px-3 py-3" style={{ color: "oklch(0.50 0.10 15)" }}>{row.feature}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.45 0.20 145)" }}>{row.benefit}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1599,20 +1599,20 @@ export default function Home() {
 
             {/* ── Section 3: Website Walkthrough ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">⭐</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>3. Website Walkthrough</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Social proof — build trust visually</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>3. Website Walkthrough</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>Social proof — build trust visually</p>
                 </div>
               </div>
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "25%" }}>Step</th>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "40%" }}>What to Say</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "35%" }}>What to Look For</th>
+                    <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "25%" }}>Step</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "40%" }}>What to Say</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.45 0.22 145)", width: "35%" }}>What to Look For</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1634,9 +1634,9 @@ export default function Home() {
                         lookHighlight: true,
                       },
                     ].map((row, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                        <td className="px-3 py-3 font-semibold text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.step}</td>
-                        <td className="px-3 py-3 text-white/80 leading-relaxed">{row.say}</td>
+                      <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                        <td className="px-3 py-3 font-semibold text-gray-800" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{row.step}</td>
+                        <td className="px-3 py-3 text-gray-700 leading-relaxed">{row.say}</td>
                         <td className="px-3 py-3 leading-relaxed" style={{ color: row.lookHighlight ? "oklch(0.82 0.22 145)" : "oklch(0.75 0.12 145)", fontWeight: row.lookHighlight ? 700 : 400 }}>{row.look}</td>
                       </tr>
                     ))}
@@ -1647,11 +1647,11 @@ export default function Home() {
 
             {/* ── Section 4: Offer & Close ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">🎁</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>4. The Offer & Close</p>
-                  <p className="text-sm mt-0.5 font-black tracking-wide" style={{ color: "oklch(0.82 0.22 145)", textShadow: "0 0 12px oklch(0.65 0.22 145 / 0.4)" }}>Read word-for-word. Do NOT improvise. Do NOT say "only."</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>4. The Offer & Close</p>
+                  <p className="text-sm mt-0.5 font-black tracking-wide" style={{ color: "oklch(0.45 0.22 145)" }}>Read word-for-word. Do NOT improvise. Do NOT say "only."</p>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
@@ -1684,11 +1684,11 @@ export default function Home() {
                     highlight: true,
                   },
                 ].map((item, i) => (
-                  <div key={i} className="rounded-xl px-4 py-4 flex gap-3 items-start" style={{ background: item.highlight ? "oklch(0.18 0.06 145 / 0.5)" : "oklch(0.18 0.025 250)", border: `1px solid ${item.highlight ? "oklch(0.45 0.18 145 / 0.5)" : "oklch(1 0 0 / 10%)"}` }}>
+                  <div key={i} className="rounded-xl px-4 py-4 flex gap-3 items-start" style={{ background: item.highlight ? "oklch(0.95 0.06 145 / 0.5)" : "white", border: `1px solid ${item.highlight ? "oklch(0.60 0.18 145 / 0.5)" : "oklch(0.88 0.01 265)"}` }}>
                     <span className="text-lg shrink-0 mt-0.5">{item.icon}</span>
                     <div className="flex flex-col gap-1.5">
                       <p className="text-xs font-bold uppercase tracking-widest" style={{ color: item.highlight ? "oklch(0.75 0.2 145)" : "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>{item.step}</p>
-                      <p className="text-base leading-relaxed text-white/90">"{item.script}"</p>
+                      <p className="text-base leading-relaxed text-gray-800">"{item.script}"</p>
                     </div>
                   </div>
                 ))}
@@ -1697,11 +1697,11 @@ export default function Home() {
 
             {/* ── Section 5: Quick Objection Handling ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">🛡️</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>5. Quick Objection Handling</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Emergency responses — find the objection and read the response</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>5. Quick Objection Handling</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>Emergency responses — find the objection and read the response</p>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
@@ -1719,11 +1719,11 @@ export default function Home() {
                     response: "I hear that all the time! My goal isn't to add another jar to your cabinet; my goal is to replace three of those jars with one medical-grade product that actually works. Since it's free for 21 days, why not let my cream prove itself?",
                   },
                 ].map((item, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
-                    <div className="px-4 py-3" style={{ background: "oklch(0.22 0.04 250)" }}>
-                      <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>If they say: {item.objection}</p>
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
+                    <div className="px-4 py-3" style={{ background: "oklch(0.95 0.02 265)" }}>
+                      <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>If they say: {item.objection}</p>
                     </div>
-                    <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                    <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>
                       <p className="text-base leading-relaxed">"{item.response}"</p>
                     </div>
                   </div>
@@ -1740,18 +1740,18 @@ export default function Home() {
 
             {/* ── BLOCK 1: Stop Reading the Script ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">🚨</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Rule #1: Stop Reading the Script</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Rule #1: Stop Reading the Script</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
                 <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-sm leading-relaxed">She doesn't know what's written in your script. But she knows exactly when you're reading it.</p>
               </div>
-              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
-                <p className="text-sm leading-relaxed text-white/80">When you read from a script, your customer hears three things:</p>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.01 265)" }}>
+                <p className="text-sm leading-relaxed text-gray-700">When you read from a script, your customer hears three things:</p>
                 <div className="flex flex-col gap-2">
                   {[
                     "\"This isn't personal — he says this to everyone.\"",
@@ -1759,24 +1759,24 @@ export default function Home() {
                     "\"This is a sales call, not a conversation.\"",
                   ].map((line, i) => (
                     <div key={i} className="flex gap-3 items-start">
-                      <span className="text-base shrink-0" style={{ color: "oklch(0.65 0.2 15)" }}>✗</span>
-                      <p className="text-sm leading-relaxed italic" style={{ color: "oklch(0.75 0.05 250)" }}>{line}</p>
+                      <span className="text-base shrink-0" style={{ color: "oklch(0.55 0.22 15)" }}>✗</span>
+                      <p className="text-sm leading-relaxed italic" style={{ color: "oklch(0.40 0.03 265)" }}>{line}</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-sm leading-relaxed text-white/80 pt-1 border-t border-white/10">The moment she feels that — she's gone. Not because of the product. Because she didn't feel like anyone was actually talking to her.</p>
-                <div className="rounded-lg px-4 py-3 mt-1" style={{ background: "oklch(0.22 0.04 250)", border: "1px solid oklch(0.45 0.18 250 / 40%)" }}>
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Rule</p>
-                  <p className="text-sm leading-relaxed mt-1" style={{ color: "oklch(0.85 0.08 250)" }}>The script is the map — not the road. Knowing it by heart is not enough. You need to forget it exists and talk to the person in front of you.</p>
+                <p className="text-sm leading-relaxed text-gray-700 pt-1 border-t border-gray-200">The moment she feels that — she's gone. Not because of the product. Because she didn't feel like anyone was actually talking to her.</p>
+                <div className="rounded-lg px-4 py-3 mt-1" style={{ background: "oklch(0.95 0.02 265)", border: "1px solid oklch(0.65 0.12 265 / 50%)" }}>
+                  <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Rule</p>
+                  <p className="text-sm leading-relaxed mt-1" style={{ color: "oklch(0.25 0.04 265)" }}>The script is the map — not the road. Knowing it by heart is not enough. You need to forget it exists and talk to the person in front of you.</p>
                 </div>
               </div>
               {/* Comparison table */}
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
+                    <tr style={{ background: "oklch(0.95 0.02 265)" }}>
                       <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.65 0.18 15)", width: "50%" }}>Rep Reading the Script</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "50%" }}>Rep Having a Conversation</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.45 0.22 145)", width: "50%" }}>Rep Having a Conversation</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1787,9 +1787,9 @@ export default function Home() {
                       ["Moves to the next line regardless", "Responds to what actually just happened"],
                       ["Sounds like a robot", "Sounds like a friend who knows skincare"],
                     ].map(([bad, good], i) => (
-                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.6 0.08 15)" }}>{bad}</td>
-                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{good}</td>
+                      <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.50 0.12 15)" }}>{bad}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.45 0.20 145)" }}>{good}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1803,29 +1803,29 @@ export default function Home() {
 
             {/* ── BLOCK 2: The 3-Second Rule ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">🎭</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The 3-Second Rule</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>First impressions — your voice is the door</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The 3-Second Rule</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>First impressions — your voice is the door</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
                 <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-sm leading-relaxed">Before you've said a single word — she's already decided whether she wants to talk to you. Your voice is the door.</p>
               </div>
-              <div className="rounded-xl px-4 py-4" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
-                <p className="text-sm leading-relaxed text-white/80">The first 3 seconds of the call decide everything that follows. Your customer is asking herself one question:</p>
-                <p className="text-base font-bold text-white mt-3 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"Do I want to talk to this person?"</p>
+              <div className="rounded-xl px-4 py-4" style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.01 265)" }}>
+                <p className="text-sm leading-relaxed text-gray-700">The first 3 seconds of the call decide everything that follows. Your customer is asking herself one question:</p>
+                <p className="text-base font-bold text-gray-900 mt-3 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>"Do I want to talk to this person?"</p>
               </div>
               {/* Voice signals table */}
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "20%" }}>Signal</th>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "38%" }}>What She Hears</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "42%" }}>What to Do</th>
+                    <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "20%" }}>Signal</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "38%" }}>What She Hears</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.45 0.22 145)", width: "42%" }}>What to Do</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1834,18 +1834,18 @@ export default function Home() {
                       ["Pace", "\"Is she rushing to get this over with?\"", "Speak 20% slower than feels natural to you"],
                       ["Tone", "\"Is she talking to me or to everyone?\"", "Drop your pitch lower — a calm, warm voice builds trust immediately"],
                     ].map(([signal, hears, doThis], i) => (
-                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                        <td className="px-3 py-3 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{signal}</td>
-                        <td className="px-3 py-3 italic" style={{ color: "oklch(0.7 0.05 250)" }}>{hears}</td>
-                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{doThis}</td>
+                      <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                        <td className="px-3 py-3 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{signal}</td>
+                        <td className="px-3 py-3 italic" style={{ color: "oklch(0.40 0.03 265)" }}>{hears}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.45 0.20 145)" }}>{doThis}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               {/* Opening lines */}
-              <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Your Opening Line — Pick the Style That Fits You</p>
-              <p className="text-sm" style={{ color: "oklch(0.6 0.01 250)" }}>Every version includes who you are, where you're calling from, and why. The energy and delivery is yours to own.</p>
+              <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: "oklch(0.50 0.18 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Your Opening Line — Pick the Style That Fits You</p>
+              <p className="text-sm" style={{ color: "oklch(0.45 0.02 265)" }}>Every version includes who you are, where you're calling from, and why. The energy and delivery is yours to own.</p>
               <div className="flex flex-col gap-3">
                 {[
                   {
@@ -1877,17 +1877,17 @@ export default function Home() {
                     line: "[Name]! Hi, it's [Your Name] from Lavie Labs — we're a medical-grade skincare company and I am so excited to tell you why I'm calling. We are sending out complimentary Anti-Ageing Starter Kits and I really wanted to make sure you got yours!",
                   },
                 ].map((item, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 10%)" }}>
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                     <button
                       onClick={() => setRapportOpen(rapportOpen === i ? null : i)}
                       className="w-full flex items-center justify-between px-4 py-3 text-left"
-                      style={{ background: "oklch(0.22 0.03 250)" }}
+                      style={{ background: "oklch(0.95 0.02 265)" }}
                     >
-                      <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.style}</span>
-                      {rapportOpen === i ? <ChevronUp className="w-4 h-4 text-white/60 shrink-0" /> : <ChevronDown className="w-4 h-4 text-white/60 shrink-0" />}
+                      <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.style}</span>
+                      {rapportOpen === i ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
                     </button>
                     {rapportOpen === i && (
-                      <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.55 0.18 250 / 60%)" }}>
+                      <div className="script-block rounded-none" style={{ borderLeft: "3px solid oklch(0.60 0.15 265 / 60%)" }}>
                         <p className="text-base leading-relaxed">"{item.line}"</p>
                       </div>
                     )}
@@ -1902,11 +1902,11 @@ export default function Home() {
 
             {/* ── BLOCK 3: Mirror & Match ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">🧐</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Mirror & Match</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Speak her language</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Mirror & Match</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>Speak her language</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
@@ -1931,26 +1931,26 @@ export default function Home() {
                     body: "She said \"moisturiser\"? Don't say \"hydration product.\" She said \"tired\"? Use the word \"tired\" — not \"lack of radiance.\" Echo her language back.",
                   },
                 ].map((item, i) => (
-                  <div key={i} className="rounded-xl px-4 py-4 flex gap-3 items-start" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
-                    <span className="text-sm font-black shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "oklch(0.3 0.12 250)", color: "oklch(0.85 0.1 250)", fontFamily: "'Space Grotesk', sans-serif" }}>{item.number}</span>
+                  <div key={i} className="rounded-xl px-4 py-4 flex gap-3 items-start" style={{ background: "oklch(1 0 0)", border: "1px solid oklch(0.88 0.01 265)" }}>
+                    <span className="text-sm font-black shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "oklch(0.85 0.10 265)", color: "oklch(0.30 0.10 265)", fontFamily: "'Space Grotesk', sans-serif" }}>{item.number}</span>
                     <div>
-                      <p className="text-sm font-bold text-white mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</p>
-                      <p className="text-sm leading-relaxed text-white/80">{item.body}</p>
+                      <p className="text-sm font-bold text-gray-900 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</p>
+                      <p className="text-sm leading-relaxed text-gray-700">{item.body}</p>
                     </div>
                   </div>
                 ))}
               </div>
               {/* Example */}
-              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.16 0.02 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Example from a real call</p>
-                <p className="text-sm italic" style={{ color: "oklch(0.75 0.05 250)" }}>Customer: "My skin just looks so tired lately..."</p>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.98 0.01 265)", border: "1px solid oklch(0.88 0.01 265)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.50 0.18 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Example from a real call</p>
+                <p className="text-sm italic" style={{ color: "oklch(0.40 0.03 265)" }}>Customer: "My skin just looks so tired lately..."</p>
                 <div className="flex gap-2 items-start">
-                  <span style={{ color: "oklch(0.65 0.2 15)" }} className="text-base shrink-0">✗</span>
-                  <p className="text-sm leading-relaxed" style={{ color: "oklch(0.6 0.08 15)" }}>"Great! So our product contains retinol which improves skin texture and..."</p>
+                  <span style={{ color: "oklch(0.55 0.22 15)" }} className="text-base shrink-0">✗</span>
+                  <p className="text-sm leading-relaxed" style={{ color: "oklch(0.50 0.12 15)" }}>"Great! So our product contains retinol which improves skin texture and..."</p>
                 </div>
                 <div className="flex gap-2 items-start">
-                  <span style={{ color: "oklch(0.75 0.2 145)" }} className="text-base shrink-0">✓</span>
-                  <p className="text-sm leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>"Tired — I completely get that. Tell me more, when do you notice it the most?"</p>
+                  <span style={{ color: "oklch(0.40 0.20 145)" }} className="text-base shrink-0">✓</span>
+                  <p className="text-sm leading-relaxed" style={{ color: "oklch(0.45 0.20 145)" }}>"Tired — I completely get that. Tell me more, when do you notice it the most?"</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
@@ -1961,23 +1961,23 @@ export default function Home() {
 
             {/* ── BLOCK 4: The Magic Words ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">💬</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Magic Words</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Phrases that make her feel genuinely heard</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Magic Words</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>Phrases that make her feel genuinely heard</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
                 <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-sm leading-relaxed">These are not script lines. These are tools you weave into the conversation naturally — based on what she just said. Use them one at a time, not all in one call.</p>
               </div>
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 12%)" }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.88 0.01 265)" }}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ background: "oklch(0.22 0.03 250)" }}>
-                      <th className="text-left px-3 py-2.5 font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "52%" }}>Phrase</th>
-                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.82 0.22 145)", width: "48%" }}>When to Use It</th>
+                    <tr style={{ background: "oklch(0.95 0.02 265)" }}>
+                      <th className="text-left px-3 py-2.5 font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif", width: "52%" }}>Phrase</th>
+                      <th className="text-left px-3 py-2.5 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "oklch(0.45 0.22 145)", width: "48%" }}>When to Use It</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1991,9 +1991,9 @@ export default function Home() {
                       ["\"Let me just make sure I've got this right...\"", "Before summarising her need back to her"],
                       ["\"[Name], do you know what...\"", "When you want to create a personal moment"],
                     ].map(([phrase, when], i) => (
-                      <tr key={i} style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", background: i % 2 === 0 ? "oklch(0.16 0.02 250)" : "oklch(0.18 0.025 250)" }}>
-                        <td className="px-3 py-3 font-semibold leading-relaxed" style={{ color: "oklch(0.88 0.05 250)" }}>{phrase}</td>
-                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.75 0.12 145)" }}>{when}</td>
+                      <tr key={i} style={{ borderTop: "1px solid oklch(0.90 0.01 265)", background: i % 2 === 0 ? "oklch(0.98 0.01 265)" : "white" }}>
+                        <td className="px-3 py-3 font-semibold leading-relaxed" style={{ color: "oklch(0.20 0.02 265)" }}>{phrase}</td>
+                        <td className="px-3 py-3 leading-relaxed" style={{ color: "oklch(0.40 0.15 145)" }}>{when}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2007,11 +2007,11 @@ export default function Home() {
 
             {/* ── BLOCK 5: AER Formula ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">👂</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Listening Formula: AER</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>Acknowledge → Empathise → Redirect</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>The Listening Formula: AER</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>Acknowledge → Empathise → Redirect</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
@@ -2025,47 +2025,47 @@ export default function Home() {
                     label: "Acknowledge",
                     desc: "Repeat back what she said in her own words. Don't interpret — reflect.",
                     example: "\"So you're saying your skin feels really dry, especially in the morning — is that right?\"",
-                    color: "oklch(0.65 0.18 250)",
-                    bg: "oklch(0.18 0.06 250)",
-                    border: "oklch(0.45 0.18 250 / 40%)",
+                    color: "oklch(0.50 0.20 265)",
+                    bg: "oklch(0.95 0.04 265)",
+                    border: "oklch(0.70 0.12 265 / 50%)",
                   },
                   {
                     letter: "E",
                     label: "Empathise",
                     desc: "Tell her you understand — and that it makes sense.",
                     example: "\"That's really uncomfortable, especially when you just want to feel good about yourself when you wake up.\"",
-                    color: "oklch(0.75 0.15 60)",
-                    bg: "oklch(0.18 0.06 60)",
-                    border: "oklch(0.45 0.15 60 / 40%)",
+                    color: "oklch(0.50 0.18 60)",
+                    bg: "oklch(0.97 0.04 60)",
+                    border: "oklch(0.70 0.12 60 / 50%)",
                   },
                   {
                     letter: "R",
                     label: "Redirect",
                     desc: "Now — and only now — connect what she said to the product.",
                     example: "\"That's exactly why I'm so excited to tell you about Matinika — because that is precisely what it does for dry skin.\"",
-                    color: "oklch(0.75 0.2 145)",
-                    bg: "oklch(0.16 0.06 145)",
-                    border: "oklch(0.45 0.18 145 / 40%)",
+                    color: "oklch(0.40 0.20 145)",
+                    bg: "oklch(0.95 0.05 145)",
+                    border: "oklch(0.60 0.18 145 / 50%)",
                   },
                 ].map((item) => (
                   <div key={item.letter} className="rounded-xl px-4 py-4 flex flex-col gap-2" style={{ background: item.bg, border: `1px solid ${item.border}` }}>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-black" style={{ color: item.color, fontFamily: "'Space Grotesk', sans-serif" }}>{item.letter}</span>
-                      <span className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.label}</span>
+                      <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.label}</span>
                     </div>
-                    <p className="text-sm leading-relaxed text-white/80">{item.desc}</p>
+                    <p className="text-sm leading-relaxed text-gray-700">{item.desc}</p>
                     <p className="text-sm leading-relaxed italic" style={{ color: item.color }}>e.g. {item.example}</p>
                   </div>
                 ))}
               </div>
               {/* Full example */}
-              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.16 0.02 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
-                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.65 0.15 250)", fontFamily: "'Space Grotesk', sans-serif" }}>Full Example</p>
-                <p className="text-sm italic" style={{ color: "oklch(0.75 0.05 250)" }}>Customer: "I've tried so many creams and nothing ever works. I'm honestly giving up."</p>
+              <div className="rounded-xl px-4 py-4 flex flex-col gap-3" style={{ background: "oklch(0.98 0.01 265)", border: "1px solid oklch(0.88 0.01 265)" }}>
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "oklch(0.50 0.18 265)", fontFamily: "'Space Grotesk', sans-serif" }}>Full Example</p>
+                <p className="text-sm italic" style={{ color: "oklch(0.40 0.03 265)" }}>Customer: "I've tried so many creams and nothing ever works. I'm honestly giving up."</p>
                 <div className="flex flex-col gap-2">
-                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.65 0.18 250)" }}>A: </span><span className="text-white/80">"So you've tried a lot of products and haven't seen real results — is that right?"</span></p>
-                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.75 0.15 60)" }}>E: </span><span className="text-white/80">"That's genuinely frustrating — spending money and time and not seeing a change. I completely understand."</span></p>
-                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>R: </span><span className="text-white/80">"And that's exactly why Lavie Labs works differently. This isn't another off-the-shelf cream. It's a medical-grade concentration that works at a completely different level."</span></p>
+                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.50 0.20 265)" }}>A: </span><span className="text-gray-700">"So you've tried a lot of products and haven't seen real results — is that right?"</span></p>
+                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.50 0.18 60)" }}>E: </span><span className="text-gray-700">"That's genuinely frustrating — spending money and time and not seeing a change. I completely understand."</span></p>
+                  <p className="text-sm leading-relaxed"><span className="font-bold" style={{ color: "oklch(0.40 0.20 145)" }}>R: </span><span className="text-gray-700">"And that's exactly why Lavie Labs works differently. This isn't another off-the-shelf cream. It's a medical-grade concentration that works at a completely different level."</span></p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
@@ -2076,11 +2076,11 @@ export default function Home() {
 
             {/* ── BLOCK 6: Rapport Killers ── */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
                 <span className="text-xl">⚡</span>
                 <div>
-                  <p className="font-bold text-base text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Rapport Killers</p>
-                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.6 0.01 250)" }}>5 mistakes that destroy the connection instantly</p>
+                  <p className="font-bold text-base text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Rapport Killers</p>
+                  <p className="text-sm mt-0.5" style={{ color: "oklch(0.45 0.02 265)" }}>5 mistakes that destroy the connection instantly</p>
                 </div>
               </div>
               <div className="coaching-note flex gap-2 items-start">
@@ -2115,19 +2115,19 @@ export default function Home() {
                     good: "After \"Will you be using Visa, Mastercard, or Amex?\" — stop. Say nothing. Let her answer.",
                   },
                 ].map((item, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.35 0.1 15 / 60%)" }}>
-                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.2 0.06 15)" }}>
-                      <span style={{ color: "oklch(0.65 0.2 15)" }}>💀</span>
-                      <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</p>
+                  <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0.75 0.10 15 / 60%)" }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.97 0.04 15)" }}>
+                      <span style={{ color: "oklch(0.55 0.22 15)" }}>💀</span>
+                      <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.title}</p>
                     </div>
-                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "oklch(0.16 0.02 250)" }}>
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "oklch(0.98 0.01 265)" }}>
                       <div className="flex gap-2 items-start">
-                        <span className="text-sm shrink-0" style={{ color: "oklch(0.65 0.2 15)" }}>✗</span>
-                        <p className="text-sm leading-relaxed italic" style={{ color: "oklch(0.6 0.08 15)" }}>{item.bad}</p>
+                        <span className="text-sm shrink-0" style={{ color: "oklch(0.55 0.22 15)" }}>✗</span>
+                        <p className="text-sm leading-relaxed italic" style={{ color: "oklch(0.50 0.12 15)" }}>{item.bad}</p>
                       </div>
                       <div className="flex gap-2 items-start">
-                        <span className="text-sm shrink-0" style={{ color: "oklch(0.75 0.2 145)" }}>✓</span>
-                        <p className="text-sm leading-relaxed" style={{ color: "oklch(0.82 0.18 145)" }}>{item.good}</p>
+                        <span className="text-sm shrink-0" style={{ color: "oklch(0.40 0.20 145)" }}>✓</span>
+                        <p className="text-sm leading-relaxed" style={{ color: "oklch(0.45 0.20 145)" }}>{item.good}</p>
                       </div>
                     </div>
                   </div>

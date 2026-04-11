@@ -65,9 +65,9 @@ interface CallAnalysisReport {
 function CallTypeBadge({ callType }: { callType?: string | null }) {
   if (!callType) return null;
   const map: Record<string, { label: string; cls: string }> = {
-    opening: { label: "📞 Opening", cls: "bg-blue-500/20 text-blue-300 border-blue-500/40" },
-    retention_cancel_trial: { label: "🔄 Cancel Trial", cls: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-    retention_win_back: { label: "💎 Win Back", cls: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+    opening: { label: "📞 Opening", cls: "bg-blue-50 text-blue-700 border-blue-200" },
+    retention_cancel_trial: { label: "🔄 Cancel Trial", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+    retention_win_back: { label: "💎 Win Back", cls: "bg-purple-50 text-purple-700 border-purple-200" },
   };
   const info = map[callType];
   if (!info) return null;
@@ -82,28 +82,28 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
   if (repPct == null) return null;
   const rep = Math.round(repPct);
   const cust = 100 - rep;
-  let color = "text-emerald-400";
+  let color = "text-emerald-600";
   let barColor = "bg-emerald-500";
   let label = "Good ratio";
-  if (rep > 65) { color = "text-red-400"; barColor = "bg-red-500"; label = "Rep talks too much"; }
-  else if (rep < 30) { color = "text-amber-400"; barColor = "bg-amber-500"; label = "Rep too passive"; }
+  if (rep > 65) { color = "text-red-600"; barColor = "bg-red-500"; label = "Rep talks too much"; }
+  else if (rep < 30) { color = "text-amber-600"; barColor = "bg-amber-500"; label = "Rep too passive"; }
   return (
     <span
-      className="relative inline-flex items-center gap-1.5 text-xs border border-slate-600 rounded px-2 py-0.5 bg-slate-800/60 cursor-pointer select-none"
+      className="relative inline-flex items-center gap-1.5 text-xs border border-gray-200 rounded px-2 py-0.5 bg-gray-50 cursor-pointer select-none"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       onClick={(e) => { e.stopPropagation(); setShowTooltip(v => !v); }}
     >
-      <span className="text-white font-medium">Talk:</span>
+      <span className="text-gray-700 font-medium">Talk:</span>
       {/* mini bar */}
-      <span className="relative inline-block w-14 h-2 rounded-full bg-slate-700 overflow-hidden">
+      <span className="relative inline-block w-14 h-2 rounded-full bg-gray-200 overflow-hidden">
         <span
           className={`absolute left-0 top-0 h-full rounded-full ${barColor}`}
           style={{ width: `${rep}%` }}
         />
       </span>
       <span className={`font-semibold ${color}`}>{rep}%</span>
-      <span className="text-white">rep</span>
+      <span className="text-gray-700">rep</span>
 
       {/* ── Tooltip popup with 3 zones ── */}
       {showTooltip && (
@@ -113,15 +113,15 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
         >
           <span
             className="flex flex-col gap-1.5 rounded-xl p-3 shadow-2xl"
-            style={{ background: "oklch(0.14 0.04 250)", border: "1px solid oklch(0.35 0.08 250 / 60%)" }}
+            style={{ background: "white", border: "1px solid oklch(0.85 0.03 265)" }}
           >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Talk Ratio Guide</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Talk Ratio Guide</span>
             {/* Green zone */}
             <span className="flex items-start gap-2">
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.2 145)" }} />
               <span className="flex flex-col">
-                <span className="text-[11px] font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>40–65% rep speaking</span>
-                <span className="text-[10px] text-slate-400 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
+                <span className="text-[11px] font-bold" style={{ color: "oklch(0.40 0.20 145)" }}>40–65% rep speaking</span>
+                <span className="text-[10px] text-gray-500 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
               </span>
             </span>
             {/* Amber zone */}
@@ -129,7 +129,7 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.65 0.18 60)" }} />
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold" style={{ color: "oklch(0.8 0.18 60)" }}>Below 30% rep speaking</span>
-                <span className="text-[10px] text-slate-400 leading-snug">Too passive — you're not driving the close.</span>
+                <span className="text-[10px] text-gray-500 leading-snug">Too passive — you're not driving the close.</span>
               </span>
             </span>
             {/* Red zone */}
@@ -137,13 +137,13 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.22 15)" }} />
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold" style={{ color: "oklch(0.7 0.22 15)" }}>Above 65% rep speaking</span>
-                <span className="text-[10px] text-slate-400 leading-snug">Too much — she feels talked at, not heard.</span>
+                <span className="text-[10px] text-gray-500 leading-snug">Too much — she feels talked at, not heard.</span>
               </span>
             </span>
             {/* Arrow pointer */}
             <span
               className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45"
-              style={{ background: "oklch(0.14 0.04 250)", borderRight: "1px solid oklch(0.35 0.08 250 / 60%)", borderBottom: "1px solid oklch(0.35 0.08 250 / 60%)" }}
+              style={{ background: "white", borderRight: "1px solid oklch(0.35 0.08 250 / 60%)", borderBottom: "1px solid oklch(0.35 0.08 250 / 60%)" }}
             />
           </span>
         </span>
@@ -154,24 +154,24 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
 
 // ─── SCORE COLOUR ─────────────────────────────────────────────────────────────
 function scoreColor(score: number) {
-  if (score >= 75) return "text-emerald-400";
-  if (score >= 50) return "text-amber-400";
-  return "text-red-400";
+  if (score >= 75) return "text-emerald-600";
+  if (score >= 50) return "text-amber-600";
+  return "text-red-600";
 }
 
 function scoreBg(score: number) {
-  if (score >= 75) return "bg-emerald-500/20 border-emerald-500/40";
-  if (score >= 50) return "bg-amber-500/20 border-amber-500/40";
-  return "bg-red-500/20 border-red-500/40";
+  if (score >= 75) return "bg-emerald-50 border-emerald-500/40";
+  if (score >= 50) return "bg-amber-50 border-amber-500/40";
+  return "bg-red-50 border-red-500/40";
 }
 
 // ─── 5-TIER REP STATUS ───────────────────────────────────────────────────────
 function getRepStatus(score: number): { label: string; color: string; bg: string; border: string; emoji: string } {
-  if (score >= 85) return { label: "Elite",       color: "text-teal-300",   bg: "bg-teal-500/20",   border: "border-teal-400/50",   emoji: "💎" };
-  if (score >= 70) return { label: "Proficient",  color: "text-emerald-300",bg: "bg-emerald-500/20",border: "border-emerald-400/50",emoji: "🟢" };
-  if (score >= 55) return { label: "On Track",    color: "text-amber-300",  bg: "bg-amber-500/20",  border: "border-amber-400/50",  emoji: "🟡" };
-  if (score >= 40) return { label: "Developing",  color: "text-orange-300", bg: "bg-orange-500/20", border: "border-orange-400/50", emoji: "🟠" };
-  return              { label: "Needs Work",  color: "text-red-300",    bg: "bg-red-500/20",    border: "border-red-400/50",    emoji: "🔴" };
+  if (score >= 85) return { label: "Elite",       color: "text-teal-600",   bg: "bg-teal-50",   border: "border-teal-400/50",   emoji: "💎" };
+  if (score >= 70) return { label: "Proficient",  color: "text-emerald-600",bg: "bg-emerald-50",border: "border-emerald-400/50",emoji: "🟢" };
+  if (score >= 55) return { label: "On Track",    color: "text-amber-600",  bg: "bg-amber-50",  border: "border-amber-400/50",  emoji: "🟡" };
+  if (score >= 40) return { label: "Developing",  color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-400/50", emoji: "🟠" };
+  return              { label: "Needs Work",  color: "text-red-600",    bg: "bg-red-50",    border: "border-red-400/50",    emoji: "🔴" };
 }
 
 function RepStatusBadge({ score, size = "sm" }: { score: number; size?: "sm" | "md" }) {
@@ -187,9 +187,9 @@ function RepStatusBadge({ score, size = "sm" }: { score: number; size?: "sm" | "
 }
 
 function qualityBadge(quality: "strong" | "weak" | "missing") {
-  if (quality === "strong") return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">Strong</Badge>;
-  if (quality === "weak") return <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40">Weak</Badge>;
-  return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/40">Missing</Badge>;
+  if (quality === "strong") return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Strong</Badge>;
+  if (quality === "weak") return <Badge className="bg-amber-50 text-amber-700 border-amber-200">Weak</Badge>;
+  return <Badge className="bg-gray-100 text-gray-500 border-gray-200">Missing</Badge>;
 }
 
 // ─── FLAG FEEDBACK MODAL ─────────────────────────────────────────────────────
@@ -230,30 +230,30 @@ function FlagFeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-[#0F1923] border-slate-700 text-white max-w-md">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center gap-2">
-            <Flag className="w-5 h-5 text-amber-400" />
+          <DialogTitle className="text-gray-900 flex items-center gap-2">
+            <Flag className="w-5 h-5 text-amber-600" />
             Flag Incorrect Analysis
           </DialogTitle>
         </DialogHeader>
         {submitted ? (
           <div className="py-8 text-center space-y-3">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-            <p className="text-slate-200 font-medium">Thank you for the feedback!</p>
-            <p className="text-slate-400 text-sm">This helps us improve the AI over time.</p>
+            <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+            <p className="text-gray-700 font-medium">Thank you for the feedback!</p>
+            <p className="text-gray-500 text-sm">This helps us improve the AI over time.</p>
             <Button onClick={handleClose} className="mt-4 bg-teal-600 hover:bg-teal-500">Close</Button>
           </div>
         ) : (
           <>
             <div className="space-y-4 py-2">
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Which section is incorrect?</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Which section is incorrect?</label>
                 <Select value={section} onValueChange={setSection}>
-                  <SelectTrigger className="bg-[#1a2535] border-slate-600 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a2535] border-slate-600">
+                  <SelectContent className="bg-white border-gray-300">
                     <SelectItem value="overall">Overall Score</SelectItem>
                     <SelectItem value="script_compliance">Script Compliance</SelectItem>
                     <SelectItem value="tone">Tone & Confidence</SelectItem>
@@ -265,34 +265,34 @@ function FlagFeedbackModal({
                 </Select>
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">What's wrong? <span className="text-red-400">*</span></label>
+                <label className="text-gray-600 text-sm mb-1.5 block">What's wrong? <span className="text-red-600">*</span></label>
                 <input
                   type="text"
                   value={issue}
                   onChange={e => setIssue(e.target.value)}
                   placeholder="e.g. Score is too high, the rep didn't actually close"
-                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   maxLength={512}
                 />
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Additional notes (optional)</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Additional notes (optional)</label>
                 <Textarea
                   value={comment}
                   onChange={e => setComment(e.target.value)}
                   placeholder="Any extra context that would help improve the AI..."
-                  className="bg-[#1a2535] border-slate-600 text-white placeholder:text-slate-500 resize-none"
+                  className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 resize-none"
                   rows={3}
                   maxLength={2000}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={handleClose} className="text-slate-400">Cancel</Button>
+              <Button variant="ghost" onClick={handleClose} className="text-gray-500">Cancel</Button>
               <Button
                 onClick={handleSubmit}
                 disabled={!issue.trim() || submitFeedback.isPending}
-                className="bg-amber-600 hover:bg-amber-500 text-white"
+                className="bg-amber-600 hover:bg-amber-500 text-gray-900"
               >
                 {submitFeedback.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}
                 Submit Flag
@@ -367,53 +367,53 @@ function EditDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && handleClose()}>
-      <DialogContent className="bg-[#0F1923] border-slate-700 text-white max-w-md">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Call Details</DialogTitle>
+          <DialogTitle className="text-gray-700">Edit Call Details</DialogTitle>
         </DialogHeader>
         {saved ? (
           <div className="py-8 text-center space-y-2">
-            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-            <p className="text-slate-200 font-medium">Details updated!</p>
+            <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
+            <p className="text-gray-700 font-medium">Details updated!</p>
           </div>
         ) : (
           <>
             <div className="space-y-4 py-2">
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Customer Name</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Customer Name</label>
                 <input
                   type="text"
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   placeholder="Auto-extracted from call, or enter manually"
-                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Rep Name</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Rep Name</label>
                 <input
                   type="text"
                   value={repName}
                   onChange={e => setRepName(e.target.value)}
                   placeholder="Rep name"
-                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Call Date</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Call Date</label>
                 <input
                   type="date"
                   value={callDate}
                   onChange={e => setCallDate(e.target.value)}
-                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Call Type</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Call Type</label>
                 <select
                   value={callType}
                   onChange={e => setCallType(e.target.value as typeof callType)}
-                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
                   <option value="opening">📞 Opening</option>
                   <option value="retention_cancel_trial">🔄 Cancel Trial</option>
@@ -421,11 +421,11 @@ function EditDetailsModal({
                 </select>
               </div>
               <div>
-                <label className="text-slate-300 text-sm mb-1.5 block">Close Status</label>
+                <label className="text-gray-600 text-sm mb-1.5 block">Close Status</label>
                 <select
                   value={closeStatus}
                   onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
-                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
                   <option value="closed">✅ Closed</option>
                   <option value="not_closed">❌ Not Closed</option>
@@ -434,11 +434,11 @@ function EditDetailsModal({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={handleClose} className="text-slate-400">Cancel</Button>
+              <Button variant="ghost" onClick={handleClose} className="text-gray-500">Cancel</Button>
               <Button
                 onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined, callType })}
                 disabled={updateDetails.isPending}
-                className="bg-teal-600 hover:bg-teal-500 text-white"
+                className="bg-teal-600 hover:bg-teal-500 text-gray-900"
               >
                 {updateDetails.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Changes
@@ -477,61 +477,61 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
   if (isLoading || !analysis) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
       </div>
     );
   }
 
   const statusMap = {
-    pending: { icon: <Clock className="w-5 h-5 text-slate-400" />, label: "Queued", color: "text-slate-400" },
-    transcribing: { icon: <Loader2 className="w-5 h-5 animate-spin text-blue-400" />, label: "Transcribing audio...", color: "text-blue-400" },
-    analyzing: { icon: <Loader2 className="w-5 h-5 animate-spin text-teal-400" />, label: "AI is analysing...", color: "text-teal-400" },
-    done: { icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, label: "Complete", color: "text-emerald-400" },
-    error: { icon: <XCircle className="w-5 h-5 text-red-400" />, label: "Error", color: "text-red-400" },
+    pending: { icon: <Clock className="w-5 h-5 text-gray-500" />, label: "Queued", color: "text-gray-500" },
+    transcribing: { icon: <Loader2 className="w-5 h-5 animate-spin text-blue-600" />, label: "Transcribing audio...", color: "text-blue-600" },
+    analyzing: { icon: <Loader2 className="w-5 h-5 animate-spin text-teal-600" />, label: "AI is analysing...", color: "text-teal-600" },
+    done: { icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />, label: "Complete", color: "text-emerald-600" },
+    error: { icon: <XCircle className="w-5 h-5 text-red-600" />, label: "Error", color: "text-red-600" },
   };
 
   const status = statusMap[analysis.status as keyof typeof statusMap];
 
   // Deal status config
   const dealStatusMap: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    closed:     { label: "Closed Deal",  color: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-500/40" },
-    follow_up:  { label: "Follow-up",    color: "text-amber-300",   bg: "bg-amber-500/15",   border: "border-amber-500/40" },
-    not_closed: { label: "Not Closed",   color: "text-red-300",     bg: "bg-red-500/15",     border: "border-red-500/40" },
+    closed:     { label: "Closed Deal",  color: "text-emerald-600", bg: "bg-emerald-500/15", border: "border-emerald-500/40" },
+    follow_up:  { label: "Follow-up",    color: "text-amber-600",   bg: "bg-amber-500/15",   border: "border-amber-500/40" },
+    not_closed: { label: "Not Closed",   color: "text-red-600",     bg: "bg-red-500/15",     border: "border-red-500/40" },
   };
   const dealStatus = analysis.closeStatus ? dealStatusMap[analysis.closeStatus] : null;
 
   // Talk ratio display
   const repPct = analysis.repSpeechPct != null ? Math.round(analysis.repSpeechPct) : null;
   const custPct = repPct != null ? 100 - repPct : null;
-  let ratioColor = "text-emerald-400";
+  let ratioColor = "text-emerald-600";
   let ratioLabel = "Good ratio";
-  if (repPct != null && repPct > 65) { ratioColor = "text-red-400"; ratioLabel = "Talking too much"; }
-  else if (repPct != null && repPct < 30) { ratioColor = "text-amber-400"; ratioLabel = "Too passive"; }
+  if (repPct != null && repPct > 65) { ratioColor = "text-red-600"; ratioLabel = "Talking too much"; }
+  else if (repPct != null && repPct < 30) { ratioColor = "text-amber-600"; ratioLabel = "Too passive"; }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-xl border border-slate-700 bg-[#0F1923] overflow-hidden">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
         {/* Back button row */}
         <div className="px-4 pt-3 pb-0">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-400 hover:text-white -ml-2">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-500 hover:text-gray-900 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
         </div>
         {/* Two-column content */}
-        <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-700/60 px-0">
+        <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60 px-0">
           {/* Left: call info */}
           <div className="flex-1 px-4 pb-4 pt-2 space-y-1">
-            <h2 className="text-lg font-semibold text-white leading-tight">{analysis.fileName ?? "Call Recording"}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 leading-tight">{analysis.fileName ?? "Call Recording"}</h2>
             {analysis.customerName && (
-              <p className="text-sm text-teal-300 font-medium">
+              <p className="text-sm text-teal-600 font-medium">
                 👤 {analysis.customerName}
-                {!analysis.repName && !analysis.callDate && !analysis.closeStatus ? null : <span className="text-slate-500 font-normal"> (customer)</span>}
+                {!analysis.repName && !analysis.callDate && !analysis.closeStatus ? null : <span className="text-gray-400 font-normal"> (customer)</span>}
               </p>
             )}
             {(analysis.repName || analysis.callDate) && (
-              <p className="text-xs text-slate-400">
-                {analysis.repName && <span className="font-medium text-slate-300">{analysis.repName}</span>}
+              <p className="text-xs text-gray-500">
+                {analysis.repName && <span className="font-medium text-gray-600">{analysis.repName}</span>}
                 {analysis.callDate && <span>{analysis.repName ? " · " : ""}{new Date(analysis.callDate).toLocaleDateString()}</span>}
               </p>
             )}
@@ -541,7 +541,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
               </div>
             )}
             {analysis.lastEditedByName && (
-              <p className="text-xs text-slate-500 italic">
+              <p className="text-xs text-gray-400 italic">
                 Last edited by {analysis.lastEditedByName}{analysis.lastEditedAt ? ` · ${new Date(analysis.lastEditedAt).toLocaleString()}` : ""}
               </p>
             )}
@@ -552,12 +552,12 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowEditModal(true)}
-                className="text-slate-400 hover:text-teal-400 text-xs border border-slate-700 hover:border-teal-500"
+                className="text-gray-500 hover:text-teal-600 text-xs border border-gray-200 hover:border-teal-500"
               >
                 ✏️ Edit Details
               </Button>
               {analysis.durationSeconds && (
-                <span className="text-slate-500">
+                <span className="text-gray-400">
                   · {Math.floor((analysis.durationSeconds ?? 0) / 60)}m {Math.round((analysis.durationSeconds ?? 0) % 60)}s
                 </span>
               )}
@@ -565,11 +565,11 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
           </div>
 
           {/* Right: Talk Ratio + Deal Status */}
-          <div className="flex flex-row sm:flex-col items-center justify-center gap-6 px-8 py-6 sm:min-w-[200px] bg-slate-800/30">
+          <div className="flex flex-row sm:flex-col items-center justify-center gap-6 px-8 py-6 sm:min-w-[200px] bg-gray-50">
             {/* Talk Ratio */}
             {repPct != null && (
               <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Talk Ratio</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Talk Ratio</p>
                 {/* Circular gauge */}
                 <div className="relative w-24 h-24">
                   <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
@@ -584,23 +584,23 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className={`text-2xl font-bold leading-none ${ratioColor}`}>{repPct}%</span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">rep</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">rep</span>
                   </div>
                 </div>
                 <p className={`text-xs font-semibold mt-1 ${ratioColor}`}>{ratioLabel}</p>
-                <p className="text-[11px] text-slate-500">👤 Customer: {custPct}%</p>
+                <p className="text-[11px] text-gray-400">👤 Customer: {custPct}%</p>
               </div>
             )}
 
             {/* Divider between the two stats */}
             {repPct != null && dealStatus && (
-              <div className="hidden sm:block w-full h-px bg-slate-700/60 my-1" />
+              <div className="hidden sm:block w-full h-px bg-gray-100 my-1" />
             )}
 
             {/* Deal Status */}
             {dealStatus && (
               <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Deal Status</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Deal Status</p>
                 <div className={`px-5 py-2.5 rounded-lg border ${dealStatus.bg} ${dealStatus.border} text-center min-w-[120px]`}>
                   <p className={`text-sm font-bold ${dealStatus.color}`}>{dealStatus.label}</p>
                 </div>
@@ -612,11 +612,11 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
 
       {/* Processing states */}
       {(analysis.status === "pending" || analysis.status === "transcribing" || analysis.status === "analyzing") && (
-        <Card className="bg-[#0F1923] border-slate-700">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-8 text-center space-y-4">
-            <Loader2 className="w-12 h-12 animate-spin text-teal-400 mx-auto" />
-            <p className="text-slate-300 text-lg">{status.label}</p>
-            <p className="text-slate-500 text-sm">This usually takes 30–90 seconds depending on call length.</p>
+            <Loader2 className="w-12 h-12 animate-spin text-teal-600 mx-auto" />
+            <p className="text-gray-600 text-lg">{status.label}</p>
+            <p className="text-gray-400 text-sm">This usually takes 30–90 seconds depending on call length.</p>
           </CardContent>
         </Card>
       )}
@@ -624,11 +624,11 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
       {analysis.status === "error" && (
         <Card className="bg-red-900/20 border-red-500/40">
           <CardContent className="p-6">
-            <div className="flex items-start gap-3 text-red-400">
+            <div className="flex items-start gap-3 text-red-600">
               <XCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium">Analysis failed</p>
-                <p className="text-sm text-red-300 mt-1 break-words">{analysis.errorMessage ?? "Unknown error"}</p>
+                <p className="text-sm text-red-600 mt-1 break-words">{analysis.errorMessage ?? "Unknown error"}</p>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -641,7 +641,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                   }
                 }}
                 disabled={deleteAnalysis.isPending}
-                className="text-red-400 hover:text-red-300 hover:bg-red-900/40 border border-red-500/40 text-xs"
+                className="text-red-600 hover:text-red-600 hover:bg-red-900/40 border border-red-500/40 text-xs"
               >
                 {deleteAnalysis.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
                 🗑️ Delete Failed Call
@@ -663,11 +663,11 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                 { label: "Tone & Confidence", value: report.toneScore, icon: <Mic className="w-5 h-5" /> },
                 { label: "Rep Speech %", value: analysis.repSpeechPct ?? 0, icon: <BarChart3 className="w-5 h-5" /> },
               ].map(({ label, value, icon }) => (
-                <Card key={label} className={`bg-[#0F1923] border ${scoreBg(value ?? 0)}`}>
+                <Card key={label} className={`bg-gray-50 border ${scoreBg(value ?? 0)}`}>
                   <CardContent className="p-4 text-center">
                     <div className={`flex justify-center mb-2 ${scoreColor(value ?? 0)}`}>{icon}</div>
                     <div className={`text-3xl font-bold ${scoreColor(value ?? 0)}`}>{Math.round(value ?? 0)}</div>
-                    <div className="text-xs text-slate-400 mt-1">{label}</div>
+                    <div className="text-xs text-gray-500 mt-1">{label}</div>
                   </CardContent>
                 </Card>
               ))}
@@ -675,53 +675,53 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2">
-              <Badge className={report.closingAttempted ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-red-500/20 text-red-300 border-red-500/40"}>
+              <Badge className={report.closingAttempted ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}>
                 {report.closingAttempted ? "✓ Close attempted" : "✗ No close attempt"}
               </Badge>
-              <Badge className={report.magicWandUsed ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-amber-500/20 text-amber-300 border-amber-500/40"}>
+              <Badge className={report.magicWandUsed ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}>
                 {report.magicWandUsed ? "✓ Magic Wand used" : "✗ Magic Wand missed"}
               </Badge>
             </div>
 
             {/* Summary */}
-            <Card className="bg-[#0F1923] border-slate-700">
+            <Card className="bg-gray-50 border-gray-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-400 uppercase tracking-wider">Summary</CardTitle>
+                <CardTitle className="text-sm text-gray-500 uppercase tracking-wider">Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-200 leading-relaxed">{report.summary}</p>
+                <p className="text-gray-700 leading-relaxed">{report.summary}</p>
               </CardContent>
             </Card>
 
             {/* Top 3 Recommendations */}
-            <Card className="bg-[#0F1923] border-teal-500/30">
+            <Card className="bg-gray-50 border-teal-500/30">
               <CardHeader className="pb-2">
-                <CardTitle className="text-teal-400 flex items-center gap-2">
+                <CardTitle className="text-teal-600 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" /> Top 3 Recommendations
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {report.topRecommendations.map((rec, i) => (
                   <div key={i} className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 text-xs flex items-center justify-center font-bold">{i + 1}</span>
-                    <p className="text-slate-200 text-sm leading-relaxed">{rec}</p>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-50 text-teal-600 text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                    <p className="text-gray-700 text-sm leading-relaxed">{rec}</p>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
             {/* Script Stages */}
-            <Card className="bg-[#0F1923] border-slate-700">
+            <Card className="bg-gray-50 border-gray-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-400 uppercase tracking-wider">Script Stage Compliance</CardTitle>
+                <CardTitle className="text-sm text-gray-500 uppercase tracking-wider">Script Stage Compliance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {report.stagesDetected.map((stage) => (
                   <div key={stage.stage} className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">{qualityBadge(stage.quality)}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-slate-200 text-sm font-medium">{stage.stage}</p>
-                      <p className="text-slate-400 text-xs mt-0.5">{stage.note}</p>
+                      <p className="text-gray-700 text-sm font-medium">{stage.stage}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{stage.note}</p>
                     </div>
                   </div>
                 ))}
@@ -730,27 +730,27 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
 
             {/* Strengths & Improvements */}
             <div className="grid md:grid-cols-2 gap-4">
-              <Card className="bg-[#0F1923] border-emerald-500/30">
+              <Card className="bg-gray-50 border-emerald-500/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-emerald-400 text-sm">What Worked Well</CardTitle>
+                  <CardTitle className="text-emerald-600 text-sm">What Worked Well</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {report.strengths.map((s, i) => (
-                    <div key={i} className="flex gap-2 text-sm text-slate-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div key={i} className="flex gap-2 text-sm text-gray-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                       <span>{s}</span>
                     </div>
                   ))}
                 </CardContent>
               </Card>
-              <Card className="bg-[#0F1923] border-amber-500/30">
+              <Card className="bg-gray-50 border-amber-500/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-amber-400 text-sm">Areas to Improve</CardTitle>
+                  <CardTitle className="text-amber-600 text-sm">Areas to Improve</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {report.improvements.map((s, i) => (
-                    <div key={i} className="flex gap-2 text-sm text-slate-200">
-                      <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div key={i} className="flex gap-2 text-sm text-gray-700">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                       <span>{s}</span>
                     </div>
                   ))}
@@ -760,19 +760,19 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
 
             {/* Key Moments */}
             {report.keyMoments?.length > 0 && (
-              <Card className="bg-[#0F1923] border-slate-700">
+              <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-slate-400 uppercase tracking-wider">Key Moments</CardTitle>
+                  <CardTitle className="text-sm text-gray-500 uppercase tracking-wider">Key Moments</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {report.keyMoments.map((km, i) => (
                     <div key={i} className={`rounded-lg p-3 border ${
-                      km.type === "positive" ? "bg-emerald-500/10 border-emerald-500/30" :
-                      km.type === "critical" ? "bg-red-500/10 border-red-500/30" :
-                      "bg-amber-500/10 border-amber-500/30"
+                      km.type === "positive" ? "bg-emerald-50 border-emerald-500/30" :
+                      km.type === "critical" ? "bg-red-50 border-red-500/30" :
+                      "bg-amber-50 border-amber-500/30"
                     }`}>
-                      <p className="text-slate-200 text-sm italic">"{km.moment}"</p>
-                      <p className="text-slate-400 text-xs mt-2">💡 {km.coaching}</p>
+                      <p className="text-gray-700 text-sm italic">"{km.moment}"</p>
+                      <p className="text-gray-500 text-xs mt-2">💡 {km.coaching}</p>
                     </div>
                   ))}
                 </CardContent>
@@ -781,16 +781,16 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
 
             {/* Transcript toggle */}
             {analysis.transcript && (
-              <Card className="bg-[#0F1923] border-slate-700">
+              <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2 cursor-pointer" onClick={() => setShowTranscript(!showTranscript)}>
-                  <CardTitle className="text-sm text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <CardTitle className="text-sm text-gray-500 uppercase tracking-wider flex items-center justify-between">
                     <span>Full Transcript</span>
                     {showTranscript ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </CardTitle>
                 </CardHeader>
                 {showTranscript && (
                   <CardContent>
-                    <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap font-mono">{analysis.transcript}</p>
+                    <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap font-mono">{analysis.transcript}</p>
                   </CardContent>
                 )}
               </Card>
@@ -801,7 +801,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
               variant="ghost"
               size="sm"
               onClick={() => setShowFlagModal(true)}
-              className="text-white bg-blue-700 hover:bg-blue-600 hover:text-white gap-2 border border-blue-500"
+              className="text-gray-900 bg-blue-700 hover:bg-blue-600 hover:text-gray-900 gap-2 border border-blue-500"
             >
               <Flag className="w-4 h-4" />
               Flag incorrect analysis
@@ -887,35 +887,35 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   return (
     <div className="space-y-4">
       {/* Metadata fields */}
-      <Card className="bg-[#0F1923] border-slate-700">
+      <Card className="bg-gray-50 border-gray-200">
         <CardContent className="p-4 space-y-3">
-          <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Call Details</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Call Details</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Rep Name</label>
+              <label className="text-xs text-gray-500">Rep Name</label>
               <input
                 type="text"
                 value={repName}
                 onChange={e => setRepName(e.target.value)}
                 placeholder="Your name"
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-slate-500 focus:outline-none focus:border-teal-500"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Call Date</label>
+              <label className="text-xs text-gray-500">Call Date</label>
               <input
                 type="date"
                 value={callDate}
                 onChange={e => setCallDate(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Close Status</label>
+              <label className="text-xs text-gray-500">Close Status</label>
               <select
                 value={closeStatus}
                 onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
               >
                 <option value="closed">✅ Closed</option>
                 <option value="not_closed">❌ Not Closed</option>
@@ -923,11 +923,11 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Call Type</label>
+              <label className="text-xs text-gray-500">Call Type</label>
               <select
                 value={callType}
                 onChange={e => setCallType(e.target.value as typeof callType)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
               >
                 <option value="opening">📞 Opening</option>
                 <option value="retention_cancel_trial">🔄 Cancel Trial</option>
@@ -940,7 +940,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
 
       <div
         className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer ${
-          isDragging ? "border-teal-400 bg-teal-400/10" : "border-slate-600 hover:border-slate-500 hover:bg-slate-800/30"
+          isDragging ? "border-indigo-400 bg-indigo-50" : "border-gray-300 hover:border-indigo-400 hover:bg-gray-50"
         } ${uploading ? "pointer-events-none opacity-60" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
@@ -956,21 +956,21 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         />
         {uploading ? (
           <div className="space-y-3">
-            <Loader2 className="w-12 h-12 animate-spin text-teal-400 mx-auto" />
-            <p className="text-teal-400 font-medium">Uploading & starting analysis...</p>
+            <Loader2 className="w-12 h-12 animate-spin text-teal-600 mx-auto" />
+            <p className="text-teal-600 font-medium">Uploading & starting analysis...</p>
           </div>
         ) : (
           <div className="space-y-3">
-            <Upload className="w-12 h-12 text-slate-500 mx-auto" />
+            <Upload className="w-12 h-12 text-gray-400 mx-auto" />
             <div>
-              <p className="text-slate-200 font-medium">Drop your call recording here</p>
-              <p className="text-slate-500 text-sm mt-1">or click to browse · MP3, WAV, M4A, OGG, WebM · max 50MB</p>
+              <p className="text-gray-700 font-medium">Drop your call recording here</p>
+              <p className="text-gray-400 text-sm mt-1">or click to browse · MP3, WAV, M4A, OGG, WebM · max 50MB</p>
             </div>
           </div>
         )}
       </div>
       {error && (
-        <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+        <div className="flex items-center gap-2 text-red-600 text-sm bg-red-900/20 border border-red-500/30 rounded-lg p-3">
           <XCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
@@ -991,18 +991,18 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
       utils.callCoach.getAllAnalyses.invalidate();
     },
   });
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!analyses?.length) return (
-    <div className="text-center py-12 text-slate-500">
+    <div className="text-center py-12 text-gray-400">
       <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No calls analysed yet. Upload your first recording above.</p>
     </div>
   );
 
   const statusIcon = (status: string) => {
-    if (status === "done") return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
-    if (status === "error") return <XCircle className="w-4 h-4 text-red-400" />;
-    return <Loader2 className="w-4 h-4 animate-spin text-teal-400" />;
+    if (status === "done") return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+    if (status === "error") return <XCircle className="w-4 h-4 text-red-600" />;
+    return <Loader2 className="w-4 h-4 animate-spin text-teal-600" />;
   };
 
   return (
@@ -1010,17 +1010,17 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
         {[...analyses].reverse().map((a) => (
         <div
           key={a.id}
-          className="flex items-center gap-4 p-4 rounded-lg bg-[#0F1923] border border-slate-700 hover:border-slate-600 cursor-pointer transition-colors"
+          className="flex items-center gap-4 p-4 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors"
           onClick={() => onSelect(a.id)}
         >
           {statusIcon(a.status)}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-slate-200 text-sm font-medium truncate">{a.fileName ?? "Recording"}</p>
+              <p className="text-gray-700 text-sm font-medium truncate">{a.fileName ?? "Recording"}</p>
               <CallTypeBadge callType={a.callType} />
               <TalkRatioBadge repPct={a.repSpeechPct} />
             </div>
-            <p className="text-slate-500 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
+            <p className="text-gray-400 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
           </div>
           {a.overallScore != null && (
             <div className="flex flex-col items-end gap-1">
@@ -1029,7 +1029,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
             </div>
           )}
           {a.status !== "done" && a.status !== "error" && (
-            <span className="text-xs text-slate-500 capitalize">{a.status}</span>
+            <span className="text-xs text-gray-400 capitalize">{a.status}</span>
           )}
           {a.status === "error" && (
             <button
@@ -1040,7 +1040,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
                 }
               }}
               disabled={deleteAnalysis.isPending}
-              className="text-red-400 hover:text-red-300 text-xs border border-red-500/40 rounded px-2 py-1 hover:bg-red-900/30 transition-colors flex-shrink-0"
+              className="text-red-600 hover:text-red-600 text-xs border border-red-500/40 rounded px-2 py-1 hover:bg-red-900/30 transition-colors flex-shrink-0"
               title="Delete failed call"
             >
               🗑️
@@ -1068,9 +1068,9 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
     });
   };
 
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!analyses?.length) return (
-    <div className="text-center py-12 text-slate-500">
+    <div className="text-center py-12 text-gray-400">
       <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No calls analysed yet across the team.</p>
     </div>
@@ -1091,22 +1091,22 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
     <div className="space-y-6">
       {/* Team stats */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="bg-[#0F1923] border-slate-700">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-teal-400">{analyses.length}</div>
-            <div className="text-xs text-slate-400 mt-1">Total Calls</div>
+            <div className="text-2xl font-bold text-teal-600">{analyses.length}</div>
+            <div className="text-xs text-gray-500 mt-1">Total Calls</div>
           </CardContent>
         </Card>
-        <Card className="bg-[#0F1923] border-slate-700">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
             <div className={`text-2xl font-bold ${scoreColor(avgScore)}`}>{avgScore || "—"}</div>
-            <div className="text-xs text-slate-400 mt-1">Team Avg Score</div>
+            <div className="text-xs text-gray-500 mt-1">Team Avg Score</div>
           </CardContent>
         </Card>
-        <Card className="bg-[#0F1923] border-slate-700">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-slate-200">{Object.keys(byRep).length}</div>
-            <div className="text-xs text-slate-400 mt-1">Active Reps</div>
+            <div className="text-2xl font-bold text-gray-700">{Object.keys(byRep).length}</div>
+            <div className="text-xs text-gray-500 mt-1">Active Reps</div>
           </CardContent>
         </Card>
       </div>
@@ -1116,12 +1116,12 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
         const repDone = repCalls.filter(a => a.status === "done");
         const repAvg = repDone.length ? Math.round(repDone.reduce((s, a) => s + (a.overallScore ?? 0), 0) / repDone.length) : null;
         return (
-          <Card key={repName} className="bg-[#0F1923] border-slate-700">
+          <Card key={repName} className="bg-gray-50 border-gray-200">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-slate-200 text-base">{repName}</CardTitle>
+                <CardTitle className="text-gray-700 text-base">{repName}</CardTitle>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-500">{repCalls.length} calls</span>
+                  <span className="text-xs text-gray-400">{repCalls.length} calls</span>
                   {repAvg != null && (
                     <span className={`text-lg font-bold ${scoreColor(repAvg)}`}>{repAvg}</span>
                   )}
@@ -1140,20 +1140,20 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                     {visible.map((a) => (
                       <div
                         key={a.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 cursor-pointer transition-colors"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-white/50 hover:bg-white cursor-pointer transition-colors"
                         onClick={() => onSelect(a.id)}
                       >
-                        {a.status === "done" ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /> :
-                         a.status === "error" ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> :
-                         <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
+                        {a.status === "done" ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> :
+                         a.status === "error" ? <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" /> :
+                         <Loader2 className="w-4 h-4 animate-spin text-teal-600 flex-shrink-0" />}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                            <p className="text-gray-600 text-sm truncate">{a.fileName ?? "Recording"}</p>
                             <CallTypeBadge callType={a.callType} />
                             <TalkRatioBadge repPct={a.repSpeechPct} />
                           </div>
-                          <p className="text-slate-500 text-xs">
-                            {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
+                          <p className="text-gray-400 text-xs">
+                            {a.customerName && <span className="text-teal-600/80">👤 {a.customerName} · </span>}
                             {new Date(a.createdAt).toLocaleString()}
                           </p>
                         </div>
@@ -1165,7 +1165,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                     {sorted.length > MANAGER_PREVIEW_COUNT && (
                       <button
                         onClick={() => toggleRep(repName)}
-                        className="w-full text-xs text-teal-400 hover:text-teal-300 py-1.5 text-center transition-colors"
+                        className="w-full text-xs text-teal-600 hover:text-teal-600 py-1.5 text-center transition-colors"
                       >
                         {isExpanded
                           ? `▲ Show less`
@@ -1189,12 +1189,12 @@ function Leaderboard() {
     refetchInterval: 30000,
   });
 
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!entries?.length) return (
-    <div className="text-center py-12 text-slate-500">
+    <div className="text-center py-12 text-gray-400">
       <Trophy className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No calls analysed yet. Be the first to upload!</p>
-      <p className="text-xs mt-2 text-slate-600">Minimum 5 calls required for a reliable ranking.</p>
+      <p className="text-xs mt-2 text-gray-400">Minimum 5 calls required for a reliable ranking.</p>
     </div>
   );
 
@@ -1204,32 +1204,32 @@ function Leaderboard() {
   const mostImproved = entries.filter(e => e.isReliable && e.trend === "up")[0];
 
   const trendIcon = (trend: string) => {
-    if (trend === "up") return <TrendingUp className="w-4 h-4 text-emerald-400" />;
-    if (trend === "down") return <TrendingDown className="w-4 h-4 text-red-400" />;
-    return <Minus className="w-4 h-4 text-slate-500" />;
+    if (trend === "up") return <TrendingUp className="w-4 h-4 text-emerald-600" />;
+    if (trend === "down") return <TrendingDown className="w-4 h-4 text-red-600" />;
+    return <Minus className="w-4 h-4 text-gray-400" />;
   };
 
   const closeStatusLabel = (rate: number) => {
-    if (rate >= 60) return <span className="text-emerald-400">{rate}%</span>;
-    if (rate >= 30) return <span className="text-amber-400">{rate}%</span>;
-    return <span className="text-red-400">{rate}%</span>;
+    if (rate >= 60) return <span className="text-emerald-600">{rate}%</span>;
+    if (rate >= 30) return <span className="text-amber-600">{rate}%</span>;
+    return <span className="text-red-600">{rate}%</span>;
   };
 
   return (
     <div className="space-y-4">
       {/* Disclaimer */}
-      <div className="text-xs text-slate-500 italic text-center">
+      <div className="text-xs text-gray-400 italic text-center">
         Rankings are based on AI scores only. Minimum 5 analysed calls required for a reliable ranking.
         <br />Reps with fewer than 5 calls are shown but marked as unranked.
       </div>
 
       {/* Most Improved badge */}
       {mostImproved && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-500/30">
           <span className="text-2xl">\uD83D\uDE80</span>
           <div>
-            <p className="text-emerald-400 text-sm font-bold">Most Improved</p>
-            <p className="text-slate-300 text-sm">{mostImproved.repName} — score trending up over last 6 calls</p>
+            <p className="text-emerald-600 text-sm font-bold">Most Improved</p>
+            <p className="text-gray-600 text-sm">{mostImproved.repName} — score trending up over last 6 calls</p>
           </div>
         </div>
       )}
@@ -1241,33 +1241,33 @@ function Leaderboard() {
             key={entry.userId}
             className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
               i === 0 && entry.isReliable
-                ? "bg-amber-500/10 border-amber-500/30"
+                ? "bg-amber-50 border-amber-500/30"
                 : i === 1 && entry.isReliable
-                ? "bg-slate-400/10 border-slate-400/30"
+                ? "bg-gray-100 border-gray-300"
                 : i === 2 && entry.isReliable
-                ? "bg-orange-500/10 border-orange-500/30"
-                : "bg-[#0F1923] border-slate-700"
+                ? "bg-orange-50 border-orange-500/30"
+                : "bg-gray-50 border-gray-200"
             }`}
           >
             {/* Rank */}
             <div className="w-8 text-center flex-shrink-0">
               {entry.isReliable && i < 3
                 ? <span className="text-xl">{medals[i]}</span>
-                : <span className="text-slate-500 text-sm font-bold">#{i + 1}</span>
+                : <span className="text-gray-400 text-sm font-bold">#{i + 1}</span>
               }
             </div>
 
             {/* Name & stats */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-slate-200 font-semibold text-sm">{entry.repName}</p>
+                <p className="text-gray-700 font-semibold text-sm">{entry.repName}</p>
                 {!entry.isReliable && (
-                  <Badge className="text-xs bg-slate-700/50 text-slate-400 border-slate-600">Unranked &lt;5 calls</Badge>
+                  <Badge className="text-xs bg-gray-100/50 text-gray-500 border-gray-300">Unranked &lt;5 calls</Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-slate-500">{entry.totalCalls} calls</span>
-                <span className="text-xs text-slate-500">Close rate: {closeStatusLabel(entry.closeRate)}</span>
+                <span className="text-xs text-gray-400">{entry.totalCalls} calls</span>
+                <span className="text-xs text-gray-400">Close rate: {closeStatusLabel(entry.closeRate)}</span>
               </div>
             </div>
 
@@ -1277,7 +1277,7 @@ function Leaderboard() {
                 {trendIcon(entry.trend)}
                 {entry.avgScore != null
                   ? <span className={`text-xl font-bold ${scoreColor(entry.avgScore)}`}>{entry.avgScore}</span>
-                  : <span className="text-slate-500 text-sm">—</span>
+                  : <span className="text-gray-400 text-sm">—</span>
                 }
               </div>
               {entry.avgScore != null && <RepStatusBadge score={entry.avgScore} size="sm" />}
@@ -1293,23 +1293,23 @@ function Leaderboard() {
 function FeedbackReview() {
   const { data: feedbacks, isLoading } = trpc.callCoach.getFeedbackSummary.useQuery();
 
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!feedbacks?.length) return (
-    <div className="text-center py-12 text-slate-500">
+    <div className="text-center py-12 text-gray-400">
       <Flag className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No feedback submitted yet.</p>
-      <p className="text-xs mt-2 text-slate-600">When reps flag incorrect analysis, it will appear here.</p>
+      <p className="text-xs mt-2 text-gray-400">When reps flag incorrect analysis, it will appear here.</p>
     </div>
   );
 
   const sectionColors: Record<string, string> = {
-    overall: "bg-blue-500/20 text-blue-300 border-blue-500/40",
-    script_compliance: "bg-purple-500/20 text-purple-300 border-purple-500/40",
-    tone: "bg-pink-500/20 text-pink-300 border-pink-500/40",
-    talk_ratio: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
-    recommendations: "bg-teal-500/20 text-teal-300 border-teal-500/40",
-    transcript: "bg-orange-500/20 text-orange-300 border-orange-500/40",
-    other: "bg-slate-500/20 text-slate-300 border-slate-500/40",
+    overall: "bg-blue-50 text-blue-700 border-blue-200",
+    script_compliance: "bg-purple-50 text-purple-700 border-purple-200",
+    tone: "bg-pink-50 text-pink-700 border-pink-200",
+    talk_ratio: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    recommendations: "bg-teal-50 text-teal-600 border-teal-500/40",
+    transcript: "bg-orange-50 text-orange-700 border-orange-200",
+    other: "bg-gray-100 text-gray-600 border-gray-200",
   };
 
   // Count by section
@@ -1323,37 +1323,37 @@ function FeedbackReview() {
     <div className="space-y-5">
       {/* Summary */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-[#0F1923] border-slate-700">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-amber-400">{feedbacks.length}</div>
-            <div className="text-xs text-slate-400 mt-1">Total Flags</div>
+            <div className="text-2xl font-bold text-amber-600">{feedbacks.length}</div>
+            <div className="text-xs text-gray-500 mt-1">Total Flags</div>
           </CardContent>
         </Card>
-        <Card className="bg-[#0F1923] border-slate-700">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="p-4 text-center">
-            <div className="text-lg font-bold text-slate-200 capitalize">{topSection?.[0]?.replace("_", " ") ?? "—"}</div>
-            <div className="text-xs text-slate-400 mt-1">Most Flagged Section</div>
+            <div className="text-lg font-bold text-gray-700 capitalize">{topSection?.[0]?.replace("_", " ") ?? "—"}</div>
+            <div className="text-xs text-gray-500 mt-1">Most Flagged Section</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tip for improvement */}
-      <div className="rounded-lg bg-teal-500/10 border border-teal-500/30 p-4 text-sm text-teal-300">
+      <div className="rounded-lg bg-teal-50 border border-teal-500/30 p-4 text-sm text-teal-600">
         💡 <strong>How to use this:</strong> Review the flags below, identify patterns, and share them with the AI trainer to improve the prompt. After 10+ flags, patterns become clear.
       </div>
 
       {/* Feedback list */}
       <div className="space-y-3">
         {[...feedbacks].reverse().map((f) => (
-          <Card key={f.id} className="bg-[#0F1923] border-slate-700">
+          <Card key={f.id} className="bg-gray-50 border-gray-200">
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={sectionColors[f.section] ?? sectionColors.other}>{f.section.replace("_", " ")}</Badge>
-                <span className="text-xs text-slate-500">{new Date(f.createdAt).toLocaleString()}</span>
-                <span className="text-xs text-slate-500">· Call #{f.analysisId}</span>
+                <span className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleString()}</span>
+                <span className="text-xs text-gray-400">· Call #{f.analysisId}</span>
               </div>
-              <p className="text-slate-200 text-sm font-medium">{f.issue}</p>
-              {f.comment && <p className="text-slate-400 text-xs leading-relaxed">{f.comment}</p>}
+              <p className="text-gray-700 text-sm font-medium">{f.issue}</p>
+              {f.comment && <p className="text-gray-500 text-xs leading-relaxed">{f.comment}</p>}
             </CardContent>
           </Card>
         ))}
@@ -1385,17 +1385,17 @@ type RepProfileData = {
 
 function TrendIndicator({ trend, delta }: { trend: "improving" | "stable" | "declining"; delta: number }) {
   if (trend === "improving") return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-2 py-0.5">
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-2 py-0.5">
       <TrendingUp className="w-3 h-3" /> +{delta} Improving
     </span>
   );
   if (trend === "declining") return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 bg-red-500/15 border border-red-500/30 rounded-full px-2 py-0.5">
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-500/15 border border-red-500/30 rounded-full px-2 py-0.5">
       <TrendingDown className="w-3 h-3" /> {delta} Declining
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 bg-slate-500/15 border border-slate-600/30 rounded-full px-2 py-0.5">
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
       <Minus className="w-3 h-3" /> Stable
     </span>
   );
@@ -1407,7 +1407,7 @@ function RepInitials({ name }: { name: string }) {
     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
     : name.slice(0, 2).toUpperCase();
   return (
-    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center text-gray-900 font-bold text-sm flex-shrink-0">
       {initials}
     </div>
   );
@@ -1422,15 +1422,15 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="bg-[#0A1628] border-slate-700 max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-gray-50 border-gray-200 max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-white">
+          <DialogTitle className="flex items-center gap-3 text-gray-900">
             <RepInitials name={rep.repName} />
             <div>
               <div className="text-lg font-bold">{rep.repName}</div>
               <div className="flex items-center gap-2 mt-1">
                 {rep.allTimeAvg != null && <RepStatusBadge score={rep.allTimeAvg} size="md" />}
-                <span className="text-slate-500 text-xs">{rankLabel} of {rep.totalReps} reps</span>
+                <span className="text-gray-400 text-xs">{rankLabel} of {rep.totalReps} reps</span>
               </div>
             </div>
           </DialogTitle>
@@ -1439,16 +1439,16 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
         <div className="space-y-5 mt-2">
           {/* Dual score row */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">All-Time Avg</p>
-              <p className={`text-3xl font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-slate-500"}`}>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-center">
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">All-Time Avg</p>
+              <p className={`text-3xl font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-400"}`}>
                 {rep.allTimeAvg ?? "—"}
               </p>
-              <p className="text-xs text-slate-500 mt-1">{rep.totalCalls} calls total</p>
+              <p className="text-xs text-gray-400 mt-1">{rep.totalCalls} calls total</p>
             </div>
-            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Last 10 Avg</p>
-              <p className={`text-3xl font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-slate-500"}`}>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-center">
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Last 10 Avg</p>
+              <p className={`text-3xl font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-gray-400"}`}>
                 {rep.last10Avg ?? "—"}
               </p>
               <div className="mt-1">
@@ -1459,8 +1459,8 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
 
           {/* Score history sparkline */}
           {chartData.length >= 2 && (
-            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4">
-              <p className="text-xs text-slate-400 uppercase tracking-widest mb-3">Score History (last 10 calls)</p>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Score History (last 10 calls)</p>
               <div className="h-24">
                 <svg viewBox={`0 0 ${chartData.length * 40} 80`} className="w-full h-full" preserveAspectRatio="none">
                   {/* Grid line at 70 */}
@@ -1480,15 +1480,15 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
                   ))}
                 </svg>
               </div>
-              <div className="flex justify-between text-xs text-slate-600 mt-1">
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>Oldest</span><span className="text-teal-500/60">— 70 target</span><span>Latest</span>
               </div>
             </div>
           )}
 
           {/* Category breakdown */}
-          <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-4 space-y-3">
-            <p className="text-xs text-slate-400 uppercase tracking-widest">Category Breakdown</p>
+          <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 space-y-3">
+            <p className="text-xs text-gray-500 uppercase tracking-widest">Category Breakdown</p>
             {[
               { label: "Script Compliance", value: rep.scriptComplianceAvg, icon: "📋" },
               { label: "Tone & Delivery", value: rep.toneAvg, icon: "🎙️" },
@@ -1496,8 +1496,8 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
             ].map(({ label, value, icon, suffix }) => (
               <div key={label} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-300">{icon} {label}</span>
-                  <span className={`text-xs font-bold ${value != null ? scoreColor(value) : "text-slate-500"}`}>
+                  <span className="text-xs text-gray-600">{icon} {label}</span>
+                  <span className={`text-xs font-bold ${value != null ? scoreColor(value) : "text-gray-400"}`}>
                     {value != null ? `${value}${suffix ?? ""}` : "—"}
                   </span>
                 </div>
@@ -1510,35 +1510,35 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
-              <p className="text-xs text-slate-500 mb-1">Close Rate</p>
-              <p className={`text-lg font-bold ${rep.closeRate >= 60 ? "text-emerald-400" : rep.closeRate >= 30 ? "text-amber-400" : "text-red-400"}`}>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
+              <p className="text-xs text-gray-400 mb-1">Close Rate</p>
+              <p className={`text-lg font-bold ${rep.closeRate >= 60 ? "text-emerald-600" : rep.closeRate >= 30 ? "text-amber-600" : "text-red-600"}`}>
                 {rep.closeRate}%
               </p>
             </div>
-            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
-              <p className="text-xs text-slate-500 mb-1">Best Score</p>
-              <p className={`text-lg font-bold ${rep.bestCall ? scoreColor(rep.bestCall.score) : "text-slate-500"}`}>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
+              <p className="text-xs text-gray-400 mb-1">Best Score</p>
+              <p className={`text-lg font-bold ${rep.bestCall ? scoreColor(rep.bestCall.score) : "text-gray-400"}`}>
                 {rep.bestCall?.score ?? "—"}
               </p>
             </div>
-            <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
-              <p className="text-xs text-slate-500 mb-1">Worst Score</p>
-              <p className={`text-lg font-bold ${rep.worstCall ? scoreColor(rep.worstCall.score) : "text-slate-500"}`}>
+            <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
+              <p className="text-xs text-gray-400 mb-1">Worst Score</p>
+              <p className={`text-lg font-bold ${rep.worstCall ? scoreColor(rep.worstCall.score) : "text-gray-400"}`}>
                 {rep.worstCall?.score ?? "—"}
               </p>
             </div>
           </div>
 
           {!rep.isReliable && (
-            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300">
+            <div className="rounded-lg bg-amber-50 border border-amber-500/30 p-3 text-xs text-amber-600">
               ⚠️ This rep has fewer than 5 analysed calls — stats may not be representative yet.
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-300 hover:bg-slate-700">
+          <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-600 hover:bg-gray-100">
             Close
           </Button>
         </DialogFooter>
@@ -1551,12 +1551,12 @@ function TeamDashboard() {
   const { data: reps, isLoading } = trpc.callCoach.getTeamDashboard.useQuery();
   const [selectedRep, setSelectedRep] = useState<RepProfileData | null>(null);
 
-  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>;
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!reps?.length) return (
-    <div className="text-center py-12 text-slate-500">
+    <div className="text-center py-12 text-gray-400">
       <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
       <p>No analysed calls yet.</p>
-      <p className="text-xs mt-2 text-slate-600">Once reps upload and analyse calls, their profiles will appear here.</p>
+      <p className="text-xs mt-2 text-gray-400">Once reps upload and analyse calls, their profiles will appear here.</p>
     </div>
   );
 
@@ -1569,24 +1569,24 @@ function TeamDashboard() {
     <div className="space-y-4">
       {/* Team summary bar */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
-          <p className="text-xs text-slate-500 mb-1">Total Reps</p>
-          <p className="text-2xl font-bold text-white">{reps.length}</p>
+        <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
+          <p className="text-xs text-gray-400 mb-1">Total Reps</p>
+          <p className="text-2xl font-bold text-gray-900">{reps.length}</p>
         </div>
-        <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
-          <p className="text-xs text-slate-500 mb-1">Team Avg</p>
-          <p className={`text-2xl font-bold ${teamAvg != null ? scoreColor(teamAvg) : "text-slate-500"}`}>{teamAvg ?? "—"}</p>
+        <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
+          <p className="text-xs text-gray-400 mb-1">Team Avg</p>
+          <p className={`text-2xl font-bold ${teamAvg != null ? scoreColor(teamAvg) : "text-gray-400"}`}>{teamAvg ?? "—"}</p>
         </div>
-        <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 text-center">
-          <p className="text-xs text-slate-500 mb-1">Improving</p>
-          <p className="text-2xl font-bold text-emerald-400">{reps.filter(r => r.trendIndicator === "improving").length}</p>
+        <div className="rounded-xl bg-gray-50 border border-gray-200 p-3 text-center">
+          <p className="text-xs text-gray-400 mb-1">Improving</p>
+          <p className="text-2xl font-bold text-emerald-600">{reps.filter(r => r.trendIndicator === "improving").length}</p>
         </div>
       </div>
 
       {/* Ranked table */}
-      <div className="rounded-xl border border-slate-700 overflow-hidden">
+      <div className="rounded-xl border border-gray-200 overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-2 bg-slate-800/80 border-b border-slate-700 text-xs text-slate-500 font-medium uppercase tracking-wide">
+        <div className="grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-2 bg-white/80 border-b border-gray-200 text-xs text-gray-400 font-medium uppercase tracking-wide">
           <span className="text-center">#</span>
           <span>Rep</span>
           <span className="text-center">Status</span>
@@ -1601,30 +1601,30 @@ function TeamDashboard() {
           <button
             key={rep.repName}
             onClick={() => setSelectedRep(rep)}
-            className="w-full grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-3 border-b border-slate-800 hover:bg-teal-500/5 hover:border-teal-500/20 transition-all cursor-pointer group text-left items-center last:border-b-0"
+            className="w-full grid grid-cols-[2rem_1fr_5rem_5rem_4rem_4rem_4rem] gap-2 px-3 py-3 border-b border-gray-200 hover:bg-teal-500/5 hover:border-teal-500/20 transition-all cursor-pointer group text-left items-center last:border-b-0"
           >
             {/* Rank */}
-            <span className="text-center text-slate-500 text-sm font-bold">
+            <span className="text-center text-gray-400 text-sm font-bold">
               {rep.rank <= 3
                 ? ["🥇", "🥈", "🥉"][rep.rank - 1]
-                : <span className="text-slate-600">#{rep.rank}</span>}
+                : <span className="text-gray-400">#{rep.rank}</span>}
             </span>
 
             {/* Name + calls count */}
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <RepInitials name={rep.repName} />
-                <span className="text-slate-200 font-semibold text-sm truncate group-hover:text-teal-300 transition-colors">{rep.repName}</span>
-                {!rep.isReliable && <span className="text-[10px] text-slate-500 flex-shrink-0">({rep.totalCalls})</span>}
+                <span className="text-gray-700 font-semibold text-sm truncate group-hover:text-teal-600 transition-colors">{rep.repName}</span>
+                {!rep.isReliable && <span className="text-[10px] text-gray-400 flex-shrink-0">({rep.totalCalls})</span>}
               </div>
-              {rep.isReliable && <span className="text-[10px] text-slate-500 ml-7">{rep.totalCalls} calls</span>}
+              {rep.isReliable && <span className="text-[10px] text-gray-400 ml-7">{rep.totalCalls} calls</span>}
             </div>
 
             {/* Status badge */}
             <div className="flex justify-center">
               {rep.allTimeAvg != null
                 ? <RepStatusBadge score={rep.allTimeAvg} size="sm" />
-                : <span className="text-slate-600 text-xs">—</span>}
+                : <span className="text-gray-400 text-xs">—</span>}
             </div>
 
             {/* Trend */}
@@ -1633,24 +1633,24 @@ function TeamDashboard() {
             </div>
 
             {/* All-time avg */}
-            <span className={`text-center text-sm font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-slate-500"}`}>
+            <span className={`text-center text-sm font-bold ${rep.allTimeAvg != null ? scoreColor(rep.allTimeAvg) : "text-gray-400"}`}>
               {rep.allTimeAvg ?? "—"}
             </span>
 
             {/* Last 10 avg */}
-            <span className={`text-center text-sm font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-slate-500"}`}>
+            <span className={`text-center text-sm font-bold ${rep.last10Avg != null ? scoreColor(rep.last10Avg) : "text-gray-400"}`}>
               {rep.last10Avg ?? "—"}
             </span>
 
             {/* Close rate */}
-            <span className={`text-center text-sm font-bold ${rep.closeRate >= 60 ? "text-emerald-400" : rep.closeRate >= 30 ? "text-amber-400" : "text-red-400"}`}>
+            <span className={`text-center text-sm font-bold ${rep.closeRate >= 60 ? "text-emerald-600" : rep.closeRate >= 30 ? "text-amber-600" : "text-red-600"}`}>
               {rep.closeRate}%
             </span>
           </button>
         ))}
       </div>
 
-      <p className="text-xs text-slate-600 text-center">Click any row to view the full rep profile. Stats based on AI-analysed calls only.</p>
+      <p className="text-xs text-gray-400 text-center">Click any row to view the full rep profile. Stats based on AI-analysed calls only.</p>
 
       {/* Rep Profile Modal */}
       {selectedRep && <RepProfileModal rep={selectedRep} onClose={() => setSelectedRep(null)} />}
@@ -1678,19 +1678,19 @@ export default function CallCoach() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-400" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Mic className="w-12 h-12 text-teal-400 mx-auto" />
-          <h2 className="text-white text-xl font-semibold">AI Call Coach</h2>
-          <p className="text-slate-400">Sign in to analyse your calls</p>
+          <Mic className="w-12 h-12 text-teal-600 mx-auto" />
+          <h2 className="text-gray-900 text-xl font-semibold">AI Call Coach</h2>
+          <p className="text-gray-500">Sign in to analyse your calls</p>
           <Button asChild className="bg-teal-600 hover:bg-teal-700">
             <a href={getLoginUrl()}>Sign In</a>
           </Button>
@@ -1703,7 +1703,7 @@ export default function CallCoach() {
 
   if (selectedId !== null) {
     return (
-      <div className="min-h-screen bg-[#0A1628] p-4 md:p-8">
+      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
         <div className="max-w-3xl mx-auto">
           <AnalysisReport
             analysisId={selectedId}
@@ -1716,30 +1716,30 @@ export default function CallCoach() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A1628] p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Page header */}
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Mic className="w-7 h-7 text-teal-400" />
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <Mic className="w-7 h-7 text-teal-600" />
             AI Call Coach
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">
+          <p className="text-gray-500 mt-1 text-sm">
             Upload a call recording — AI transcribes, analyses script compliance, and gives you actionable coaching.
           </p>
         </div>
 
         {/* AI Capabilities Disclaimer */}
-        <div className="rounded-xl border border-slate-700 overflow-hidden">
-          <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.18 0.04 250)" }}>
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 flex items-center gap-2" style={{ background: "oklch(0.97 0.02 265)" }}>
             <span className="text-base">⚠️</span>
-            <p className="text-sm font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>What this AI can — and cannot — do</p>
+            <p className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>What this AI can — and cannot — do</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-700/60">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-200/60">
             {/* Can do */}
-            <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.15 0.04 160 / 60%)" }}>
-              <p className="text-xs font-bold uppercase tracking-widest text-emerald-400" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>✅ Reliable — use these insights</p>
-              <ul className="space-y-1.5 text-xs text-slate-300 leading-relaxed">
+            <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.96 0.04 160)" }}>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-600" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>✅ Reliable — use these insights</p>
+              <ul className="space-y-1.5 text-xs text-gray-600 leading-relaxed">
                 <li>• <strong>Talk/listen ratio</strong> — how much of the call you spoke vs. listened (accurate)</li>
                 <li>• <strong>Script stage detection</strong> — did you cover Opening, Pitch, Close? (good accuracy)</li>
                 <li>• <strong>Keyword spotting</strong> — did you mention trial, subscription, price? (accurate)</li>
@@ -1748,9 +1748,9 @@ export default function CallCoach() {
               </ul>
             </div>
             {/* Cannot do */}
-            <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.15 0.04 15 / 50%)" }}>
-              <p className="text-xs font-bold uppercase tracking-widest text-red-400" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>❌ Unreliable — do not base decisions on these</p>
-              <ul className="space-y-1.5 text-xs text-slate-300 leading-relaxed">
+            <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.97 0.03 15)" }}>
+              <p className="text-xs font-bold uppercase tracking-widest text-red-600" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>❌ Unreliable — do not base decisions on these</p>
+              <ul className="space-y-1.5 text-xs text-gray-600 leading-relaxed">
                 <li>• <strong>Tone of voice / warmth</strong> — AI reads words, not true vocal emotion</li>
                 <li>• <strong>Rapport quality</strong> — whether the customer genuinely connected with you</li>
                 <li>• <strong>Subtle hesitation or sarcasm</strong> — easily missed without human context</li>
@@ -1759,43 +1759,43 @@ export default function CallCoach() {
               </ul>
             </div>
           </div>
-          <div className="px-4 py-2.5 text-xs text-slate-500 italic" style={{ background: "oklch(0.14 0.02 250)" }}>
+          <div className="px-4 py-2.5 text-xs text-gray-400 italic" style={{ background: "white" }}>
             Use this tool as a starting point for coaching conversations — not as a final verdict. Always listen to the call yourself before making performance decisions.
           </div>
         </div>
 
         {/* Talk Ratio Legend */}
-        <div className="rounded-xl border border-slate-700 overflow-hidden" style={{ background: "oklch(0.13 0.03 220 / 80%)" }}>
-          <div className="px-4 py-2.5 border-b border-slate-700/60 flex items-center gap-2" style={{ background: "oklch(0.16 0.04 220 / 60%)" }}>
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-200" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>📊 Talk Ratio — What the numbers mean</span>
+        <div className="rounded-xl border border-gray-200 overflow-hidden" style={{ background: "white" }}>
+          <div className="px-4 py-2.5 border-b border-gray-200 flex items-center gap-2" style={{ background: "oklch(0.95 0.02 220)" }}>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-700" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>📊 Talk Ratio — What the numbers mean</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-700/60">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60">
             <div className="px-4 py-3 flex items-start gap-3">
               <span className="mt-0.5 w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-emerald-400">40–65% rep speaking</p>
-                <p className="text-xs text-slate-400 mt-0.5">Ideal balance — rep leads the call while giving the customer space to talk and engage.</p>
+                <p className="text-xs font-semibold text-emerald-600">40–65% rep speaking</p>
+                <p className="text-xs text-gray-500 mt-0.5">Ideal balance — rep leads the call while giving the customer space to talk and engage.</p>
               </div>
             </div>
             <div className="px-4 py-3 flex items-start gap-3">
               <span className="mt-0.5 w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-amber-400">Below 30% rep speaking</p>
-                <p className="text-xs text-slate-400 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
+                <p className="text-xs font-semibold text-amber-600">Below 30% rep speaking</p>
+                <p className="text-xs text-gray-500 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
               </div>
             </div>
             <div className="px-4 py-3 flex items-start gap-3">
               <span className="mt-0.5 w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-red-400">Above 65% rep speaking</p>
-                <p className="text-xs text-slate-400 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
+                <p className="text-xs font-semibold text-red-600">Above 65% rep speaking</p>
+                <p className="text-xs text-gray-500 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-800/50 rounded-lg p-1">
+        <div className="flex gap-1 bg-white/50 rounded-lg p-1">
           {[
             { id: "upload", label: "Upload Call" },
             { id: "my-calls", label: "My Calls" },
@@ -1808,8 +1808,8 @@ export default function CallCoach() {
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? "bg-teal-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-teal-600 text-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {tab.label}
