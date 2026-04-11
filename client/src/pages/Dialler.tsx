@@ -3,31 +3,33 @@
   - Embeds CloudTalk Phone via iframe (phone.cloudtalk.io)
   - Listens to postMessage events: ringing, dialing, calling, hangup, ended, contact_info
   - Shows a contact card panel that auto-opens when a call starts
-  - Notes are saved per call session
+  - Click-to-call: sends postMessage to CloudTalk iframe to dial a number
+  - Quick contacts search panel in idle state
 */
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Phone,
   PhoneCall,
   PhoneOff,
-  PhoneMissed,
   User,
   Building2,
   Clock,
   FileText,
   Mic,
   ChevronLeft,
-  ChevronRight,
   Loader2,
+  Search,
+  ContactRound,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { Link } from "wouter";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type CallStatus = "idle" | "ringing" | "dialing" | "active" | "ended";
@@ -70,7 +72,6 @@ function formatDuration(startedAt: Date): string {
 }
 
 function formatNumber(num: string): string {
-  // Basic formatting — show as-is but clean up
   return num?.replace(/\s+/g, " ").trim() ?? "—";
 }
 
@@ -83,7 +84,6 @@ function CallStatusBadge({ status }: { status: CallStatus }) {
     active: { label: "On Call", color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40", icon: <Mic className="w-3 h-3 animate-pulse" /> },
     ended: { label: "Call Ended", color: "bg-slate-700/60 text-slate-400", icon: <PhoneOff className="w-3 h-3" /> },
   }[status];
-
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
       {config.icon}
@@ -92,7 +92,26 @@ function CallStatusBadge({ status }: { status: CallStatus }) {
   );
 }
 
-// ─── CONTACT CARD ─────────────────────────────────────────────────────────────
+// ─── LEAD TYPE BADGE ──────────────────────────────────────────────────────────
+function LeadTypeBadge({ type }: { type?: string | null }) {
+  if (!type) return null;
+  const t = type.toLowerCase();
+  let cls = "bg-slate-700 text-slate-200";
+  if (t.includes("pre cycle") || t.includes("pre-cycle")) cls = "bg-amber-600/80 text-amber-100";
+  else if (t.includes("live sub")) cls = "bg-emerald-600/80 text-emerald-100";
+  else if (t.includes("cancel") || t.includes("declined")) cls = "bg-rose-600/80 text-rose-100";
+  else if (t.includes("cycle 1")) cls = "bg-sky-600/80 text-sky-100";
+  else if (t.includes("cycle 2")) cls = "bg-indigo-600/80 text-indigo-100";
+  else if (t.includes("cycle 3")) cls = "bg-violet-600/80 text-violet-100";
+  else if (t.includes("warm")) cls = "bg-orange-500/80 text-orange-100";
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${cls}`}>
+      {type}
+    </span>
+  );
+}
+
+// ─── CONTACT CARD (active call) ───────────────────────────────────────────────
 function ContactCard({
   session,
   onNotesChange,
@@ -112,7 +131,6 @@ function ContactCard({
       {/* Header */}
       <div className="p-4 border-b border-slate-700/60 bg-slate-800/40">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
             {initials}
           </div>
@@ -129,7 +147,6 @@ function ContactCard({
           </div>
           <CallStatusBadge status={session.status} />
         </div>
-
         {/* Call meta */}
         <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
           <span className="flex items-center gap-1">
@@ -143,7 +160,6 @@ function ContactCard({
             </span>
           )}
         </div>
-
         {/* Tags */}
         {contact?.tags && contact.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
@@ -198,35 +214,127 @@ function ContactCard({
 
 // ─── CALL HISTORY ITEM ────────────────────────────────────────────────────────
 function CallHistoryItem({ session }: { session: CallSession }) {
-  const contact = session.contact;
+  const statusIcon = {
+    ended: <PhoneOff className="w-3 h-3 text-slate-500" />,
+    active: <PhoneCall className="w-3 h-3 text-emerald-400" />,
+    idle: <Phone className="w-3 h-3 text-slate-500" />,
+    ringing: <Phone className="w-3 h-3 text-amber-400" />,
+    dialing: <PhoneCall className="w-3 h-3 text-blue-400" />,
+  }[session.status];
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800/40 border border-slate-700/60">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-slate-300 text-xs font-bold flex-shrink-0">
-        {contact?.name ? contact.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) : "?"}
-      </div>
+    <div className="flex items-center gap-3 py-2 border-b border-slate-800/60 last:border-0">
+      {statusIcon}
       <div className="flex-1 min-w-0">
-        <p className="text-slate-300 text-sm font-medium truncate">{contact?.name ?? formatNumber(session.externalNumber)}</p>
-        <p className="text-slate-500 text-xs">{session.startedAt.toLocaleTimeString()}</p>
+        <p className="text-slate-300 text-xs truncate">
+          {session.contact?.name ?? formatNumber(session.externalNumber)}
+        </p>
+        <p className="text-slate-600 text-[10px]">
+          {session.startedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+        </p>
       </div>
-      {session.status === "ended" ? (
-        <PhoneOff className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-      ) : (
-        <PhoneMissed className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+      {session.notes && (
+        <FileText className="w-3 h-3 text-slate-600 flex-shrink-0" />
       )}
     </div>
   );
 }
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+// ─── QUICK CONTACTS PANEL ─────────────────────────────────────────────────────
+function QuickContactsPanel({ onDial }: { onDial: (phone: string, name: string) => void }) {
+  const [search, setSearch] = useState("");
+  const { data: contacts = [], isLoading } = trpc.contacts.list.useQuery(
+    { search: search || undefined, limit: 20 },
+    { enabled: true }
+  );
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+        <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <ContactRound className="w-4 h-4" />
+          <span>Quick Dial</span>
+        </div>
+        <Link href="/contacts">
+          <button className="text-[10px] text-teal-400 hover:text-teal-300 transition-colors">
+            Manage Contacts →
+          </button>
+        </Link>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 py-2 border-b border-slate-800">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search contacts…"
+            className="pl-7 h-8 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-600 text-xs"
+          />
+        </div>
+      </div>
+
+      {/* Contact list */}
+      <div className="flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-20 text-slate-500 text-xs">
+            <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading…
+          </div>
+        ) : contacts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-slate-600 text-xs gap-2">
+            <User className="w-6 h-6" />
+            {search ? "No contacts match" : "No contacts yet — import a CSV"}
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-800/60">
+            {contacts.map((c: any) => (
+              <div
+                key={c.id}
+                className="flex items-center gap-2 px-3 py-2.5 hover:bg-slate-800/40 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-semibold text-slate-300">
+                    {c.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white text-xs font-medium truncate">{c.name}</span>
+                    <LeadTypeBadge type={c.leadType} />
+                  </div>
+                  {c.phone && (
+                    <span className="text-slate-500 text-[10px] font-mono">{c.phone}</span>
+                  )}
+                </div>
+                {c.phone && (
+                  <button
+                    onClick={() => onDial(c.phone, c.name)}
+                    className="w-7 h-7 rounded-full bg-emerald-600/20 hover:bg-emerald-600/50 flex items-center justify-center text-emerald-400 transition-colors flex-shrink-0"
+                    title={`Call ${c.name}`}
+                  >
+                    <Phone className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN DIALLER ─────────────────────────────────────────────────────────────
 export default function Dialler() {
   const { isAuthenticated, loading } = useAuth();
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [currentSession, setCurrentSession] = useState<CallSession | null>(null);
   const [sessionHistory, setSessionHistory] = useState<CallSession[]>([]);
-  const [cardVisible, setCardVisible] = useState(true);
   const [elapsed, setElapsed] = useState("00:00");
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionRef = useRef<CallSession | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Keep ref in sync for use in event handler
   useEffect(() => {
@@ -246,7 +354,7 @@ export default function Dialler() {
     return () => { if (elapsedRef.current) clearInterval(elapsedRef.current); };
   }, [callStatus, currentSession]);
 
-  // CloudTalk postMessage listener — only accept messages from CloudTalk origins
+  // CloudTalk postMessage listener
   const CLOUDTALK_ORIGINS = [
     "https://phone.cloudtalk.io",
     "https://my.cloudtalk.io",
@@ -254,7 +362,6 @@ export default function Dialler() {
   ];
 
   const handleMessage = useCallback((e: MessageEvent) => {
-    // Security: ignore messages from untrusted origins
     if (!CLOUDTALK_ORIGINS.some(o => e.origin === o || e.origin.endsWith(".cloudtalk.io"))) {
       return;
     }
@@ -281,7 +388,6 @@ export default function Dialler() {
         };
         setCurrentSession(session);
         setCallStatus("ringing");
-        setCardVisible(true);
         break;
       }
       case "dialing": {
@@ -296,7 +402,6 @@ export default function Dialler() {
         };
         setCurrentSession(session);
         setCallStatus("dialing");
-        setCardVisible(true);
         break;
       }
       case "calling": {
@@ -307,7 +412,6 @@ export default function Dialler() {
         break;
       }
       case "contact_info": {
-        // Update contact info when it arrives (may come after ringing)
         if (properties.contact) {
           setCurrentSession(prev =>
             prev ? { ...prev, contact: properties.contact ?? prev.contact } : prev
@@ -324,7 +428,6 @@ export default function Dialler() {
           setSessionHistory(h => [ended, ...h].slice(0, 20));
           return ended;
         });
-        // Auto-clear after 8 seconds
         setTimeout(() => {
           setCallStatus("idle");
           setCurrentSession(null);
@@ -343,6 +446,21 @@ export default function Dialler() {
     setCurrentSession(prev => prev ? { ...prev, notes } : prev);
   };
 
+  // ─── CLICK-TO-CALL ──────────────────────────────────────────────────────────
+  const handleDial = useCallback((phone: string, name: string) => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) {
+      toast.error("Dialler not ready — please wait for CloudTalk to load.");
+      return;
+    }
+    // CloudTalk click-to-call postMessage API
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event: "dial", properties: { phone_number: phone } }),
+      "https://phone.cloudtalk.io"
+    );
+    toast.success(`Dialling ${name} (${phone})…`);
+  }, []);
+
   // ─── AUTH GATE ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -357,7 +475,7 @@ export default function Dialler() {
       <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
         <div className="text-center space-y-4">
           <Phone className="w-12 h-12 text-teal-400 mx-auto" />
-          <h2 className="text-white text-xl font-semibold">Lavie Dialler</h2>
+          <h2 className="text-white text-xl font-semibold">Lavié Dialler</h2>
           <p className="text-slate-400">Sign in to access the dialler</p>
           <Button asChild className="bg-teal-600 hover:bg-teal-700">
             <a href={getLoginUrl()}>Sign In</a>
@@ -369,37 +487,24 @@ export default function Dialler() {
 
   // ─── MAIN LAYOUT ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0A1628] flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-[#0F1923]">
-        <div className="flex items-center gap-3">
-          <a href="/" className="text-slate-500 hover:text-teal-400 transition-colors">
-            <ChevronLeft className="w-5 h-5" />
-          </a>
-          <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4 text-teal-400" />
-            <span className="text-white font-semibold text-sm">Lavie Dialler</span>
-          </div>
-        </div>
-        <CallStatusBadge status={callStatus} />
-      </div>
-
+    <div className="h-[calc(100vh-56px)] bg-[#0A1628] flex flex-col">
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
         {/* CloudTalk iframe */}
         <div className="flex-shrink-0 relative">
           <iframe
+            ref={iframeRef}
             src="https://phone.cloudtalk.io?partner=lavielabs"
             allow="microphone *; camera *; autoplay *"
-            style={{ width: "420px", height: "calc(100vh - 53px)", border: "none", display: "block" }}
+            style={{ width: "420px", height: "100%", border: "none", display: "block" }}
             title="CloudTalk Phone"
           />
         </div>
 
-        {/* Right panel — contact card + history */}
+        {/* Right panel */}
         <div className="flex-1 flex flex-col overflow-hidden border-l border-slate-800">
-          {/* Contact card toggle */}
-          {currentSession && (
+          {/* Active call — contact card */}
+          {currentSession ? (
             <div className="flex-1 p-4 overflow-y-auto">
               <ContactCard
                 session={currentSession}
@@ -407,26 +512,18 @@ export default function Dialler() {
                 elapsed={elapsed}
               />
             </div>
-          )}
-
-          {/* Idle state */}
-          {!currentSession && callStatus === "idle" && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-4">
-                <Phone className="w-7 h-7 text-teal-400" />
-              </div>
-              <h3 className="text-slate-300 font-semibold mb-2">Ready to dial</h3>
-              <p className="text-slate-500 text-sm max-w-xs">
-                Use the CloudTalk phone on the left to make or receive calls. The contact card will appear here automatically.
-              </p>
+          ) : (
+            /* Idle — quick contacts panel */
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <QuickContactsPanel onDial={handleDial} />
             </div>
           )}
 
-          {/* Call history */}
+          {/* Call history (always visible at bottom) */}
           {sessionHistory.length > 0 && (
-            <div className="border-t border-slate-800 p-4 max-h-64 overflow-y-auto">
+            <div className="border-t border-slate-800 p-4 max-h-52 overflow-y-auto flex-shrink-0">
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Recent Calls</p>
-              <div className="space-y-2">
+              <div className="space-y-0">
                 {sessionHistory.map((s) => (
                   <CallHistoryItem key={s.uuid} session={s} />
                 ))}

@@ -8,6 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import CallCoach from "./pages/CallCoach";
 import Dialler from "./pages/Dialler";
+import Customers from "./pages/Customers";
 
 function Router() {
   return (
@@ -16,6 +17,8 @@ function Router() {
         {/* Default landing → Dialler */}
         <Route path={"/"} component={Dialler} />
         <Route path={"/dialler"} component={Dialler} />
+        {/* Contacts CRM */}
+        <Route path={"/contacts"}>{() => <Customers />}</Route>
         {/* Training = the original Home content (scripts, objections, cheat sheet) */}
         <Route path={"/training"} component={Home} />
         {/* AI Coach = upload + my calls + manager view */}

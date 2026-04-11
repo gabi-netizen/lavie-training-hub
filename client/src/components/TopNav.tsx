@@ -9,12 +9,14 @@ import {
   Users,
   BookOpen,
   ChevronDown,
+  ContactRound,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const NAV_ITEMS = [
   { path: "/dialler", label: "Dialler", icon: Phone },
+  { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
   { path: "/team", label: "Team", icon: Users },

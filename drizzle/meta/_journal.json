@@ -57,6 +57,13 @@
       "when": 1775868158605,
       "tag": "0007_brief_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1775883417196,
+      "tag": "0008_gifted_newton_destine",
+      "breakpoints": true
     }
   ]
 }

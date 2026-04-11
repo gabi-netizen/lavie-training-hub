@@ -94,3 +94,68 @@ export const aiFeedback = mysqlTable("ai_feedback", {
 
 export type AiFeedback = typeof aiFeedback.$inferSelect;
 export type InsertAiFeedback = typeof aiFeedback.$inferInsert;
+
+/**
+ * Contacts (CRM) table — customer/lead cards imported from CSV or created manually.
+ */
+export const contacts = mysqlTable("contacts", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Full name */
+  name: varchar("name", { length: 256 }).notNull(),
+  /** Email address */
+  email: varchar("email", { length: 320 }),
+  /** Phone number (UK format) */
+  phone: varchar("phone", { length: 64 }),
+  /**
+   * Lead type — matches the Type of Lead column from the CSV:
+   * Pre Cycle, Pre-Cycle-Cancelled, Pre-Cycle-Decline,
+   * Cycle 1, Cycle 2, Cycle 3+, Cancel 2+ Cycle,
+   * Live Sub 3 Days, Live Sub 7 Days, Live Sub 14days+,
+   * Live Sub 2nd+, Live Sub Declined 2nd+,
+   * Owned Sub, Same day as charge cancel, Warm lead, Other
+   */
+  leadType: varchar("leadType", { length: 128 }),
+  /**
+   * Current status of this contact:
+   * new, open, working, assigned, done_deal, retained_sub, cancelled_sub, closed
+   */
+  status: mysqlEnum("status", [
+    "new", "open", "working", "assigned",
+    "done_deal", "retained_sub", "cancelled_sub", "closed"
+  ]).default("new").notNull(),
+  /** Agent name assigned to this contact */
+  agentName: varchar("agentName", { length: 256 }),
+  /** User ID of the assigned agent (if they have an account) */
+  assignedUserId: int("assignedUserId"),
+  /** Original notes from the CSV (reason for cancellation etc.) */
+  importedNotes: text("importedNotes"),
+  /** Source of the lead: e.g. UK Best Offers, Facebook, Website */
+  source: varchar("source", { length: 128 }),
+  /** Date the lead was created / imported */
+  leadDate: timestamp("leadDate"),
+  /** Next callback reminder datetime */
+  callbackAt: timestamp("callbackAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = typeof contacts.$inferInsert;
+
+/**
+ * Call notes table — one row per note added by a rep after/during a call.
+ */
+export const contactCallNotes = mysqlTable("contact_call_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  /** The rep who added this note */
+  userId: int("userId"),
+  agentName: varchar("agentName", { length: 256 }),
+  note: text("note").notNull(),
+  /** Status update made alongside this note */
+  statusAtTime: varchar("statusAtTime", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ContactCallNote = typeof contactCallNotes.$inferSelect;
+export type InsertContactCallNote = typeof contactCallNotes.$inferInsert;

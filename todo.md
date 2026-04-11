@@ -165,3 +165,19 @@
 - [x] Team tab = Team Dashboard (currently inside AI Coach)
 - [x] Leaderboard tab = Leaderboard (currently inside AI Coach)
 - [x] Mobile: top nav collapses to icon bar at bottom of screen
+
+## Customer Card CRM System
+- [x] Add `contacts` table to DB schema: id, name, email, phone, leadType, status, agentName, notes, robNotes, importedAt, updatedAt
+- [x] Add `callNotes` table: id, contactId, agentId, note, createdAt
+- [x] Run pnpm db:push to migrate
+- [x] Server: importContacts procedure (parse CSV, upsert by email/phone)
+- [x] Server: listContacts procedure (search, filter by leadType/status, pagination)
+- [x] Server: getContact procedure (single contact with call notes)
+- [x] Server: updateContact procedure (status, notes)
+- [x] Server: addCallNote procedure
+- [x] Build Contacts page: search bar + filter chips + contacts table
+- [x] Build Contact Card modal: name/phone/email, lead type badge, status dropdown, click-to-call button, notes history, add note form
+- [x] Add Contacts tab to TopNav
+- [x] CSV import UI: upload button + column mapping + preview before import
+- [x] Click-to-call from Contacts page and Dialler quick-dial panel
+- [x] Quick Dial panel in Dialler right panel (search contacts, dial instantly)
