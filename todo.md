@@ -192,3 +192,11 @@
 
 ## ContactCard Redesign
 - [x] Redesign ContactCard with white/light background, professional proportions, clean CRM layout
+
+## Email Integration (Postmark + ActiveCampaign)
+- [ ] Add POSTMARK_API_KEY secret
+- [ ] Build server/email.ts helper using Postmark API
+- [ ] Add email tRPC procedures: sendConfirmation, sendCallbackReminder, sendStatusUpdate
+- [ ] Add ACTIVECAMPAIGN_API_URL and ACTIVECAMPAIGN_API_KEY secrets
+- [ ] Build server/activecampaign.ts helper (add contact, trigger automation)
+- [ ] Wire email triggers to contact card: payment confirmation, callback reminder, status change

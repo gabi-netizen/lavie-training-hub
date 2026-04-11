@@ -159,6 +159,22 @@ export default function ContactCard() {
     },
   });
 
+  const syncToACMutation = trpc.contacts.syncToAC.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success("Synced to ActiveCampaign ✅");
+      else toast.error("Sync failed");
+    },
+    onError: () => toast.error("Sync failed"),
+  });
+
+  const sendTestEmailMutation = trpc.contacts.sendTestEmail.useMutation({
+    onSuccess: (data) => {
+      if (data.success) toast.success("Test email sent ✅");
+      else toast.error("Email failed to send");
+    },
+    onError: () => toast.error("Email failed to send"),
+  });
+
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("connected");
   const [statusOpen, setStatusOpen] = useState(false);
@@ -465,6 +481,22 @@ export default function ContactCard() {
               >
                 <Mail size={15} />
                 Send Email
+              </button>
+              <button
+                onClick={() => syncToACMutation.mutate({ id: contactId })}
+                disabled={syncToACMutation.isPending}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Tag size={15} />
+                {syncToACMutation.isPending ? "Syncing…" : "Sync to ActiveCampaign"}
+              </button>
+              <button
+                onClick={() => user?.email && sendTestEmailMutation.mutate({ to: user.email })}
+                disabled={sendTestEmailMutation.isPending || !user?.email}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <CheckCircle2 size={15} />
+                {sendTestEmailMutation.isPending ? "Sending…" : "Send Test Email"}
               </button>
             </div>
           </div>
