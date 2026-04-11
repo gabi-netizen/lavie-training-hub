@@ -122,3 +122,8 @@
 - [ ] Add motivational cubes section at the top of the Live Call Script tab (before the script sections)
 - [ ] Add a condensed info section in Live Call Script tab (key stats, mindset reminders, quick facts)
 - [x] Add hover tooltip on TalkRatioBadge in AI Coach showing the 3 zones explanation
+
+## Colour Zone Ordering (Green → Amber → Red)
+- [x] Fix TalkRatioBadge tooltip zone order: Green first, then Amber, then Red
+- [x] Fix TalkRatioLegend card zone order: Green first, then Amber, then Red
+- [x] Audit and fix any other colour zone lists in CallCoach.tsx and Home.tsx (Home.tsx had none)

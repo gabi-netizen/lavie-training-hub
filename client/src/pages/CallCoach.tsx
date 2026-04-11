@@ -124,20 +124,20 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
                 <span className="text-[10px] text-slate-400 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
               </span>
             </span>
-            {/* Red zone */}
-            <span className="flex items-start gap-2">
-              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.22 15)" }} />
-              <span className="flex flex-col">
-                <span className="text-[11px] font-bold" style={{ color: "oklch(0.7 0.22 15)" }}>Above 65% rep speaking</span>
-                <span className="text-[10px] text-slate-400 leading-snug">Too much — she feels talked at, not heard.</span>
-              </span>
-            </span>
             {/* Amber zone */}
             <span className="flex items-start gap-2">
               <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.65 0.18 60)" }} />
               <span className="flex flex-col">
                 <span className="text-[11px] font-bold" style={{ color: "oklch(0.8 0.18 60)" }}>Below 30% rep speaking</span>
                 <span className="text-[10px] text-slate-400 leading-snug">Too passive — you're not driving the close.</span>
+              </span>
+            </span>
+            {/* Red zone */}
+            <span className="flex items-start gap-2">
+              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.22 15)" }} />
+              <span className="flex flex-col">
+                <span className="text-[11px] font-bold" style={{ color: "oklch(0.7 0.22 15)" }}>Above 65% rep speaking</span>
+                <span className="text-[10px] text-slate-400 leading-snug">Too much — she feels talked at, not heard.</span>
               </span>
             </span>
             {/* Arrow pointer */}
@@ -1443,17 +1443,17 @@ export default function CallCoach() {
               </div>
             </div>
             <div className="px-4 py-3 flex items-start gap-3">
-              <span className="mt-0.5 w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-red-400">Above 65% rep speaking</p>
-                <p className="text-xs text-slate-400 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
-              </div>
-            </div>
-            <div className="px-4 py-3 flex items-start gap-3">
               <span className="mt-0.5 w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-amber-400">Below 30% rep speaking</p>
                 <p className="text-xs text-slate-400 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
+              </div>
+            </div>
+            <div className="px-4 py-3 flex items-start gap-3">
+              <span className="mt-0.5 w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-red-400">Above 65% rep speaking</p>
+                <p className="text-xs text-slate-400 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
               </div>
             </div>
           </div>
