@@ -117,3 +117,8 @@
 
 ## Prominent Talk Ratio + Deal Status in Report Header
 - [x] Add right-side panel in AnalysisReport header: large Talk Ratio circular gauge + Deal Status badge (Closed Deal / Follow-up / Not Closed)
+
+## Cubes in Live Call Script + TalkRatio Tooltip
+- [ ] Add motivational cubes section at the top of the Live Call Script tab (before the script sections)
+- [ ] Add a condensed info section in Live Call Script tab (key stats, mindset reminders, quick facts)
+- [x] Add hover tooltip on TalkRatioBadge in AI Coach showing the 3 zones explanation

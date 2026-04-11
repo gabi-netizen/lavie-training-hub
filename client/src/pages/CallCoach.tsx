@@ -76,8 +76,9 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
 
 // ─── TALK RATIO BADGE ─────────────────────────────────────────────────────────
 // repPct = % of total speech time spoken by the rep (dominant speaker)
-// Ideal range: 40–60%. >65% = rep talks too much. <30% = rep too passive.
+// Ideal range: 40–65%. >65% = rep talks too much. <30% = rep too passive.
 function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
+  const [showTooltip, setShowTooltip] = useState(false);
   if (repPct == null) return null;
   const rep = Math.round(repPct);
   const cust = 100 - rep;
@@ -88,8 +89,10 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
   else if (rep < 30) { color = "text-amber-400"; barColor = "bg-amber-500"; label = "Rep too passive"; }
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-xs border border-slate-600 rounded px-2 py-0.5 bg-slate-800/60"
-      title={`Rep spoke ${rep}% of the call, customer ${cust}%`}
+      className="relative inline-flex items-center gap-1.5 text-xs border border-slate-600 rounded px-2 py-0.5 bg-slate-800/60 cursor-pointer select-none"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onClick={(e) => { e.stopPropagation(); setShowTooltip(v => !v); }}
     >
       <span className="text-white font-medium">Talk:</span>
       {/* mini bar */}
@@ -101,6 +104,50 @@ function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
       </span>
       <span className={`font-semibold ${color}`}>{rep}%</span>
       <span className="text-white">rep</span>
+
+      {/* ── Tooltip popup with 3 zones ── */}
+      {showTooltip && (
+        <span
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none"
+          style={{ minWidth: "220px" }}
+        >
+          <span
+            className="flex flex-col gap-1.5 rounded-xl p-3 shadow-2xl"
+            style={{ background: "oklch(0.14 0.04 250)", border: "1px solid oklch(0.35 0.08 250 / 60%)" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Talk Ratio Guide</span>
+            {/* Green zone */}
+            <span className="flex items-start gap-2">
+              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.2 145)" }} />
+              <span className="flex flex-col">
+                <span className="text-[11px] font-bold" style={{ color: "oklch(0.75 0.2 145)" }}>40–65% rep speaking</span>
+                <span className="text-[10px] text-slate-400 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
+              </span>
+            </span>
+            {/* Red zone */}
+            <span className="flex items-start gap-2">
+              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.22 15)" }} />
+              <span className="flex flex-col">
+                <span className="text-[11px] font-bold" style={{ color: "oklch(0.7 0.22 15)" }}>Above 65% rep speaking</span>
+                <span className="text-[10px] text-slate-400 leading-snug">Too much — she feels talked at, not heard.</span>
+              </span>
+            </span>
+            {/* Amber zone */}
+            <span className="flex items-start gap-2">
+              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.65 0.18 60)" }} />
+              <span className="flex flex-col">
+                <span className="text-[11px] font-bold" style={{ color: "oklch(0.8 0.18 60)" }}>Below 30% rep speaking</span>
+                <span className="text-[10px] text-slate-400 leading-snug">Too passive — you're not driving the close.</span>
+              </span>
+            </span>
+            {/* Arrow pointer */}
+            <span
+              className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45"
+              style={{ background: "oklch(0.14 0.04 250)", borderRight: "1px solid oklch(0.35 0.08 250 / 60%)", borderBottom: "1px solid oklch(0.35 0.08 250 / 60%)" }}
+            />
+          </span>
+        </span>
+      )}
     </span>
   );
 }
