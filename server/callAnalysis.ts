@@ -170,6 +170,7 @@ export async function createCallAnalysisRecord(data: {
   fileName: string;
   callDate?: Date | null;
   closeStatus?: "closed" | "not_closed" | "follow_up" | null;
+  callType?: "opening" | "retention_cancel_trial" | "retention_win_back" | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -182,6 +183,7 @@ export async function createCallAnalysisRecord(data: {
     fileName: data.fileName,
     callDate: data.callDate ?? null,
     closeStatus: data.closeStatus ?? null,
+    callType: data.callType ?? "opening",
     status: "pending",
   });
 

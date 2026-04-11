@@ -61,6 +61,19 @@ interface CallAnalysisReport {
   magicWandUsed: boolean;
 }
 
+// ─── CALL TYPE BADGE ─────────────────────────────────────────────────────────
+function CallTypeBadge({ callType }: { callType?: string | null }) {
+  if (!callType) return null;
+  const map: Record<string, { label: string; cls: string }> = {
+    opening: { label: "📞 Opening", cls: "bg-blue-500/20 text-blue-300 border-blue-500/40" },
+    retention_cancel_trial: { label: "🔄 Cancel Trial", cls: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
+    retention_win_back: { label: "💎 Win Back", cls: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+  };
+  const info = map[callType];
+  if (!info) return null;
+  return <Badge className={`text-xs ${info.cls}`}>{info.label}</Badge>;
+}
+
 // ─── SCORE COLOUR ─────────────────────────────────────────────────────────────
 function scoreColor(score: number) {
   if (score >= 75) return "text-emerald-400";
@@ -394,6 +407,11 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
               {analysis.closeStatus && <span>{(analysis.repName || analysis.callDate) ? " · " : ""}{{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}</span>}
             </p>
           )}
+          {analysis.callType && (
+            <div className="mt-1">
+              <CallTypeBadge callType={analysis.callType} />
+            </div>
+          )}
           {analysis.lastEditedByName && (
             <p className="text-xs text-slate-500 mt-0.5 italic">
               Last edited by {analysis.lastEditedByName}{analysis.lastEditedAt ? ` · ${new Date(analysis.lastEditedAt).toLocaleString()}` : ""}
@@ -632,6 +650,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [repName, setRepName] = useState(user?.name ?? "");
   const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
+  const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
   const inputRef = useRef<HTMLInputElement>(null);
   const startAnalysis = trpc.callCoach.startAnalysis.useMutation();
 
@@ -659,6 +678,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         repName: repName || undefined,
         callDate: callDate || undefined,
         closeStatus: closeStatus || undefined,
+        callType,
       });
       onUploaded(analysisId);
     } catch (err) {
@@ -666,7 +686,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
     } finally {
       setUploading(false);
     }
-  }, [startAnalysis, onUploaded, repName, callDate, closeStatus]);
+  }, [startAnalysis, onUploaded, repName, callDate, closeStatus, callType]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -681,7 +701,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
       <Card className="bg-[#0F1923] border-slate-700">
         <CardContent className="p-4 space-y-3">
           <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Call Details</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-slate-400">Rep Name</label>
               <input
@@ -711,6 +731,18 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                 <option value="closed">✅ Closed</option>
                 <option value="not_closed">❌ Not Closed</option>
                 <option value="follow_up">🔄 Follow-up</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400">Call Type</label>
+              <select
+                value={callType}
+                onChange={e => setCallType(e.target.value as typeof callType)}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500"
+              >
+                <option value="opening">📞 Opening</option>
+                <option value="retention_cancel_trial">🔄 Cancel Trial</option>
+                <option value="retention_win_back">💎 Win Back</option>
               </select>
             </div>
           </div>
@@ -780,7 +812,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
 
   return (
     <div className="space-y-2">
-      {[...analyses].reverse().map((a) => (
+        {[...analyses].reverse().map((a) => (
         <div
           key={a.id}
           className="flex items-center gap-4 p-4 rounded-lg bg-[#0F1923] border border-slate-700 hover:border-slate-600 cursor-pointer transition-colors"
@@ -788,7 +820,10 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
         >
           {statusIcon(a.status)}
           <div className="flex-1 min-w-0">
-            <p className="text-slate-200 text-sm font-medium truncate">{a.fileName ?? "Recording"}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-slate-200 text-sm font-medium truncate">{a.fileName ?? "Recording"}</p>
+              <CallTypeBadge callType={a.callType} />
+            </div>
             <p className="text-slate-500 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
           </div>
           {a.overallScore != null && (
@@ -881,7 +916,10 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                    a.status === "error" ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> :
                    <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
+                      <CallTypeBadge callType={a.callType} />
+                    </div>
                     <p className="text-slate-500 text-xs">
                       {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
                       {new Date(a.createdAt).toLocaleString()}

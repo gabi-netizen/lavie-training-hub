@@ -50,6 +50,7 @@ export const callCoachRouter = router({
         repName: z.string().optional(),
         callDate: z.string().optional(), // ISO date string
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
+        callType: z.enum(["opening", "retention_cancel_trial", "retention_win_back"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -61,6 +62,7 @@ export const callCoachRouter = router({
         fileName: input.fileName,
         callDate: input.callDate ? new Date(input.callDate) : null,
         closeStatus: input.closeStatus ?? null,
+        callType: input.callType ?? "opening",
       });
 
       processCallAnalysis(analysisId, input.audioFileUrl).catch(err =>
