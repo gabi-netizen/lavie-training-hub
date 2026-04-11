@@ -154,3 +154,14 @@
 - [x] Build contact card popup that auto-opens with caller name, number, company when call starts
 - [x] Add note-taking field on contact card (saved per call)
 - [x] Add new "Dialler" route in App.tsx
+
+## Top Nav Redesign (CRM Layout)
+- [x] Build persistent TopNav component: Lavie Labs logo + nav tabs + user avatar/logout
+- [x] Nav tabs: Dialler | Training | AI Coach | Team | Leaderboard
+- [x] Wrap all pages in AppLayout that renders TopNav at the top
+- [x] Move Dialler to default landing page (/) for logged-in users
+- [x] Training tab = current Home.tsx content (script, objections, cheat sheet etc.)
+- [x] AI Coach tab = current CallCoach.tsx (upload + my calls + manager view)
+- [x] Team tab = Team Dashboard (currently inside AI Coach)
+- [x] Leaderboard tab = Leaderboard (currently inside AI Coach)
+- [x] Mobile: top nav collapses to icon bar at bottom of screen

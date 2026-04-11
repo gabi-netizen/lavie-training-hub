@@ -1659,10 +1659,21 @@ function TeamDashboard() {
 }
 
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
+const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "manager", "feedback"] as const;
+type TabId = typeof VALID_TABS[number];
+
 export default function CallCoach() {
   const { user, loading, isAuthenticated } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"upload" | "my-calls" | "leaderboard" | "team" | "manager" | "feedback">("upload");
+
+  // Read initial tab from URL query param (?tab=team etc.)
+  const initialTab = (): TabId => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab") as TabId | null;
+    return t && VALID_TABS.includes(t) ? t : "upload";
+  };
+
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const utils = trpc.useUtils();
 
   if (loading) {

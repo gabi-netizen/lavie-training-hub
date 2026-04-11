@@ -3,37 +3,41 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AppLayout from "./components/AppLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import CallCoach from "./pages/CallCoach";
 import Dialler from "./pages/Dialler";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/ai-coach"} component={CallCoach} />
-      <Route path={"/dialler"} component={Dialler} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <AppLayout>
+      <Switch>
+        {/* Default landing → Dialler */}
+        <Route path={"/"} component={Dialler} />
+        <Route path={"/dialler"} component={Dialler} />
+        {/* Training = the original Home content (scripts, objections, cheat sheet) */}
+        <Route path={"/training"} component={Home} />
+        {/* AI Coach = upload + my calls + manager view */}
+        <Route path={"/ai-coach"} component={CallCoach} />
+        {/* Team and Leaderboard deep-link into CallCoach with the right tab */}
+        <Route path={"/team"}>
+          {() => { window.history.replaceState(null, "", "/ai-coach?tab=team"); return <CallCoach />; }}
+        </Route>
+        <Route path={"/leaderboard"}>
+          {() => { window.history.replaceState(null, "", "/ai-coach?tab=leaderboard"); return <CallCoach />; }}
+        </Route>
+        <Route path={"/404"} component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+    </AppLayout>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="dark"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />

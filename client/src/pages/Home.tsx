@@ -857,20 +857,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "oklch(0.13 0.025 250)" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3 border-b border-white/8" style={{ background: "oklch(0.16 0.025 250)" }}>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.3 0.12 250)" }}>
-          <BookOpen className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h1 className="text-sm font-bold text-white leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Lavié Labs
-          </h1>
-          <p className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-            Training Hub
-          </p>
-        </div>
-      </header>
 
       {/* Tabs — hidden on home screen */}
       {activeTab !== "home" && (
