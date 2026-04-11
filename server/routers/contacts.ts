@@ -24,7 +24,7 @@ import {
   getLists,
   getAutomations,
 } from "../activecampaign";
-import { clickToCall, getCloudTalkAgents } from "../cloudtalk";
+import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording } from "../cloudtalk";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
@@ -340,4 +340,36 @@ export const contactsRouter = router({
     const [user] = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
     return user ?? ctx.user;
   }),
+
+  // ─── CloudTalk: Get call history (optionally filtered by phone) ───────────
+  callHistory: adminProcedure
+    .input(
+      z.object({
+        phone: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        limit: z.number().min(1).max(100).default(20),
+        page: z.number().min(1).default(1),
+        status: z.enum(["answered", "missed"]).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return getCallHistory({
+        phone: input.phone,
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        limit: input.limit,
+        page: input.page,
+        status: input.status,
+      });
+    }),
+
+  // ─── CloudTalk: Stream a call recording (proxied to avoid CORS) ──────────
+  streamRecording: adminProcedure
+    .input(z.object({ callId: z.number() }))
+    .mutation(async ({ input }) => {
+      const buffer = await fetchRecording(input.callId);
+      if (!buffer) return { success: false, data: null, mimeType: null };
+      return { success: true, data: buffer.toString("base64"), mimeType: "audio/wav" };
+    }),
 });
