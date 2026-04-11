@@ -1,4 +1,5 @@
 import TopNav from "./TopNav";
+import FloatingDialler from "./FloatingDialler";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <main className="flex-1 md:pb-0 pb-16">
         {children}
       </main>
+      {/* Persistent floating CloudTalk widget (admin only) */}
+      <FloatingDialler />
     </div>
   );
 }

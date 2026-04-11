@@ -246,18 +246,15 @@ export default function ContactCard() {
   };
 
   const handleCallNow = () => {
-    const iframe = document.querySelector<HTMLIFrameElement>("iframe[src*='cloudtalk']");
-    if (iframe?.contentWindow && contact.phone) {
-      iframe.contentWindow.postMessage(
-        { event: "dial", properties: { phone_number: contact.phone } },
-        "*"
-      );
-      toast.success(`Dialling ${contact.phone}…`);
-    } else if (contact.phone) {
-      window.open(`tel:${contact.phone}`);
-    } else {
+    if (!contact.phone) {
       toast.error("No phone number on file");
+      return;
     }
+    // Dispatch to FloatingDialler (works from any page)
+    window.dispatchEvent(
+      new CustomEvent("cloudtalk:dial", { detail: { phone: contact.phone } })
+    );
+    toast.success(`Dialling ${contact.phone}…`);
   };
 
   return (

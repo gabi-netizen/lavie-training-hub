@@ -222,3 +222,8 @@
 - [x] Redesign Dialler page to light theme
 - [x] Redesign CallCoach (AI Coach) page to light theme
 - [x] Verify Contacts and ContactCard pages (already light, fix any remaining dark elements)
+
+## Floating CloudTalk Widget
+- [x] Create FloatingDialler component (minimized by default, expand/collapse toggle, persists on all pages)
+- [x] Add FloatingDialler to AppLayout
+- [x] Update ContactCard "Call Now" to postMessage to the floating iframe
