@@ -1,1 +1,0 @@
-ALTER TABLE `call_analyses` ADD `callType` enum('opening','retention_cancel_trial','retention_win_back') DEFAULT 'opening' NOT NULL;

@@ -56,10 +56,10 @@ export const callAnalyses = mysqlTable("call_analyses", {
   analysisJson: text("analysisJson"),
   /** Error message if status=error */
   errorMessage: text("errorMessage"),
-  /** Type of call: opening (new sale), retention_cancel_trial, retention_win_back */
-  callType: mysqlEnum("callType", ["opening", "retention_cancel_trial", "retention_win_back"]).default("opening").notNull(),
   /** Customer name extracted from the call transcript by AI, or manually set */
   customerName: varchar("customerName", { length: 256 }),
+  /** Call type: opening (new sale), retention_cancel_trial (cancel trial), retention_win_back (win back) */
+  callType: mysqlEnum("callType", ["opening", "retention_cancel_trial", "retention_win_back"]).default("opening"),
   /** User ID of the person who last edited the call details (repName/callDate/closeStatus) */
   lastEditedByUserId: int("lastEditedByUserId"),
   /** Display name of the person who last edited the call details */

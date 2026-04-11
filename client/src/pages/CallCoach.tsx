@@ -200,6 +200,7 @@ function EditDetailsModal({
   initialCallDate,
   initialCloseStatus,
   initialCustomerName,
+  initialCallType,
   open,
   onClose,
   onSaved,
@@ -209,6 +210,7 @@ function EditDetailsModal({
   initialCallDate?: Date | null;
   initialCloseStatus?: string | null;
   initialCustomerName?: string | null;
+  initialCallType?: string | null;
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -222,6 +224,9 @@ function EditDetailsModal({
     (initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed"
   );
   const [customerName, setCustomerName] = useState(initialCustomerName ?? "");
+  const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">(
+    (initialCallType as "opening" | "retention_cancel_trial" | "retention_win_back") ?? "opening"
+  );
   const [saved, setSaved] = useState(false);
 
   // Sync form state whenever the modal opens (handles reopening with fresh data)
@@ -231,9 +236,10 @@ function EditDetailsModal({
       setCallDate(initialCallDate ? new Date(initialCallDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]);
       setCloseStatus((initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed");
       setCustomerName(initialCustomerName ?? "");
+      setCallType((initialCallType as "opening" | "retention_cancel_trial" | "retention_win_back") ?? "opening");
       setSaved(false);
     }
-  }, [open, initialRepName, initialCallDate, initialCloseStatus, initialCustomerName]);
+  }, [open, initialRepName, initialCallDate, initialCloseStatus, initialCustomerName, initialCallType]);
   const utils = trpc.useUtils();
   const updateDetails = trpc.callCoach.updateCallDetails.useMutation({
     onSuccess: async () => {
@@ -291,6 +297,18 @@ function EditDetailsModal({
                 />
               </div>
               <div>
+                <label className="text-slate-300 text-sm mb-1.5 block">Call Type</label>
+                <select
+                  value={callType}
+                  onChange={e => setCallType(e.target.value as typeof callType)}
+                  className="w-full bg-[#1a2535] border border-slate-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                >
+                  <option value="opening">📞 Opening</option>
+                  <option value="retention_cancel_trial">🔄 Cancel Trial</option>
+                  <option value="retention_win_back">💎 Win Back</option>
+                </select>
+              </div>
+              <div>
                 <label className="text-slate-300 text-sm mb-1.5 block">Close Status</label>
                 <select
                   value={closeStatus}
@@ -306,7 +324,7 @@ function EditDetailsModal({
             <DialogFooter>
               <Button variant="ghost" onClick={handleClose} className="text-slate-400">Cancel</Button>
               <Button
-                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined })}
+                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined, callType })}
                 disabled={updateDetails.isPending}
                 className="bg-teal-600 hover:bg-teal-500 text-white"
               >
@@ -375,11 +393,6 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
               {analysis.callDate && <span>{analysis.repName ? " · " : ""}{new Date(analysis.callDate).toLocaleDateString()}</span>}
               {analysis.closeStatus && <span>{(analysis.repName || analysis.callDate) ? " · " : ""}{{ closed: "✅ Closed", not_closed: "❌ Not Closed", follow_up: "🔄 Follow-up" }[analysis.closeStatus] ?? ""}</span>}
             </p>
-          )}
-          {analysis.callType && CALL_TYPE_LABELS[analysis.callType] && (
-            <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded border mt-1 ${CALL_TYPE_LABELS[analysis.callType].color}`}>
-              {CALL_TYPE_LABELS[analysis.callType].label}
-            </span>
           )}
           {analysis.lastEditedByName && (
             <p className="text-xs text-slate-500 mt-0.5 italic">
@@ -598,6 +611,7 @@ function AnalysisReport({ analysisId, onBack }: { analysisId: number; onBack: ()
           initialCallDate={analysis.callDate}
           initialCloseStatus={analysis.closeStatus}
           initialCustomerName={analysis.customerName}
+          initialCallType={analysis.callType}
           open={showEditModal}
           onClose={() => setShowEditModal(false)}
           onSaved={() => setShowEditModal(false)}
@@ -618,7 +632,6 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [repName, setRepName] = useState(user?.name ?? "");
   const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
-  const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
   const inputRef = useRef<HTMLInputElement>(null);
   const startAnalysis = trpc.callCoach.startAnalysis.useMutation();
 
@@ -646,7 +659,6 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         repName: repName || undefined,
         callDate: callDate || undefined,
         closeStatus: closeStatus || undefined,
-        callType,
       });
       onUploaded(analysisId);
     } catch (err) {
@@ -654,7 +666,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
     } finally {
       setUploading(false);
     }
-  }, [startAnalysis, onUploaded, repName, callDate, closeStatus, callType]);
+  }, [startAnalysis, onUploaded, repName, callDate, closeStatus]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -669,31 +681,6 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
       <Card className="bg-[#0F1923] border-slate-700">
         <CardContent className="p-4 space-y-3">
           <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Call Details</p>
-          {/* Call Type selector — full width, prominent */}
-          <div className="space-y-1">
-            <label className="text-xs text-slate-400">Call Type</label>
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { value: "opening", label: "📞 Opening", desc: "New sale" },
-                { value: "retention_cancel_trial", label: "🔄 Cancel Trial", desc: "Save the trial" },
-                { value: "retention_win_back", label: "💎 Win Back", desc: "Re-engage" },
-              ] as const).map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setCallType(opt.value)}
-                  className={`p-2.5 rounded-lg border text-left transition-all ${
-                    callType === opt.value
-                      ? "border-teal-500 bg-teal-500/15 text-teal-300"
-                      : "border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500"
-                  }`}
-                >
-                  <div className="text-sm font-medium">{opt.label}</div>
-                  <div className="text-xs opacity-70 mt-0.5">{opt.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-slate-400">Rep Name</label>
@@ -817,14 +804,7 @@ function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
 }
 
 // ─── MANAGER DASHBOARD ────────────────────────────────────────────────────────
-const CALL_TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  opening: { label: "📞 Opening", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
-  retention_cancel_trial: { label: "🔄 Cancel Trial", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
-  retention_win_back: { label: "💎 Win Back", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
-};
-
 function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
-  const [filterType, setFilterType] = useState<"all" | "opening" | "retention_cancel_trial" | "retention_win_back">("all");
   const { data: analyses, isLoading } = trpc.callCoach.getAllAnalyses.useQuery(undefined, {
     refetchInterval: 10000,
   });
@@ -837,13 +817,12 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
     </div>
   );
 
-  const filtered = filterType === "all" ? analyses : analyses.filter(a => a.callType === filterType);
-  const done = filtered.filter(a => a.status === "done");
+  const done = analyses.filter(a => a.status === "done");
   const avgScore = done.length ? Math.round(done.reduce((s, a) => s + (a.overallScore ?? 0), 0) / done.length) : 0;
 
   // Group by rep
   const byRep: Record<string, typeof analyses> = {};
-  for (const a of filtered) {
+  for (const a of analyses) {
     const name = a.repName ?? "Unknown";
     if (!byRep[name]) byRep[name] = [];
     byRep[name].push(a);
@@ -851,27 +830,6 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
 
   return (
     <div className="space-y-6">
-      {/* Call type filter */}
-      <div className="flex gap-2 flex-wrap">
-        {([
-          { value: "all", label: "All Calls" },
-          { value: "opening", label: "📞 Opening" },
-          { value: "retention_cancel_trial", label: "🔄 Cancel Trial" },
-          { value: "retention_win_back", label: "💎 Win Back" },
-        ] as const).map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => setFilterType(opt.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
-              filterType === opt.value
-                ? "bg-teal-600 text-white border-teal-500"
-                : "bg-slate-800 text-slate-400 border-slate-600 hover:border-slate-500"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
       {/* Team stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="bg-[#0F1923] border-slate-700">
@@ -923,14 +881,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                    a.status === "error" ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" /> :
                    <Loader2 className="w-4 h-4 animate-spin text-teal-400 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
-                      {a.callType && CALL_TYPE_LABELS[a.callType] && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded border flex-shrink-0 ${CALL_TYPE_LABELS[a.callType].color}`}>
-                          {CALL_TYPE_LABELS[a.callType].label}
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-slate-300 text-sm truncate">{a.fileName ?? "Recording"}</p>
                     <p className="text-slate-500 text-xs">
                       {a.customerName && <span className="text-teal-400/80">👤 {a.customerName} · </span>}
                       {new Date(a.createdAt).toLocaleString()}
@@ -951,8 +902,7 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
 
 /// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 function Leaderboard() {
-  const [leaderboardTab, setLeaderboardTab] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
-  const { data: entries, isLoading } = trpc.callCoach.getLeaderboard.useQuery({ callType: leaderboardTab }, {
+  const { data: entries, isLoading } = trpc.callCoach.getLeaderboard.useQuery(undefined, {
     refetchInterval: 30000,
   });
 
@@ -984,26 +934,6 @@ function Leaderboard() {
 
   return (
     <div className="space-y-4">
-      {/* Call type tab switcher */}
-      <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl border border-slate-700">
-        {([
-          { value: "opening", label: "📞 Opening" },
-          { value: "retention_cancel_trial", label: "🔄 Cancel Trial" },
-          { value: "retention_win_back", label: "💎 Win Back" },
-        ] as const).map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => setLeaderboardTab(tab.value)}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-              leaderboardTab === tab.value
-                ? "bg-teal-600 text-white"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
       {/* Disclaimer */}
       <div className="text-xs text-slate-500 italic text-center">
         Rankings are based on AI scores only. Minimum 5 analysed calls required for a reliable ranking.
@@ -1243,8 +1173,7 @@ export default function CallCoach() {
             { id: "upload", label: "Upload Call" },
             { id: "my-calls", label: "My Calls" },
             { id: "leaderboard", label: "\uD83C\uDFC6 Leaderboard" },
-            { id: "manager", label: "Manager View" },
-            ...(isAdmin ? [{ id: "feedback", label: "🚩 AI Feedback" }] : []),
+            ...(isAdmin ? [{ id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1271,7 +1200,7 @@ export default function CallCoach() {
         )}
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} />}
         {activeTab === "leaderboard" && <Leaderboard />}
-        {activeTab === "manager" && <ManagerDashboard onSelect={setSelectedId} />}
+        {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}
       </div>
     </div>

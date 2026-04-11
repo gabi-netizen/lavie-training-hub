@@ -78,23 +78,5 @@
 ## Flag Button Visibility
 - [x] Make "Flag Incorrect Analysis" button always visible (remove hover-only visibility), keep blue/white colors
 
-## Call Type Feature (Opening vs Retention)
-- [x] Add callType enum column to call_analyses schema (opening, retention_cancel_trial, retention_win_back)
-- [x] Run pnpm db:push to migrate schema
-- [x] Write separate AI analysis prompts for each call type (Opening, Cancel Trial, Win Back)
-- [x] Update processCallAnalysis to select prompt based on callType
-- [x] Update upload endpoint to accept callType parameter
-- [x] Update startAnalysis tRPC procedure to accept and store callType
-- [x] Add call type selector to upload form UI
-- [x] Display call type badge in analysis report header
-- [x] Add call type filter to manager dashboard
-- [x] Separate leaderboard by call type (Opening tab / Retention tab)
-
-## Manager View Access
-- [x] Allow all authenticated users to see Manager View tab (remove admin-only restriction)
-- [x] Update getAllAnalyses tRPC procedure from adminProcedure to protectedProcedure
-
-## Call Back Handling Section
-- [x] Create Call Back Handling section in Home.tsx with 4 steps and key rules
-- [x] Add callbackhandling to activeTab type and top navigation tabs
-- [x] Add Call Back Handling card to Home.tsx between Live Call Script and Rapport
+## Edit Details - Call Type Field
+- [x] Add Call Type dropdown to Edit Details modal (Opening / Cancel Trial / Win Back)

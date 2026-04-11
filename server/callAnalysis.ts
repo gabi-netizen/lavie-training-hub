@@ -7,16 +7,11 @@ import { eq } from "drizzle-orm";
 const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY ?? "" });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export type CallType = "opening" | "retention_cancel_trial" | "retention_win_back";
-
-// ─── PROMPT CONTEXTS PER CALL TYPE ────────────────────────────────────────────
-
-const OPENING_CONTEXT = `
+// ─── LAVIE LABS SCRIPT CONTEXT ────────────────────────────────────────────────
+const LAVIE_SCRIPT_CONTEXT = `
 You are an expert sales coach for Lavie Labs, a UK skincare company.
 
-This is an OPENING call — a cold outbound call to a new prospect. The rep's goal is to close a 21-day free trial for £4.95 postage.
-
-The correct sales flow has these key stages:
+The sales script has these key stages:
 1. OPENING: Warm greeting, introduce yourself from Lavie Labs, ask how they are
 2. MAGIC WAND QUESTION: "If you could wave a magic wand and change one thing about your skin, what would it be?"
 3. QUALIFY: How long have they had this concern? What have they tried before?
@@ -34,50 +29,6 @@ Golden rules:
 - Never get defensive about the subscription
 - After the close — stop talking (silence is part of the close)
 - Always tie back to the customer's Magic Wand answer
-`;
-
-const RETENTION_CANCEL_TRIAL_CONTEXT = `
-You are an expert retention coach for Lavie Labs, a UK skincare company.
-
-This is a RETENTION — CANCEL TRIAL call. The customer is on a 21-day free trial and wants to cancel before being charged. The rep's goal is to:
-1. PREVENT the cancellation — keep the customer on the trial
-2. If they insist on cancelling — UPSELL to an annual plan (full or split payment) as an alternative
-
-The correct retention flow for a trial cancellation:
-1. EMPATHY OPENING: Acknowledge their concern warmly, don't be defensive
-2. DISCOVER THE REASON: Find out WHY they want to cancel (not seeing results yet? worried about subscription? financial concern?)
-3. ADDRESS THE CONCERN: Directly handle the specific objection
-   - Not seeing results: "The first 3 weeks are about deep hydration — visible results typically appear in weeks 2-3"
-   - Worried about subscription: "You're in complete control, one click to cancel anytime"
-   - Financial: Offer the annual plan as a better value alternative
-4. SAVE THE TRIAL: Try to keep them on the free trial — remind them it's still free
-5. UPSELL TO ANNUAL: If they're wavering, offer annual plan (better value, locks in discount)
-6. CLOSE: Either save the trial or close the annual plan
-
-Golden rules:
-- Never cancel without trying to save first
-- The annual plan is the backup close — always offer it before giving up
-- Empathy first, solution second
-`;
-
-const RETENTION_WIN_BACK_CONTEXT = `
-You are an expert retention coach for Lavie Labs, a UK skincare company.
-
-This is a RETENTION — WIN BACK call. The customer previously cancelled their subscription (approximately 1 month ago) and the rep is calling to win them back. The goal is to re-engage the customer and close them on an annual plan.
-
-The correct win-back flow:
-1. WARM RE-ENGAGEMENT: Friendly reconnect — "Hi [Name], it's [Rep] from Lavie Labs, I was thinking about you..."
-2. CHECK IN: Ask how their skin has been since they stopped using the cream — plant the seed of missing results
-3. REFRAME THE VALUE: Remind them of the results they were getting, what they're missing now
-4. INTRODUCE THE ANNUAL OFFER: Present the annual plan as a special returning-customer offer (better value, locked-in price)
-5. HANDLE OBJECTIONS: Address why they originally cancelled and what's changed
-6. CLOSE: Close on annual plan (full payment or split payment option)
-
-Golden rules:
-- Don't make them feel guilty for leaving — make them feel valued for coming back
-- The annual plan is the primary offer — not the monthly subscription
-- Reference their original skin concern and tie the value back to it
-- Split payment option is available if full annual is too much upfront
 `;
 
 // ─── TRANSCRIBE WITH DEEPGRAM ─────────────────────────────────────────────────
@@ -150,53 +101,12 @@ export interface CallAnalysisReport {
   customerName: string | null; // extracted from transcript, null if not found
 }
 
-function buildPrompt(
-  callType: CallType,
+export async function analyseCallWithAI(
   transcript: string,
   repSpeechPct: number,
   durationMinutes: number
-): string {
-  const context =
-    callType === "opening"
-      ? OPENING_CONTEXT
-      : callType === "retention_cancel_trial"
-      ? RETENTION_CANCEL_TRIAL_CONTEXT
-      : RETENTION_WIN_BACK_CONTEXT;
-
-  const stagesForType =
-    callType === "opening"
-      ? `[
-    { "stage": "Opening", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Magic Wand Question", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Qualify", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Product Pitch", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Social Proof", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Offer & Close", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }
-  ]`
-      : callType === "retention_cancel_trial"
-      ? `[
-    { "stage": "Empathy Opening", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Discover Cancellation Reason", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Address the Concern", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Save the Trial", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Upsell to Annual Plan", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Close", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }
-  ]`
-      : `[
-    { "stage": "Warm Re-engagement", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Check In on Skin", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Reframe the Value", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Introduce Annual Offer", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Handle Objections", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Close", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }
-  ]`;
-
-  const magicWandNote =
-    callType === "opening"
-      ? `"magicWandUsed": <bool — did the rep ask the Magic Wand Question?>,`
-      : `"magicWandUsed": false,`;
-
-  return `${context}
+): Promise<CallAnalysisReport> {
+  const prompt = `${LAVIE_SCRIPT_CONTEXT}
 
 ---
 
@@ -211,11 +121,18 @@ CALL STATS:
 
 ---
 
-Analyse this call and return a JSON object with this exact structure:
+Analyse this sales call and return a JSON object with this exact structure:
 {
   "overallScore": <number 0-100>,
   "summary": "<2-3 sentence summary of the call>",
-  "stagesDetected": ${stagesForType},
+  "stagesDetected": [
+    { "stage": "Opening", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
+    { "stage": "Magic Wand Question", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
+    { "stage": "Qualify", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
+    { "stage": "Product Pitch", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
+    { "stage": "Social Proof", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
+    { "stage": "Offer & Close", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }
+  ],
   "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
   "improvements": ["<improvement 1>", "<improvement 2>", "<improvement 3>"],
   "topRecommendations": ["<rec 1>", "<rec 2>", "<rec 3>"],
@@ -225,22 +142,13 @@ Analyse this call and return a JSON object with this exact structure:
   "scriptComplianceScore": <number 0-100>,
   "toneScore": <number 0-100>,
   "closingAttempted": <bool>,
-  ${magicWandNote}
+  "magicWandUsed": <bool>,
   "customerName": "<first name of the customer if mentioned in the call, otherwise null>"
 }
 
-IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name]..."). Return just the first name as a string, or null if not found.
+IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
 
-Be specific, actionable, and encouraging. Score based on the correct flow for this call type.`;
-}
-
-export async function analyseCallWithAI(
-  transcript: string,
-  repSpeechPct: number,
-  durationMinutes: number,
-  callType: CallType = "opening"
-): Promise<CallAnalysisReport> {
-  const prompt = buildPrompt(callType, transcript, repSpeechPct, durationMinutes);
+Be specific, actionable, and encouraging. Focus on Lavie Labs script compliance.`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -262,7 +170,6 @@ export async function createCallAnalysisRecord(data: {
   fileName: string;
   callDate?: Date | null;
   closeStatus?: "closed" | "not_closed" | "follow_up" | null;
-  callType?: CallType;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -275,7 +182,6 @@ export async function createCallAnalysisRecord(data: {
     fileName: data.fileName,
     callDate: data.callDate ?? null,
     closeStatus: data.closeStatus ?? null,
-    callType: data.callType ?? "opening",
     status: "pending",
   });
 
@@ -334,25 +240,18 @@ export interface LeaderboardEntry {
   isReliable: boolean; // true if 5+ calls
 }
 
-export async function getLeaderboard(callType?: CallType): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const query = db.select().from(callAnalyses)
+  const all = await db.select().from(callAnalyses)
     .where(eq(callAnalyses.status, "done"))
     .orderBy(callAnalyses.createdAt);
-
-  const all = await query;
-
-  // Filter by callType if specified
-  const filtered = callType
-    ? all.filter(r => r.callType === callType)
-    : all;
 
   // Group by userId
   type CallRow = (typeof all)[number];
   const byUser = new Map<number, CallRow[]>();
-  for (const row of filtered) {
+  for (const row of all) {
     if (!byUser.has(row.userId)) byUser.set(row.userId, []);
     byUser.get(row.userId)!.push(row);
   }
@@ -408,7 +307,7 @@ export async function getLeaderboard(callType?: CallType): Promise<LeaderboardEn
 }
 
 // ─── FULL PIPELINE ────────────────────────────────────────────────────────────
-export async function processCallAnalysis(analysisId: number, audioUrl: string, callType: CallType = "opening") {
+export async function processCallAnalysis(analysisId: number, audioUrl: string) {
   try {
     // Step 1: Transcribe
     await updateCallAnalysisStatus(analysisId, { status: "transcribing" });
@@ -420,9 +319,9 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
       durationSeconds,
     });
 
-    // Step 2: Analyse using the correct prompt for this call type
+    // Step 2: Analyse
     await updateCallAnalysisStatus(analysisId, { status: "analyzing" });
-    const report = await analyseCallWithAI(transcript, repSpeechPct, durationSeconds / 60, callType);
+    const report = await analyseCallWithAI(transcript, repSpeechPct, durationSeconds / 60);
 
     // Step 3: Save results (including AI-extracted customer name)
     const savePayload: Parameters<typeof updateCallAnalysisStatus>[1] = {
@@ -497,7 +396,7 @@ export interface UpdateCallDetailsInput {
   callDate?: Date;
   closeStatus?: "closed" | "not_closed" | "follow_up";
   customerName?: string;
-  callType?: CallType;
+  callType?: "opening" | "retention_cancel_trial" | "retention_win_back";
   lastEditedByUserId?: number;
   lastEditedByName?: string;
 }

@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "5c61f6cb-9e6e-4e34-8e77-dbe699c63db9",
+  "id": "fd77e0a7-6f4b-4b3a-86f7-d016c3cbdd68",
   "prevId": "ff15bce2-973b-483b-aba0-9d560ce04d70",
   "tables": {
     "ai_feedback": {
@@ -180,20 +180,20 @@
           "notNull": false,
           "autoincrement": false
         },
-        "callType": {
-          "name": "callType",
-          "type": "enum('opening','retention_cancel_trial','retention_win_back')",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'opening'"
-        },
         "customerName": {
           "name": "customerName",
           "type": "varchar(256)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "callType": {
+          "name": "callType",
+          "type": "enum('opening','retention_cancel_trial','retention_win_back')",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'opening'"
         },
         "lastEditedByUserId": {
           "name": "lastEditedByUserId",
