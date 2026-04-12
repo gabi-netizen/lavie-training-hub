@@ -144,6 +144,10 @@ export default function ContactCard() {
 
   const contactId = parseInt(id ?? "0", 10);
 
+  // CloudTalk call history state
+  const [showCloudTalkHistory, setShowCloudTalkHistory] = useState(false);
+  const [audioData, setAudioData] = useState<Record<number, string>>({}); // callId -> base64
+
   const { data: contact, refetch, isLoading, isError } = trpc.contacts.get.useQuery(
     { id: contactId },
     { enabled: !!contactId }
@@ -186,6 +190,22 @@ export default function ContactCard() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+
+  const { data: cloudTalkHistory, isLoading: historyLoading } = trpc.contacts.callHistory.useQuery(
+    { phone: contact?.phone ?? "", limit: 20 },
+    { enabled: showCloudTalkHistory && !!contact?.phone }
+  );
+
+  const streamRecordingMutation = trpc.contacts.streamRecording.useMutation({
+    onSuccess: (data, variables) => {
+      if (data.success && data.data) {
+        setAudioData((prev) => ({ ...prev, [variables.callId]: data.data! }));
+      } else {
+        toast.error("Recording not available");
+      }
+    },
+    onError: () => toast.error("Failed to load recording"),
+  });
 
   const clickToCallMutation = trpc.contacts.clickToCall.useMutation({
     onSuccess: (data) => {
@@ -516,6 +536,107 @@ export default function ContactCard() {
                   </div>
                 );
               })
+            )}
+          </div>
+
+          {/* ── CloudTalk Call History Panel ── */}
+          <div className="border-t border-gray-200">
+            <button
+              onClick={() => setShowCloudTalkHistory((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide hover:bg-gray-50 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <PhoneCall size={13} className="text-indigo-500" />
+                CloudTalk History
+                {cloudTalkHistory && (
+                  <span className="ml-1 text-gray-500">({cloudTalkHistory.totalCount} total)</span>
+                )}
+              </span>
+              <ChevronDown size={13} className={cn("transition-transform", showCloudTalkHistory && "rotate-180")} />
+            </button>
+
+            {showCloudTalkHistory && (
+              <div className="px-5 pb-5 flex flex-col gap-2">
+                {historyLoading ? (
+                  <div className="flex items-center gap-2 py-4 text-gray-500 text-sm">
+                    <div className="w-4 h-4 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                    Loading call history…
+                  </div>
+                ) : !cloudTalkHistory || cloudTalkHistory.calls.length === 0 ? (
+                  <div className="flex flex-col items-center py-8 text-gray-400">
+                    <PhoneOff size={28} className="mb-2 opacity-40" />
+                    <p className="text-sm">No CloudTalk calls found for this number</p>
+                  </div>
+                ) : (
+                  cloudTalkHistory.calls.map((call) => {
+                    const isAnswered = call.status === "answered";
+                    const durationSec = call.call_times?.talking_time ?? 0;
+                    const mins = Math.floor(durationSec / 60);
+                    const secs = durationSec % 60;
+                    const b64 = audioData[call.cdr_id];
+                    return (
+                      <div key={call.cdr_id} className="bg-white rounded-xl border-2 border-gray-200 p-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {isAnswered ? (
+                              <PhoneCall size={13} className="text-green-500 shrink-0 mt-0.5" />
+                            ) : (
+                              <PhoneMissed size={13} className="text-red-400 shrink-0 mt-0.5" />
+                            )}
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={cn(
+                                  "text-xs px-1.5 py-0.5 rounded-full font-medium",
+                                  isAnswered ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+                                )}>
+                                  {isAnswered ? "Answered" : "Missed"}
+                                </span>
+                                {durationSec > 0 && (
+                                  <span className="text-xs text-gray-500">{mins}m {secs}s</span>
+                                )}
+                                {call.agent?.name && (
+                                  <span className="text-xs text-gray-500">· {call.agent.name}</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {call.date ? new Date(call.date).toLocaleString("en-GB") : ""}
+                              </p>
+                            </div>
+                          </div>
+                          {call.recorded && (
+                            <button
+                              onClick={() => {
+                                if (b64) {
+                                  setAudioData((prev) => { const n = {...prev}; delete n[call.cdr_id]; return n; });
+                                } else {
+                                  streamRecordingMutation.mutate({ callId: call.cdr_id });
+                                }
+                              }}
+                              disabled={streamRecordingMutation.isPending}
+                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium shrink-0 disabled:opacity-50"
+                            >
+                              {streamRecordingMutation.isPending && !b64 ? (
+                                <div className="w-3 h-3 border border-indigo-400 border-t-indigo-700 rounded-full animate-spin" />
+                              ) : b64 ? (
+                                <span>Hide</span>
+                              ) : (
+                                <span>▶ Play</span>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                        {b64 && (
+                          <audio
+                            controls
+                            className="w-full mt-2 h-8"
+                            src={`data:audio/wav;base64,${b64}`}
+                          />
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             )}
           </div>
         </main>

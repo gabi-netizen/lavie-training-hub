@@ -372,4 +372,48 @@ export const contactsRouter = router({
       if (!buffer) return { success: false, data: null, mimeType: null };
       return { success: true, data: buffer.toString("base64"), mimeType: "audio/wav" };
     }),
+
+  // ─── CloudTalk: Global call log (all calls, not per contact) ─────────────
+  callLog: adminProcedure
+    .input(
+      z.object({
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        limit: z.number().min(1).max(100).default(50),
+        page: z.number().min(1).default(1),
+        status: z.enum(["answered", "missed"]).optional(),
+        agentId: z.number().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      // Fetch calls from CloudTalk
+      const result = await getCallHistory({
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        limit: input.limit,
+        page: input.page,
+        status: input.status,
+      });
+
+      // Try to match phone numbers to existing contacts
+      const db = await getDb();
+      const { contacts } = await import("../../drizzle/schema");
+      const allContacts = db
+        ? await db.select({ id: contacts.id, phone: contacts.phone, name: contacts.name }).from(contacts)
+        : [];
+      const phoneMap = new Map(
+        (allContacts as Array<{ id: number; phone: string | null; name: string }>)
+          .map((c) => [c.phone?.replace(/\s/g, ""), { id: c.id, name: c.name }])
+      );
+
+      const enrichedCalls = result.calls.map((call) => {
+        // Use the contact.number from CloudTalk to match
+        const ctPhone = (call.contact?.number ?? "").replace(/\s/g, "");
+        const internalPhone = (call.internal_number?.number ?? "").replace(/\s/g, "");
+        const matched = phoneMap.get(ctPhone) ?? phoneMap.get(internalPhone) ?? null;
+        return { ...call, matchedContact: matched };
+      });
+
+      return { ...result, calls: enrichedCalls };
+    }),
 });
