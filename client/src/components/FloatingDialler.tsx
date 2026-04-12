@@ -21,9 +21,6 @@ export default function FloatingDialler() {
   const [expanded, setExpanded] = useState(false);
   const [hasIncoming, setHasIncoming] = useState(false);
 
-  // Only show for admins
-  if (user && user.role !== "admin") return null;
-
   // Listen for dial events dispatched by ContactCard "Call Now"
   useEffect(() => {
     const handler = (e: Event) => {
@@ -64,6 +61,9 @@ export default function FloatingDialler() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, []);
+
+  // Only show for admins — MUST be after all hooks
+  if (user && user.role !== "admin") return null;
 
   return (
     <div
