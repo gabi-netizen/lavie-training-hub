@@ -12,7 +12,6 @@ import {
   ContactRound,
   ShieldCheck,
   Settings,
-  PhoneCall,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -21,7 +20,6 @@ import { Link, useLocation } from "wouter";
 const ADMIN_NAV_ITEMS = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
-  { path: "/call-log", label: "Call Log", icon: PhoneCall },
 ];
 
 // Visible to all logged-in users

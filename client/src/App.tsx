@@ -11,7 +11,6 @@ import Dialler from "./pages/Dialler";
 import Customers from "./pages/Customers";
 import ContactCard from "./pages/ContactCard";
 import ProfileSettings from "./pages/ProfileSettings";
-import CallLog from "./pages/CallLog";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -71,11 +70,6 @@ function Router() {
         {/* Admin-only: Individual contact card */}
         <Route path={"/contacts/:id"}>
           {() => <AdminRoute component={ContactCard} />}
-        </Route>
-
-        {/* Admin-only: Global Call Log */}
-        <Route path={"/call-log"}>
-          {() => <AdminRoute component={CallLog} />}
         </Route>
 
         {/* Training = scripts, objections, cheat sheet — all users */}

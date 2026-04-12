@@ -151,8 +151,6 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
     // Extract call data — CloudTalk payload structure varies by version
     const call = payload?.Call ?? payload?.call ?? payload;
     const callId =
-      payload?.call_uuid ||  // CloudTalk v2 top-level field
-      call?.call_uuid ||     // CloudTalk v2 nested
       call?.uuid ||
       call?.id ||
       call?.call_id ||
@@ -160,21 +158,18 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       payload?.id;
 
     const recordingUrl =
-      payload?.recording_url ||  // CloudTalk v2 top-level
       call?.recording_url ||
       call?.recordingUrl ||
-      call?.recording;
+      call?.recording ||
+      payload?.recording_url;
 
     const agentId =
-      payload?.agent?.id ||     // CloudTalk v2: agent object
-      payload?.agent?.user_id ||
       call?.agent_id ||
       call?.agentId ||
       call?.Agent?.id ||
       payload?.agent_id;
 
     const callerPhone =
-      payload?.external_number ||  // CloudTalk v2 top-level
       call?.caller_number ||
       call?.callerNumber ||
       call?.from ||
@@ -188,10 +183,10 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       payload?.duration;
 
     const callStarted =
-      payload?.started_at ||  // CloudTalk v2 top-level
       call?.started_at ||
       call?.startedAt ||
-      call?.created_at;
+      call?.created_at ||
+      payload?.started_at;
 
     console.log(`[CloudTalk Webhook] Call ID: ${callId}, Agent: ${agentId}, Phone: ${callerPhone}, Recording: ${recordingUrl ? "YES" : "NO"}`);
 
