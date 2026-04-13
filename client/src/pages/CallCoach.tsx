@@ -1034,81 +1034,262 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   );
 }
 
-// ─── MY CALLS LIST ─────────────────────────────────────────────────────────────
-function MyCalls({ onSelect }: { onSelect: (id: number) => void }) {
-  const utils = trpc.useUtils();
-  const { data: analyses, isLoading } = trpc.callCoach.getMyAnalyses.useQuery(undefined, {
-    refetchInterval: 5000,
+// ─── SHARED CALL ROW ─────────────────────────────────────────────────────────
+function CallRow({
+  a,
+  onSelect,
+  onDelete,
+  deleteIsPending,
+}: {
+  a: any;
+  onSelect: (id: number) => void;
+  onDelete?: (id: number) => void;
+  deleteIsPending?: boolean;
+}) {
+  const statusIcon = (status: string) => {
+    if (status === "done") return <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />;
+    if (status === "error") return <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />;
+    return <Loader2 className="w-4 h-4 animate-spin text-teal-600 flex-shrink-0" />;
+  };
+  const displayDate = a.callDate ?? a.createdAt;
+  const dateStr = displayDate
+    ? new Date(displayDate).toLocaleString("en-GB", {
+        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+      })
+    : "";
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white border border-gray-200 hover:border-teal-300 hover:bg-teal-50/30 cursor-pointer transition-colors"
+      onClick={() => onSelect(a.id)}
+    >
+      {statusIcon(a.status)}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-gray-800 text-sm font-medium truncate">
+            {a.customerName ?? (a.source === "webhook" ? "Auto call" : (a.fileName ?? "Recording"))}
+          </p>
+          {a.source === "webhook" && (
+            <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5 font-semibold">AUTO</span>
+          )}
+          <CallTypeBadge callType={a.callType} />
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+          <span className="text-xs text-gray-500">{dateStr}</span>
+          {a.repSpeechPct != null && <TalkRatioBadge repPct={a.repSpeechPct} />}
+          {a.closeStatus && (
+            <span className={`text-xs font-medium ${
+              a.closeStatus === "closed" ? "text-emerald-600" :
+              a.closeStatus === "follow_up" ? "text-amber-600" : "text-red-500"
+            }`}>
+              {a.closeStatus === "closed" ? "✅ Closed" : a.closeStatus === "follow_up" ? "🔄 Follow-up" : "❌ Not closed"}
+            </span>
+          )}
+        </div>
+      </div>
+      {a.overallScore != null ? (
+        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+          <span className={`text-xl font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</span>
+          <RepStatusBadge score={Math.round(a.overallScore)} size="sm" />
+        </div>
+      ) : a.status !== "done" && a.status !== "error" ? (
+        <span className="text-xs text-gray-400 capitalize flex-shrink-0">{a.status}…</span>
+      ) : null}
+      {a.status === "error" && onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); if (confirm("Delete this failed call?")) onDelete(a.id); }}
+          disabled={deleteIsPending}
+          className="text-red-500 text-xs border border-red-300 rounded px-2 py-1 hover:bg-red-50 transition-colors flex-shrink-0"
+        >🗑️</button>
+      )}
+    </div>
+  );
+}
+
+// ─── ADMIN AGENT DASHBOARD ───────────────────────────────────────────────────
+function AdminAgentDashboard({ onSelect }: { onSelect: (id: number) => void }) {
+  const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
+  const { data: agents, isLoading } = trpc.callCoach.getAgentDashboard.useQuery(undefined, {
+    refetchInterval: 10000,
   });
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
+  if (!agents?.length) return (
+    <div className="text-center py-12 text-gray-500">
+      <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+      <p className="text-sm">No calls yet. Calls will appear here automatically after agents finish their calls.</p>
+    </div>
+  );
+
+  const trendIcon = (t: string, delta: number) => {
+    if (t === "improving") return <span className="flex items-center gap-1 text-emerald-600 text-xs font-semibold"><TrendingUp className="w-3.5 h-3.5" />+{delta}</span>;
+    if (t === "declining") return <span className="flex items-center gap-1 text-red-500 text-xs font-semibold"><TrendingDown className="w-3.5 h-3.5" />{delta}</span>;
+    return <span className="flex items-center gap-1 text-gray-400 text-xs"><Minus className="w-3.5 h-3.5" />Stable</span>;
+  };
+
+  const lastCallTime = (iso: string | null) => {
+    if (!iso) return "No calls";
+    const d = new Date(iso);
+    const diffMs = Date.now() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+  };
+
+  const totalCallsToday = agents.reduce((s, a) => s + a.callsToday, 0);
+  const totalThisWeek = agents.reduce((s, a) => s + a.callsThisWeek, 0);
+  const totalPending = agents.reduce((s, a) => s + a.pendingCalls, 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Summary strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Agents", value: agents.length, icon: "👥" },
+          { label: "Calls Today", value: totalCallsToday, icon: "📞" },
+          { label: "This Week", value: totalThisWeek, icon: "📅" },
+          { label: "Analyzing", value: totalPending, icon: "⏳" },
+        ].map(stat => (
+          <div key={stat.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center shadow-sm">
+            <div className="text-xl mb-0.5">{stat.icon}</div>
+            <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+            <div className="text-xs text-gray-500 mt-0.5">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Agent cards */}
+      {agents.map((agent) => {
+        const isExpanded = expandedAgent === agent.userId;
+        const s = agent.avgScore;
+        const borderCls = s == null ? "border-gray-200" : s >= 75 ? "border-emerald-300" : s >= 55 ? "border-amber-300" : "border-red-300";
+        const bgCls = s == null ? "bg-white" : s >= 75 ? "bg-emerald-50/30" : s >= 55 ? "bg-amber-50/30" : "bg-red-50/30";
+
+        return (
+          <div key={agent.userId} className={`rounded-xl border-2 ${borderCls} ${bgCls} overflow-hidden`}>
+            {/* Header row */}
+            <div
+              className="flex items-center gap-3 px-4 py-4 cursor-pointer hover:bg-black/5 transition-colors"
+              onClick={() => setExpandedAgent(isExpanded ? null : agent.userId)}
+            >
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                {agent.repName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+
+              {/* Name + last call info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-gray-900">{agent.repName}</span>
+                  {agent.pendingCalls > 0 && (
+                    <span className="text-xs bg-teal-100 text-teal-700 border border-teal-200 rounded-full px-2 py-0.5 font-semibold animate-pulse">
+                      {agent.pendingCalls} analyzing…
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="text-xs text-gray-500">Last: <span className="font-medium text-gray-700">{lastCallTime(agent.lastCallAt)}</span></span>
+                  {agent.lastCallCustomer && <span className="text-xs text-gray-400 truncate max-w-[100px]">{agent.lastCallCustomer}</span>}
+                  {agent.lastCallStatus === "closed" && <span className="text-xs text-emerald-600 font-medium">✅ Closed</span>}
+                  {agent.lastCallStatus === "follow_up" && <span className="text-xs text-amber-600 font-medium">🔄 Follow-up</span>}
+                  {agent.lastCallStatus === "not_closed" && <span className="text-xs text-red-500 font-medium">❌ Not closed</span>}
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
+                <div className="text-center hidden sm:block">
+                  <div className="text-lg font-bold text-gray-900">{agent.callsToday}</div>
+                  <div className="text-xs text-gray-400">today</div>
+                </div>
+                <div className="text-center hidden sm:block">
+                  <div className="text-lg font-bold text-gray-700">{agent.callsThisWeek}</div>
+                  <div className="text-xs text-gray-400">week</div>
+                </div>
+                {s != null ? (
+                  <div className="text-center">
+                    <div className={`text-2xl font-bold ${scoreColor(s)}`}>{s}</div>
+                    <div className="text-xs text-gray-400">avg</div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="text-xl text-gray-300">—</div>
+                    <div className="text-xs text-gray-400">avg</div>
+                  </div>
+                )}
+                <div className="text-center hidden sm:block">
+                  {trendIcon(agent.trendIndicator, Math.abs(agent.trendDelta))}
+                  <div className="text-xs text-gray-400">trend</div>
+                </div>
+                <div className="text-center hidden md:block">
+                  <div className="text-lg font-bold text-gray-700">{agent.closeRate}%</div>
+                  <div className="text-xs text-gray-400">close</div>
+                </div>
+                {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </div>
+            </div>
+
+            {/* Expanded call feed */}
+            {isExpanded && (
+              <div className="border-t border-gray-200 bg-gray-50/60 px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Recent Calls</span>
+                  <span className="text-xs text-gray-400">{agent.totalCalls} total</span>
+                </div>
+                {agent.recentCalls.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4 text-center">No calls yet</p>
+                ) : (
+                  agent.recentCalls.map((c: any) => (
+                    <CallRow key={c.id} a={c} onSelect={onSelect} />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── MY CALLS (agent personal view or admin dashboard) ───────────────────────
+function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmin?: boolean }) {
+  const utils = trpc.useUtils();
   const deleteAnalysis = trpc.callCoach.deleteAnalysis.useMutation({
     onSuccess: () => {
       utils.callCoach.getMyAnalyses.invalidate();
       utils.callCoach.getAllAnalyses.invalidate();
     },
   });
+
+  // Admins get the full agent dashboard view
+  if (isAdmin) return <AdminAgentDashboard onSelect={onSelect} />;
+
+  // Agents see their own calls
+  const { data: analyses, isLoading } = trpc.callCoach.getMyAnalyses.useQuery(undefined, {
+    refetchInterval: 5000,
+  });
+
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!analyses?.length) return (
-    <div className="text-center py-12 text-gray-800">
+    <div className="text-center py-12 text-gray-500">
       <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
-      <p>No calls analysed yet. Upload your first recording above.</p>
+      <p className="text-sm">No calls yet. Your calls will appear here automatically after each call.</p>
     </div>
   );
 
-  const statusIcon = (status: string) => {
-    if (status === "done") return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
-    if (status === "error") return <XCircle className="w-4 h-4 text-red-600" />;
-    return <Loader2 className="w-4 h-4 animate-spin text-teal-600" />;
-  };
-
   return (
     <div className="space-y-2">
-        {[...analyses].reverse().map((a) => (
-        <div
+      {[...analyses].reverse().map((a) => (
+        <CallRow
           key={a.id}
-          className="flex items-center gap-4 p-4 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors"
-          onClick={() => onSelect(a.id)}
-        >
-          {statusIcon(a.status)}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-gray-700 text-sm font-medium truncate">
-                {(a as any).source === "webhook"
-                  ? `📞 ${a.customerName ?? a.repName ?? "Auto-analyzed call"}`
-                  : (a.fileName ?? "Recording")}
-              </p>
-              {(a as any).source === "webhook" && (
-                <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full px-2 py-0.5 font-bold">AUTO</span>
-              )}
-              <CallTypeBadge callType={a.callType} />
-              <TalkRatioBadge repPct={a.repSpeechPct} />
-            </div>
-            <p className="text-gray-800 text-xs">{new Date(a.createdAt).toLocaleString()}</p>
-          </div>
-          {a.overallScore != null && (
-            <div className="flex flex-col items-end gap-1">
-              <div className={`text-lg font-bold ${scoreColor(a.overallScore)}`}>{Math.round(a.overallScore)}</div>
-              <RepStatusBadge score={Math.round(a.overallScore)} size="sm" />
-            </div>
-          )}
-          {a.status !== "done" && a.status !== "error" && (
-            <span className="text-xs text-gray-800 capitalize">{a.status}</span>
-          )}
-          {a.status === "error" && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm("Delete this failed call? This cannot be undone.")) {
-                  deleteAnalysis.mutate({ id: a.id });
-                }
-              }}
-              disabled={deleteAnalysis.isPending}
-              className="text-red-600 hover:text-red-600 text-xs border border-red-500/40 rounded px-2 py-1 hover:bg-red-900/30 transition-colors flex-shrink-0"
-              title="Delete failed call"
-            >
-              🗑️
-            </button>
-          )}
-        </div>
+          a={a}
+          onSelect={onSelect}
+          onDelete={(id) => deleteAnalysis.mutate({ id })}
+          deleteIsPending={deleteAnalysis.isPending}
+        />
       ))}
     </div>
   );
@@ -1895,7 +2076,7 @@ export default function CallCoach() {
             }}
           />
         )}
-        {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} />}
+        {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} isAdmin={isAdmin} />}
         {activeTab === "leaderboard" && <Leaderboard />}
         {activeTab === "team" && <TeamDashboard />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}

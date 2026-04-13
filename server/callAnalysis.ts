@@ -1,7 +1,7 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import OpenAI from "openai";
 import { getDb } from "./db";
-import { callAnalyses, aiFeedback } from "../drizzle/schema";
+import { callAnalyses, aiFeedback, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY ?? "" });
@@ -622,4 +622,127 @@ export async function getTeamDashboard(): Promise<RepProfileData[]> {
   }
 
   return profiles;
+}
+
+// ─── AGENT DASHBOARD (admin view) ─────────────────────────────────────────────
+export interface AgentSummary {
+  userId: number;
+  repName: string;
+  totalCalls: number;
+  callsToday: number;
+  callsThisWeek: number;
+  avgScore: number | null;
+  last10Avg: number | null;
+  trendDelta: number;
+  trendIndicator: "improving" | "stable" | "declining";
+  lastCallAt: string | null;
+  lastCallScore: number | null;
+  lastCallCustomer: string | null;
+  lastCallStatus: string | null;
+  closeRate: number;
+  pendingCalls: number;
+  recentCalls: Array<{
+    id: number;
+    createdAt: string;
+    callDate: string | null;
+    customerName: string | null;
+    overallScore: number | null;
+    closeStatus: string | null;
+    status: string;
+    source: string | null;
+    callType: string | null;
+    repSpeechPct: number | null;
+  }>;
+}
+
+export async function getAgentDashboard(): Promise<AgentSummary[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const all = await db.select().from(callAnalyses).orderBy(callAnalyses.createdAt);
+  const allUsers = await db.select().from(users);
+  const userMap = new Map(allUsers.map((u) => [u.id, u]));
+
+  const byUser = new Map<number, typeof all>();
+  for (const row of all) {
+    if (!byUser.has(row.userId)) byUser.set(row.userId, []);
+    byUser.get(row.userId)!.push(row);
+  }
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
+
+  const summaries: AgentSummary[] = [];
+
+  for (const [userId, calls] of Array.from(byUser.entries())) {
+    const user = userMap.get(userId);
+    const repName = user?.name ?? calls[calls.length - 1]?.repName ?? `Rep #${userId}`;
+
+    const doneCalls = calls.filter((c) => c.status === "done");
+    const pendingCalls = calls.filter(
+      (c) => c.status === "pending" || c.status === "transcribing" || c.status === "analyzing"
+    ).length;
+
+    const scored = doneCalls.filter((c) => c.overallScore != null);
+    const scores = scored.map((c) => c.overallScore as number);
+    const avgScore =
+      scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+    const last10Scores = scores.slice(-10);
+    const last10Avg =
+      last10Scores.length > 0
+        ? Math.round(last10Scores.reduce((a, b) => a + b, 0) / last10Scores.length)
+        : null;
+    const trendDelta = last10Avg != null && avgScore != null ? last10Avg - avgScore : 0;
+    const trendIndicator: "improving" | "stable" | "declining" =
+      trendDelta >= 5 ? "improving" : trendDelta <= -5 ? "declining" : "stable";
+
+    const callsToday = calls.filter((c) => new Date(c.createdAt) >= todayStart).length;
+    const callsThisWeek = calls.filter((c) => new Date(c.createdAt) >= weekStart).length;
+
+    const lastCall = calls[calls.length - 1] ?? null;
+
+    const closedCount = doneCalls.filter((c) => c.closeStatus === "closed").length;
+    const closeRate =
+      doneCalls.length > 0 ? Math.round((closedCount / doneCalls.length) * 100) : 0;
+
+    const recentCalls = [...calls]
+      .reverse()
+      .slice(0, 20)
+      .map((c) => ({
+        id: c.id,
+        createdAt: new Date(c.createdAt).toISOString(),
+        callDate: c.callDate ? new Date(c.callDate).toISOString() : null,
+        customerName: c.customerName ?? null,
+        overallScore: c.overallScore != null ? Math.round(c.overallScore) : null,
+        closeStatus: c.closeStatus ?? null,
+        status: c.status,
+        source: (c as any).source ?? null,
+        callType: c.callType ?? null,
+        repSpeechPct: c.repSpeechPct != null ? Math.round(c.repSpeechPct) : null,
+      }));
+
+    summaries.push({
+      userId,
+      repName,
+      totalCalls: calls.length,
+      callsToday,
+      callsThisWeek,
+      avgScore,
+      last10Avg,
+      trendDelta,
+      trendIndicator,
+      lastCallAt: lastCall ? new Date(lastCall.createdAt).toISOString() : null,
+      lastCallScore: lastCall?.overallScore != null ? Math.round(lastCall.overallScore) : null,
+      lastCallCustomer: lastCall?.customerName ?? null,
+      lastCallStatus: lastCall?.closeStatus ?? null,
+      pendingCalls,
+      closeRate,
+      recentCalls,
+    });
+  }
+
+  summaries.sort((a, b) => b.totalCalls - a.totalCalls);
+  return summaries;
 }

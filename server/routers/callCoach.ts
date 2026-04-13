@@ -8,6 +8,7 @@ import {
   processCallAnalysis,
   getLeaderboard,
   getTeamDashboard,
+  getAgentDashboard,
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
@@ -36,6 +37,12 @@ export const callCoachRouter = router({
 
   getAllAnalyses: protectedProcedure.query(async () => {
     return listAllCallAnalyses();
+  }),
+
+  /** Admin agent dashboard — per-agent summary cards with recent calls */
+  getAgentDashboard: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new Error("Forbidden");
+    return getAgentDashboard();
   }),
 
   /** Public leaderboard — visible to all logged-in users */
