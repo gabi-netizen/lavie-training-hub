@@ -37,15 +37,26 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   repSpeechPct: number;
   durationSeconds: number;
 }> {
-  const response = await deepgram.listen.v1.media.transcribeUrl({
-    url: audioUrl,
-    model: "nova-2",
-    smart_format: true,
-    diarize: true,
-    punctuate: true,
-    utterances: true,
-    language: "en",
-  });
+  // Deepgram v5 SDK uses transcribeFile — download audio first then pass as buffer
+  const audioRes = await fetch(audioUrl);
+  if (!audioRes.ok) {
+    throw new Error(`Failed to fetch audio for transcription: ${audioRes.status} ${audioRes.statusText}`);
+  }
+  const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+  const contentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
+
+  const response = await deepgram.listen.v1.media.transcribeFile(
+    audioBuffer,
+    {
+      model: "nova-2",
+      smart_format: true,
+      diarize: true,
+      punctuate: true,
+      utterances: true,
+      language: "en",
+      mimetype: contentType,
+    } as any
+  );
 
   const result = response as any;
   const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
