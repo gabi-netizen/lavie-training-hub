@@ -132,12 +132,14 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       payload?.Event?.type ||
       "unknown";
 
-    // Accept call_ended or call_finished events (CloudTalk uses different names)
+    // Accept call_ended, call_finished, or recording_uploaded events (CloudTalk uses different names)
     const isCallEnded =
       eventType === "call_ended" ||
       eventType === "call_finished" ||
       eventType === "CALL_ENDED" ||
       eventType === "CALL_FINISHED" ||
+      eventType === "recording_uploaded" ||
+      eventType === "RECORDING_UPLOADED" ||
       // Some versions send the event in a nested structure
       payload?.Call?.status === "ANSWERED" ||
       payload?.call?.status === "ANSWERED";
