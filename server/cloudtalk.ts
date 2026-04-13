@@ -29,12 +29,21 @@ export interface CloudTalkAgent {
  * Fetch all agents from CloudTalk
  */
 export async function getCloudTalkAgents(): Promise<CloudTalkAgent[]> {
-  const res = await fetch(`${BASE_URL}/agents/index.json`, {
-    headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
-  });
-  const json = await res.json() as any;
-  const data = json?.responseData?.data ?? [];
-  return data.map((item: any) => item.Agent as CloudTalkAgent);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(`${BASE_URL}/agents/index.json`, {
+      headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const json = await res.json() as any;
+    const data = json?.responseData?.data ?? [];
+    return data.map((item: any) => item.Agent as CloudTalkAgent);
+  } catch (err: any) {
+    console.error("CloudTalk getAgents error:", err?.message ?? err);
+    return [];
+  }
 }
 
 export interface CloudTalkCall {
@@ -99,9 +108,21 @@ export async function getCallHistory(params?: {
   if (params?.status) query.set("status", params.status);
 
   const url = `${BASE_URL}/calls/index.json?${query.toString()}`;
-  const res = await fetch(url, {
-    headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    console.error("CloudTalk call history fetch error (timeout or network):", err?.message ?? err);
+    return { calls: [], totalCount: 0, pageCount: 0 };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!res.ok) {
     console.error("CloudTalk call history error:", res.status, await res.text());
@@ -172,11 +193,22 @@ export async function fetchRecording(callId: number): Promise<Buffer | null> {
  * Returns { success: true } or throws with error message
  */
 export async function clickToCall(agentId: string, calleeNumber: string): Promise<{ success: boolean; message?: string }> {
-  const res = await fetch(`${BASE_URL}/calls/create.json`, {
-    method: "POST",
-    headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
-    body: JSON.stringify({ agent_id: parseInt(agentId, 10), callee_number: calleeNumber }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/calls/create.json`, {
+      method: "POST",
+      headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ agent_id: parseInt(agentId, 10), callee_number: calleeNumber }),
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    throw new Error(err?.name === "AbortError" ? "CloudTalk request timed out" : (err?.message ?? "Network error"));
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const json = await res.json() as any;
   const status = json?.responseData?.status ?? res.status;
