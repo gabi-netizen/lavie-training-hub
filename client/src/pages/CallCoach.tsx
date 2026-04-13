@@ -1075,7 +1075,7 @@ function CallRow({
         </div>
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-xs text-gray-500">{dateStr}</span>
-          {a.repSpeechPct != null && <TalkRatioBadge repPct={a.repSpeechPct} />}
+          {/* Talk Ratio hidden until data is reliable */}
           {a.closeStatus && (
             <span className={`text-xs font-medium ${
               a.closeStatus === "closed" ? "text-emerald-600" :
@@ -1400,7 +1400,6 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                               <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full px-2 py-0.5 font-bold">AUTO</span>
                             )}
                             <CallTypeBadge callType={a.callType} />
-                            <TalkRatioBadge repPct={a.repSpeechPct} />
                           </div>
                           <p className="text-gray-800 text-xs">
                             {a.customerName && (a as any).source !== "webhook" && <span className="text-teal-600/80">👤 {a.customerName} · </span>}
