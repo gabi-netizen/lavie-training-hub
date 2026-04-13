@@ -740,10 +740,16 @@ export default function Workspace() {
           </div>
         </div>
 
-        {/* RIGHT: SALES TOOLS */}
-        <div className="ws-sales-tools">
+        {/* CENTER: SCRIPT PANEL */}
+        <div className="ws-script-col">
           <div className="ws-sales-content">
             <ScriptPanel />
+          </div>
+        </div>
+
+        {/* RIGHT: QUICK TOOLS */}
+        <div className="ws-quicktools-col">
+          <div className="ws-sales-content">
             <QuickTools />
           </div>
         </div>
