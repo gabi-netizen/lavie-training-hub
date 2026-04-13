@@ -275,3 +275,8 @@
 - [ ] Add search/filter by date, status (answered/missed), agent
 - [ ] Add "Call Log" nav link under Dialler section
 - [ ] Register /call-log route in App.tsx
+
+## Recent Fixes & Requests (Apr 13 2026)
+- [x] Fix fetch failed / timeout error on /contacts and /call-log pages (CloudTalk API timeout)
+- [x] Add contact selector to AI Coach upload form (link call to a contact)
+- [ ] Fix CloudTalk Workflow Automation not firing — investigate and resolve webhook pipeline

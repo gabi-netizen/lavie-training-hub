@@ -840,8 +840,15 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
   const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
+  const [contactId, setContactId] = useState<number | null>(null);
+  const [contactSearch, setContactSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const startAnalysis = trpc.callCoach.startAnalysis.useMutation();
+  const contactsQuery = trpc.contacts.list.useQuery(
+    { search: contactSearch || undefined, limit: 10 },
+    { enabled: contactSearch.length > 0 }
+  );
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file) return;
@@ -868,6 +875,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         callDate: callDate || undefined,
         closeStatus: closeStatus || undefined,
         callType,
+        contactId: contactId ?? undefined,
       });
       onUploaded(analysisId);
     } catch (err) {
@@ -875,7 +883,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
     } finally {
       setUploading(false);
     }
-  }, [startAnalysis, onUploaded, repName, callDate, closeStatus, callType]);
+  }, [startAnalysis, onUploaded, repName, callDate, closeStatus, callType, contactId]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -934,6 +942,53 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                 <option value="retention_win_back">💎 Win Back</option>
               </select>
             </div>
+          </div>
+          {/* Contact selector — full width */}
+          <div className="space-y-1 relative">
+            <label className="text-xs text-gray-700">Link to Contact (optional)</label>
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={e => { setContactSearch(e.target.value); setShowContactDropdown(true); if (!e.target.value) { setContactId(null); } }}
+              onFocus={() => setShowContactDropdown(true)}
+              placeholder={contactId ? `Contact #${contactId} selected` : "Search by name or phone..."}
+              className={`w-full bg-white border rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-slate-500 focus:outline-none focus:border-teal-500 ${
+                contactId ? "border-teal-500 bg-teal-50" : "border-gray-300"
+              }`}
+            />
+            {contactId && (
+              <button
+                type="button"
+                onClick={() => { setContactId(null); setContactSearch(""); }}
+                className="absolute right-2 top-7 text-gray-400 hover:text-red-500 text-xs"
+              >✕ Clear</button>
+            )}
+            {showContactDropdown && contactSearch.length > 0 && (
+              <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                {contactsQuery.isLoading && (
+                  <div className="px-3 py-2 text-sm text-gray-500">Searching...</div>
+                )}
+                {!contactsQuery.isLoading && (contactsQuery.data ?? []).length === 0 && (
+                  <div className="px-3 py-2 text-sm text-gray-500">No contacts found</div>
+                )}
+                {(contactsQuery.data ?? []).map((c: any) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50 border-b border-gray-100 last:border-0"
+                    onClick={() => {
+                      setContactId(c.id);
+                      setContactSearch(c.name + (c.phone ? ` (${c.phone})` : ""));
+                      setShowContactDropdown(false);
+                    }}
+                  >
+                    <span className="font-medium text-gray-800">{c.name}</span>
+                    {c.phone && <span className="text-gray-500 ml-2">{c.phone}</span>}
+                    {c.leadType && <span className="ml-2 text-xs text-indigo-600">{c.leadType}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
