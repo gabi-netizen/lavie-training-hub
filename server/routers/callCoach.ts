@@ -16,6 +16,10 @@ import {
 
 export const callCoachRouter = router({
   getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
+    // Admins see all agents' calls; regular agents see only their own
+    if (ctx.user.role === "admin") {
+      return listAllCallAnalyses();
+    }
     return listCallAnalysesByUser(ctx.user.id);
   }),
 
