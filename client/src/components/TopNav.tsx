@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Settings,
   PhoneCall,
+  LayoutDashboard,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -26,6 +27,7 @@ const ADMIN_NAV_ITEMS = [
 
 // Visible to all logged-in users
 const AGENT_NAV_ITEMS = [
+  { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
   { path: "/team", label: "Team", icon: Users },
@@ -70,7 +72,7 @@ export default function TopNav() {
 
         {/* Nav tabs */}
         <div className="flex items-center gap-1">
-          {navItems.map(({ path, label, icon: Icon }) => {
+          {navItems.map(({ path, label, icon: Icon, highlight }: any) => {
             const active =
               location === path ||
               (path === "/dialler" && location === "/" && isAdmin) ||
@@ -79,10 +81,12 @@ export default function TopNav() {
               <Link key={path} href={path}>
                 <button
                   className={cn(
-                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
-                    active
-                      ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                      : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150",
+                    highlight && !active
+                      ? "font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+                      : active
+                      ? "font-medium text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                      : "font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100"
                   )}
                 >
                   <Icon size={14} />
@@ -149,7 +153,7 @@ export default function TopNav() {
 
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t-2 border-gray-900 px-2 py-2 shadow-lg">
-        {navItems.map(({ path, label, icon: Icon }) => {
+        {navItems.map(({ path, label, icon: Icon, highlight }: any) => {
           const active =
             location === path ||
             (path === "/dialler" && location === "/" && isAdmin) ||
@@ -159,7 +163,9 @@ export default function TopNav() {
               <button
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg border-2 transition-colors",
-                  active
+                  highlight && !active
+                    ? "border-indigo-600 bg-indigo-600 text-white font-bold"
+                    : active
                     ? "border-indigo-600 text-indigo-600 bg-indigo-50"
                     : "border-gray-900 text-gray-900 hover:bg-gray-50"
                 )}
