@@ -12,6 +12,7 @@ import Customers from "./pages/Customers";
 import ContactCard from "./pages/ContactCard";
 import ProfileSettings from "./pages/ProfileSettings";
 import CallLog from "./pages/CallLog";
+import Workspace from "./pages/Workspace";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -92,8 +93,12 @@ function Router() {
           {() => <TabRedirect tab="leaderboard" />}
         </Route>
 
+        {/* Workspace — agent calling workspace */}
+        <Route path={"/workspace"} component={Workspace} />
+
         {/* Profile settings — all authenticated users */}
         <Route path={"/profile"} component={ProfileSettings} />
+        <Route path={"/profile-settings"} component={ProfileSettings} />
 
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />

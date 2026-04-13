@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { adminProcedure, router } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import {
   listContacts,
   getContact,
@@ -296,10 +297,10 @@ export const contactsRouter = router({
       const agentId = freshUser?.cloudtalkAgentId;
 
       if (!agentId) {
-        return {
-          success: false,
-          message: "You haven't set your CloudTalk Agent ID yet. Go to Profile Settings to add it.",
-        };
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "NO_CLOUDTALK_AGENT_ID",
+        });
       }
 
       // Get the contact's phone number
