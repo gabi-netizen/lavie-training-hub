@@ -3,8 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +43,8 @@ import {
   ChevronDown,
   ChevronUp,
   Edit2,
+  Users,
+  Clock,
 } from "lucide-react";
 
 type PhoneStatus = "pool" | "active" | "spam";
@@ -74,6 +75,23 @@ const STATUS_LABELS: Record<PhoneStatus, string> = {
   active: "Active",
   spam: "Spam",
 };
+
+/** Colour-codes how long a number has been active */
+function DaysActiveBadge({ days }: { days: number | null }) {
+  if (days === null) return <span className="text-xs text-gray-400">—</span>;
+  const color =
+    days >= 60
+      ? "bg-red-100 text-red-700 border-red-200"
+      : days >= 30
+      ? "bg-amber-100 text-amber-700 border-amber-200"
+      : "bg-green-100 text-green-700 border-green-200";
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}>
+      <Clock size={10} />
+      {days}d
+    </span>
+  );
+}
 
 function HistoryPanel({ historyJson }: { historyJson: string | null }) {
   const [open, setOpen] = useState(false);
@@ -110,11 +128,9 @@ function HistoryPanel({ historyJson }: { historyJson: string | null }) {
 function NumberRow({
   num,
   agents,
-  onRefresh,
 }: {
   num: PhoneNumber;
   agents: Array<{ id: number; name: string | null }>;
-  onRefresh: () => void;
 }) {
   const utils = trpc.useUtils();
   const [assignOpen, setAssignOpen] = useState(false);
@@ -125,20 +141,18 @@ function NumberRow({
   const [editCloudtalkId, setEditCloudtalkId] = useState(num.cloudtalkNumberId ?? "");
   const [editNotes, setEditNotes] = useState(num.notes ?? "");
 
+  const invalidateAll = () => {
+    utils.phoneNumbers.list.invalidate();
+    utils.phoneNumbers.agentSummary.invalidate();
+  };
+
   const assign = trpc.phoneNumbers.assign.useMutation({
-    onSuccess: () => {
-      toast.success("Number assigned");
-      setAssignOpen(false);
-      utils.phoneNumbers.list.invalidate();
-    },
+    onSuccess: () => { toast.success("Number assigned"); setAssignOpen(false); invalidateAll(); },
     onError: (e) => toast.error(e.message),
   });
 
   const release = trpc.phoneNumbers.release.useMutation({
-    onSuccess: () => {
-      toast.success("Number released to pool");
-      utils.phoneNumbers.list.invalidate();
-    },
+    onSuccess: () => { toast.success("Number released to pool"); invalidateAll(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -147,41 +161,35 @@ function NumberRow({
       if (data.cloudtalkDeleted) {
         toast.success("Number marked as spam and deleted from CloudTalk");
       } else {
-        toast.warning("Marked as spam in DB — CloudTalk deletion may have failed (check manually)");
+        toast.warning("Marked as spam — CloudTalk deletion may have failed (check manually)");
       }
       setSpamConfirmOpen(false);
-      utils.phoneNumbers.list.invalidate();
+      invalidateAll();
     },
     onError: (e) => toast.error(e.message),
   });
 
   const unspam = trpc.phoneNumbers.unspam.useMutation({
-    onSuccess: () => {
-      toast.success("Number moved back to pool");
-      utils.phoneNumbers.list.invalidate();
-    },
+    onSuccess: () => { toast.success("Number moved back to pool"); invalidateAll(); },
     onError: (e) => toast.error(e.message),
   });
 
   const update = trpc.phoneNumbers.update.useMutation({
-    onSuccess: () => {
-      toast.success("Number updated");
-      setEditOpen(false);
-      utils.phoneNumbers.list.invalidate();
-    },
+    onSuccess: () => { toast.success("Number updated"); setEditOpen(false); invalidateAll(); },
     onError: (e) => toast.error(e.message),
   });
 
   const deleteNum = trpc.phoneNumbers.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Number deleted");
-      setDeleteConfirmOpen(false);
-      utils.phoneNumbers.list.invalidate();
-    },
+    onSuccess: () => { toast.success("Number deleted"); setDeleteConfirmOpen(false); invalidateAll(); },
     onError: (e) => toast.error(e.message),
   });
 
   const selectedAgent = agents.find((a) => a.id === Number(selectedAgentId));
+
+  // Compute days active
+  const daysActive = num.assignedAt
+    ? Math.floor((Date.now() - new Date(num.assignedAt).getTime()) / 86_400_000)
+    : null;
 
   return (
     <>
@@ -193,105 +201,58 @@ function NumberRow({
           )}
         </td>
         <td className="py-3 px-4">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_COLORS[num.status]}`}
-          >
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_COLORS[num.status]}`}>
             {STATUS_LABELS[num.status]}
           </span>
         </td>
         <td className="py-3 px-4">
           {num.assignedAgentName ? (
-            <div>
-              <div className="text-sm font-medium text-gray-900">{num.assignedAgentName}</div>
-              {num.assignedAt && (
-                <div className="text-xs text-gray-400">
-                  Since {new Date(num.assignedAt).toLocaleDateString()}
-                </div>
-              )}
-            </div>
+            <div className="text-sm font-medium text-gray-900">{num.assignedAgentName}</div>
           ) : (
             <span className="text-sm text-gray-400">—</span>
+          )}
+        </td>
+        {/* Days Active column */}
+        <td className="py-3 px-4">
+          {num.status === "active" ? (
+            <DaysActiveBadge days={daysActive} />
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
           )}
         </td>
         <td className="py-3 px-4">
           <HistoryPanel historyJson={num.historyJson} />
         </td>
-        <td className="py-3 px-4 max-w-[200px]">
+        <td className="py-3 px-4 max-w-[160px]">
           <span className="text-xs text-gray-500 truncate block">{num.notes ?? "—"}</span>
         </td>
         <td className="py-3 px-4">
           <div className="flex items-center gap-1">
-            {/* Assign — available for pool numbers */}
             {num.status === "pool" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs"
-                onClick={() => setAssignOpen(true)}
-              >
-                <UserCheck size={12} className="mr-1" />
-                Assign
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setAssignOpen(true)}>
+                <UserCheck size={12} className="mr-1" />Assign
               </Button>
             )}
-            {/* Release — available for active numbers */}
             {num.status === "active" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs"
-                onClick={() => release.mutate({ id: num.id })}
-                disabled={release.isPending}
-              >
-                <UserMinus size={12} className="mr-1" />
-                Release
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => release.mutate({ id: num.id })} disabled={release.isPending}>
+                <UserMinus size={12} className="mr-1" />Release
               </Button>
             )}
-            {/* Mark as Spam — available for pool and active */}
             {num.status !== "spam" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                onClick={() => setSpamConfirmOpen(true)}
-              >
-                <AlertTriangle size={12} className="mr-1" />
-                Spam
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50" onClick={() => setSpamConfirmOpen(true)}>
+                <AlertTriangle size={12} className="mr-1" />Spam
               </Button>
             )}
-            {/* Unspam — available for spam numbers */}
             {num.status === "spam" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs"
-                onClick={() => unspam.mutate({ id: num.id })}
-                disabled={unspam.isPending}
-              >
-                <RotateCcw size={12} className="mr-1" />
-                Restore
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => unspam.mutate({ id: num.id })} disabled={unspam.isPending}>
+                <RotateCcw size={12} className="mr-1" />Restore
               </Button>
             )}
-            {/* Edit */}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs"
-              onClick={() => {
-                setEditCloudtalkId(num.cloudtalkNumberId ?? "");
-                setEditNotes(num.notes ?? "");
-                setEditOpen(true);
-              }}
-            >
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setEditCloudtalkId(num.cloudtalkNumberId ?? ""); setEditNotes(num.notes ?? ""); setEditOpen(true); }}>
               <Edit2 size={12} />
             </Button>
-            {/* Delete — only for pool/spam */}
             {num.status !== "active" && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-xs text-red-500 hover:bg-red-50"
-                onClick={() => setDeleteConfirmOpen(true)}
-              >
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-red-500 hover:bg-red-50" onClick={() => setDeleteConfirmOpen(true)}>
                 <Trash2 size={12} />
               </Button>
             )}
@@ -302,41 +263,23 @@ function NumberRow({
       {/* Assign dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign {num.number}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Assign {num.number}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <Label>Select Agent</Label>
               <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Choose an agent..." />
-                </SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Choose an agent..." /></SelectTrigger>
                 <SelectContent>
                   {agents.map((a) => (
-                    <SelectItem key={a.id} value={String(a.id)}>
-                      {a.name ?? `Agent #${a.id}`}
-                    </SelectItem>
+                    <SelectItem key={a.id} value={String(a.id)}>{a.name ?? `Agent #${a.id}`}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!selectedAgentId || assign.isPending}
-              onClick={() => {
-                if (!selectedAgent) return;
-                assign.mutate({
-                  id: num.id,
-                  assignedUserId: selectedAgent.id,
-                  assignedAgentName: selectedAgent.name ?? `Agent #${selectedAgent.id}`,
-                });
-              }}
-            >
+            <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
+            <Button disabled={!selectedAgentId || assign.isPending} onClick={() => { if (!selectedAgent) return; assign.mutate({ id: num.id, assignedUserId: selectedAgent.id, assignedAgentName: selectedAgent.name ?? `Agent #${selectedAgent.id}` }); }}>
               Assign
             </Button>
           </DialogFooter>
@@ -346,47 +289,21 @@ function NumberRow({
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit {num.number}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Edit {num.number}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <Label>CloudTalk Number ID</Label>
-              <Input
-                className="mt-1"
-                placeholder="e.g. 12345"
-                value={editCloudtalkId}
-                onChange={(e) => setEditCloudtalkId(e.target.value)}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Required for spam auto-deletion from CloudTalk
-              </p>
+              <Input className="mt-1" placeholder="e.g. 12345" value={editCloudtalkId} onChange={(e) => setEditCloudtalkId(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">Required for spam auto-deletion from CloudTalk</p>
             </div>
             <div>
               <Label>Notes</Label>
-              <Textarea
-                className="mt-1"
-                placeholder="e.g. Was Cat's primary number, high spam rate..."
-                value={editNotes}
-                onChange={(e) => setEditNotes(e.target.value)}
-                rows={3}
-              />
+              <Textarea className="mt-1" placeholder="e.g. Was Cat's primary number..." value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={update.isPending}
-              onClick={() =>
-                update.mutate({
-                  id: num.id,
-                  cloudtalkNumberId: editCloudtalkId || undefined,
-                  notes: editNotes || undefined,
-                })
-              }
-            >
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button disabled={update.isPending} onClick={() => update.mutate({ id: num.id, cloudtalkNumberId: editCloudtalkId || undefined, notes: editNotes || undefined })}>
               Save
             </Button>
           </DialogFooter>
@@ -400,19 +317,12 @@ function NumberRow({
             <AlertDialogTitle>Mark as Spam?</AlertDialogTitle>
             <AlertDialogDescription>
               This will mark <strong>{num.number}</strong> as spam
-              {num.cloudtalkNumberId
-                ? " and immediately DELETE it from CloudTalk to stop billing."
-                : ". No CloudTalk ID is set — you will need to delete it from CloudTalk manually."}
+              {num.cloudtalkNumberId ? " and immediately DELETE it from CloudTalk to stop billing." : ". No CloudTalk ID is set — you will need to delete it from CloudTalk manually."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => markAsSpam.mutate({ id: num.id })}
-            >
-              Mark as Spam
-            </AlertDialogAction>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => markAsSpam.mutate({ id: num.id })}>Mark as Spam</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -423,18 +333,12 @@ function NumberRow({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Number?</AlertDialogTitle>
             <AlertDialogDescription>
-              Permanently remove <strong>{num.number}</strong> from the pool. This cannot be
-              undone.
+              Permanently remove <strong>{num.number}</strong> from the pool. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => deleteNum.mutate({ id: num.id })}
-            >
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => deleteNum.mutate({ id: num.id })}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -442,10 +346,97 @@ function NumberRow({
   );
 }
 
+/** Agents tab — one card per agent showing their numbers + days active */
+function AgentsView({ isAdmin }: { isAdmin: boolean }) {
+  const { data: agentSummary = [], isLoading } = trpc.phoneNumbers.agentSummary.useQuery(
+    undefined,
+    { enabled: isAdmin }
+  );
+
+  if (isLoading) return <div className="py-16 text-center text-gray-400">Loading...</div>;
+
+  if (agentSummary.length === 0) {
+    return (
+      <div className="py-16 text-center text-gray-400">
+        No active numbers assigned yet. Assign numbers from the Pool tab.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {agentSummary.map((agent) => (
+        <Card key={agent.agentName} className="shadow-none border border-gray-200">
+          <CardContent className="p-0">
+            {/* Agent header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+                  {agent.agentName
+                    .split(" ")
+                    .map((w) => w[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </div>
+                <span className="font-semibold text-gray-900">{agent.agentName}</span>
+              </div>
+              <span className="text-sm text-gray-500">
+                {agent.numbers.length} number{agent.numbers.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Numbers table */}
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="py-2 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Number</th>
+                  <th className="py-2 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Assigned Since</th>
+                  <th className="py-2 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Days Active</th>
+                  <th className="py-2 px-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agent.numbers.map((n) => (
+                  <tr key={n.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                    <td className="py-2.5 px-4 font-mono text-sm font-medium text-gray-900">
+                      {n.number}
+                      {n.cloudtalkNumberId && (
+                        <span className="ml-2 text-xs text-gray-400">CT:{n.cloudtalkNumberId}</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-sm text-gray-600">
+                      {n.assignedAt ? new Date(n.assignedAt).toLocaleDateString("en-GB") : "—"}
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <DaysActiveBadge days={n.daysActive} />
+                    </td>
+                    <td className="py-2.5 px-4 text-xs text-gray-500 max-w-[200px] truncate">
+                      {n.notes ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 pt-1 text-xs text-gray-500">
+        <span className="font-medium">Days active colour guide:</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200"><Clock size={10} /> &lt;30d — Fresh</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200"><Clock size={10} /> 30–59d — Monitor</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200"><Clock size={10} /> 60d+ — Consider rotating</span>
+      </div>
+    </div>
+  );
+}
+
 export default function PhoneNumbers() {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<PhoneStatus | "all">("all");
+  const [activeTab, setActiveTab] = useState<PhoneStatus | "all" | "agents">("all");
   const [addOpen, setAddOpen] = useState(false);
   const [newNumber, setNewNumber] = useState("");
   const [newCloudtalkId, setNewCloudtalkId] = useState("");
@@ -469,6 +460,7 @@ export default function PhoneNumbers() {
       setNewCloudtalkId("");
       setNewNotes("");
       utils.phoneNumbers.list.invalidate();
+      utils.phoneNumbers.agentSummary.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -480,7 +472,9 @@ export default function PhoneNumbers() {
   }
 
   const filtered =
-    activeTab === "all" ? numbers : numbers.filter((n) => n.status === activeTab);
+    activeTab === "all" || activeTab === "agents"
+      ? numbers
+      : numbers.filter((n) => n.status === activeTab);
 
   const counts = {
     all: numbers.length,
@@ -489,11 +483,12 @@ export default function PhoneNumbers() {
     spam: numbers.filter((n) => n.status === "spam").length,
   };
 
-  const tabs: Array<{ key: PhoneStatus | "all"; label: string; count: number }> = [
+  const tabs: Array<{ key: PhoneStatus | "all" | "agents"; label: string; count?: number; icon?: React.ReactNode }> = [
     { key: "all", label: "All Numbers", count: counts.all },
     { key: "active", label: "Active", count: counts.active },
     { key: "pool", label: "Pool", count: counts.pool },
     { key: "spam", label: "Spam", count: counts.spam },
+    { key: "agents", label: "By Agent", icon: <Users size={12} /> },
   ];
 
   return (
@@ -538,128 +533,88 @@ export default function PhoneNumbers() {
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === t.key
                 ? "border-indigo-600 text-indigo-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
+            {t.icon}
             {t.label}
-            <span
-              className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === t.key
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {t.count}
-            </span>
+            {t.count !== undefined && (
+              <span className={`ml-0.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === t.key ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"}`}>
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Table */}
-      <Card className="shadow-none border border-gray-200">
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="py-16 text-center text-gray-400">Loading...</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 text-center text-gray-400">
-              No numbers in this category yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Number
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Status
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Assigned To
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      History
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Notes
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((num) => (
-                    <NumberRow
-                      key={num.id}
-                      num={num as PhoneNumber}
-                      agents={agentList}
-                      onRefresh={() => utils.phoneNumbers.list.invalidate()}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Agents view */}
+      {activeTab === "agents" ? (
+        <AgentsView isAdmin={user.role === "admin"} />
+      ) : (
+        /* Numbers table */
+        <Card className="shadow-none border border-gray-200">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="py-16 text-center text-gray-400">Loading...</div>
+            ) : filtered.length === 0 ? (
+              <div className="py-16 text-center text-gray-400">No numbers in this category yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Number</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Days Active</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">History</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((num) => (
+                      <NumberRow
+                        key={num.id}
+                        num={num as PhoneNumber}
+                        agents={agentList}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Number dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Number to Pool</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Add Number to Pool</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <Label>Phone Number *</Label>
-              <Input
-                className="mt-1"
-                placeholder="+447893942312"
-                value={newNumber}
-                onChange={(e) => setNewNumber(e.target.value)}
-              />
+              <Input className="mt-1" placeholder="+447893942312" value={newNumber} onChange={(e) => setNewNumber(e.target.value)} />
             </div>
             <div>
               <Label>CloudTalk Number ID</Label>
-              <Input
-                className="mt-1"
-                placeholder="e.g. 12345"
-                value={newCloudtalkId}
-                onChange={(e) => setNewCloudtalkId(e.target.value)}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Required for automatic spam deletion from CloudTalk
-              </p>
+              <Input className="mt-1" placeholder="e.g. 12345" value={newCloudtalkId} onChange={(e) => setNewCloudtalkId(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">Required for automatic spam deletion from CloudTalk</p>
             </div>
             <div>
               <Label>Notes</Label>
-              <Textarea
-                className="mt-1"
-                placeholder="e.g. Was Cat's primary number..."
-                value={newNotes}
-                onChange={(e) => setNewNotes(e.target.value)}
-                rows={2}
-              />
+              <Textarea className="mt-1" placeholder="e.g. Was Cat's primary number..." value={newNotes} onChange={(e) => setNewNotes(e.target.value)} rows={2} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button
               disabled={!newNumber.trim() || add.isPending}
-              onClick={() =>
-                add.mutate({
-                  number: newNumber.trim(),
-                  cloudtalkNumberId: newCloudtalkId.trim() || undefined,
-                  notes: newNotes.trim() || undefined,
-                })
-              }
+              onClick={() => add.mutate({ number: newNumber.trim(), cloudtalkNumberId: newCloudtalkId.trim() || undefined, notes: newNotes.trim() || undefined })}
             >
               Add to Pool
             </Button>

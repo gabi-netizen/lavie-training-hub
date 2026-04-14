@@ -34,7 +34,57 @@ async function deleteCloudTalkNumber(cloudtalkNumberId: string): Promise<boolean
   }
 }
 
+export interface AgentPhoneSummary {
+  agentName: string;
+  numbers: Array<{
+    id: number;
+    number: string;
+    assignedAt: Date | null;
+    daysActive: number | null;
+    cloudtalkNumberId: string | null;
+    notes: string | null;
+  }>;
+}
+
 export const phoneNumbersRouter = router({
+  /**
+   * Per-agent summary: how many numbers each agent holds + days active per number.
+   * Only returns "active" numbers (assigned to someone).
+   */
+  agentSummary: adminProcedure.query(async (): Promise<AgentPhoneSummary[]> => {
+    const db = await getDb();
+    const rows = await db!
+      .select()
+      .from(phoneNumbers)
+      .where(eq(phoneNumbers.status, "active"))
+      .orderBy(phoneNumbers.assignedAgentName);
+
+    const now = Date.now();
+    const byAgent = new Map<string, AgentPhoneSummary>();
+
+    for (const row of rows) {
+      const name = row.assignedAgentName ?? "Unknown";
+      if (!byAgent.has(name)) byAgent.set(name, { agentName: name, numbers: [] });
+
+      const daysActive = row.assignedAt
+        ? Math.floor((now - new Date(row.assignedAt).getTime()) / 86_400_000)
+        : null;
+
+      byAgent.get(name)!.numbers.push({
+        id: row.id,
+        number: row.number,
+        assignedAt: row.assignedAt,
+        daysActive,
+        cloudtalkNumberId: row.cloudtalkNumberId ?? null,
+        notes: row.notes ?? null,
+      });
+    }
+
+    return Array.from(byAgent.values()).sort((a, b) =>
+      a.agentName.localeCompare(b.agentName)
+    );
+  }),
+
   /** List all phone numbers — grouped by status */
   list: adminProcedure.query(async () => {
     const db = await getDb();
