@@ -19,16 +19,22 @@ The sales script has these key stages:
 5. SOCIAL PROOF: Reference Trustpilot reviews, website results
 6. OFFER & CLOSE: £4.95 for 21-day free trial, subscription framing (cancel anytime), VIP discount
 7. CONFIRMATION: Take details, confirm delivery address
-
 Key objection handlers:
 - Subscription objection: "You're in complete control, cancel anytime with one click"
 - Trust/card objection: "Fully regulated UK company, encrypted payment, Trustpilot reviews"
 - Too many products: "Replace 3 products with one medical-grade cream"
-
 Golden rules:
 - Never get defensive about the subscription
 - After the close — stop talking (silence is part of the close)
 - Always tie back to the customer's Magic Wand answer
+PAYMENT METHOD — IMPORTANT:
+Approximately 30% of sales are completed via a secure payment form/link sent to the customer.
+A sale is CLOSED and "closingAttempted" = true AND the call counts as a successful close if ANY of the following occur:
+1. The rep takes card details directly on the call (standard method)
+2. The rep sends a payment form/link to the customer AND the customer confirms they have filled it in / will fill it in
+3. The customer mentions they already filled in the form/link before or during the call
+Do NOT penalise a rep for using the form/link method — it is an equally valid and approved payment route.
+If the transcript contains phrases like "I'll send you a link", "fill in the form", "I've filled it in", "sent you the form", "payment link" — treat this as a closing attempt. If the customer confirms completion, treat it as a successful close.
 `;
 
 // ─── TRANSCRIBE WITH DEEPGRAM ─────────────────────────────────────────────────
