@@ -599,6 +599,31 @@
 }
 .ws-notes-area:focus { border-color: #4F46E5; }
 
+/* Take Payment + Email Template — 50/50 pair */
+.ws-btn-pair {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ws-btn-pair-item {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+/* Email Template button */
+.ws-btn-email {
+  padding: 10px;
+  border: 2px solid #1a1a1a;
+  border-radius: 8px;
+  background: #fffbeb;
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ws-btn-email:hover { background: #fef3c7; }
+
 /* Take Payment */
 .ws-btn-pay {
   width: 100%;

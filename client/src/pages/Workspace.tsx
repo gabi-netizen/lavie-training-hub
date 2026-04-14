@@ -2,7 +2,7 @@
 // Full Agent Workspace UI — v8 design converted to React
 // Includes: Contact card, Action buttons, Script panel, Notes dropdowns, Payment box
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -223,8 +223,41 @@ function ContactCard({
   onFieldChange: (field: string, value: any) => void;
 }) {
   const [payOpen, setPayOpen] = useState(false);
+  const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [concerns, setConcerns] = useState<string[]>(contact.concerns ?? []);
   const [notes, setNotes] = useState(contact.notes ?? "");
+
+  const { user } = useAuth();
+
+  const { data: emailTemplates, isLoading: templatesLoading } = trpc.emailTemplates.list.useQuery(
+    undefined,
+    { enabled: emailTemplateOpen }
+  );
+
+  const { data: selectedTemplate, isLoading: templateDetailLoading } = trpc.emailTemplates.getById.useQuery(
+    { id: selectedTemplateId! },
+    { enabled: selectedTemplateId !== null }
+  );
+
+  const previewHtml = useMemo(() => {
+    if (!selectedTemplate || !contact) return null;
+    return selectedTemplate.htmlBody
+      .replaceAll("${Customers.First Name}", (contact.name ?? "").split(" ")[0] || "[Name]")
+      .replaceAll("${Customers.Customers Owner}", user?.name ?? "[Agent]")
+      .replaceAll("${agentName}", user?.name ?? "[Agent Name]")
+      .replaceAll("${agentEmail}", user?.email ?? "[Agent Email]");
+  }, [selectedTemplate, contact, user]);
+
+  const sendTemplateMutation = trpc.emailTemplates.send.useMutation({
+    onSuccess: () => {
+      toast.success("Email sent successfully ✅");
+      setEmailTemplateOpen(false);
+      setSelectedTemplateId(null);
+    },
+    onError: (err) => toast.error(`Failed to send: ${err.message}`),
+  });
+
   const initials = contact.name
     .split(" ")
     .map((w) => w[0])
@@ -357,10 +390,15 @@ function ContactCard({
             }}
           />
 
-          {/* Take Payment */}
-          <button className="ws-btn-pay" onClick={() => setPayOpen(!payOpen)}>
-            Take Payment
-          </button>
+          {/* Take Payment + Send Email Template — 50/50 */}
+          <div className="ws-btn-pair">
+            <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)}>
+              Take Payment
+            </button>
+            <button className="ws-btn-email ws-btn-pair-item" onClick={() => setEmailTemplateOpen(true)}>
+              Send Email Template
+            </button>
+          </div>
 
           {payOpen && (
             <div className="ws-pay-box">
@@ -378,6 +416,121 @@ function ContactCard({
               <button className="ws-pay-submit">
                 Charge £4.95
               </button>
+            </div>
+          )}
+
+          {/* Email Template Modal */}
+          {emailTemplateOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}>
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Send Email Template</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      To: <span className="font-medium text-gray-700">{contact.name}</span>
+                      {contact.email
+                        ? <span className="ml-2 text-gray-400">&lt;{contact.email}&gt;</span>
+                        : <span className="ml-2 text-red-500 text-xs">⚠ No email on file</span>}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <X size={18} className="text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="flex flex-1 overflow-hidden">
+                  {/* Left: Template list */}
+                  <div className="w-72 shrink-0 border-r border-gray-200 overflow-y-auto p-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Choose Template</p>
+                    {templatesLoading && (
+                      <div className="text-sm text-gray-400 text-center py-8">Loading…</div>
+                    )}
+                    {!templatesLoading && (!emailTemplates || emailTemplates.length === 0) && (
+                      <div className="text-sm text-gray-400 text-center py-8">No templates yet</div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      {emailTemplates?.map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          onClick={() => setSelectedTemplateId(tpl.id)}
+                          className={`w-full text-left px-3 py-3 rounded-lg border-2 transition-colors ${
+                            selectedTemplateId === tpl.id
+                              ? "border-amber-500 bg-amber-50"
+                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold text-gray-900 leading-tight">{tpl.name}</p>
+                          {tpl.description && (
+                            <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right: Preview */}
+                  <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                    {!selectedTemplateId && (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                        <Mail size={32} className="opacity-30" />
+                        <p className="text-sm">Select a template to preview</p>
+                      </div>
+                    )}
+                    {selectedTemplateId && templateDetailLoading && (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading preview…</div>
+                    )}
+                    {selectedTemplateId && previewHtml && (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                        <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                          <p className="text-xs text-gray-500">
+                            Subject: <span className="font-medium text-gray-700">
+                              {selectedTemplate?.subject
+                                .replaceAll("${Customers.First Name}", (contact.name ?? "").split(" ")[0] || "[Name]")
+                                .replaceAll("${agentName}", user?.name ?? "[Agent]")}
+                            </span>
+                          </p>
+                        </div>
+                        <iframe
+                          srcDoc={previewHtml}
+                          className="w-full"
+                          style={{ height: "520px", border: "none" }}
+                          title="Email Preview"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
+                  <p className="text-xs text-gray-400">
+                    Placeholders (name, agent, email) are filled automatically before sending
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!selectedTemplateId) return;
+                        sendTemplateMutation.mutate({ templateId: selectedTemplateId, contactId: contact.id });
+                      }}
+                      disabled={!selectedTemplateId || sendTemplateMutation.isPending || !contact.email}
+                      className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sendTemplateMutation.isPending ? "Sending…" : "Send Email"}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
