@@ -225,6 +225,20 @@ function ContactCard({
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
+  const [emailDropOpen, setEmailDropOpen] = useState(false);
+  const [autoSelectFormTemplate, setAutoSelectFormTemplate] = useState(false);
+  const emailDropRef = useRef<HTMLDivElement>(null);
+
+  // Close email dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (emailDropRef.current && !emailDropRef.current.contains(e.target as Node)) {
+        setEmailDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [concerns, setConcerns] = useState<string[]>(contact.concerns ?? []);
   const [notes, setNotes] = useState(contact.notes ?? "");
@@ -249,6 +263,19 @@ function ContactCard({
       .replaceAll("${agentName}", user?.name ?? "[Agent Name]")
       .replaceAll("${agentEmail}", user?.email ?? "[Agent Email]");
   }, [selectedTemplate, contact, user]);
+
+  // Auto-select the "Form" template when "Send Payment Form" is clicked
+  useEffect(() => {
+    if (autoSelectFormTemplate && emailTemplates && emailTemplates.length > 0) {
+      const formTemplate = emailTemplates.find(
+        (t: { id: number; name: string }) => t.name === "Form"
+      );
+      if (formTemplate) {
+        setSelectedTemplateId(formTemplate.id);
+      }
+      setAutoSelectFormTemplate(false);
+    }
+  }, [autoSelectFormTemplate, emailTemplates]);
 
   const sendTemplateMutation = trpc.emailTemplates.send.useMutation({
     onSuccess: () => {
@@ -516,14 +543,47 @@ function ContactCard({
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
           </div>
 
-          {/* Take Payment + Send Email Template — 50/50 */}
+          {/* Take Payment + Send Email Template dropdown — 50/50 */}
           <div className="ws-btn-pair">
             <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)}>
               Take Payment
             </button>
-            <button className="ws-btn-email ws-btn-pair-item" onClick={() => setEmailTemplateOpen(true)}>
-              Send Email Template
-            </button>
+            <div className="ws-email-drop-wrap" ref={emailDropRef}>
+              <button
+                className="ws-btn-email ws-btn-pair-item ws-email-drop-trigger"
+                onClick={() => setEmailDropOpen((v) => !v)}
+              >
+                Send Email
+                <span className="ws-email-drop-arrow">{emailDropOpen ? "▲" : "▼"}</span>
+              </button>
+              {emailDropOpen && (
+                <div className="ws-email-drop-menu">
+                  <button
+                    className="ws-email-drop-item"
+                    onClick={() => {
+                      setEmailDropOpen(false);
+                      setEmailTemplateOpen(true);
+                    }}
+                  >
+                    <span className="ws-email-drop-icon">✉️</span>
+                    Post-Call Follow-Up
+                  </button>
+                  <button
+                    className="ws-email-drop-item"
+                    onClick={() => {
+                      setEmailDropOpen(false);
+                      // Find and open the Form template directly
+                      setEmailTemplateOpen(true);
+                      // We'll auto-select the Form template after templates load
+                      setAutoSelectFormTemplate(true);
+                    }}
+                  >
+                    <span className="ws-email-drop-icon">🔗</span>
+                    Send Payment Form
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {payOpen && (

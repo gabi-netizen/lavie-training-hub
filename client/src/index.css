@@ -1404,3 +1404,64 @@
   .pay-product-img-wrap { width: 100px; }
   .pay-field-row { flex-direction: column; }
 }
+
+/* ── Email Button Dropdown ─────────────────────────────────────────────────── */
+.ws-email-drop-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.ws-email-drop-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ws-email-drop-arrow {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+.ws-email-drop-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.ws-email-drop-item {
+  width: 100%;
+  padding: 11px 14px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.12s;
+}
+
+.ws-email-drop-item:hover {
+  background: #f3f4f6;
+}
+
+.ws-email-drop-item + .ws-email-drop-item {
+  border-top: 1px solid #f0f0f0;
+}
+
+.ws-email-drop-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
