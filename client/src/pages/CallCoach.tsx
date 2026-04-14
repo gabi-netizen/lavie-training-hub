@@ -865,6 +865,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [contactSearch, setContactSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const startAnalysis = trpc.callCoach.startAnalysis.useMutation();
+  const agentListQuery = trpc.callCoach.getAgentList.useQuery();
   const contactsQuery = trpc.contacts.list.useQuery(
     { search: contactSearch || undefined, limit: 10 },
     { enabled: contactSearch.length > 0 }
@@ -922,13 +923,16 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-gray-700">Rep Name</label>
-              <input
-                type="text"
+              <select
                 value={repName}
                 onChange={e => setRepName(e.target.value)}
-                placeholder="Your name"
-                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 placeholder-slate-500 focus:outline-none focus:border-teal-500"
-              />
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
+              >
+                <option value="">Select rep...</option>
+                {(agentListQuery.data ?? []).map(agent => (
+                  <option key={agent.id} value={agent.name ?? ""}>{agent.name}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-xs text-gray-700">Call Date</label>

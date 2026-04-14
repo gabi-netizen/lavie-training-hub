@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { getDb } from "../db";
+import { users } from "../../drizzle/schema";
 import {
   createCallAnalysisRecord,
   getCallAnalysisById,
@@ -185,5 +187,19 @@ export const callCoachRouter = router({
    */
   getFeedbackSummary: adminProcedure.query(async () => {
     return getFeedbackSummary();
+  }),
+
+  /**
+   * Returns list of all app users (id + name) for the rep dropdown in manual upload.
+   * Available to all logged-in users so agents can also see their own name.
+   */
+  getAgentList: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    const rows = await db
+      .select({ id: users.id, name: users.name })
+      .from(users)
+      .orderBy(users.name);
+    return rows.filter(r => r.name);
   }),
 });
