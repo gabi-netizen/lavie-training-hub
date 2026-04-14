@@ -715,7 +715,7 @@
   flex: 1;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 /* Script column (center) */

@@ -1448,39 +1448,45 @@ export default function Workspace() {
           </div>
         </div>
 
-        {/* RIGHT: SALES TOOLS */}
+        {/* CENTER: PITCH PANEL */}
         <div className="ws-sales-tools">
-          <div className="ws-sales-content">
-            {/* ── My Pitch / Manager View Toggle (admin only) ── */}
-            {isAdmin && (
-              <div className="ws-mode-toggle" style={{ marginBottom: 12 }}>
-                <button
-                  className={`ws-mode-btn ${!managerMode ? "active" : ""}`}
-                  onClick={() => setManagerMode(false)}
-                >
-                  <Edit3 size={14} /> My Pitch
-                </button>
-                <button
-                  className={`ws-mode-btn ${managerMode ? "active" : ""}`}
-                  onClick={() => setManagerMode(true)}
-                >
-                  <Users size={14} /> Manager View
-                </button>
-              </div>
-            )}
+          <div className="ws-script-col">
+            <div className="ws-sales-content">
+              {/* ── My Pitch / Manager View Toggle (admin only) ── */}
+              {isAdmin && (
+                <div className="ws-mode-toggle" style={{ marginBottom: 12 }}>
+                  <button
+                    className={`ws-mode-btn ${!managerMode ? "active" : ""}`}
+                    onClick={() => setManagerMode(false)}
+                  >
+                    <Edit3 size={14} /> My Pitch
+                  </button>
+                  <button
+                    className={`ws-mode-btn ${managerMode ? "active" : ""}`}
+                    onClick={() => setManagerMode(true)}
+                  >
+                    <Users size={14} /> Manager View
+                  </button>
+                </div>
+              )}
 
-            {/* ── Pitch Panel (7-stage with Edit/Reset) ── */}
-            {managerMode && isAdmin ? (
-              <ManagerView
-                selectedAgentId={selectedAgentId}
-                setSelectedAgentId={setSelectedAgentId}
-              />
-            ) : (
-              <AgentPitchPanel />
-            )}
+              {/* ── Pitch Panel (7-stage with Edit/Reset) ── */}
+              {managerMode && isAdmin ? (
+                <ManagerView
+                  selectedAgentId={selectedAgentId}
+                  setSelectedAgentId={setSelectedAgentId}
+                />
+              ) : (
+                <AgentPitchPanel />
+              )}
+            </div>
+          </div>
 
-            {/* ── Quick Tools (Offer, Objections, Products) ── */}
-            <QuickTools />
+          {/* RIGHT: QUICK TOOLS (Offer, Objections, Products) */}
+          <div className="ws-quicktools-col">
+            <div className="ws-sales-content">
+              <QuickTools />
+            </div>
           </div>
         </div>
       </div>
