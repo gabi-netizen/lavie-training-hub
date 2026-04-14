@@ -280,3 +280,14 @@
 - [x] Fix fetch failed / timeout error on /contacts and /call-log pages (CloudTalk API timeout)
 - [x] Add contact selector to AI Coach upload form (link call to a contact)
 - [ ] Fix CloudTalk Workflow Automation not firing — investigate and resolve webhook pipeline
+
+## Phone Pool Feature (Apr 14 2026)
+- [x] Add phone_numbers table to DB schema (number, status, assignedUserId, cloudtalkNumberId, historyJson, notes)
+- [x] Run pnpm db:push to migrate the new table
+- [x] Build phoneNumbersRouter with: list, add, assign, release, markAsSpam (auto-deletes from CloudTalk), unspam, update, delete
+- [x] Register phoneNumbersRouter in server/routers.ts
+- [x] Build PhoneNumbers.tsx page (Active/Pool/Spam tabs, assign/release/spam/restore/edit/delete actions)
+- [x] Add /phone-numbers route in App.tsx (admin-only)
+- [x] Add "Phone Pool" nav item to TopNav (admin-only)
+- [x] Pre-populate pool with Cat McKay's and Marco Salomone's numbers via seed script
+- [x] Write lavie-crm SKILL.md for persistent context across sessions

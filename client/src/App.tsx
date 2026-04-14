@@ -13,6 +13,7 @@ import ContactCard from "./pages/ContactCard";
 import ProfileSettings from "./pages/ProfileSettings";
 import CallLog from "./pages/CallLog";
 import Workspace from "./pages/Workspace";
+import PhoneNumbers from "./pages/PhoneNumbers";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -77,6 +78,11 @@ function Router() {
         {/* Admin-only: Global Call Log */}
         <Route path={"/call-log"}>
           {() => <AdminRoute component={CallLog} />}
+        </Route>
+
+        {/* Admin-only: Phone Numbers pool management */}
+        <Route path={"/phone-numbers"}>
+          {() => <AdminRoute component={PhoneNumbers} />}
         </Route>
 
         {/* Training = scripts, objections, cheat sheet — all users */}

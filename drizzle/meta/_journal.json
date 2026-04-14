@@ -99,6 +99,13 @@
       "when": 1776143100276,
       "tag": "0013_demonic_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1776151367340,
+      "tag": "0014_sticky_luminals",
+      "breakpoints": true
     }
   ]
 }

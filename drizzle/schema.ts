@@ -182,3 +182,36 @@ export const contactCallNotes = mysqlTable("contact_call_notes", {
 
 export type ContactCallNote = typeof contactCallNotes.$inferSelect;
 export type InsertContactCallNote = typeof contactCallNotes.$inferInsert;
+
+/**
+ * Phone Numbers pool — tracks all UK numbers used by the team.
+ * Status lifecycle: pool → active → pool (released) or spam (auto-deleted from CloudTalk).
+ * CRITICAL: marking a number as 'spam' MUST trigger DELETE /numbers/delete/{cloudtalkNumberId}.json
+ * on CloudTalk immediately to stop billing.
+ */
+export const phoneNumbers = mysqlTable("phone_numbers", {
+  id: int("id").autoincrement().primaryKey(),
+  /** UK phone number in E.164 format e.g. +447893942312 */
+  number: varchar("number", { length: 32 }).notNull().unique(),
+  /** Status: pool = unassigned, active = assigned to an agent, spam = blocked/deleted from CloudTalk */
+  status: mysqlEnum("status", ["pool", "active", "spam"]).default("pool").notNull(),
+  /** User ID of the agent currently assigned to this number (null if pool/spam) */
+  assignedUserId: int("assignedUserId"),
+  /** Agent name for display (denormalised for speed) */
+  assignedAgentName: varchar("assignedAgentName", { length: 256 }),
+  /** CloudTalk internal number ID — required for DELETE /numbers/delete/{id}.json */
+  cloudtalkNumberId: varchar("cloudtalkNumberId", { length: 64 }),
+  /** Notes about this number (e.g. "Was Cat's primary number", "High spam rate") */
+  notes: text("notes"),
+  /** When the number was marked as spam */
+  spamMarkedAt: timestamp("spamMarkedAt"),
+  /** When the number was assigned to the current agent */
+  assignedAt: timestamp("assignedAt"),
+  /** JSON array of assignment history: [{agentName, assignedAt, releasedAt}] */
+  historyJson: text("historyJson"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PhoneNumber = typeof phoneNumbers.$inferSelect;
+export type InsertPhoneNumber = typeof phoneNumbers.$inferInsert;

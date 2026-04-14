@@ -14,6 +14,7 @@ import {
   Settings,
   PhoneCall,
   LayoutDashboard,
+  Smartphone,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -23,6 +24,7 @@ const ADMIN_NAV_ITEMS = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/call-log", label: "Call Log", icon: PhoneCall },
+  { path: "/phone-numbers", label: "Phone Pool", icon: Smartphone },
 ];
 
 // Visible to all logged-in users
