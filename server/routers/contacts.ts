@@ -35,6 +35,42 @@ import { eq } from "drizzle-orm";
 const ADMIN_EMAIL = "gabriel@lavielabs.com";
 
 export const contactsRouter = router({
+  // ─── Create a single contact ──────────────────────────────────────────────
+  create: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(256),
+        phone: z.string().max(32).optional(),
+        email: z.string().max(320).optional(),
+        leadType: z.string().max(64).optional(),
+        status: z.enum(CONTACT_STATUSES).default("new"),
+        agentName: z.string().max(256).optional(),
+        agentEmail: z.string().max(320).optional(),
+        source: z.string().max(128).optional(),
+        leadDate: z.string().optional(),
+        notes: z.string().max(2000).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const leadDate = input.leadDate ? new Date(input.leadDate) : undefined;
+      const { contacts: contactsTable } = await import("../../drizzle/schema");
+      const [result] = await db.insert(contactsTable).values({
+        name: input.name.trim(),
+        phone: input.phone?.trim() || undefined,
+        email: input.email?.trim() || undefined,
+        leadType: input.leadType?.trim() || undefined,
+        status: input.status,
+        agentName: input.agentName?.trim() || undefined,
+        agentEmail: input.agentEmail?.trim() || undefined,
+        source: input.source?.trim() || undefined,
+        leadDate,
+        importedNotes: input.notes?.trim() || undefined,
+      });
+      return { id: (result as any).insertId as number };
+    }),
+
   // ─── List contacts with search/filter ─────────────────────────────────────
   list: adminProcedure
     .input(

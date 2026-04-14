@@ -291,3 +291,6 @@
 - [x] Add "Phone Pool" nav item to TopNav (admin-only)
 - [x] Pre-populate pool with Cat McKay's and Marco Salomone's numbers via seed script
 - [x] Write lavie-crm SKILL.md for persistent context across sessions
+
+## Add Contact Button
+- [ ] Add "Add Contact" button to Contacts page header with a form modal

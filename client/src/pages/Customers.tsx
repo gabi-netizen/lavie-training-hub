@@ -15,7 +15,16 @@ import {
   TrendingUp,
   PhoneCall,
   UserCheck,
+  UserPlus,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -192,6 +201,39 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     e.target.value = "";
   }, [importMutation]);
 
+  // ─── Add Contact modal ──────────────────────────────────────────────────────────────────────
+  const [showAddModal, setShowAddModal] = useState(false);
+  const emptyForm = () => ({
+    name: "", phone: "", email: "", leadType: "",
+    status: "new", agentName: "", agentEmail: "",
+    source: "", leadDate: new Date().toISOString().split("T")[0], notes: "",
+  });
+  const [addForm, setAddForm] = useState(emptyForm);
+  const createMutation = trpc.contacts.create.useMutation({
+    onSuccess: () => {
+      toast.success("Contact added successfully!");
+      utils.contacts.list.invalidate();
+      setShowAddModal(false);
+      setAddForm(emptyForm());
+    },
+    onError: (err) => toast.error(`Failed to add contact: ${err.message}`),
+  });
+  const handleAddContact = () => {
+    if (!addForm.name.trim()) { toast.error("Name is required"); return; }
+    createMutation.mutate({
+      name: addForm.name,
+      phone: addForm.phone || undefined,
+      email: addForm.email || undefined,
+      leadType: addForm.leadType || undefined,
+      status: (addForm.status || "new") as any,
+      agentName: addForm.agentName || undefined,
+      agentEmail: addForm.agentEmail || undefined,
+      source: addForm.source || undefined,
+      leadDate: addForm.leadDate || undefined,
+      notes: addForm.notes || undefined,
+    });
+  };
+
   const activeFilters = [filterLeadType, filterStatus].filter(Boolean).length;
 
   // Stats
@@ -232,6 +274,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 <Upload size={14} className="mr-1.5" />
               )}
               Import CSV
+            </Button>
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white h-9 px-4 font-semibold border-2 border-green-800"
+              onClick={() => setShowAddModal(true)}
+            >
+              <UserPlus size={14} className="mr-1.5" />
+              Add Contact
             </Button>
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
           </div>
