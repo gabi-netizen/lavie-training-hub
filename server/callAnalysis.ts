@@ -2,7 +2,7 @@ import { DeepgramClient } from "@deepgram/sdk";
 import OpenAI from "openai";
 import { getDb } from "./db";
 import { callAnalyses, aiFeedback, users } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY ?? "" });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -336,6 +336,10 @@ export async function updateCallAnalysisStatus(
     analysisJson: string;
     errorMessage: string;
     customerName: string;
+    saved: boolean;
+    upsellAttempted: boolean;
+    upsellSucceeded: boolean;
+    cancelReason: string;
   }>
 ) {
   const db = await getDb();
@@ -467,6 +471,10 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string) 
       analysisJson: JSON.stringify(report),
     };
     if (report.customerName) savePayload.customerName = report.customerName;
+    if (report.saved !== undefined && report.saved !== null) savePayload.saved = report.saved;
+    if (report.upsellAttempted !== undefined && report.upsellAttempted !== null) savePayload.upsellAttempted = report.upsellAttempted;
+    if (report.upsellSucceeded !== undefined && report.upsellSucceeded !== null) savePayload.upsellSucceeded = report.upsellSucceeded;
+    if (report.cancelReason) savePayload.cancelReason = report.cancelReason;
     await updateCallAnalysisStatus(analysisId, savePayload);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -857,4 +865,151 @@ export async function getAgentDashboard(): Promise<AgentSummary[]> {
 
   summaries.sort((a, b) => b.totalCalls - a.totalCalls);
   return summaries;
+}
+
+// ─── CALL TYPE PERFORMANCE DASHBOARD ─────────────────────────────────────────
+export interface CallTypePerformanceRow {
+  callType: string;
+  team: "opening" | "retention";
+  totalCalls: number;
+  avgScore: number | null;
+  // Retention-specific
+  saveRate: number | null;       // % saved (saved=true / total with saved!=null)
+  upsellAttemptRate: number | null; // % upsell attempted
+  upsellSuccessRate: number | null; // % upsell succeeded (of those attempted)
+  // Cancel reasons breakdown (retention only)
+  cancelReasons: Record<string, number>;
+  // Per-agent breakdown
+  byAgent: {
+    userId: number;
+    repName: string;
+    totalCalls: number;
+    avgScore: number | null;
+    saveRate: number | null;
+    upsellSuccessRate: number | null;
+  }[];
+}
+
+const RETENTION_TYPES = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat"]);
+const OPENING_TYPES = new Set(["cold_call", "follow_up"]);
+
+export async function getCallTypePerformance(
+  range: "today" | "week" | "month" | "all" = "all"
+): Promise<CallTypePerformanceRow[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const now = new Date();
+  let since: Date | null = null;
+  if (range === "today") {
+    since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (range === "week") {
+    since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else if (range === "month") {
+    since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  const rows = await db
+    .select({
+      callType: callAnalyses.callType,
+      userId: callAnalyses.userId,
+      repName: callAnalyses.repName,
+      overallScore: callAnalyses.overallScore,
+      saved: callAnalyses.saved,
+      upsellAttempted: callAnalyses.upsellAttempted,
+      upsellSucceeded: callAnalyses.upsellSucceeded,
+      cancelReason: callAnalyses.cancelReason,
+      createdAt: callAnalyses.createdAt,
+    })
+    .from(callAnalyses)
+    .where(
+      since
+        ? sql`${callAnalyses.status} = 'done' AND ${callAnalyses.createdAt} >= ${since}`
+        : eq(callAnalyses.status, "done")
+    );
+
+  // Group by callType
+  const grouped: Record<string, typeof rows> = {};
+  for (const row of rows) {
+    const ct = row.callType ?? "other";
+    if (!grouped[ct]) grouped[ct] = [];
+    grouped[ct].push(row);
+  }
+
+  const result: CallTypePerformanceRow[] = [];
+
+  for (const [callType, calls] of Object.entries(grouped)) {
+    const team = RETENTION_TYPES.has(callType) ? "retention" : "opening";
+
+    const scores = calls.filter(c => c.overallScore != null).map(c => c.overallScore as number);
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+
+    // Save rate (retention only)
+    const withSaved = calls.filter(c => c.saved !== null && c.saved !== undefined);
+    const savedCount = withSaved.filter(c => c.saved === true).length;
+    const saveRate = withSaved.length > 0 ? Math.round((savedCount / withSaved.length) * 100) : null;
+
+    // Upsell rates
+    const withUpsellAttempt = calls.filter(c => c.upsellAttempted !== null && c.upsellAttempted !== undefined);
+    const upsellAttemptedCount = withUpsellAttempt.filter(c => c.upsellAttempted === true).length;
+    const upsellAttemptRate = withUpsellAttempt.length > 0 ? Math.round((upsellAttemptedCount / withUpsellAttempt.length) * 100) : null;
+
+    const withUpsellSuccess = calls.filter(c => c.upsellAttempted === true);
+    const upsellSucceededCount = withUpsellSuccess.filter(c => c.upsellSucceeded === true).length;
+    const upsellSuccessRate = withUpsellSuccess.length > 0 ? Math.round((upsellSucceededCount / withUpsellSuccess.length) * 100) : null;
+
+    // Cancel reasons
+    const cancelReasons: Record<string, number> = {};
+    for (const c of calls) {
+      if (c.cancelReason) {
+        cancelReasons[c.cancelReason] = (cancelReasons[c.cancelReason] ?? 0) + 1;
+      }
+    }
+
+    // Per-agent breakdown
+    const agentMap: Record<number, typeof calls> = {};
+    for (const c of calls) {
+      if (!agentMap[c.userId]) agentMap[c.userId] = [];
+      agentMap[c.userId].push(c);
+    }
+
+    const byAgent = Object.entries(agentMap).map(([uid, agentCalls]) => {
+      const aScores = agentCalls.filter(c => c.overallScore != null).map(c => c.overallScore as number);
+      const aAvgScore = aScores.length > 0 ? Math.round(aScores.reduce((a, b) => a + b, 0) / aScores.length) : null;
+      const aWithSaved = agentCalls.filter(c => c.saved !== null && c.saved !== undefined);
+      const aSavedCount = aWithSaved.filter(c => c.saved === true).length;
+      const aSaveRate = aWithSaved.length > 0 ? Math.round((aSavedCount / aWithSaved.length) * 100) : null;
+      const aWithUpsell = agentCalls.filter(c => c.upsellAttempted === true);
+      const aUpsellSucceeded = aWithUpsell.filter(c => c.upsellSucceeded === true).length;
+      const aUpsellSuccessRate = aWithUpsell.length > 0 ? Math.round((aUpsellSucceeded / aWithUpsell.length) * 100) : null;
+      return {
+        userId: Number(uid),
+        repName: agentCalls[0]?.repName ?? "Unknown",
+        totalCalls: agentCalls.length,
+        avgScore: aAvgScore,
+        saveRate: aSaveRate,
+        upsellSuccessRate: aUpsellSuccessRate,
+      };
+    }).sort((a, b) => b.totalCalls - a.totalCalls);
+
+    result.push({
+      callType,
+      team,
+      totalCalls: calls.length,
+      avgScore,
+      saveRate,
+      upsellAttemptRate,
+      upsellSuccessRate,
+      cancelReasons,
+      byAgent,
+    });
+  }
+
+  // Sort: retention first, then by totalCalls desc
+  result.sort((a, b) => {
+    if (a.team !== b.team) return a.team === "retention" ? -1 : 1;
+    return b.totalCalls - a.totalCalls;
+  });
+
+  return result;
 }

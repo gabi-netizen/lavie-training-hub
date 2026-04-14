@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CallTypePerformance from "@/components/CallTypePerformance";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface CallAnalysisReport {
@@ -1937,7 +1938,7 @@ function TeamDashboard() {
 }
 
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
-const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "manager", "feedback"] as const;
+const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "performance", "manager", "feedback"] as const;
 type TabId = typeof VALID_TABS[number];
 
 export default function CallCoach() {
@@ -2079,7 +2080,7 @@ export default function CallCoach() {
             { id: "my-calls", label: "My Calls" },
             { id: "leaderboard", label: "🏆 Leaderboard" },
             { id: "team", label: "👥 Team" },
-            ...(isAdmin ? [{ id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
+            ...(isAdmin ? [{ id: "performance", label: "📊 Performance" }, { id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
           ].map((tab) => (
             <button
               key={tab.id}
@@ -2107,6 +2108,7 @@ export default function CallCoach() {
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} isAdmin={isAdmin} />}
         {activeTab === "leaderboard" && <Leaderboard />}
         {activeTab === "team" && <TeamDashboard />}
+        {activeTab === "performance" && isAdmin && <CallTypePerformance />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}
       </div>

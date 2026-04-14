@@ -9,6 +9,7 @@ import {
   getLeaderboard,
   getTeamDashboard,
   getAgentDashboard,
+  getCallTypePerformance,
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
@@ -167,6 +168,15 @@ export const callCoachRouter = router({
       }
       const deleted = await deleteFailedAnalysis(input.id);
       return { success: deleted };
+    }),
+
+  /**
+   * Admin-only: call type performance dashboard — save rates, upsell rates, scores per call type.
+   */
+  getCallTypePerformance: adminProcedure
+    .input(z.object({ range: z.enum(["today", "week", "month", "all"]).default("all") }))
+    .query(async ({ input }) => {
+      return getCallTypePerformance(input.range);
     }),
 
   /**

@@ -1,4 +1,4 @@
-import { float, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, float, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -79,6 +79,14 @@ export const callAnalyses = mysqlTable("call_analyses", {
   cloudtalkCallId: varchar("cloudtalkCallId", { length: 128 }),
   /** Contact ID linked to this call (from CRM contacts table) */
   contactId: int("contactId"),
+  /** Retention: did the rep save/retain the customer? (extracted from AI report) */
+  saved: boolean("saved"),
+  /** Retention: did the rep attempt an upsell? */
+  upsellAttempted: boolean("upsellAttempted"),
+  /** Retention: did the upsell succeed? */
+  upsellSucceeded: boolean("upsellSucceeded"),
+  /** Retention: reason the customer wanted to cancel */
+  cancelReason: varchar("cancelReason", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
