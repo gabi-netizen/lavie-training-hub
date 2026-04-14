@@ -116,39 +116,155 @@ export interface CallAnalysisReport {
   closingAttempted: boolean;
   magicWandUsed: boolean;
   customerName: string | null; // extracted from transcript, null if not found
+  // Retention-specific fields
+  saved?: boolean | null;          // Did the rep save/retain the customer?
+  upsellAttempted?: boolean | null; // Did the rep attempt an upsell?
+  upsellSucceeded?: boolean | null; // Did the upsell succeed?
+  cancelReason?: string | null;    // Reason customer wanted to cancel (if applicable)
+}
+
+// ─── CALL TYPE CONTEXT BUILDERS ───────────────────────────────────────────────
+function getCallTypeContext(callType: string): { context: string; stages: string[]; extraFields: string } {
+  if (callType === "live_sub") {
+    return {
+      context: `
+CALL TYPE: Live Sub (Premium Upsell Lead)
+This customer is an ACTIVE subscriber who has NOT requested to cancel. This is a premium upsell opportunity.
+The rep's PRIMARY goal is to introduce and close an additional product (Oulala retinol serum or Ashkara eye serum).
+Score HIGH if the rep identified an upsell opportunity and closed it.
+Score LOW if the rep missed the upsell opportunity entirely.
+Do NOT penalise for missing "Magic Wand Question" — this is not a cold call script.
+`,
+      stages: ["Warm Rapport Building", "Needs Discovery", "Upsell Product Pitch", "Upsell Close", "Confirmation"],
+      extraFields: `
+  "saved": null,
+  "upsellAttempted": <bool — did the rep introduce an additional product?>,
+  "upsellSucceeded": <bool — did the customer agree to the upsell?>,
+  "cancelReason": null,`,
+    };
+  }
+
+  if (callType === "pre_cycle_cancelled" || callType === "retention_cancel_trial") {
+    return {
+      context: `
+CALL TYPE: Pre-Cycle Cancelled (Save + Upsell Lead)
+This customer cancelled BEFORE their first payment. The rep must first save the subscription, then attempt an upsell.
+Score HIGH for: understanding the cancellation reason, offering a tailored solution, saving the sub, AND attempting upsell.
+Score MEDIUM for: saving without upsell attempt.
+Score LOW for: failing to save.
+`,
+      stages: ["Opening & Rapport", "Understand Cancel Reason", "Tailored Save Offer", "Save Close", "Upsell Attempt"],
+      extraFields: `
+  "saved": <bool — did the rep successfully retain the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell after saving?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": "<Can't afford | Skin reaction | No results | Too many products | Didn't understand subscription | Other>",`,
+    };
+  }
+
+  if (callType === "pre_cycle_decline") {
+    return {
+      context: `
+CALL TYPE: Pre-Cycle Decline (Payment Recovery + Upsell Lead)
+This customer's card was declined before their first payment. The rep must recover the payment details, then attempt an upsell.
+Score HIGH for: recovering payment details AND attempting upsell.
+Score MEDIUM for: recovering payment only.
+Score LOW for: failing to recover payment.
+`,
+      stages: ["Opening & Rapport", "Explain Payment Issue", "Update Payment Details", "Confirm Subscription", "Upsell Attempt"],
+      extraFields: `
+  "saved": <bool — did the rep successfully update payment and retain the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": null,`,
+    };
+  }
+
+  if (callType === "end_of_instalment" || callType === "retention_win_back") {
+    return {
+      context: `
+CALL TYPE: End of Instalment (Winback + Upsell Lead)
+This customer previously had an instalment plan and was successfully brought back. The rep should reinforce their decision to return and attempt an upsell.
+Score HIGH for: reinforcing the customer's past results, offering an upsell, and closing.
+Score MEDIUM for: retaining without upsell.
+Score LOW for: losing the customer again.
+`,
+      stages: ["Warm Reconnection", "Reference Past Results", "Reactivation Confirmation", "Upsell Pitch", "Upsell Close"],
+      extraFields: `
+  "saved": <bool — did the rep retain/reactivate the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": null,`,
+    };
+  }
+
+  if (callType === "from_cat") {
+    return {
+      context: `
+CALL TYPE: Escalation from Opening (From Cat)
+This customer was transferred from the Opening team with a complex issue. The rep must first resolve the issue, then attempt to save and upsell.
+Score HIGH for: resolving the issue, retaining the customer, AND attempting upsell.
+Score MEDIUM for: resolving without upsell.
+Score LOW for: failing to resolve.
+`,
+      stages: ["Acknowledge Issue", "Understand Root Cause", "Resolve Problem", "Save/Retain", "Upsell Attempt"],
+      extraFields: `
+  "saved": <bool — did the rep successfully resolve and retain the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": "<Can't afford | Skin reaction | No results | Too many products | Trust issue | Other>",`,
+    };
+  }
+
+  // Opening: cold_call, follow_up, or legacy "opening"
+  return {
+    context: callType === "follow_up"
+      ? `
+CALL TYPE: Follow-up (Opening Team)
+This is a follow-up call to a previous conversation. The rep should reference the previous call, re-engage the customer's interest, and close the sale.
+Score HIGH for: referencing previous conversation, re-engaging the customer's concern, and closing.
+`
+      : `
+CALL TYPE: Cold Call (Opening Team)
+This is a first-time outbound call to a new prospect. The full Lavie Labs script applies.
+Score HIGH for: following all 7 stages of the script, using the Magic Wand Question, and closing.
+`,
+    stages: ["Opening", "Magic Wand Question", "Qualify", "Product Pitch", "Social Proof", "Offer & Close"],
+    extraFields: `
+  "saved": null,
+  "upsellAttempted": null,
+  "upsellSucceeded": null,
+  "cancelReason": null,`,
+  };
 }
 
 export async function analyseCallWithAI(
   transcript: string,
   repSpeechPct: number,
-  durationMinutes: number
+  durationMinutes: number,
+  callType: string = "cold_call"
 ): Promise<CallAnalysisReport> {
+  const { context: callTypeContext, stages, extraFields } = getCallTypeContext(callType);
+  const stagesJson = stages.map(s =>
+    `    { "stage": "${s}", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }`
+  ).join(",\n");
+
   const prompt = `${LAVIE_SCRIPT_CONTEXT}
-
+${callTypeContext}
 ---
-
 CALL TRANSCRIPT:
 ${transcript}
-
 ---
-
 CALL STATS:
 - Rep speech: ${repSpeechPct}% of conversation
 - Duration: ${durationMinutes.toFixed(1)} minutes
-
 ---
-
 Analyse this sales call and return a JSON object with this exact structure:
 {
   "overallScore": <number 0-100>,
   "summary": "<2-3 sentence summary of the call>",
   "stagesDetected": [
-    { "stage": "Opening", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Magic Wand Question", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Qualify", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Product Pitch", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Social Proof", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" },
-    { "stage": "Offer & Close", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }
+${stagesJson}
   ],
   "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
   "improvements": ["<improvement 1>", "<improvement 2>", "<improvement 3>"],
@@ -160,12 +276,10 @@ Analyse this sales call and return a JSON object with this exact structure:
   "toneScore": <number 0-100>,
   "closingAttempted": <bool>,
   "magicWandUsed": <bool>,
-  "customerName": "<first name of the customer if mentioned in the call, otherwise null>"
+  "customerName": "<first name of the customer if mentioned in the call, otherwise null>",${extraFields}
 }
-
 IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
-
-Be specific, actionable, and encouraging. Focus on Lavie Labs script compliance.`;
+Be specific, actionable, and encouraging. Focus on the call type objectives above.`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -173,11 +287,9 @@ Be specific, actionable, and encouraging. Focus on Lavie Labs script compliance.
     response_format: { type: "json_object" },
     temperature: 0.3,
   });
-
   const content = response.choices[0]?.message?.content ?? "{}";
   return JSON.parse(content) as CallAnalysisReport;
 }
-
 // ─── DB HELPERS ───────────────────────────────────────────────────────────────
 export async function createCallAnalysisRecord(data: {
   userId: number;
@@ -187,7 +299,7 @@ export async function createCallAnalysisRecord(data: {
   fileName: string;
   callDate?: Date | null;
   closeStatus?: "closed" | "not_closed" | "follow_up" | null;
-  callType?: "opening" | "retention_cancel_trial" | "retention_win_back" | null;
+  callType?: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_cancel_trial" | "retention_win_back" | null;
   source?: "manual" | "webhook";
   cloudtalkCallId?: string | null;
   contactId?: number | null;
@@ -203,7 +315,7 @@ export async function createCallAnalysisRecord(data: {
     fileName: data.fileName,
     callDate: data.callDate ?? null,
     closeStatus: data.closeStatus ?? null,
-    callType: data.callType ?? "opening",
+    callType: (data.callType ?? "cold_call") as any,
     status: "pending",
     source: data.source ?? "manual",
     cloudtalkCallId: data.cloudtalkCallId ?? null,
@@ -337,16 +449,16 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string) 
     // Step 1: Transcribe
     await updateCallAnalysisStatus(analysisId, { status: "transcribing" });
     const { transcript, repSpeechPct, durationSeconds } = await transcribeAudio(audioUrl);
-
     await updateCallAnalysisStatus(analysisId, {
       transcript,
       repSpeechPct,
       durationSeconds,
     });
-
-    // Step 2: Analyse
+    // Step 2: Analyse — fetch callType from DB so the prompt is tailored
     await updateCallAnalysisStatus(analysisId, { status: "analyzing" });
-    const report = await analyseCallWithAI(transcript, repSpeechPct, durationSeconds / 60);
+    const record = await getCallAnalysisById(analysisId);
+    const callType = record?.callType ?? "cold_call";
+    const report = await analyseCallWithAI(transcript, repSpeechPct, durationSeconds / 60, callType);
 
     // Step 3: Save results (including AI-extracted customer name)
     const savePayload: Parameters<typeof updateCallAnalysisStatus>[1] = {

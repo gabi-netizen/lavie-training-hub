@@ -65,9 +65,20 @@ interface CallAnalysisReport {
 function CallTypeBadge({ callType }: { callType?: string | null }) {
   if (!callType) return null;
   const map: Record<string, { label: string; cls: string }> = {
-    opening: { label: "📞 Opening", cls: "bg-blue-50 text-blue-700 border-blue-200" },
-    retention_cancel_trial: { label: "🔄 Cancel Trial", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-    retention_win_back: { label: "💎 Win Back", cls: "bg-purple-50 text-purple-700 border-purple-200" },
+    // Opening team
+    cold_call:           { label: "📞 Cold Call",           cls: "bg-blue-50 text-blue-700 border-blue-200" },
+    follow_up:           { label: "🔄 Follow-up",           cls: "bg-sky-50 text-sky-700 border-sky-200" },
+    // Retention team
+    live_sub:            { label: "💚 Live Sub",            cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    pre_cycle_cancelled: { label: "🚫 Pre-Cycle Cancelled", cls: "bg-red-50 text-red-700 border-red-200" },
+    pre_cycle_decline:   { label: "💳 Pre-Cycle Decline",   cls: "bg-orange-50 text-orange-700 border-orange-200" },
+    end_of_instalment:   { label: "💎 End of Instalment",   cls: "bg-purple-50 text-purple-700 border-purple-200" },
+    from_cat:            { label: "🔀 From Cat",            cls: "bg-pink-50 text-pink-700 border-pink-200" },
+    other:               { label: "❓ Other",               cls: "bg-gray-50 text-gray-700 border-gray-200" },
+    // Legacy
+    opening:             { label: "📞 Opening",             cls: "bg-blue-50 text-blue-700 border-blue-200" },
+    retention_cancel_trial: { label: "🔄 Cancel Trial",    cls: "bg-amber-50 text-amber-700 border-amber-200" },
+    retention_win_back:  { label: "💎 Win Back",            cls: "bg-purple-50 text-purple-700 border-purple-200" },
   };
   const info = map[callType];
   if (!info) return null;
@@ -336,8 +347,8 @@ function EditDetailsModal({
     (initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed"
   );
   const [customerName, setCustomerName] = useState(initialCustomerName ?? "");
-  const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">(
-    (initialCallType as "opening" | "retention_cancel_trial" | "retention_win_back") ?? "opening"
+  const [callType, setCallType] = useState<string>(
+    initialCallType ?? "cold_call"
   );
   const [saved, setSaved] = useState(false);
 
@@ -348,7 +359,7 @@ function EditDetailsModal({
       setCallDate(initialCallDate ? new Date(initialCallDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]);
       setCloseStatus((initialCloseStatus as "closed" | "not_closed" | "follow_up") ?? "not_closed");
       setCustomerName(initialCustomerName ?? "");
-      setCallType((initialCallType as "opening" | "retention_cancel_trial" | "retention_win_back") ?? "opening");
+      setCallType(initialCallType ?? "cold_call");
       setSaved(false);
     }
   }, [open, initialRepName, initialCallDate, initialCloseStatus, initialCustomerName, initialCallType]);
@@ -415,9 +426,18 @@ function EditDetailsModal({
                   onChange={e => setCallType(e.target.value as typeof callType)}
                   className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
-                  <option value="opening">📞 Opening</option>
-                  <option value="retention_cancel_trial">🔄 Cancel Trial</option>
-                  <option value="retention_win_back">💎 Win Back</option>
+                  <optgroup label="── Opening Team ──">
+                    <option value="cold_call">📞 Cold Call</option>
+                    <option value="follow_up">🔄 Follow-up</option>
+                  </optgroup>
+                  <optgroup label="── Retention Team ──">
+                    <option value="live_sub">💚 Live Sub</option>
+                    <option value="pre_cycle_cancelled">🚫 Pre-Cycle Cancelled</option>
+                    <option value="pre_cycle_decline">💳 Pre-Cycle Decline</option>
+                    <option value="end_of_instalment">💎 End of Instalment</option>
+                    <option value="from_cat">🔀 From Cat</option>
+                    <option value="other">❓ Other</option>
+                  </optgroup>
                 </select>
               </div>
               <div>
@@ -436,7 +456,7 @@ function EditDetailsModal({
             <DialogFooter>
               <Button variant="ghost" onClick={handleClose} className="text-gray-700">Cancel</Button>
               <Button
-                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined, callType })}
+                onClick={() => updateDetails.mutate({ id: analysisId, repName, callDate, closeStatus, customerName: customerName || undefined, callType: callType as any })}
                 disabled={updateDetails.isPending}
                 className="bg-teal-600 hover:bg-teal-500 text-gray-900"
               >
@@ -839,7 +859,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [repName, setRepName] = useState(user?.name ?? "");
   const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
-  const [callType, setCallType] = useState<"opening" | "retention_cancel_trial" | "retention_win_back">("opening");
+  const [callType, setCallType] = useState<string>("cold_call");
   const [contactId, setContactId] = useState<number | null>(null);
   const [contactSearch, setContactSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -874,7 +894,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
         repName: repName || undefined,
         callDate: callDate || undefined,
         closeStatus: closeStatus || undefined,
-        callType,
+        callType: callType as any,
         contactId: contactId ?? undefined,
       });
       onUploaded(analysisId);
@@ -937,9 +957,18 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                 onChange={e => setCallType(e.target.value as typeof callType)}
                 className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
               >
-                <option value="opening">📞 Opening</option>
-                <option value="retention_cancel_trial">🔄 Cancel Trial</option>
-                <option value="retention_win_back">💎 Win Back</option>
+                <optgroup label="── Opening Team ──">
+                  <option value="cold_call">📞 Cold Call</option>
+                  <option value="follow_up">🔄 Follow-up</option>
+                </optgroup>
+                <optgroup label="── Retention Team ──">
+                  <option value="live_sub">💚 Live Sub</option>
+                  <option value="pre_cycle_cancelled">🚫 Pre-Cycle Cancelled</option>
+                  <option value="pre_cycle_decline">💳 Pre-Cycle Decline</option>
+                  <option value="end_of_instalment">💎 End of Instalment</option>
+                  <option value="from_cat">🔀 From Cat</option>
+                  <option value="other">❓ Other</option>
+                </optgroup>
               </select>
             </div>
           </div>

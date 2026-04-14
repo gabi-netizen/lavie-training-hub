@@ -68,7 +68,7 @@ export const callCoachRouter = router({
         repName: z.string().optional(),
         callDate: z.string().optional(), // ISO date string
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
-        callType: z.enum(["opening", "retention_cancel_trial", "retention_win_back"]).optional(),
+        callType: z.enum(["cold_call", "follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "opening", "retention_cancel_trial", "retention_win_back"]).optional(),
         contactId: z.number().optional(),
       })
     )
@@ -81,7 +81,7 @@ export const callCoachRouter = router({
         fileName: input.fileName,
         callDate: input.callDate ? new Date(input.callDate) : null,
         closeStatus: input.closeStatus ?? null,
-        callType: input.callType ?? "opening",
+        callType: input.callType ?? "cold_call",
         contactId: input.contactId ?? null,
       });
 
@@ -104,7 +104,7 @@ export const callCoachRouter = router({
         callDate: z.string().optional(),
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
         customerName: z.string().optional(),
-        callType: z.enum(["opening", "retention_cancel_trial", "retention_win_back"]).optional(),
+        callType: z.enum(["cold_call", "follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "opening", "retention_cancel_trial", "retention_win_back"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -119,7 +119,7 @@ export const callCoachRouter = router({
         callDate: input.callDate ? new Date(input.callDate) : undefined,
         closeStatus: input.closeStatus,
         customerName: input.customerName,
-        callType: input.callType,
+        callType: input.callType as any,
         lastEditedByUserId: ctx.user.id,
         lastEditedByName: ctx.user.name ?? ctx.user.email ?? `User #${ctx.user.id}`,
       });

@@ -60,8 +60,13 @@ export const callAnalyses = mysqlTable("call_analyses", {
   errorMessage: text("errorMessage"),
   /** Customer name extracted from the call transcript by AI, or manually set */
   customerName: varchar("customerName", { length: 256 }),
-  /** Call type: opening (new sale), retention_cancel_trial (cancel trial), retention_win_back (win back) */
-  callType: mysqlEnum("callType", ["opening", "retention_cancel_trial", "retention_win_back"]).default("opening"),
+  /** Call type — Opening team: cold_call, follow_up. Retention team: live_sub, pre_cycle_cancelled, pre_cycle_decline, end_of_instalment, from_cat, other. Legacy values kept for backward compatibility. */
+  callType: mysqlEnum("callType", [
+    "cold_call", "follow_up",
+    "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat",
+    "other",
+    "opening", "retention_cancel_trial", "retention_win_back"
+  ]).default("cold_call"),
   /** User ID of the person who last edited the call details (repName/callDate/closeStatus) */
   lastEditedByUserId: int("lastEditedByUserId"),
   /** Display name of the person who last edited the call details */
