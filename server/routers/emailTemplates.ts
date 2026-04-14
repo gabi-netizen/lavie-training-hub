@@ -175,7 +175,7 @@ export const emailTemplatesRouter = router({
 
       // Build placeholder map
       const agentName = ctx.user.name ?? "Lavié Labs";
-      const agentEmail = ctx.user.email ?? "customercare@lavielabs.co.uk";
+      const agentEmail = ctx.user.email ?? "support@lavielabs.com";
       const firstName = (contact.name ?? "").split(" ")[0] || contact.name || "";
       const ownerName = contact.agentName ?? agentName;
 
@@ -194,7 +194,7 @@ export const emailTemplatesRouter = router({
       const resolvedHtml = fillPlaceholders(template.htmlBody, vars);
 
       // Send via Postmark
-      const fromAddress = `${agentName} <customercare@lavielabs.co.uk>`;
+      const fromAddress = `${agentName} <support@lavielabs.com>`;
       let postmarkMessageId: string | null = null;
       try {
         const result = await sendViaPostmark({
