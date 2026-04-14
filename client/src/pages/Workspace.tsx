@@ -390,35 +390,6 @@ function ContactCard({
             }}
           />
 
-          {/* Take Payment + Send Email Template — 50/50 */}
-          <div className="ws-btn-pair">
-            <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)}>
-              Take Payment
-            </button>
-            <button className="ws-btn-email ws-btn-pair-item" onClick={() => setEmailTemplateOpen(true)}>
-              Send Email Template
-            </button>
-          </div>
-
-          {payOpen && (
-            <div className="ws-pay-box">
-              <div className="ws-pay-title">
-                <CreditCard size={14} /> Payment Details
-              </div>
-              <div className="ws-pay-grid">
-                <input className="ws-pay-input" placeholder="Card Number" />
-                <div className="ws-pay-row2">
-                  <input className="ws-pay-input" placeholder="MM/YY" />
-                  <input className="ws-pay-input" placeholder="CVV" />
-                </div>
-                <input className="ws-pay-input" placeholder="Name on Card" />
-              </div>
-              <button className="ws-pay-submit">
-                Charge £4.95
-              </button>
-            </div>
-          )}
-
           {/* Email Template Modal */}
           {emailTemplateOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}>
@@ -543,6 +514,35 @@ function ContactCard({
             <button className="ws-btn ws-btn-no" onClick={() => onAction("no")}>No</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
           </div>
+
+          {/* Take Payment + Send Email Template — 50/50 */}
+          <div className="ws-btn-pair">
+            <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)}>
+              Take Payment
+            </button>
+            <button className="ws-btn-email ws-btn-pair-item" onClick={() => setEmailTemplateOpen(true)}>
+              Send Email Template
+            </button>
+          </div>
+
+          {payOpen && (
+            <div className="ws-pay-box">
+              <div className="ws-pay-title">
+                <CreditCard size={14} /> Payment Details
+              </div>
+              <div className="ws-pay-grid">
+                <input className="ws-pay-input" placeholder="Card Number" />
+                <div className="ws-pay-row2">
+                  <input className="ws-pay-input" placeholder="MM/YY" />
+                  <input className="ws-pay-input" placeholder="CVV" />
+                </div>
+                <input className="ws-pay-input" placeholder="Name on Card" />
+              </div>
+              <button className="ws-pay-submit">
+                Charge £4.95
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
