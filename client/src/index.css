@@ -603,6 +603,7 @@
 .ws-btn-pair {
   display: flex;
   gap: 8px;
+  margin-top: 10px;
   margin-bottom: 8px;
 }
 .ws-btn-pair-item {
