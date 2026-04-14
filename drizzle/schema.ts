@@ -215,3 +215,51 @@ export const phoneNumbers = mysqlTable("phone_numbers", {
 
 export type PhoneNumber = typeof phoneNumbers.$inferSelect;
 export type InsertPhoneNumber = typeof phoneNumbers.$inferInsert;
+
+/**
+ * Email templates — HTML email templates with variable placeholders.
+ * Supported placeholders (auto-filled at send time):
+ *   ${Customers.First Name}   → contact first name
+ *   ${Customers.Customers Owner} → agent name assigned to contact
+ *   ${agentName}              → sending agent's full name
+ *   ${agentEmail}             → sending agent's email address
+ */
+export const emailTemplates = mysqlTable("email_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Human-readable template name shown in the picker */
+  name: varchar("name", { length: 256 }).notNull(),
+  /** Email subject line (also supports placeholders) */
+  subject: varchar("subject", { length: 512 }).notNull(),
+  /** Full HTML body of the email */
+  htmlBody: text("htmlBody").notNull(),
+  /** Short description shown in the template picker */
+  description: varchar("description", { length: 512 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
+
+/**
+ * Email send log — records every email sent to a contact.
+ */
+export const emailLogs = mysqlTable("email_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Contact the email was sent to */
+  contactId: int("contactId").notNull(),
+  /** Template used */
+  templateId: int("templateId").notNull(),
+  templateName: varchar("templateName", { length: 256 }),
+  /** Agent who sent the email */
+  sentByUserId: int("sentByUserId").notNull(),
+  sentByName: varchar("sentByName", { length: 256 }),
+  /** Resolved subject (after placeholder substitution) */
+  subject: varchar("subject", { length: 512 }),
+  /** Recipient email address */
+  toEmail: varchar("toEmail", { length: 320 }),
+  /** Postmark message ID for tracking */
+  postmarkMessageId: varchar("postmarkMessageId", { length: 128 }),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type InsertEmailLog = typeof emailLogs.$inferInsert;

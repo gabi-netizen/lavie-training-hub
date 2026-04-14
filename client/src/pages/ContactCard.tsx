@@ -4,7 +4,7 @@
  * Design: Light/white background, professional CRM layout (HubSpot-style)
  * Layout: Left sidebar (identity) | Main area (log call + history) | Right panel (actions + info)
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -182,6 +182,38 @@ export default function ContactCard() {
     onError: () => toast.error("Email failed to send"),
   });
 
+  // ─── Email Template Picker ─────────────────────────────────────────────────
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
+  const { data: emailTemplates, isLoading: templatesLoading } = trpc.emailTemplates.list.useQuery(
+    undefined,
+    { enabled: templatePickerOpen }
+  );
+
+  const { data: selectedTemplate, isLoading: templateDetailLoading } = trpc.emailTemplates.getById.useQuery(
+    { id: selectedTemplateId! },
+    { enabled: selectedTemplateId !== null }
+  );
+
+  const previewHtml = useMemo(() => {
+    if (!selectedTemplate || !contact) return null;
+    return selectedTemplate.htmlBody
+      .replaceAll("${Customers.First Name}", (contact.name ?? "").split(" ")[0] || "[Name]")
+      .replaceAll("${Customers.Customers Owner}", contact.agentName ?? user?.name ?? "[Agent]")
+      .replaceAll("${agentName}", user?.name ?? "[Agent Name]")
+      .replaceAll("${agentEmail}", user?.email ?? "[Agent Email]");
+  }, [selectedTemplate, contact, user]);
+
+  const sendTemplateMutation = trpc.emailTemplates.send.useMutation({
+    onSuccess: () => {
+      toast.success("Email sent successfully ✅");
+      setTemplatePickerOpen(false);
+      setSelectedTemplateId(null);
+    },
+    onError: (err) => toast.error(`Failed to send: ${err.message}`),
+  });
+
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("connected");
   const [statusOpen, setStatusOpen] = useState(false);
@@ -286,6 +318,7 @@ export default function ContactCard() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
 
       {/* ── Top header bar ── */}
@@ -778,12 +811,11 @@ export default function ContactCard() {
                 {syncToACMutation.isPending ? "Syncing…" : "Sync to ActiveCampaign"}
               </button>
               <button
-                onClick={() => user?.email && sendTestEmailMutation.mutate({ to: user.email })}
-                disabled={sendTestEmailMutation.isPending || !user?.email}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 border-gray-900 text-gray-700 hover:bg-gray-50 font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => setTemplatePickerOpen(true)}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 border-gray-900 text-amber-700 hover:bg-amber-50 font-semibold text-sm transition-colors"
               >
-                <CheckCircle2 size={15} />
-                {sendTestEmailMutation.isPending ? "Sending…" : "Send Test Email"}
+                <Mail size={15} />
+                Send Email Template
               </button>
             </div>
           </div>
@@ -821,5 +853,121 @@ export default function ContactCard() {
         </aside>
       </div>
     </div>
+
+    {/* ─── Email Template Picker Modal ─────────────────────────────────────── */}
+    {templatePickerOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Send Email Template</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                To: <span className="font-medium text-gray-700">{contact.name}</span>
+                {contact.email
+                  ? <span className="ml-2 text-gray-400">&lt;{contact.email}&gt;</span>
+                  : <span className="ml-2 text-red-500 text-xs">⚠ No email on file</span>}
+              </p>
+            </div>
+            <button
+              onClick={() => { setTemplatePickerOpen(false); setSelectedTemplateId(null); }}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X size={18} className="text-gray-500" />
+            </button>
+          </div>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left: Template list */}
+            <div className="w-72 shrink-0 border-r border-gray-200 overflow-y-auto p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Choose Template</p>
+              {templatesLoading && (
+                <div className="text-sm text-gray-400 text-center py-8">Loading…</div>
+              )}
+              {!templatesLoading && (!emailTemplates || emailTemplates.length === 0) && (
+                <div className="text-sm text-gray-400 text-center py-8">No templates yet</div>
+              )}
+              <div className="flex flex-col gap-2">
+                {emailTemplates?.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => setSelectedTemplateId(tpl.id)}
+                    className={`w-full text-left px-3 py-3 rounded-lg border-2 transition-colors ${
+                      selectedTemplateId === tpl.id
+                        ? "border-amber-500 bg-amber-50"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{tpl.name}</p>
+                    {tpl.description && (
+                      <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Preview */}
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+              {!selectedTemplateId && (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                  <Mail size={32} className="opacity-30" />
+                  <p className="text-sm">Select a template to preview</p>
+                </div>
+              )}
+              {selectedTemplateId && templateDetailLoading && (
+                <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading preview…</div>
+              )}
+              {selectedTemplateId && previewHtml && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                  <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      Subject: <span className="font-medium text-gray-700">
+                        {selectedTemplate?.subject
+                          .replaceAll("${Customers.First Name}", (contact.name ?? "").split(" ")[0] || "[Name]")
+                          .replaceAll("${agentName}", user?.name ?? "[Agent]")}
+                      </span>
+                    </p>
+                  </div>
+                  <iframe
+                    srcDoc={previewHtml}
+                    className="w-full"
+                    style={{ height: "520px", border: "none" }}
+                    title="Email Preview"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
+            <p className="text-xs text-gray-400">
+              Placeholders (name, agent, email) are filled automatically before sending
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => { setTemplatePickerOpen(false); setSelectedTemplateId(null); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedTemplateId) return;
+                  sendTemplateMutation.mutate({ templateId: selectedTemplateId, contactId });
+                }}
+                disabled={!selectedTemplateId || sendTemplateMutation.isPending || !contact.email}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {sendTemplateMutation.isPending ? "Sending…" : "Send Email"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -294,3 +294,13 @@
 
 ## Add Contact Button
 - [ ] Add "Add Contact" button to Contacts page header with a form modal
+
+## Email Template System (Apr 14 2026)
+- [ ] Add email_templates table to DB schema (name, subject, htmlBody, createdAt, updatedAt)
+- [ ] Run pnpm db:push to migrate
+- [ ] Seed first template: Post-Call Follow-Up (Matinika trial)
+- [ ] Add listTemplates tRPC procedure (public list for agents)
+- [ ] Add sendTemplateEmail tRPC procedure (auto-fills agentName, agentEmail, customerFirstName, customerOwner)
+- [ ] Wire Send Test Email button to open template picker modal with mini previews
+- [ ] On template select: fill placeholders and send via Postmark
+- [ ] Log sent email as a call note on the contact
