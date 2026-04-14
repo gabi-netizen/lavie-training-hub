@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, pitchCustomizations, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -90,3 +90,38 @@ export async function getUserByOpenId(openId: string) {
 }
 
 // TODO: add feature queries here as your schema grows.
+
+// ── Pitch Customizations ──
+export async function getUserPitchCustomizations(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(pitchCustomizations).where(eq(pitchCustomizations.userId, userId));
+}
+
+export async function upsertPitchCustomization(userId: number, stageNum: number, customContent: unknown) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(pitchCustomizations)
+    .where(and(eq(pitchCustomizations.userId, userId), eq(pitchCustomizations.stageNum, stageNum)));
+  if (existing.length > 0) {
+    await db.update(pitchCustomizations)
+      .set({ customContent, updatedAt: new Date() })
+      .where(and(eq(pitchCustomizations.userId, userId), eq(pitchCustomizations.stageNum, stageNum)));
+  } else {
+    await db.insert(pitchCustomizations).values({ userId, stageNum, customContent });
+  }
+}
+
+export async function deletePitchCustomization(userId: number, stageNum: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(pitchCustomizations)
+    .where(and(eq(pitchCustomizations.userId, userId), eq(pitchCustomizations.stageNum, stageNum)));
+}
+
+export async function getAllPitchCustomizationsOverview() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ userId: pitchCustomizations.userId, stageNum: pitchCustomizations.stageNum })
+    .from(pitchCustomizations);
+}

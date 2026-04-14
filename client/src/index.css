@@ -784,7 +784,7 @@
 .ws-ps-instruction {
   font-size: 11px;
   font-weight: 700;
-  color: #4F46E5;
+  color: #16a34a;
   text-transform: uppercase;
   margin-bottom: 6px;
 }
@@ -806,6 +806,230 @@
 .ws-ps-closing {
   background: #FFFBEB;
   border-color: #F59E0B;
+}
+
+/* ── Pitch Stage Actions (Edit/Reset/Save/Cancel) ── */
+.ws-ps-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 4px;
+}
+.ws-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.ws-edit-btn {
+  border-color: #C7D2FE;
+  color: #4F46E5;
+  background: #EEF2FF;
+}
+.ws-edit-btn:hover { background: #E0E7FF; }
+.ws-reset-btn {
+  border-color: #FCA5A5;
+  color: #dc2626;
+  background: #FEF2F2;
+}
+.ws-reset-btn:hover { background: #FEE2E2; }
+.ws-save-btn {
+  border-color: #86EFAC;
+  color: #16a34a;
+  background: #F0FDF4;
+}
+.ws-save-btn:hover { background: #DCFCE7; }
+.ws-cancel-btn {
+  border-color: #D1D5DB;
+  color: #6b7280;
+  background: #F9FAFB;
+}
+.ws-cancel-btn:hover { background: #F3F4F6; }
+
+/* ── Branch Buttons ── */
+.ws-branch-section {
+  margin-top: 10px;
+}
+.ws-branch-prompt {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+.ws-branch-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.ws-branch-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid #C7D2FE;
+  color: #4F46E5;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.ws-branch-btn:hover { background: #EEF2FF; }
+.ws-branch-btn.active {
+  background: #4F46E5;
+  color: #fff;
+  border-color: #4F46E5;
+}
+.ws-branch-content {
+  animation: branchSlide 0.15s ease;
+  padding: 8px 0 0 0;
+}
+@keyframes branchSlide {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Customized Badge ── */
+.ws-customized-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #D97706;
+  background: #FEF3C7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+
+/* ── Edit Mode ── */
+.ws-edit-mode { padding: 4px 0; }
+.ws-edit-section { margin-bottom: 12px; }
+.ws-edit-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  letter-spacing: 0.3px;
+}
+.ws-edit-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid #C7D2FE;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #1f2937;
+  background: #FAFBFF;
+  resize: vertical;
+  margin-bottom: 4px;
+  transition: border-color 0.15s;
+  line-height: 1.5;
+}
+.ws-edit-textarea:focus {
+  outline: none;
+  border-color: #4F46E5;
+  background: #fff;
+}
+.ws-edit-textarea.ws-edit-instruction {
+  border-color: #86EFAC;
+  background: #F0FDF4;
+  color: #16a34a;
+  font-weight: 600;
+}
+.ws-edit-note-text {
+  font-size: 11px;
+  color: #9CA3AF;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* ── Mode Toggle (My Pitch / Manager View) ── */
+.ws-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #F3F4F6;
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+.ws-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  color: #6b7280;
+  background: transparent;
+}
+.ws-mode-btn.active {
+  background: #fff;
+  color: #4F46E5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.ws-mode-btn:hover:not(.active) { color: #374151; }
+
+/* ── Manager Bar ── */
+.ws-manager-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #EEF2FF;
+  border: 1.5px solid #C7D2FE;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  color: #4F46E5;
+}
+.ws-manager-label { font-size: 13px; font-weight: 600; }
+.ws-manager-select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1.5px solid #C7D2FE;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2937;
+  background: #fff;
+  cursor: pointer;
+}
+.ws-manager-select:focus { outline: none; border-color: #4F46E5; }
+
+/* ── Loading & Empty State ── */
+.ws-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+.ws-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: #9CA3AF;
+  font-size: 14px;
+  text-align: center;
 }
 
 /* Quick Tools */

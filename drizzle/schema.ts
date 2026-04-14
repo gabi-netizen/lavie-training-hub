@@ -1,4 +1,4 @@
-import { boolean, float, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, float, int, json, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -263,3 +263,16 @@ export const emailLogs = mysqlTable("email_logs", {
 });
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertEmailLog = typeof emailLogs.$inferInsert;
+
+// ── Pitch Customizations ──
+export const pitchCustomizations = mysqlTable("pitch_customizations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  stageNum: int("stage_num").notNull(),
+  customContent: json("custom_content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  unique("pitch_customizations_user_stage_unique").on(table.userId, table.stageNum),
+]);
+export type PitchCustomization = typeof pitchCustomizations.$inferSelect;

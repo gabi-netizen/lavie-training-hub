@@ -1,6 +1,6 @@
-// File: client/src/pages/Workspace.tsx
-// Full Agent Workspace UI — v8 design converted to React
-// Includes: Contact card, Action buttons, Script panel, Notes dropdowns, Payment box
+
+// Full Agent Workspace UI — v9 design: 7-stage pitch + Edit/Reset + Manager View + Email Modal
+// Includes: Contact card, Action buttons, Script panel (7 stages), Notes dropdowns, Payment box, Email Template Modal
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
-  ChevronRight, ChevronDown, CreditCard, Search
+  ChevronRight, ChevronDown, CreditCard, Search,
+  Edit3, Save, AlertCircle, Eye, Users
 } from "lucide-react";
 
 // ==========================================
@@ -550,73 +551,244 @@ function ContactCard({
 }
 
 // ==========================================
-// SCRIPT PANEL — PITCH STAGES
+// PITCH DATA — 7 stages with branches
 // ==========================================
-const PITCH_STAGES = [
+interface PitchBranch {
+  label: string;
+  says: string[];
+  instruction?: string;
+}
+
+interface PitchStage {
+  num: number;
+  title: string;
+  emoji?: string;
+  instructions?: string[];
+  says?: string[];
+  endInstruction?: string;
+  closingSay?: string;
+  notes?: string[];
+  branches?: {
+    prompt: string;
+    options: PitchBranch[];
+  };
+}
+
+const PITCH_STAGES: PitchStage[] = [
   {
     num: 1,
-    title: "Opening",
-    instructions: ["HIGH ENERGY — NO PAUSES — CONFIDENCE — SMILE"],
+    title: "Introduction & Discovery",
+    emoji: "📞",
+    instructions: ["HIGH ENERGY — NO PAUSES — CONFIDENCE — SAY IT WITH A SMILE!"],
     says: [
       '"Hi [Name], it\'s [Your Name] from Lavie Labs. We\'re a medical-grade skincare company working in partnership with UK Best Offers. We\'re calling today to send you a complimentary Anti-Ageing Starter Kit to try!"',
       '"Because our products are medical-grade and highly active, I just need to ask a few quick questions to make sure we send you the perfect match for your skin. Would you say your skin is more on the dry side, combination, or oily?"',
     ],
-    endInstruction: "Listen and adapt. Focus on how the skin FEELS to them.",
+    endInstruction: "Listen and adapt based on their answer. Focus on how the skin FEELS to them.",
+    branches: {
+      prompt: "What did the customer say?",
+      options: [
+        {
+          label: "🌵 Dry",
+          says: [
+            '"Have you always had drier skin, or is this a recent change where your skin just feels like it\'s lost its bounce and hydration?"',
+            '"Do you ever get that tight, uncomfortable feeling right after you step out of the shower?"',
+            '"Are there specific areas that feel rough or flaky, where makeup just doesn\'t sit right?"',
+          ],
+        },
+        {
+          label: "🔄 Combination",
+          says: [
+            '"Has it always been combination, or did you used to have oilier skin that has changed over time?"',
+            '"Do you find your T-zone gets shiny by midday while your cheeks feel tight?"',
+          ],
+        },
+        {
+          label: "💧 Oily",
+          says: [
+            '"Have you always struggled with oily skin?"',
+            '"Do you find yourself having to blot or powder throughout the day to keep the shine down?"',
+            '"Are you prone to breakouts, or do you have any stubborn post-blemish marks you\'d love to fade?"',
+          ],
+        },
+      ],
+    },
   },
   {
     num: 2,
-    title: "Magic Wand Question",
-    instructions: ["Crucial for emotional buy-in — listen carefully"],
+    title: "Routine & Education",
+    emoji: "🧴",
+    instructions: ["Build rapport and introduce Hyaluronic Acid"],
     says: [
-      '"If you had a magic wand and could improve just ONE thing about your skin right now, what would it be?"',
-      '"So just to clarify, you would like to [recap their exact words]. Did I get that right?"',
+      '"Do you currently have a skincare routine you follow morning and night? What are you using right now?"',
     ],
-    endInstruction: "Recap their exact words to show you understand.",
+    endInstruction: "Listen actively. Compliment their effort, no matter how small.",
+    notes: [
+      '"I love that you have a routine! Taking that time for yourself is half the battle. The other half is making sure you are using powerful active ingredients which you will receive using medical grade products."',
+      '"Tell me, are you familiar with Hyaluronic Acid? Have you heard of it?"',
+      '"Hyaluronic Acid is actually something our bodies produce naturally. Think of it like a sponge that holds water inside your skin. It\'s what gives young skin that plump, bouncy, glowing look."',
+      '"The catch is, after we turn 25, our bodies stop making as much of it. That\'s when we start noticing our skin feeling drier, looking a bit duller, and those fine lines start creeping in. Our goal is simply to give that hydration back to your skin, so it can look and feel plump, smooth, and radiant again."',
+    ],
   },
   {
     num: 3,
-    title: "Product Presentation",
-    instructions: ["Benefit-driven — tie back to their magic wand answer"],
-    notes: ["MATINIKA — 32% Hyaluronic Acid"],
+    title: "The Magic Wand Question",
+    emoji: "✨",
+    instructions: ["Crucial for emotional buy-in — listen carefully"],
     says: [
-      '"Based on what you told me about [their goal], the first product I\'m sending you is Matinika. It has 32% active Hyaluronic Acid — 6x more than high street brands."',
-      '"The first time you put this on, your skin just drinks it up. That tight, dry feeling vanishes. Incredibly soft, deeply nourished, beautiful healthy glow."',
+      '"I always like to ask my clients this question: If you had a magic wand and could improve just ONE thing about your skin right now when you look in the mirror, what would it be? What result would make you feel amazing? It could be the eye area — some puffiness, lines, or dark circles — or it could be elasticity, or lines and wrinkles. What would your choice be?"',
     ],
+    endInstruction: "Listen carefully. Recap their exact words to show you understand their pain point.",
+    closingSay: '"So just to clarify, you would like to soften the lines around your mouth and treat the dry skin and get it looking more radiant. Did I get that right?"',
   },
   {
     num: 4,
-    title: "Social Proof & Website",
-    says: [
-      '"I\'ve just sent an email to [Email]. Could you let me know when that pops up?"',
-      '"We\'re incredibly proud of our Trustpilot rating — thousands of happy customers. Scroll down for Before & After photos."',
-    ],
-    endInstruction: "Compare the women on the website with your customer's needs.",
+    title: "Product Presentation",
+    emoji: "💎",
+    instructions: ["Benefit-driven — always tie back to their magic wand answer"],
+    branches: {
+      prompt: "Which product are you presenting?",
+      options: [
+        {
+          label: "🧴 Matinika",
+          instruction: "MATINIKA — Day & Night Cream",
+          says: [
+            '"Based on what you just told me about wanting to [insert their goal], the first product I am so excited to send you is called Matinika. Now, I could bore you with the science and tell you it has 32% active Hyaluronic Acid compared to the 5% you might find in high street brands, but what really matters is what it\'s going to do for you."',
+            '"The very first time you put this on, you\'re going to notice the texture. It\'s incredibly silky and lightweight. It doesn\'t sit heavy on your face; your skin just drinks it right up. Instantly, that tight, dry feeling is going to vanish. Your skin is going to feel incredibly soft, deeply nourished, and you\'re going to have this beautiful, healthy glow that lasts all day long."',
+            '"We have clients telling us constantly that they finally feel confident going makeup-free because their skin just looks so healthy and hydrated."',
+          ],
+        },
+        {
+          label: "✨ Oulala",
+          instruction: "OULALA — Retinol Serum (Fine Lines / Texture)",
+          says: [
+            '"The second product I\'m including in your kit is our Oulala Face and Neck Retinol Serum. Retinol is the gold standard for anti-ageing. What this is going to do for you is gently sweep away all those tired, dead skin cells that make our complexion look dull. You are going to literally see your skin transforming — tighter, significantly smoother, and those deeper lines you mentioned are going to start softening. You\'re going to wake up looking refreshed, with that plump, youthful radiance we all want."',
+          ],
+        },
+        {
+          label: "👁️ Ashkara",
+          instruction: "ASHKARA — Eye Serum (Dark Circles / Puffiness)",
+          says: [
+            '"Because you specifically mentioned wanting to target [dark circles / hooded eye lids / puffy bags / fine lines around the eyes], I am making sure to include our Ashkara Eye Serum in your kit. When you use this daily, it\'s going to smooth out those fine lines, visibly reduce that morning puffiness, and brighten up those dark circles. Apply the eye serum mornings and evenings."',
+          ],
+        },
+      ],
+    },
   },
   {
     num: 5,
-    title: "The Offer & Close",
-    instructions: ["Confident, clear, no hesitation"],
+    title: "Social Proof & Website",
+    emoji: "⭐",
+    instructions: ["Show the website, build trust visually"],
     says: [
-      '"We\'re sending you a 21-day, completely risk-free trial. Cancel anytime, no questions asked."',
-      '"As a VIP client, you get a permanent 30% discount — £44.95 every 60 days instead of £59."',
-      '"We just ask you to cover the small £4.95 postage fee today."',
+      '"I want to show you exactly what you\'ll be receiving. I\'ve just sent an email to [Email Address]. Could you let me know when that pops up? It will be from Lavie Labs."',
+      '"Fantastic. If you click the link to our website, you\'ll see our homepage. We are incredibly proud of our rating on Trustpilot — we have thousands of happy customers who have shared their results there and across the web. I am going to be your personal skincare concierge — if you ever need anything, I\'m right here."',
+      '"If you scroll down just a bit, you\'ll see some Before & After photos of real women using our products. Take a look at those. Do any of those transformations stand out to you?"',
     ],
-    endInstruction: "Process payment. Stop talking.",
-    closingSay: '"Will you be using Visa, Mastercard, or Amex for the £4.95 postage?"',
+    endInstruction: "Guide them to see the results they want.",
+    notes: [
+      '🎁 Compare the women on our website with your customer\'s needs!',
+      '"Look at the brightness in their skin. You can see how much softer their fine lines look, and they all have that gorgeous, healthy glow. That is exactly the result we are aiming for with your skin using the Matinika and the [Oulala/Ashkara]."',
+    ],
   },
   {
     num: 6,
-    title: "Confirmation & Usage",
+    title: "The Offer & Close",
+    emoji: "🎁",
+    instructions: ["Confident, clear, no hesitation"],
     says: [
-      '"Today it\'s just £4.95 for premium tracked shipping. You\'re receiving your Matinika and starter serum."',
-      '"In 21 days, your subscription begins at your exclusive 30% VIP discount."',
+      '"Here is how this works: We are sending you a 21-day, completely risk-free trial of the Matinika, alongside a starter size of the serum. We want you to feel the textures, see the glow, and experience the results in your own mirror without any pressure."',
+      '"If for any reason you don\'t absolutely love how your skin feels, you can pause or cancel at any time, no questions asked."',
+      '"Once you fall in love with the results, as a VIP client, you unlock a permanent 30% discount. So instead of paying the normal £59 for a two-month supply of Matinika, it comes all the way down to just £44.95 every 60 days."',
+      '"We send everything via our premium 48-hour tracked delivery with signature on arrival, so your package is always safe and in your hands. We just ask you to cover the small £4.95 postage fee today."',
+      '"I am so excited for you to start seeing real changes in your skin, especially with [reiterate their main concern]. Are you ready to give your skin the hydration it deserves and try this out?"',
     ],
-    endInstruction: "Warm close — set expectations and build excitement.",
+    endInstruction: "Process payment. Stop talking. Do not add anything.",
+    closingSay: '"Will you be using Visa, Mastercard, or Amex for the £4.95 postage?"',
+  },
+  {
+    num: 7,
+    title: "Confirmation & Usage",
+    emoji: "✅",
+    instructions: ["Warm close — set expectations and build excitement"],
+    says: [
+      '"Perfect. Just to summarise for our recorded line: Today it is just £4.95 for the premium tracked shipping. You are receiving your Matinika and your starter [Oulala/Ashkara]."',
+      '"In 21 days, if you\'re loving your results — and I know you will be — your subscription will begin and you\'ll receive your next supply at your exclusive 30% VIP discount."',
+      '"For best results, use the Matinika morning and night on clean skin. Apply a small amount — a little goes a long way — and gently massage it in until fully absorbed. Follow with the [Oulala/Ashkara] serum. You should start noticing a difference in how your skin feels within the first few days."',
+      '"I\'m going to send you a confirmation email right now with all the details, your order number, and my direct contact information. If you ever have any questions, please don\'t hesitate to reach out — I am your personal skincare concierge and I am here for you."',
+      '"I am so excited for you to start this journey. Enjoy your beautiful new skin!"',
+    ],
+    endInstruction: "End the call warmly. The customer should feel excited, not sold to.",
   },
 ];
 
-function ScriptPanel() {
+// ==========================================
+// HELPERS — merge custom content onto a stage
+// ==========================================
+function mergeStage(original: PitchStage, custom: Record<string, unknown> | null): PitchStage {
+  if (!custom) return original;
+  return {
+    ...original,
+    says: (custom.says as string[] | undefined) ?? original.says,
+    notes: (custom.notes as string[] | undefined) ?? original.notes,
+    closingSay: (custom.closingSay as string | undefined) ?? original.closingSay,
+    instructions: (custom.instructions as string[] | undefined) ?? original.instructions,
+    endInstruction: (custom.endInstruction as string | undefined) ?? original.endInstruction,
+  };
+}
+
+function extractEditable(stage: PitchStage): Record<string, unknown> {
+  return {
+    says: stage.says ?? [],
+    notes: stage.notes ?? [],
+    closingSay: stage.closingSay ?? "",
+    instructions: stage.instructions ?? [],
+    endInstruction: stage.endInstruction ?? "",
+  };
+}
+
+// ==========================================
+// EDITABLE TEXTAREA FOR SAY LINES
+// ==========================================
+function EditableSayLine({
+  value,
+  onChange,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) {
+  return (
+    <textarea
+      className={`ws-edit-textarea ${className || ""}`}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={Math.max(2, Math.ceil(value.length / 80))}
+    />
+  );
+}
+
+// ==========================================
+// SCRIPT PANEL — 7 stages + Edit/Reset + Branches
+// ==========================================
+function ScriptPanel({
+  customMap,
+  onSave,
+  onReset,
+  isSaving,
+  isManagerView,
+}: {
+  customMap: Record<number, Record<string, unknown>>;
+  onSave: (stageNum: number, content: Record<string, unknown>) => void;
+  onReset: (stageNum: number) => void;
+  isSaving: boolean;
+  isManagerView?: boolean;
+}) {
   const [openStages, setOpenStages] = useState<number[]>([1]);
+  const [activeBranches, setActiveBranches] = useState<Record<string, string>>({});
+  const [editingStage, setEditingStage] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<Record<string, unknown> | null>(null);
 
   const toggleStage = (num: number) => {
     setOpenStages((prev) =>
@@ -624,35 +796,243 @@ function ScriptPanel() {
     );
   };
 
+  const selectBranch = (stageNum: number, label: string) => {
+    const key = `stage-${stageNum}`;
+    setActiveBranches((prev) => ({
+      ...prev,
+      [key]: prev[key] === label ? "" : label,
+    }));
+  };
+
+  const startEditing = (stage: PitchStage, customContent: Record<string, unknown> | null) => {
+    const merged = mergeStage(stage, customContent);
+    setEditingStage(stage.num);
+    setEditDraft(extractEditable(merged));
+    if (!openStages.includes(stage.num)) {
+      setOpenStages((prev) => [...prev, stage.num]);
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingStage(null);
+    setEditDraft(null);
+  };
+
+  const saveEditing = (stageNum: number) => {
+    if (!editDraft) return;
+    onSave(stageNum, editDraft);
+    setEditingStage(null);
+    setEditDraft(null);
+  };
+
+  const updateDraftField = (field: string, value: unknown) => {
+    setEditDraft((prev) => (prev ? { ...prev, [field]: value } : null));
+  };
+
+  const updateDraftArrayItem = (field: string, index: number, value: string) => {
+    setEditDraft((prev) => {
+      if (!prev) return null;
+      const arr = [...((prev[field] as string[]) || [])];
+      arr[index] = value;
+      return { ...prev, [field]: arr };
+    });
+  };
+
   return (
     <div className="ws-pitch-panel">
-      {PITCH_STAGES.map((stage) => {
+      {PITCH_STAGES.map((originalStage) => {
+        const customContent = customMap[originalStage.num] || null;
+        const isCustomized = !!customContent;
+        const stage = mergeStage(originalStage, customContent);
         const isOpen = openStages.includes(stage.num);
+        const isEditing = editingStage === stage.num;
+        const branchKey = `stage-${stage.num}`;
+        const activeBranch = activeBranches[branchKey] || "";
+
         return (
           <div key={stage.num} className={`ws-pitch-stage ${isOpen ? "" : "collapsed"}`}>
-            <div className="ws-ps-header" onClick={() => toggleStage(stage.num)}>
+            {/* Header */}
+            <div className="ws-ps-header" onClick={() => !isEditing && toggleStage(stage.num)}>
               <div className="ws-ps-num">{stage.num}</div>
-              <div className="ws-ps-title">{stage.title}</div>
-              <span className="ws-ps-arrow">
-                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </span>
+              <div className="ws-ps-title">
+                {stage.emoji && <span>{stage.emoji}</span>}
+                {stage.title}
+                {isCustomized && !isEditing && (
+                  <span className="ws-customized-badge" title="This stage has been customized">
+                    <AlertCircle size={12} /> Modified
+                  </span>
+                )}
+              </div>
+              <div className="ws-ps-actions" onClick={(e) => e.stopPropagation()}>
+                {isEditing ? (
+                  <>
+                    <button
+                      className="ws-action-btn ws-save-btn"
+                      onClick={() => saveEditing(stage.num)}
+                      disabled={isSaving}
+                    >
+                      <Save size={13} /> Save
+                    </button>
+                    <button className="ws-action-btn ws-cancel-btn" onClick={cancelEditing}>
+                      <X size={13} /> Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="ws-action-btn ws-edit-btn"
+                      onClick={() => startEditing(originalStage, customContent)}
+                      title="Edit this stage"
+                    >
+                      <Edit3 size={13} /> Edit
+                    </button>
+                    {isCustomized && (
+                      <button
+                        className="ws-action-btn ws-reset-btn"
+                        onClick={() => {
+                          if (confirm("Reset this stage to the original script?")) {
+                            onReset(stage.num);
+                          }
+                        }}
+                        title="Reset to original"
+                      >
+                        <RotateCcw size={13} /> Original
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              {!isEditing && (
+                <span className="ws-ps-arrow">
+                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </span>
+              )}
             </div>
+
+            {/* Body */}
             {isOpen && (
               <div className="ws-ps-body">
-                {stage.instructions?.map((inst, i) => (
-                  <div key={i} className="ws-ps-instruction">{inst}</div>
-                ))}
-                {stage.notes?.map((note, i) => (
-                  <div key={i} className="ws-ps-note"><strong>{note}</strong></div>
-                ))}
-                {stage.says?.map((say, i) => (
-                  <div key={i} className="ws-ps-say">{say}</div>
-                ))}
-                {stage.endInstruction && (
-                  <div className="ws-ps-instruction">{stage.endInstruction}</div>
-                )}
-                {stage.closingSay && (
-                  <div className="ws-ps-say ws-ps-closing">{stage.closingSay}</div>
+                {isEditing && editDraft ? (
+                  /* ── EDIT MODE ── */
+                  <div className="ws-edit-mode">
+                    {((editDraft.instructions as string[]) || []).length > 0 && (
+                      <div className="ws-edit-section">
+                        <label className="ws-edit-label">Instructions (green text)</label>
+                        {((editDraft.instructions as string[]) || []).map((inst, i) => (
+                          <EditableSayLine
+                            key={i}
+                            value={inst}
+                            onChange={(v) => updateDraftArrayItem("instructions", i, v)}
+                            className="ws-edit-instruction"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {((editDraft.says as string[]) || []).length > 0 && (
+                      <div className="ws-edit-section">
+                        <label className="ws-edit-label">Say Lines</label>
+                        {((editDraft.says as string[]) || []).map((say, i) => (
+                          <EditableSayLine
+                            key={i}
+                            value={say}
+                            onChange={(v) => updateDraftArrayItem("says", i, v)}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {(editDraft.endInstruction as string) && (
+                      <div className="ws-edit-section">
+                        <label className="ws-edit-label">End Instruction</label>
+                        <EditableSayLine
+                          value={editDraft.endInstruction as string}
+                          onChange={(v) => updateDraftField("endInstruction", v)}
+                          className="ws-edit-instruction"
+                        />
+                      </div>
+                    )}
+
+                    {((editDraft.notes as string[]) || []).length > 0 && (
+                      <div className="ws-edit-section">
+                        <label className="ws-edit-label">Notes</label>
+                        {((editDraft.notes as string[]) || []).map((note, i) => (
+                          <EditableSayLine
+                            key={i}
+                            value={note}
+                            onChange={(v) => updateDraftArrayItem("notes", i, v)}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {(editDraft.closingSay as string) && (
+                      <div className="ws-edit-section">
+                        <label className="ws-edit-label">Closing Line</label>
+                        <EditableSayLine
+                          value={editDraft.closingSay as string}
+                          onChange={(v) => updateDraftField("closingSay", v)}
+                        />
+                      </div>
+                    )}
+
+                    <p className="ws-edit-note-text">
+                      Branch buttons (skin type / product) cannot be edited — only the text content above.
+                    </p>
+                  </div>
+                ) : (
+                  /* ── VIEW MODE ── */
+                  <>
+                    {stage.instructions?.map((inst, i) => (
+                      <div key={i} className="ws-ps-instruction">{inst}</div>
+                    ))}
+
+                    {stage.says?.map((say, i) => (
+                      <div key={i} className="ws-ps-say">{say}</div>
+                    ))}
+
+                    {stage.endInstruction && (
+                      <div className="ws-ps-instruction">{stage.endInstruction}</div>
+                    )}
+
+                    {stage.notes?.map((note, i) => (
+                      <div key={i} className="ws-ps-say">{note}</div>
+                    ))}
+
+                    {stage.closingSay && (
+                      <div className="ws-ps-say ws-ps-closing">{stage.closingSay}</div>
+                    )}
+
+                    {/* Branch Buttons */}
+                    {stage.branches && (
+                      <div className="ws-branch-section">
+                        <div className="ws-branch-prompt">{stage.branches.prompt}</div>
+                        <div className="ws-branch-buttons">
+                          {stage.branches.options.map((opt) => (
+                            <button
+                              key={opt.label}
+                              className={`ws-branch-btn ${activeBranch === opt.label ? "active" : ""}`}
+                              onClick={() => selectBranch(stage.num, opt.label)}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        {stage.branches.options.map((opt) =>
+                          activeBranch === opt.label ? (
+                            <div key={opt.label} className="ws-branch-content">
+                              {opt.instruction && (
+                                <div className="ws-ps-instruction">{opt.instruction}</div>
+                              )}
+                              {opt.says.map((say, i) => (
+                                <div key={i} className="ws-ps-say">{say}</div>
+                              ))}
+                            </div>
+                          ) : null
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -664,7 +1044,183 @@ function ScriptPanel() {
 }
 
 // ==========================================
-// QUICK TOOLS — OBJECTIONS + PRODUCTS
+// AGENT PITCH PANEL — own editable pitch (wrapper with tRPC)
+// ==========================================
+function AgentPitchPanel() {
+  const { data: customizations, isLoading } = trpc.pitch.myCustomizations.useQuery();
+  const utils = trpc.useUtils();
+
+  const upsertMut = trpc.pitch.upsert.useMutation({
+    onSuccess: () => {
+      utils.pitch.myCustomizations.invalidate();
+      toast.success("Stage saved!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const resetMut = trpc.pitch.reset.useMutation({
+    onSuccess: () => {
+      utils.pitch.myCustomizations.invalidate();
+      toast.success("Stage reset to original");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const customMap = useMemo(() => {
+    const map: Record<number, Record<string, unknown>> = {};
+    if (customizations) {
+      for (const c of customizations) {
+        map[c.stageNum] = c.customContent as Record<string, unknown>;
+      }
+    }
+    return map;
+  }, [customizations]);
+
+  const handleSave = useCallback(
+    (stageNum: number, content: Record<string, unknown>) => {
+      upsertMut.mutate({ stageNum, customContent: content });
+    },
+    [upsertMut]
+  );
+
+  const handleReset = useCallback(
+    (stageNum: number) => {
+      resetMut.mutate({ stageNum });
+    },
+    [resetMut]
+  );
+
+  if (isLoading) {
+    return <div className="ws-loading">Loading your pitch...</div>;
+  }
+
+  return (
+    <ScriptPanel
+      customMap={customMap}
+      onSave={handleSave}
+      onReset={handleReset}
+      isSaving={upsertMut.isPending}
+    />
+  );
+}
+
+// ==========================================
+// MANAGER VIEW — see & edit agent pitches
+// ==========================================
+function ManagerView({
+  selectedAgentId,
+  setSelectedAgentId,
+}: {
+  selectedAgentId: number | null;
+  setSelectedAgentId: (id: number | null) => void;
+}) {
+  const { data: allUsers } = trpc.pitch.allUsers.useQuery();
+  const { data: overview } = trpc.pitch.agentsOverview.useQuery();
+  const { data: agentCustomizations } = trpc.pitch.agentCustomizations.useQuery(
+    { agentUserId: selectedAgentId! },
+    { enabled: !!selectedAgentId }
+  );
+  const utils = trpc.useUtils();
+
+  const adminUpsert = trpc.pitch.adminUpsert.useMutation({
+    onSuccess: () => {
+      utils.pitch.agentCustomizations.invalidate();
+      utils.pitch.agentsOverview.invalidate();
+      toast.success("Agent's stage updated!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const adminReset = trpc.pitch.adminReset.useMutation({
+    onSuccess: () => {
+      utils.pitch.agentCustomizations.invalidate();
+      utils.pitch.agentsOverview.invalidate();
+      toast.success("Agent's stage reset to original");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const overviewMap = useMemo(() => {
+    const map: Record<number, Set<number>> = {};
+    if (overview) {
+      for (const row of overview) {
+        if (!map[row.userId]) map[row.userId] = new Set();
+        map[row.userId].add(row.stageNum);
+      }
+    }
+    return map;
+  }, [overview]);
+
+  const customMap = useMemo(() => {
+    const map: Record<number, Record<string, unknown>> = {};
+    if (agentCustomizations) {
+      for (const c of agentCustomizations) {
+        map[c.stageNum] = c.customContent as Record<string, unknown>;
+      }
+    }
+    return map;
+  }, [agentCustomizations]);
+
+  const handleSave = useCallback(
+    (stageNum: number, content: Record<string, unknown>) => {
+      if (!selectedAgentId) return;
+      adminUpsert.mutate({ agentUserId: selectedAgentId, stageNum, customContent: content });
+    },
+    [adminUpsert, selectedAgentId]
+  );
+
+  const handleReset = useCallback(
+    (stageNum: number) => {
+      if (!selectedAgentId) return;
+      adminReset.mutate({ agentUserId: selectedAgentId, stageNum });
+    },
+    [adminReset, selectedAgentId]
+  );
+
+  const agents = useMemo(() => allUsers || [], [allUsers]);
+
+  return (
+    <div>
+      <div className="ws-manager-bar">
+        <Eye size={16} />
+        <span className="ws-manager-label">Viewing agent:</span>
+        <select
+          className="ws-manager-select"
+          value={selectedAgentId ?? ""}
+          onChange={(e) => setSelectedAgentId(e.target.value ? Number(e.target.value) : null)}
+        >
+          <option value="">Select an agent...</option>
+          {agents.map((a: any) => {
+            const modCount = overviewMap[a.id]?.size || 0;
+            return (
+              <option key={a.id} value={a.id}>
+                {a.name || a.email} {modCount > 0 ? `(${modCount} modified)` : ""}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      {selectedAgentId ? (
+        <ScriptPanel
+          customMap={customMap}
+          onSave={handleSave}
+          onReset={handleReset}
+          isSaving={adminUpsert.isPending}
+          isManagerView
+        />
+      ) : (
+        <div className="ws-empty-state">
+          <Users size={40} className="text-gray-300" />
+          <p>Select an agent to view and edit their pitch customizations</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// QUICK TOOLS — OBJECTIONS + PRODUCTS (UNCHANGED)
 // ==========================================
 const OBJECTIONS = [
   { q: '"It\'s a subscription?"', a: '"You\'re in complete control. Pause or cancel anytime — no questions asked."' },
@@ -741,10 +1297,13 @@ function QuickTools() {
 // ==========================================
 export default function Workspace() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [, navigate] = useLocation();
   const [activeId, setActiveId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [doneItems, setDoneItems] = useState<Record<number, string>>({});
+  const [managerMode, setManagerMode] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
   // Fetch contacts from the API
   const { data: contacts = [], refetch } = trpc.contacts.list.useQuery(
@@ -755,7 +1314,7 @@ export default function Workspace() {
   // Click-to-call mutation
   const clickToCall = trpc.contacts.clickToCall.useMutation({
     onSuccess: () => toast.success("Call initiated! Your phone will ring first."),
-    onError: (err: any) => {
+    onError: (err) => {
       if (err.message === "NO_CLOUDTALK_AGENT_ID") {
         toast.error(
           <div>
@@ -785,14 +1344,13 @@ export default function Workspace() {
   });
 
   const handleAction = (contactId: number, action: string, phone?: string) => {
-    if (action === "call" && phone) {
+    if (action === "call") {
       clickToCall.mutate({ contactId });
     } else if (action === "sold" || action === "na" || action === "no" || action === "skip" || action === "callback") {
       setDoneItems((prev) => ({
         ...prev,
         [contactId]: action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : action === "callback" ? "Callback" : "Skip",
       }));
-      // Move to next contact
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
@@ -800,12 +1358,9 @@ export default function Workspace() {
   };
 
   const handleFieldChange = (contactId: number, field: string, value: any) => {
-    // For fields that exist in the DB, save them
     if (["name", "phone", "email", "status", "leadType"].includes(field)) {
       updateContact.mutate({ id: contactId, [field]: value });
     }
-    // For workspace-only fields (skinType, concerns, routine, trialKit, notes), 
-    // they will be saved when the agent clicks an action button
   };
 
   // Auto-select first contact
@@ -893,16 +1448,38 @@ export default function Workspace() {
           </div>
         </div>
 
-        {/* CENTER: SCRIPT PANEL */}
-        <div className="ws-script-col">
+        {/* RIGHT: SALES TOOLS */}
+        <div className="ws-sales-tools">
           <div className="ws-sales-content">
-            <ScriptPanel />
-          </div>
-        </div>
+            {/* ── My Pitch / Manager View Toggle (admin only) ── */}
+            {isAdmin && (
+              <div className="ws-mode-toggle" style={{ marginBottom: 12 }}>
+                <button
+                  className={`ws-mode-btn ${!managerMode ? "active" : ""}`}
+                  onClick={() => setManagerMode(false)}
+                >
+                  <Edit3 size={14} /> My Pitch
+                </button>
+                <button
+                  className={`ws-mode-btn ${managerMode ? "active" : ""}`}
+                  onClick={() => setManagerMode(true)}
+                >
+                  <Users size={14} /> Manager View
+                </button>
+              </div>
+            )}
 
-        {/* RIGHT: QUICK TOOLS */}
-        <div className="ws-quicktools-col">
-          <div className="ws-sales-content">
+            {/* ── Pitch Panel (7-stage with Edit/Reset) ── */}
+            {managerMode && isAdmin ? (
+              <ManagerView
+                selectedAgentId={selectedAgentId}
+                setSelectedAgentId={setSelectedAgentId}
+              />
+            ) : (
+              <AgentPitchPanel />
+            )}
+
+            {/* ── Quick Tools (Offer, Objections, Products) ── */}
             <QuickTools />
           </div>
         </div>
