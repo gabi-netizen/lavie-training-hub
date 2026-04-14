@@ -276,3 +276,34 @@ export const pitchCustomizations = mysqlTable("pitch_customizations", {
   unique("pitch_customizations_user_stage_unique").on(table.userId, table.stageNum),
 ]);
 export type PitchCustomization = typeof pitchCustomizations.$inferSelect;
+
+/**
+ * Payment form submissions — customer details collected via the public /pay page.
+ * Card details are stored temporarily until processed by the billing team.
+ */
+export const formSubmissions = mysqlTable("form_submissions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Customer email */
+  email: varchar("email", { length: 320 }).notNull(),
+  /** Cardholder name */
+  cardholderName: varchar("cardholderName", { length: 256 }).notNull(),
+  /** Card number (last 4 digits only stored for security) */
+  cardLast4: varchar("cardLast4", { length: 4 }),
+  /** Card expiry MM/YY */
+  cardExpiry: varchar("cardExpiry", { length: 8 }),
+  /** Billing address line 1 */
+  addressLine1: varchar("addressLine1", { length: 256 }),
+  /** Billing address line 2 */
+  addressLine2: varchar("addressLine2", { length: 256 }),
+  /** City / Town */
+  city: varchar("city", { length: 128 }),
+  /** Postcode */
+  postcode: varchar("postcode", { length: 16 }),
+  /** Which agent sent the link (if tracked) */
+  agentName: varchar("agentName", { length: 256 }),
+  /** Status: new, processed, failed */
+  status: mysqlEnum("status", ["new", "processed", "failed"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type InsertFormSubmission = typeof formSubmissions.$inferInsert;
