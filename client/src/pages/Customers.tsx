@@ -504,6 +504,100 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           </>
         )}
       </div>
+
+      {/* ─── Add Contact Modal ─────────────────────────────────────────────── */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus size={18} className="text-green-600" />
+              Add New Contact
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-2">
+            {/* Name */}
+            <div className="col-span-2">
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Name <span className="text-red-500">*</span></Label>
+              <Input value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
+            </div>
+            {/* Phone */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Phone</Label>
+              <Input value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="+44 7700 900000" />
+            </div>
+            {/* Email */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Email</Label>
+              <Input value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+            </div>
+            {/* Lead Type */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Lead Type</Label>
+              <Select value={addForm.leadType} onValueChange={v => setAddForm(f => ({ ...f, leadType: v }))}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  {(meta?.leadTypes ?? []).map(lt => (
+                    <SelectItem key={lt} value={lt}>{lt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Status */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Status</Label>
+              <Select value={addForm.status} onValueChange={v => setAddForm(f => ({ ...f, status: v }))}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(meta?.statuses ?? []).map(s => (
+                    <SelectItem key={s} value={s}>{STATUS_LABELS[s] ?? s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Agent Name */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Agent</Label>
+              <Input value={addForm.agentName} onChange={e => setAddForm(f => ({ ...f, agentName: e.target.value }))} placeholder="Agent name" />
+            </div>
+            {/* Agent Email */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Agent Email</Label>
+              <Input value={addForm.agentEmail} onChange={e => setAddForm(f => ({ ...f, agentEmail: e.target.value }))} placeholder="Trials@lavielabs.co.uk" />
+            </div>
+            {/* Source */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Source</Label>
+              <Input value={addForm.source} onChange={e => setAddForm(f => ({ ...f, source: e.target.value }))} placeholder="e.g. Facebook, Referral" />
+            </div>
+            {/* Lead Date */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Lead Date</Label>
+              <Input type="date" value={addForm.leadDate} onChange={e => setAddForm(f => ({ ...f, leadDate: e.target.value }))} />
+            </div>
+            {/* Notes */}
+            <div className="col-span-2">
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Notes</Label>
+              <textarea
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={3}
+                value={addForm.notes}
+                onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Any notes about this contact..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)} disabled={createMutation.isPending}>Cancel</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleAddContact}
+              disabled={createMutation.isPending || !addForm.name.trim()}
+            >
+              {createMutation.isPending ? "Adding..." : "Add Contact"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
