@@ -76,15 +76,21 @@ const STATUS_LABELS: Record<PhoneStatus, string> = {
   spam: "Spam",
 };
 
-/** Colour-codes how long a number has been active */
+/**
+ * Colour-codes how long a number has been active.
+ * Older = more stable = better for retention (customers recognise the number).
+ * Green = 60d+ (established, trusted)
+ * Amber = 30–59d (settling in)
+ * Gray/neutral = <30d (brand new, not yet proven)
+ */
 function DaysActiveBadge({ days }: { days: number | null }) {
   if (days === null) return <span className="text-xs text-gray-400">—</span>;
   const color =
     days >= 60
-      ? "bg-red-100 text-red-700 border-red-200"
+      ? "bg-green-100 text-green-700 border-green-200"
       : days >= 30
       ? "bg-amber-100 text-amber-700 border-amber-200"
-      : "bg-green-100 text-green-700 border-green-200";
+      : "bg-gray-100 text-gray-500 border-gray-200";
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}>
       <Clock size={10} />
@@ -423,11 +429,11 @@ function AgentsView({ isAdmin }: { isAdmin: boolean }) {
       ))}
 
       {/* Legend */}
-      <div className="flex items-center gap-4 pt-1 text-xs text-gray-500">
+      <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-gray-500">
         <span className="font-medium">Days active colour guide:</span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200"><Clock size={10} /> &lt;30d — Fresh</span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200"><Clock size={10} /> 30–59d — Monitor</span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200"><Clock size={10} /> 60d+ — Consider rotating</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200"><Clock size={10} /> 60d+ — Established &amp; trusted</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200"><Clock size={10} /> 30–59d — Settling in</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200"><Clock size={10} /> &lt;30d — New, not yet proven</span>
       </div>
     </div>
   );
