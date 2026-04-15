@@ -60,6 +60,18 @@ interface CallAnalysisReport {
   toneScore: number;
   closingAttempted: boolean;
   magicWandUsed: boolean;
+  // Compliance fields
+  subscriptionDisclosed?: boolean;
+  subscriptionMisrepresented?: boolean;
+  tcRead?: boolean;
+  complianceScore?: number;
+  complianceIssues?: string[];
+  // Retention
+  saved?: boolean | null;
+  upsellAttempted?: boolean | null;
+  upsellSucceeded?: boolean | null;
+  cancelReason?: string | null;
+  customerName?: string | null;
 }
 
 // ─── CALL TYPE BADGE ─────────────────────────────────────────────────────────
@@ -677,22 +689,50 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
         return (
           <div className="space-y-5">
             {/* Score cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
                 { label: "Overall Score", value: report.overallScore, icon: <Star className="w-5 h-5" /> },
                 { label: "Script Compliance", value: report.scriptComplianceScore, icon: <CheckCircle2 className="w-5 h-5" /> },
                 { label: "Tone & Confidence", value: report.toneScore, icon: <Mic className="w-5 h-5" /> },
                 { label: "Rep Speech %", value: analysis.repSpeechPct ?? 0, icon: <BarChart3 className="w-5 h-5" /> },
-              ].map(({ label, value, icon }) => (
-                <Card key={label} className={`bg-gray-50 border ${scoreBg(value ?? 0)}`}>
+                { label: "Compliance", value: report.complianceScore ?? null, icon: <AlertTriangle className="w-5 h-5" /> },
+              ].filter(c => c.value !== null).map(({ label, value, icon }) => (
+                <Card key={label} className={`bg-gray-50 border ${scoreBg(value ?? 0)} ${label === 'Compliance' && report.subscriptionMisrepresented ? 'ring-2 ring-red-500' : ''}`}>
                   <CardContent className="p-4 text-center">
                     <div className={`flex justify-center mb-2 ${scoreColor(value ?? 0)}`}>{icon}</div>
                     <div className={`text-3xl font-bold ${scoreColor(value ?? 0)}`}>{Math.round(value ?? 0)}</div>
                     <div className="text-xs text-gray-700 mt-1">{label}</div>
+                    {label === 'Compliance' && report.subscriptionMisrepresented && (
+                      <div className="text-xs text-red-600 font-bold mt-1">🚨 Critical</div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
+
+            {/* Compliance Issues Alert */}
+            {report.complianceIssues && report.complianceIssues.length > 0 && (
+              <Card className="bg-red-50 border-red-400 border-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-red-700 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" /> 🚨 Compliance Issues Detected
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {report.complianceIssues.map((issue, i) => (
+                    <div key={i} className="flex gap-2 text-sm text-red-800 font-medium">
+                      <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <span>{issue}</span>
+                    </div>
+                  ))}
+                  {report.subscriptionMisrepresented && (
+                    <div className="mt-3 p-3 bg-red-100 rounded-lg border border-red-300">
+                      <p className="text-red-800 text-sm font-bold">🚨 CRITICAL VIOLATION: The rep denied or misrepresented the subscription nature of the product when directly asked by the customer. This results in a very low compliance score regardless of sale outcome. This must be addressed immediately with the agent.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2">
@@ -702,6 +742,21 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
               <Badge className={report.magicWandUsed ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}>
                 {report.magicWandUsed ? "✓ Magic Wand used" : "✗ Magic Wand missed"}
               </Badge>
+              {report.subscriptionDisclosed != null && (
+                <Badge className={report.subscriptionDisclosed ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}>
+                  {report.subscriptionDisclosed ? "✓ Subscription disclosed" : "✗ Subscription NOT disclosed"}
+                </Badge>
+              )}
+              {report.tcRead != null && (
+                <Badge className={report.tcRead ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}>
+                  {report.tcRead ? "✓ T&C read" : "✗ T&C not read"}
+                </Badge>
+              )}
+              {report.subscriptionMisrepresented && (
+                <Badge className="bg-red-100 text-red-800 border-red-400 font-bold animate-pulse">
+                  🚨 CRITICAL: Subscription denied
+                </Badge>
+              )}
             </div>
 
             {/* Summary */}
@@ -816,8 +871,67 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                 )}
               </Card>
             )}
-          {/* Flag as Incorrect button */}
-          <div className="flex justify-end pt-2">
+          {/* Flag as Incorrect + PDF Download buttons */}
+          <div className="flex justify-between items-center pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Build a printable HTML page with the report data
+                const r = report;
+                const repName = analysis.repName ?? 'Unknown Rep';
+                const callDate = analysis.callDate ? new Date(analysis.callDate).toLocaleDateString('en-GB') : 'Unknown Date';
+                const complianceAlert = r.subscriptionMisrepresented
+                  ? `<div style="background:#fee2e2;border:2px solid #ef4444;border-radius:8px;padding:16px;margin:16px 0">
+                      <strong style="color:#b91c1c">🚨 CRITICAL COMPLIANCE VIOLATION</strong><br/>
+                      <p style="color:#991b1b;margin:8px 0 0">The rep denied or misrepresented the subscription when directly asked by the customer. This must be addressed immediately.</p>
+                    </div>` : '';
+                const complianceIssuesHtml = r.complianceIssues && r.complianceIssues.length > 0
+                  ? `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin:12px 0">
+                      <strong style="color:#b91c1c">Compliance Issues:</strong><ul style="margin:8px 0 0;padding-left:20px">${r.complianceIssues.map(i => `<li style="color:#991b1b">${i}</li>`).join('')}</ul></div>` : '';
+                const html = `<!DOCTYPE html><html><head><title>Call Report — ${repName} — ${callDate}</title>
+                  <style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#111;font-size:14px}
+                  h1{font-size:22px;margin-bottom:4px}h2{font-size:16px;color:#374151;margin:20px 0 8px;border-bottom:1px solid #e5e7eb;padding-bottom:4px}
+                  .scores{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}.score-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;text-align:center;min-width:100px}
+                  .score-num{font-size:28px;font-weight:bold}.score-label{font-size:11px;color:#6b7280;margin-top:4px}
+                  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;margin:3px;border:1px solid}
+                  .green{background:#ecfdf5;color:#065f46;border-color:#6ee7b7}.red{background:#fef2f2;color:#991b1b;border-color:#fca5a5}.amber{background:#fffbeb;color:#92400e;border-color:#fcd34d}
+                  ul{padding-left:20px}li{margin:4px 0}.moment{background:#f9fafb;border-left:3px solid #6b7280;padding:8px 12px;margin:8px 0;border-radius:0 6px 6px 0}
+                  .moment.positive{border-color:#10b981}.moment.negative{border-color:#f59e0b}.moment.critical{border-color:#ef4444;background:#fef2f2}
+                  @media print{body{margin:20px}}</style></head><body>
+                  <h1>AI Call Coach Report</h1>
+                  <p style="color:#6b7280">${repName} &bull; ${callDate} &bull; ${analysis.callType ?? 'Call'}</p>
+                  ${complianceAlert}
+                  <div class="scores">
+                    <div class="score-card"><div class="score-num">${Math.round(r.overallScore)}</div><div class="score-label">Overall Score</div></div>
+                    <div class="score-card"><div class="score-num">${Math.round(r.scriptComplianceScore)}</div><div class="score-label">Script Compliance</div></div>
+                    <div class="score-card"><div class="score-num">${Math.round(r.toneScore)}</div><div class="score-label">Tone & Confidence</div></div>
+                    ${r.complianceScore != null ? `<div class="score-card" style="${r.subscriptionMisrepresented ? 'border:2px solid #ef4444' : ''}"><div class="score-num" style="color:${r.complianceScore < 40 ? '#dc2626' : r.complianceScore < 70 ? '#d97706' : '#16a34a'}">${Math.round(r.complianceScore)}</div><div class="score-label">Compliance</div></div>` : ''}
+                    <div class="score-card"><div class="score-num">${analysis.repSpeechPct ?? 0}%</div><div class="score-label">Rep Speech</div></div>
+                  </div>
+                  <div style="margin:12px 0">
+                    <span class="badge ${r.closingAttempted ? 'green' : 'red'}">${r.closingAttempted ? '✓ Close attempted' : '✗ No close attempt'}</span>
+                    <span class="badge ${r.magicWandUsed ? 'green' : 'amber'}">${r.magicWandUsed ? '✓ Magic Wand used' : '✗ Magic Wand missed'}</span>
+                    ${r.subscriptionDisclosed != null ? `<span class="badge ${r.subscriptionDisclosed ? 'green' : 'red'}">${r.subscriptionDisclosed ? '✓ Subscription disclosed' : '✗ Subscription NOT disclosed'}</span>` : ''}
+                    ${r.tcRead != null ? `<span class="badge ${r.tcRead ? 'green' : 'amber'}">${r.tcRead ? '✓ T&C read' : '✗ T&C not read'}</span>` : ''}
+                  </div>
+                  ${complianceIssuesHtml}
+                  <h2>Summary</h2><p>${r.summary}</p>
+                  <h2>Top 3 Recommendations</h2><ol>${r.topRecommendations.map(rec => `<li>${rec}</li>`).join('')}</ol>
+                  <h2>What Worked Well</h2><ul>${r.strengths.map(s => `<li style="color:#065f46">${s}</li>`).join('')}</ul>
+                  <h2>Areas to Improve</h2><ul>${r.improvements.map(s => `<li style="color:#92400e">${s}</li>`).join('')}</ul>
+                  ${r.keyMoments?.length > 0 ? `<h2>Key Moments</h2>${r.keyMoments.map(km => `<div class="moment ${km.type}"><p style="font-style:italic">&ldquo;${km.moment}&rdquo;</p><p style="font-size:12px;color:#374151;margin-top:6px">💡 ${km.coaching}</p></div>`).join('')}` : ''}
+                  <h2>Script Stage Compliance</h2><ul>${r.stagesDetected.map(s => `<li><strong>${s.stage}</strong> — ${s.quality.toUpperCase()}: ${s.note}</li>`).join('')}</ul>
+                  ${analysis.transcript ? `<h2>Full Transcript</h2><pre style="font-size:12px;white-space:pre-wrap;background:#f9fafb;padding:12px;border-radius:6px">${analysis.transcript}</pre>` : ''}
+                  <p style="color:#9ca3af;font-size:11px;margin-top:32px;border-top:1px solid #e5e7eb;padding-top:8px">Generated by Lavie Labs AI Coach &bull; ${new Date().toLocaleString('en-GB')}</p>
+                </body></html>`;
+                const win = window.open('', '_blank');
+                if (win) { win.document.write(html); win.document.close(); win.print(); }
+              }}
+              className="text-gray-900 bg-emerald-700 hover:bg-emerald-600 hover:text-gray-900 gap-2 border border-emerald-500"
+            >
+              ⬇️ Download PDF
+            </Button>
             <Button
               variant="ghost"
               size="sm"

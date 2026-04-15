@@ -122,11 +122,17 @@ export interface CallAnalysisReport {
   closingAttempted: boolean;
   magicWandUsed: boolean;
   customerName: string | null; // extracted from transcript, null if not found
-  // Retention-specific fields
-  saved?: boolean | null;          // Did the rep save/retain the customer?
-  upsellAttempted?: boolean | null; // Did the rep attempt an upsell?
-  upsellSucceeded?: boolean | null; // Did the upsell succeed?
-  cancelReason?: string | null;    // Reason customer wanted to cancel (if applicable)
+  // ─── COMPLIANCE FIELDS ───
+  subscriptionDisclosed: boolean;       // Did the rep clearly explain it's a subscription before closing?
+  subscriptionMisrepresented: boolean;  // Did the rep say "No" or deny it's a subscription when asked?
+  tcRead: boolean;                      // Did the rep read or reference the Terms & Conditions?
+  complianceScore: number;              // 0-100. CRITICAL: must be 0-20 if subscriptionMisrepresented=true
+  complianceIssues: string[];           // List of specific compliance violations found (empty if none)
+  // ─── RETENTION-SPECIFIC ───
+  saved?: boolean | null;
+  upsellAttempted?: boolean | null;
+  upsellSucceeded?: boolean | null;
+  cancelReason?: string | null;
 }
 
 // ─── CALL TYPE CONTEXT BUILDERS ───────────────────────────────────────────────
@@ -282,8 +288,19 @@ ${stagesJson}
   "toneScore": <number 0-100>,
   "closingAttempted": <bool>,
   "magicWandUsed": <bool>,
-  "customerName": "<first name of the customer if mentioned in the call, otherwise null>",${extraFields}
+  "customerName": "<first name of the customer if mentioned in the call, otherwise null>",
+  "subscriptionDisclosed": <bool — did the rep proactively explain this is a subscription before or during the close?>,
+  "subscriptionMisrepresented": <bool — did the rep say "No" or deny it's a subscription when the customer asked? e.g. customer: "Is this a subscription?" rep: "No" or "It's not a subscription" = TRUE. This is a CRITICAL compliance violation.>,
+  "tcRead": <bool — did the rep read or reference the Terms and Conditions / T&C to the customer?>,
+  "complianceScore": <number 0-100. CRITICAL RULE: if subscriptionMisrepresented=true, this MUST be between 0-20 regardless of how good the rest of the call was. If subscriptionDisclosed=false AND closingAttempted=true, deduct 20-30 points. If tcRead=false, deduct 10 points.>,
+  "complianceIssues": [<list of specific compliance violations as strings, e.g. "Rep denied subscription when asked", "T&C not read", "Subscription not disclosed before close">],${extraFields}
 }
+COMPLIANCE SCORING RULES (apply strictly):
+1. If the rep said "No" or denied being a subscription when the customer asked → subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else. Even a successful sale gets a very low overall score.
+2. If the rep closed a sale WITHOUT ever mentioning it's a subscription → subscriptionDisclosed=false → deduct 20-30 from complianceScore.
+3. If T&C were not read/referenced → tcRead=false → deduct 10 from complianceScore.
+4. Perfect compliance (subscriptionDisclosed=true, tcRead=true, subscriptionMisrepresented=false) = complianceScore 90-100.
+
 IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
 Be specific, actionable, and encouraging. Focus on the call type objectives above.`;
 
