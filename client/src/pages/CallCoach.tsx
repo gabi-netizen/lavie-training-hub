@@ -829,7 +829,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [repName, setRepName] = useState(user?.name ?? "");
+  const [repName, setRepName] = useState("");
   const [callDate, setCallDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [closeStatus, setCloseStatus] = useState<"closed" | "not_closed" | "follow_up" | "">("not_closed");
   const [callType, setCallType] = useState<string>("cold_call");
@@ -899,8 +899,9 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                 value={repName}
                 onChange={e => setRepName(e.target.value)}
                 className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
+                style={{ direction: "ltr" }}
               >
-                <option value="">Select rep...</option>
+                <option value="">בחר נציג</option>
                 {(agentListQuery.data ?? []).map(agent => (
                   <option key={agent.id} value={agent.name ?? ""}>{agent.name}</option>
                 ))}
@@ -921,6 +922,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                 value={closeStatus}
                 onChange={e => setCloseStatus(e.target.value as typeof closeStatus)}
                 className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
+                style={{ direction: "ltr" }}
               >
                 <option value="closed">✅ Closed</option>
                 <option value="not_closed">❌ Not Closed</option>
@@ -933,6 +935,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                 value={callType}
                 onChange={e => setCallType(e.target.value as typeof callType)}
                 className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500"
+                style={{ direction: "ltr" }}
               >
                 <optgroup label="── Opening Team ──">
                   <option value="cold_call">📞 Cold Call</option>
