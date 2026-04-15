@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  BarChart3,
   Users,
   ArrowLeft,
   Trophy,
@@ -96,84 +95,6 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
   const info = map[callType];
   if (!info) return null;
   return <Badge className={`text-xs ${info.cls}`}>{info.label}</Badge>;
-}
-
-// ─── TALK RATIO BADGE ─────────────────────────────────────────────────────────
-// repPct = % of total speech time spoken by the rep (dominant speaker)
-// Ideal range: 40–65%. >65% = rep talks too much. <30% = rep too passive.
-function TalkRatioBadge({ repPct }: { repPct?: number | null }) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  if (repPct == null) return null;
-  const rep = Math.round(repPct);
-  const cust = 100 - rep;
-  let color = "text-emerald-600";
-  let barColor = "bg-emerald-500";
-  let label = "Good ratio";
-  if (rep > 65) { color = "text-red-600"; barColor = "bg-red-500"; label = "Rep talks too much"; }
-  else if (rep < 30) { color = "text-amber-600"; barColor = "bg-amber-500"; label = "Rep too passive"; }
-  return (
-    <span
-      className="relative inline-flex items-center gap-1.5 text-xs border border-gray-200 rounded px-2 py-0.5 bg-gray-50 cursor-pointer select-none"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onClick={(e) => { e.stopPropagation(); setShowTooltip(v => !v); }}
-    >
-      <span className="text-gray-700 font-medium">Talk:</span>
-      {/* mini bar */}
-      <span className="relative inline-block w-14 h-2 rounded-full bg-gray-200 overflow-hidden">
-        <span
-          className={`absolute left-0 top-0 h-full rounded-full ${barColor}`}
-          style={{ width: `${rep}%` }}
-        />
-      </span>
-      <span className={`font-semibold ${color}`}>{rep}%</span>
-      <span className="text-gray-700">rep</span>
-
-      {/* ── Tooltip popup with 3 zones ── */}
-      {showTooltip && (
-        <span
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none"
-          style={{ minWidth: "220px" }}
-        >
-          <span
-            className="flex flex-col gap-1.5 rounded-xl p-3 shadow-2xl"
-            style={{ background: "white", border: "1px solid oklch(0.85 0.03 265)" }}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-800 mb-0.5">Talk Ratio Guide</span>
-            {/* Green zone */}
-            <span className="flex items-start gap-2">
-              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.2 145)" }} />
-              <span className="flex flex-col">
-                <span className="text-[11px] font-bold" style={{ color: "oklch(0.40 0.20 145)" }}>40–65% rep speaking</span>
-                <span className="text-[10px] text-gray-700 leading-snug">Ideal — you lead, she talks. Sale happens here.</span>
-              </span>
-            </span>
-            {/* Amber zone */}
-            <span className="flex items-start gap-2">
-              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.65 0.18 60)" }} />
-              <span className="flex flex-col">
-                <span className="text-[11px] font-bold" style={{ color: "oklch(0.8 0.18 60)" }}>Below 30% rep speaking</span>
-                <span className="text-[10px] text-gray-700 leading-snug">Too passive — you're not driving the close.</span>
-              </span>
-            </span>
-            {/* Red zone */}
-            <span className="flex items-start gap-2">
-              <span className="mt-0.5 w-3 h-3 rounded flex-shrink-0" style={{ background: "oklch(0.55 0.22 15)" }} />
-              <span className="flex flex-col">
-                <span className="text-[11px] font-bold" style={{ color: "oklch(0.7 0.22 15)" }}>Above 65% rep speaking</span>
-                <span className="text-[10px] text-gray-700 leading-snug">Too much — she feels talked at, not heard.</span>
-              </span>
-            </span>
-            {/* Arrow pointer */}
-            <span
-              className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45"
-              style={{ background: "white", borderRight: "1px solid oklch(0.35 0.08 250 / 60%)", borderBottom: "1px solid oklch(0.35 0.08 250 / 60%)" }}
-            />
-          </span>
-        </span>
-      )}
-    </span>
-  );
 }
 
 // ─── SCORE COLOUR ─────────────────────────────────────────────────────────────
@@ -281,7 +202,6 @@ function FlagFeedbackModal({
                     <SelectItem value="overall">Overall Score</SelectItem>
                     <SelectItem value="script_compliance">Script Compliance</SelectItem>
                     <SelectItem value="tone">Tone & Confidence</SelectItem>
-                    <SelectItem value="talk_ratio">Talk Ratio</SelectItem>
                     <SelectItem value="recommendations">Recommendations</SelectItem>
                     <SelectItem value="transcript">Transcript</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
@@ -525,22 +445,6 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
 
   const status = statusMap[analysis.status as keyof typeof statusMap];
 
-  // Deal status config
-  const dealStatusMap: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    closed:     { label: "Closed Deal",  color: "text-emerald-600", bg: "bg-emerald-500/15", border: "border-emerald-500/40" },
-    follow_up:  { label: "Follow-up",    color: "text-amber-600",   bg: "bg-amber-500/15",   border: "border-amber-500/40" },
-    not_closed: { label: "Not Closed",   color: "text-red-600",     bg: "bg-red-500/15",     border: "border-red-500/40" },
-  };
-  const dealStatus = analysis.closeStatus ? dealStatusMap[analysis.closeStatus] : null;
-
-  // Talk ratio display
-  const repPct = analysis.repSpeechPct != null ? Math.round(analysis.repSpeechPct) : null;
-  const custPct = repPct != null ? 100 - repPct : null;
-  let ratioColor = "text-emerald-600";
-  let ratioLabel = "Good ratio";
-  if (repPct != null && repPct > 65) { ratioColor = "text-red-600"; ratioLabel = "Talking too much"; }
-  else if (repPct != null && repPct < 30) { ratioColor = "text-amber-600"; ratioLabel = "Too passive"; }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -551,10 +455,8 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
         </div>
-        {/* Two-column content */}
-        <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60 px-0">
-          {/* Left: call info */}
-          <div className="flex-1 px-4 pb-4 pt-2 space-y-1">
+        {/* Call info */}
+        <div className="px-4 pb-4 pt-2 space-y-1">
             <h2 className="text-lg font-semibold text-gray-900 leading-tight">{analysis.fileName ?? "Call Recording"}</h2>
             {analysis.customerName && (
               <p className="text-sm text-teal-600 font-medium">
@@ -595,51 +497,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                 </span>
               )}
             </div>
-          </div>
 
-          {/* Right: Talk Ratio + Deal Status */}
-          <div className="flex flex-row sm:flex-col items-center justify-center gap-6 px-8 py-6 sm:min-w-[200px] bg-gray-50">
-            {/* Talk Ratio */}
-            {repPct != null && (
-              <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-1">Talk Ratio</p>
-                {/* Circular gauge */}
-                <div className="relative w-24 h-24">
-                  <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
-                    <circle cx="48" cy="48" r="38" fill="none" stroke="#1e293b" strokeWidth="9" />
-                    <circle
-                      cx="48" cy="48" r="38" fill="none"
-                      stroke={repPct > 65 ? "#ef4444" : repPct < 30 ? "#f59e0b" : "#10b981"}
-                      strokeWidth="9"
-                      strokeDasharray={`${(repPct / 100) * 239} 239`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-2xl font-bold leading-none ${ratioColor}`}>{repPct}%</span>
-                    <span className="text-[10px] text-gray-700 mt-0.5">rep</span>
-                  </div>
-                </div>
-                <p className={`text-xs font-semibold mt-1 ${ratioColor}`}>{ratioLabel}</p>
-                <p className="text-[11px] text-gray-800">👤 Customer: {custPct}%</p>
-              </div>
-            )}
-
-            {/* Divider between the two stats */}
-            {repPct != null && dealStatus && (
-              <div className="hidden sm:block w-full h-px bg-gray-100 my-1" />
-            )}
-
-            {/* Deal Status */}
-            {dealStatus && (
-              <div className="flex flex-col items-center gap-2 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-1">Deal Status</p>
-                <div className={`px-5 py-2.5 rounded-lg border ${dealStatus.bg} ${dealStatus.border} text-center min-w-[120px]`}>
-                  <p className={`text-sm font-bold ${dealStatus.color}`}>{dealStatus.label}</p>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -689,12 +547,12 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
         return (
           <div className="space-y-5">
             {/* Score cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: "Overall Score", value: report.overallScore, icon: <Star className="w-5 h-5" /> },
                 { label: "Script Compliance", value: report.scriptComplianceScore, icon: <CheckCircle2 className="w-5 h-5" /> },
                 { label: "Tone & Confidence", value: report.toneScore, icon: <Mic className="w-5 h-5" /> },
-                { label: "Rep Speech %", value: analysis.repSpeechPct ?? 0, icon: <BarChart3 className="w-5 h-5" /> },
+
                 { label: "Compliance", value: report.complianceScore ?? null, icon: <AlertTriangle className="w-5 h-5" /> },
               ].filter(c => c.value !== null).map(({ label, value, icon }) => (
                 <Card key={label} className={`bg-gray-50 border ${scoreBg(value ?? 0)} ${label === 'Compliance' && report.subscriptionMisrepresented ? 'ring-2 ring-red-500' : ''}`}>
@@ -907,7 +765,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                     <div class="score-card"><div class="score-num">${Math.round(r.scriptComplianceScore)}</div><div class="score-label">Script Compliance</div></div>
                     <div class="score-card"><div class="score-num">${Math.round(r.toneScore)}</div><div class="score-label">Tone & Confidence</div></div>
                     ${r.complianceScore != null ? `<div class="score-card" style="${r.subscriptionMisrepresented ? 'border:2px solid #ef4444' : ''}"><div class="score-num" style="color:${r.complianceScore < 40 ? '#dc2626' : r.complianceScore < 70 ? '#d97706' : '#16a34a'}">${Math.round(r.complianceScore)}</div><div class="score-label">Compliance</div></div>` : ''}
-                    <div class="score-card"><div class="score-num">${analysis.repSpeechPct ?? 0}%</div><div class="score-label">Rep Speech</div></div>
+
                   </div>
                   <div style="margin:12px 0">
                     <span class="badge ${r.closingAttempted ? 'green' : 'red'}">${r.closingAttempted ? '✓ Close attempted' : '✗ No close attempt'}</span>
@@ -1889,16 +1747,16 @@ function RepProfileModal({ rep, onClose }: { rep: RepProfileData; onClose: () =>
             {[
               { label: "Script Compliance", value: rep.scriptComplianceAvg, icon: "📋" },
               { label: "Tone & Delivery", value: rep.toneAvg, icon: "🎙️" },
-              { label: "Talk Ratio", value: rep.avgTalkRatio, icon: "🗣️", suffix: "% rep" },
-            ].map(({ label, value, icon, suffix }) => (
+
+            ].map(({ label, value, icon }) => (
               <div key={label} className="space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-800">{icon} {label}</span>
                   <span className={`text-xs font-bold ${value != null ? scoreColor(value) : "text-gray-800"}`}>
-                    {value != null ? `${value}${suffix ?? ""}` : "—"}
+                    {value != null ? `${value}` : "—"}
                   </span>
                 </div>
-                {value != null && !suffix && (
+                {value != null && (
                   <Progress value={value} className="h-1.5" />
                 )}
               </div>
@@ -2137,7 +1995,6 @@ export default function CallCoach() {
             <div className="px-4 py-4 space-y-2" style={{ background: "oklch(0.96 0.04 160)" }}>
               <p className="text-xs font-bold uppercase tracking-widest text-emerald-600" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>✅ Reliable — use these insights</p>
               <ul className="space-y-1.5 text-xs text-gray-800 leading-relaxed">
-                <li>• <strong>Talk/listen ratio</strong> — how much of the call you spoke vs. listened (accurate)</li>
                 <li>• <strong>Script stage detection</strong> — did you cover Opening, Pitch, Close? (good accuracy)</li>
                 <li>• <strong>Keyword spotting</strong> — did you mention trial, subscription, price? (accurate)</li>
                 <li>• <strong>Full transcript</strong> — word-for-word record of the call (95%+ accuracy)</li>
@@ -2158,36 +2015,6 @@ export default function CallCoach() {
           </div>
           <div className="px-4 py-2.5 text-xs text-gray-800 italic" style={{ background: "white" }}>
             Use this tool as a starting point for coaching conversations — not as a final verdict. Always listen to the call yourself before making performance decisions.
-          </div>
-        </div>
-
-        {/* Talk Ratio Legend */}
-        <div className="rounded-xl border border-gray-200 overflow-hidden" style={{ background: "white" }}>
-          <div className="px-4 py-2.5 border-b border-gray-200 flex items-center gap-2" style={{ background: "oklch(0.95 0.02 220)" }}>
-            <span className="text-xs font-bold uppercase tracking-widest text-gray-700" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>📊 Talk Ratio — What the numbers mean</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60">
-            <div className="px-4 py-3 flex items-start gap-3">
-              <span className="mt-0.5 w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-emerald-600">40–65% rep speaking</p>
-                <p className="text-xs text-gray-700 mt-0.5">Ideal balance — rep leads the call while giving the customer space to talk and engage.</p>
-              </div>
-            </div>
-            <div className="px-4 py-3 flex items-start gap-3">
-              <span className="mt-0.5 w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-amber-600">Below 30% rep speaking</p>
-                <p className="text-xs text-gray-700 mt-0.5">Rep is too passive — not driving the conversation or guiding the customer toward the close.</p>
-              </div>
-            </div>
-            <div className="px-4 py-3 flex items-start gap-3">
-              <span className="mt-0.5 w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-red-600">Above 65% rep speaking</p>
-                <p className="text-xs text-gray-700 mt-0.5">Rep is talking too much — not listening enough. Customer feels talked at, not heard.</p>
-              </div>
-            </div>
           </div>
         </div>
 
