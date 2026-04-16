@@ -158,6 +158,8 @@ export const contacts = mysqlTable("contacts", {
   leadDate: timestamp("leadDate"),
   /** Next callback reminder datetime */
   callbackAt: timestamp("callbackAt"),
+  /** CloudTalk contact ID — set after successful sync so we can upsert on next sync */
+  cloudtalkId: varchar("cloudtalkId", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

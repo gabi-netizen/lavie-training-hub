@@ -311,3 +311,10 @@
 - [ ] Auto-match phone number against contacts DB and auto-select the matching contact in Workspace left panel
 - [ ] Show "Unknown caller" state with the raw number when no contact matches
 - [ ] Outbound: when agent clicks Call on a contact in Today's List, pre-set that contact as active before CloudTalk fires the event
+
+## Delete Contact + CloudTalk Auto-Sync
+- [ ] Add deleteContact DB helper in server/contacts.ts
+- [ ] Add contacts.delete tRPC procedure (admin only)
+- [ ] Add delete button (with confirmation dialog) on contact row in Contacts page
+- [ ] Add startup CloudTalk sync: on server boot, sync all contacts that have no cloudtalkId to CloudTalk
+- [ ] Add cloudtalkId column to contacts table to track which contacts have been synced

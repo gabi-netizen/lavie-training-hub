@@ -311,24 +311,36 @@ async function updateCloudTalkContact(cloudtalkId: string, input: CloudTalkConta
 
 /**
  * Upsert a contact in CloudTalk.
- * - If a contact with the same phone already exists → update it.
+ * - If a known cloudtalkId is passed → update directly (no search needed).
+ * - If a phone is provided → search for existing contact by phone.
  * - Otherwise → create a new contact.
  *
+ * Returns the CloudTalk contact ID on success, null on failure.
  * Fire-and-forget safe: errors are logged but never thrown.
  */
-export async function syncContactToCloudTalk(input: CloudTalkContactInput): Promise<void> {
+export async function syncContactToCloudTalk(
+  input: CloudTalkContactInput,
+  knownCloudtalkId?: string | null
+): Promise<string | null> {
   try {
+    if (knownCloudtalkId) {
+      await updateCloudTalkContact(knownCloudtalkId, input);
+      return knownCloudtalkId;
+    }
     if (!input.phone) {
-      await createCloudTalkContact(input);
-      return;
+      const newId = await createCloudTalkContact(input);
+      return newId;
     }
     const existingId = await findCloudTalkContactByPhone(input.phone);
     if (existingId) {
       await updateCloudTalkContact(existingId, input);
+      return existingId;
     } else {
-      await createCloudTalkContact(input);
+      const newId = await createCloudTalkContact(input);
+      return newId;
     }
   } catch (err) {
     console.error("[CloudTalk] syncContact error:", err);
+    return null;
   }
 }

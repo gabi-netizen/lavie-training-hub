@@ -8,6 +8,7 @@ import {
   updateContact,
   addCallNote,
   importContacts,
+  deleteContact,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -75,6 +76,12 @@ export const contactsRouter = router({
         name: input.name.trim(),
         email: input.email?.trim() || null,
         phone: input.phone?.trim() || null,
+      }).then(async (cloudtalkId) => {
+        if (cloudtalkId) {
+          const db2 = await getDb();
+          const { contacts: ct } = await import("../../drizzle/schema");
+          if (db2) await db2.update(ct).set({ cloudtalkId }).where(eq(ct.id, newId));
+        }
       }).catch(() => {});
       return { id: newId };
     }),
@@ -478,5 +485,13 @@ export const contactsRouter = router({
     .input(z.object({ phone: z.string() }))
     .query(async ({ input }) => {
       return getContactByPhone(input.phone);
+    }),
+
+  // ─── Delete a contact ─────────────────────────────────────────────────────────────────
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await deleteContact(input.id);
+      return { success: true };
     }),
 });

@@ -245,3 +245,50 @@ export async function getContactByPhone(rawPhone: string) {
   if (!match) return null;
   return getContact(match.id);
 }
+
+// ─── Delete Contact ────────────────────────────────────────────────────────────
+export async function deleteContact(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  // Delete related call notes first (FK safety)
+  await db.delete(contactCallNotes).where(eq(contactCallNotes.contactId, id));
+  await db.delete(contacts).where(eq(contacts.id, id));
+}
+
+// ─── Bulk CloudTalk Sync (startup / catch-up) ─────────────────────────────────
+/**
+ * Sync all contacts that have no cloudtalkId yet.
+ * Called on server startup so any contacts created during hibernation get synced.
+ * Runs in the background — does not block server startup.
+ */
+export async function syncUnsyncedContactsToCloudTalk(): Promise<void> {
+  const { syncContactToCloudTalk } = await import("./cloudtalk");
+  const db = await getDb();
+  if (!db) return;
+
+  const unsynced = await db
+    .select()
+    .from(contacts)
+    .where(eq(contacts.cloudtalkId, null as any));
+
+  if (unsynced.length === 0) return;
+
+  console.log(`[CloudTalk] Syncing ${unsynced.length} unsynced contacts...`);
+
+  for (const contact of unsynced) {
+    const cloudtalkId = await syncContactToCloudTalk(
+      { name: contact.name, email: contact.email, phone: contact.phone },
+      null
+    );
+    if (cloudtalkId) {
+      await db
+        .update(contacts)
+        .set({ cloudtalkId })
+        .where(eq(contacts.id, contact.id));
+    }
+    // Small delay to avoid rate limiting
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  console.log(`[CloudTalk] Startup sync complete.`);
+}

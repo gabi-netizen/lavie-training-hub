@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
+import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -107,6 +108,12 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Background: sync any contacts that missed CloudTalk sync during hibernation
+    setTimeout(() => {
+      syncUnsyncedContactsToCloudTalk().catch((err) =>
+        console.error("[CloudTalk] Startup sync error:", err)
+      );
+    }, 5000); // 5s delay to let the server fully warm up first
   });
 }
 

@@ -16,7 +16,18 @@ import {
   PhoneCall,
   UserCheck,
   UserPlus,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -233,6 +244,20 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       notes: addForm.notes || undefined,
     });
   };
+
+  // ─── Delete contact ────────────────────────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const deleteMutation = trpc.contacts.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Contact deleted.");
+      utils.contacts.list.invalidate();
+      setDeleteTarget(null);
+    },
+    onError: (err) => {
+      toast.error(`Delete failed: ${err.message}`);
+      setDeleteTarget(null);
+    },
+  });
 
   const activeFilters = [filterLeadType, filterStatus].filter(Boolean).length;
 
@@ -487,14 +512,23 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-700">{c.source ?? "—"}</span></td>
                     <td className="px-4 py-3.5"><span className="text-xs text-gray-800">{c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}</span></td>
                     <td className="px-4 py-3.5">
-                      {c.phone && onDial && (
+                      <div className="flex items-center gap-1.5">
+                        {c.phone && onDial && (
+                          <button
+                            className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-500 flex items-center justify-center text-green-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                            onClick={e => { e.stopPropagation(); onDial(c.phone!, c.name); }}
+                          >
+                            <Phone size={14} />
+                          </button>
+                        )}
                         <button
-                          className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-500 flex items-center justify-center text-green-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                          onClick={e => { e.stopPropagation(); onDial(c.phone!, c.name); }}
+                          className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-500 flex items-center justify-center text-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={e => { e.stopPropagation(); setDeleteTarget({ id: c.id, name: c.name }); }}
+                          title="Delete contact"
                         >
-                          <Phone size={14} />
+                          <Trash2 size={13} />
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -504,6 +538,28 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           </>
         )}
       </div>
+
+      {/* ─── Delete Confirmation Dialog ─────────────────────────────────────── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id })}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ─── Add Contact Modal ─────────────────────────────────────────────── */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
