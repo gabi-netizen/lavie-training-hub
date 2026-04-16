@@ -272,7 +272,7 @@ async function findCloudTalkContactByPhone(phone: string): Promise<string | null
 async function createCloudTalkContact(input: CloudTalkContactInput): Promise<string | null> {
   const body: Record<string, unknown> = { name: input.name };
   if (input.address) body.address = input.address;
-  if (input.phone) body.ContactNumber = [{ number: input.phone }];
+  if (input.phone) body.ContactNumber = [{ public_number: input.phone }];
   if (input.email) body.ContactEmail = [{ email: input.email }];
 
   const res = await fetch(`${BASE_URL}/contacts/add.json`, {
@@ -295,7 +295,7 @@ async function createCloudTalkContact(input: CloudTalkContactInput): Promise<str
 async function updateCloudTalkContact(cloudtalkId: string, input: CloudTalkContactInput): Promise<void> {
   const body: Record<string, unknown> = { name: input.name };
   if (input.address) body.address = input.address;
-  if (input.phone) body.ContactNumber = [{ number: input.phone }];
+  if (input.phone) body.ContactNumber = [{ public_number: input.phone }];
   if (input.email) body.ContactEmail = [{ email: input.email }];
 
   const res = await fetch(`${BASE_URL}/contacts/edit/${cloudtalkId}.json`, {
