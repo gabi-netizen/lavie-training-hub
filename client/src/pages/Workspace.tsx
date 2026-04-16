@@ -1365,22 +1365,32 @@ export default function Workspace() {
   const [managerMode, setManagerMode] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
-  // ── Call state (driven by CloudTalk postMessage events) ──
+   // ── Call state (driven by CloudTalk postMessage events) ──
   const [callActive, setCallActive] = useState(false);
   const [callContactName, setCallContactName] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isOnHold, setIsOnHold] = useState(false);
-
+  // ── Phone lookup for live call matching ──
+  const [incomingPhone, setIncomingPhone] = useState<string | null>(null);
+  const { data: matchedContact } = trpc.contacts.lookupByPhone.useQuery(
+    { phone: incomingPhone ?? "" },
+    { enabled: !!incomingPhone }
+  );
+  // When a matched contact is found, auto-select it in the left panel
+  useEffect(() => {
+    if (matchedContact?.id) {
+      setActiveId(matchedContact.id);
+    }
+  }, [matchedContact]);
   const CLOUDTALK_ORIGINS_WS = [
     "https://phone.cloudtalk.io",
     "https://my.cloudtalk.io",
     "https://app.cloudtalk.io",
   ];
-
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (!CLOUDTALK_ORIGINS_WS.some(o => e.origin === o || e.origin.endsWith(".cloudtalk.io"))) return;
-      // CloudTalk may send data as a JSON string or as an object
+      // CloudTalk sends data as a JSON string
       let data: Record<string, unknown>;
       try {
         data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
@@ -1392,20 +1402,25 @@ export default function Workspace() {
       const props = (data.properties ?? {}) as Record<string, unknown>;
       if (evt === "ringing" || evt === "dialing" || evt === "calling") {
         setCallActive(true);
-        const contact = props.contact as Record<string, unknown> | undefined;
-        const name = (contact?.name ?? props.external_number ?? null) as string | null;
+        // Extract phone number for contact lookup
+        const rawPhone = (props.external_number ?? "") as string;
+        if (rawPhone) setIncomingPhone(rawPhone);
+        // Also try name from CloudTalk contact info
+        const ctContact = props.contact as Record<string, unknown> | undefined;
+        const name = (ctContact?.name ?? null) as string | null;
         if (name) setCallContactName(name);
       }
       if (evt === "hangup" || evt === "ended" || evt === "idle") {
         setCallActive(false);
         setCallContactName(null);
+        setIncomingPhone(null);
         setIsMuted(false);
         setIsOnHold(false);
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, []);;
 
   // Send a command to the CloudTalk iframe
   const sendToCloudTalk = useCallback((event: string) => {

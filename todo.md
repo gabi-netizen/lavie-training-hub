@@ -304,3 +304,10 @@
 - [ ] Wire Send Test Email button to open template picker modal with mini previews
 - [ ] On template select: fill placeholders and send via Postmark
 - [ ] Log sent email as a call note on the contact
+
+## CloudTalk-Workspace Phone Integration
+- [ ] Add tRPC endpoint: lookupContactByPhone — normalize number variants (+44/0) and return full contact
+- [ ] Update Workspace to listen to CloudTalk postMessage events (ringing/dialing/calling) and extract external_number
+- [ ] Auto-match phone number against contacts DB and auto-select the matching contact in Workspace left panel
+- [ ] Show "Unknown caller" state with the raw number when no contact matches
+- [ ] Outbound: when agent clicks Call on a contact in Today's List, pre-set that contact as active before CloudTalk fires the event

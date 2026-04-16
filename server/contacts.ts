@@ -217,3 +217,31 @@ export async function getCallbacksDue() {
     .where(gte(contacts.callbackAt, new Date(now.getTime() - 60 * 60 * 1000)))
     .orderBy(contacts.callbackAt);
 }
+
+// ─── Lookup Contact By Phone ───────────────────────────────────────────────────
+/**
+ * Normalize a phone number for comparison.
+ * Strips spaces, dashes, parentheses, dots. Converts leading 0 → +44.
+ */
+function normalizePhone(raw: string): string {
+  const stripped = raw.replace(/[\s\-().+]/g, "");
+  // Remove leading country code variants so we compare just the national number
+  if (stripped.startsWith("44")) return stripped.slice(2);
+  if (stripped.startsWith("0")) return stripped.slice(1);
+  return stripped;
+}
+
+export async function getContactByPhone(rawPhone: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const normalized = normalizePhone(rawPhone);
+  if (!normalized) return null;
+  // Fetch all contacts and match by normalized phone
+  const all = await db.select().from(contacts);
+  const match = all.find((c) => {
+    if (!c.phone) return false;
+    return normalizePhone(c.phone) === normalized;
+  });
+  if (!match) return null;
+  return getContact(match.id);
+}

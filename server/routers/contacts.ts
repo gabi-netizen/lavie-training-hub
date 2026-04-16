@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import {
   listContacts,
   getContact,
+  getContactByPhone,
   updateContact,
   addCallNote,
   importContacts,
@@ -452,5 +453,12 @@ export const contactsRouter = router({
       });
 
       return { ...result, calls: enrichedCalls };
+    }),
+
+  // ─── Lookup contact by phone number (for CloudTalk live call matching) ───────
+  lookupByPhone: protectedProcedure
+    .input(z.object({ phone: z.string() }))
+    .query(async ({ input }) => {
+      return getContactByPhone(input.phone);
     }),
 });
