@@ -269,9 +269,15 @@ async function findCloudTalkContactByPhone(phone: string): Promise<string | null
 /**
  * Create a new contact in CloudTalk.
  */
-/** Strip non-digit characters (e.g. leading +) — CloudTalk only accepts digits */
+/**
+ * Normalise to E.164 format with leading + — CloudTalk requires +<digits> format.
+ * e.g. "+923406165099" stays as-is; "923406165099" becomes "+923406165099".
+ */
 function toCloudTalkPhone(phone: string): string {
-  return phone.replace(/[^0-9]/g, "");
+  // Strip everything except digits and leading +
+  const cleaned = phone.replace(/[^0-9+]/g, "");
+  // Ensure it starts with +
+  return cleaned.startsWith("+") ? cleaned : "+" + cleaned;
 }
 
 async function createCloudTalkContact(input: CloudTalkContactInput): Promise<string | null> {
