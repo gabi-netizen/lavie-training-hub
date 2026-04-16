@@ -304,4 +304,3 @@
 - [ ] Wire Send Test Email button to open template picker modal with mini previews
 - [ ] On template select: fill placeholders and send via Postmark
 - [ ] Log sent email as a call note on the contact
-- [x] Remove Talk Ratio (donut chart) and Deal Status from AI Call Coach — removed from report header, score cards, PDF export, rep profile category breakdown, Talk Ratio legend, AI capabilities disclaimer, and feedback dropdown

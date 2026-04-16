@@ -1172,6 +1172,7 @@
   color: #dc2626;
 }
 .ws-bb-btn-end:hover { background: #dc2626; color: #fff; }
+.ws-bb-btn-active { background: rgba(255,255,255,0.15); color: #fbbf24; border-color: #fbbf24; }
 
 /* Responsive */
 @media (max-width: 768px) {

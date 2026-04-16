@@ -1365,6 +1365,65 @@ export default function Workspace() {
   const [managerMode, setManagerMode] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
+  // ── Call state (driven by CloudTalk postMessage events) ──
+  const [callActive, setCallActive] = useState(false);
+  const [callContactName, setCallContactName] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isOnHold, setIsOnHold] = useState(false);
+
+  const CLOUDTALK_ORIGINS_WS = [
+    "https://phone.cloudtalk.io",
+    "https://my.cloudtalk.io",
+    "https://app.cloudtalk.io",
+  ];
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (!CLOUDTALK_ORIGINS_WS.some(o => e.origin === o || e.origin.endsWith(".cloudtalk.io"))) return;
+      const evt = e.data?.event ?? e.data?.type;
+      if (evt === "ringing" || evt === "dialing" || evt === "calling") {
+        setCallActive(true);
+        const name = e.data?.properties?.contact?.name ?? e.data?.properties?.external_number ?? null;
+        if (name) setCallContactName(name);
+      }
+      if (evt === "hangup" || evt === "ended" || evt === "idle") {
+        setCallActive(false);
+        setCallContactName(null);
+        setIsMuted(false);
+        setIsOnHold(false);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  // Send a command to the CloudTalk iframe
+  const sendToCloudTalk = useCallback((event: string) => {
+    const iframe = document.querySelector<HTMLIFrameElement>('iframe[src*="phone.cloudtalk.io"]');
+    if (!iframe?.contentWindow) {
+      toast.error("CloudTalk dialler is not open. Please open the phone widget first.");
+      return;
+    }
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event, properties: {} }),
+      "https://phone.cloudtalk.io"
+    );
+  }, []);
+
+  const handleMute = useCallback(() => {
+    sendToCloudTalk(isMuted ? "unmute" : "mute");
+    setIsMuted(v => !v);
+  }, [isMuted, sendToCloudTalk]);
+
+  const handleHold = useCallback(() => {
+    sendToCloudTalk(isOnHold ? "unhold" : "hold");
+    setIsOnHold(v => !v);
+  }, [isOnHold, sendToCloudTalk]);
+
+  const handleEndCall = useCallback(() => {
+    sendToCloudTalk("hangup");
+  }, [sendToCloudTalk]);
+
   // Fetch contacts from the API
   const { data: contacts = [], refetch } = trpc.contacts.list.useQuery(
     { search: searchQuery || undefined, limit: 50 },
@@ -1551,20 +1610,36 @@ export default function Workspace() {
         </div>
       </div>
 
-      {/* BOTTOM BAR — Call Controls */}
-      <div className="ws-bottom-bar">
-        <div className="ws-bb-left">
-          <div className="ws-bb-status">
-            <div className="ws-bb-pulse" />
-            {contacts.find((c: any) => c.id === activeId)?.name ?? "No contact selected"}
+      {/* BOTTOM BAR — Call Controls: only visible when a call is active */}
+      {callActive && (
+        <div className="ws-bottom-bar">
+          <div className="ws-bb-left">
+            <div className="ws-bb-status">
+              <div className="ws-bb-pulse" />
+              {callContactName ?? contacts.find((c: any) => c.id === activeId)?.name ?? "Active Call"}
+            </div>
+          </div>
+          <div className="ws-bb-controls">
+            <button
+              className={`ws-bb-btn${isMuted ? " ws-bb-btn-active" : ""}`}
+              onClick={handleMute}
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? "Unmute" : "Mute"}
+            </button>
+            <button
+              className={`ws-bb-btn${isOnHold ? " ws-bb-btn-active" : ""}`}
+              onClick={handleHold}
+              title={isOnHold ? "Resume" : "Hold"}
+            >
+              {isOnHold ? "Resume" : "Hold"}
+            </button>
+            <button className="ws-bb-btn ws-bb-btn-end" onClick={handleEndCall} title="End Call">
+              End Call
+            </button>
           </div>
         </div>
-        <div className="ws-bb-controls">
-          <button className="ws-bb-btn">Mute</button>
-          <button className="ws-bb-btn">Hold</button>
-          <button className="ws-bb-btn ws-bb-btn-end">End Call</button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
