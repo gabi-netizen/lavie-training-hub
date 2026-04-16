@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { contacts, contactCallNotes, type Contact, type InsertContact } from "../drizzle/schema";
-import { eq, like, or, desc, and, gte } from "drizzle-orm";
+import { eq, like, or, desc, and, gte, isNull } from "drizzle-orm";
 
 // ─── Lead Types ───────────────────────────────────────────────────────────────
 export const LEAD_TYPES = [
@@ -269,7 +269,7 @@ export async function syncUnsyncedContactsToCloudTalk(): Promise<void> {
   const unsynced = await db
     .select()
     .from(contacts)
-    .where(eq(contacts.cloudtalkId, null as any));
+    .where(isNull(contacts.cloudtalkId));
 
   if (unsynced.length === 0) return;
 

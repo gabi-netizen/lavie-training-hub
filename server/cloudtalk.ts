@@ -269,10 +269,15 @@ async function findCloudTalkContactByPhone(phone: string): Promise<string | null
 /**
  * Create a new contact in CloudTalk.
  */
+/** Strip non-digit characters (e.g. leading +) — CloudTalk only accepts digits */
+function toCloudTalkPhone(phone: string): string {
+  return phone.replace(/[^0-9]/g, "");
+}
+
 async function createCloudTalkContact(input: CloudTalkContactInput): Promise<string | null> {
   const body: Record<string, unknown> = { name: input.name };
   if (input.address) body.address = input.address;
-  if (input.phone) body.ContactNumber = [{ public_number: input.phone }];
+  if (input.phone) body.ContactNumber = [{ public_number: toCloudTalkPhone(input.phone) }];
   if (input.email) body.ContactEmail = [{ email: input.email }];
 
   const res = await fetch(`${BASE_URL}/contacts/add.json`, {
@@ -295,7 +300,7 @@ async function createCloudTalkContact(input: CloudTalkContactInput): Promise<str
 async function updateCloudTalkContact(cloudtalkId: string, input: CloudTalkContactInput): Promise<void> {
   const body: Record<string, unknown> = { name: input.name };
   if (input.address) body.address = input.address;
-  if (input.phone) body.ContactNumber = [{ public_number: input.phone }];
+  if (input.phone) body.ContactNumber = [{ public_number: toCloudTalkPhone(input.phone) }];
   if (input.email) body.ContactEmail = [{ email: input.email }];
 
   const res = await fetch(`${BASE_URL}/contacts/edit/${cloudtalkId}.json`, {
