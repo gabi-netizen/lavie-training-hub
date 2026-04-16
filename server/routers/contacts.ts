@@ -26,7 +26,7 @@ import {
   getLists,
   getAutomations,
 } from "../activecampaign";
-import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording } from "../cloudtalk";
+import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncContactToCloudTalk } from "../cloudtalk";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
@@ -69,7 +69,14 @@ export const contactsRouter = router({
         leadDate,
         importedNotes: input.notes?.trim() || undefined,
       });
-      return { id: (result as any).insertId as number };
+      const newId = (result as any).insertId as number;
+      // ── CloudTalk: sync contact so dialer shows name/email/phone ────────
+      syncContactToCloudTalk({
+        name: input.name.trim(),
+        email: input.email?.trim() || null,
+        phone: input.phone?.trim() || null,
+      }).catch(() => {});
+      return { id: newId };
     }),
 
   // ─── List contacts with search/filter ─────────────────────────────────────
@@ -201,6 +208,17 @@ export const contactsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const result = await importContacts(input.rows as CsvContactRow[]);
+
+      // ── CloudTalk: sync all imported contacts so dialer shows name/email/phone ──
+      Promise.all(
+        input.rows.map((row) =>
+          syncContactToCloudTalk({
+            name: row.name,
+            email: row.email || null,
+            phone: row.phone || null,
+          }).catch(() => {})
+        )
+      ).catch(() => {});
 
       // ── ActiveCampaign: sync all imported contacts (fire-and-forget) ────
       Promise.all(

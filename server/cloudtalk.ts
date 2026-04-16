@@ -229,3 +229,106 @@ export async function clickToCall(agentId: string, calleeNumber: string): Promis
   const msg = errorMap[res.status] ?? json?.responseData?.message ?? `CloudTalk error (${res.status})`;
   return { success: false, message: msg };
 }
+
+// ─── Contact Sync ─────────────────────────────────────────────────────────────
+
+export interface CloudTalkContactInput {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+}
+
+/**
+ * Search CloudTalk for an existing contact by phone number.
+ * Returns the CloudTalk contact ID if found, null otherwise.
+ */
+async function findCloudTalkContactByPhone(phone: string): Promise<string | null> {
+  try {
+    const encoded = encodeURIComponent(phone);
+    const res = await fetch(`${BASE_URL}/contacts/index.json?keyword=${encoded}&limit=5`, {
+      headers: { Authorization: getAuthHeader() },
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    const items: any[] = data?.responseData?.data ?? [];
+    const normalise = (n: string) => n.replace(/[\s\-().]/g, "");
+    const normPhone = normalise(phone);
+    for (const item of items) {
+      const ctPhone: string = item?.ContactNumber?.public_number ?? "";
+      if (normalise(ctPhone) === normPhone) {
+        return item?.Contact?.id ?? null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a new contact in CloudTalk.
+ */
+async function createCloudTalkContact(input: CloudTalkContactInput): Promise<string | null> {
+  const body: Record<string, unknown> = { name: input.name };
+  if (input.address) body.address = input.address;
+  if (input.phone) body.ContactNumber = [{ number: input.phone }];
+  if (input.email) body.ContactEmail = [{ email: input.email }];
+
+  const res = await fetch(`${BASE_URL}/contacts/add.json`, {
+    method: "PUT",
+    headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error("[CloudTalk] createContact failed:", res.status, text.slice(0, 200));
+    return null;
+  }
+  const data = await res.json() as any;
+  return data?.responseData?.data?.id ?? null;
+}
+
+/**
+ * Update an existing CloudTalk contact.
+ */
+async function updateCloudTalkContact(cloudtalkId: string, input: CloudTalkContactInput): Promise<void> {
+  const body: Record<string, unknown> = { name: input.name };
+  if (input.address) body.address = input.address;
+  if (input.phone) body.ContactNumber = [{ number: input.phone }];
+  if (input.email) body.ContactEmail = [{ email: input.email }];
+
+  const res = await fetch(`${BASE_URL}/contacts/edit/${cloudtalkId}.json`, {
+    method: "POST",
+    headers: { Authorization: getAuthHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error("[CloudTalk] updateContact failed:", res.status, text.slice(0, 200));
+  }
+}
+
+/**
+ * Upsert a contact in CloudTalk.
+ * - If a contact with the same phone already exists → update it.
+ * - Otherwise → create a new contact.
+ *
+ * Fire-and-forget safe: errors are logged but never thrown.
+ */
+export async function syncContactToCloudTalk(input: CloudTalkContactInput): Promise<void> {
+  try {
+    if (!input.phone) {
+      await createCloudTalkContact(input);
+      return;
+    }
+    const existingId = await findCloudTalkContactByPhone(input.phone);
+    if (existingId) {
+      await updateCloudTalkContact(existingId, input);
+    } else {
+      await createCloudTalkContact(input);
+    }
+  } catch (err) {
+    console.error("[CloudTalk] syncContact error:", err);
+  }
+}
