@@ -1620,34 +1620,7 @@ export default function Workspace() {
         </div>
       </div>
 
-      {/* BOTTOM BAR — Call Controls */}
-      <div className="ws-bottom-bar">
-        <div className="ws-bb-left">
-          <div className="ws-bb-status">
-            <div className="ws-bb-pulse" />
-            {callContactName ?? contacts.find((c: any) => c.id === activeId)?.name ?? "No contact selected"}
-          </div>
-        </div>
-        <div className="ws-bb-controls">
-          <button
-            className={`ws-bb-btn${isMuted ? " ws-bb-btn-active" : ""}`}
-            onClick={handleMute}
-            title={isMuted ? "Unmute" : "Mute"}
-          >
-            {isMuted ? "Unmute" : "Mute"}
-          </button>
-          <button
-            className={`ws-bb-btn${isOnHold ? " ws-bb-btn-active" : ""}`}
-            onClick={handleHold}
-            title={isOnHold ? "Resume" : "Hold"}
-          >
-            {isOnHold ? "Resume" : "Hold"}
-          </button>
-          <button className="ws-bb-btn ws-bb-btn-end" onClick={handleEndCall} title="End Call">
-            End Call
-          </button>
-        </div>
-      </div>
+
     </div>
   );
 }
