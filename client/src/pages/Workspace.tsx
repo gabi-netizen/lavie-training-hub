@@ -1380,10 +1380,20 @@ export default function Workspace() {
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (!CLOUDTALK_ORIGINS_WS.some(o => e.origin === o || e.origin.endsWith(".cloudtalk.io"))) return;
-      const evt = e.data?.event ?? e.data?.type;
+      // CloudTalk may send data as a JSON string or as an object
+      let data: Record<string, unknown>;
+      try {
+        data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+      } catch {
+        return;
+      }
+      if (!data) return;
+      const evt = (data.event ?? data.type ?? "") as string;
+      const props = (data.properties ?? {}) as Record<string, unknown>;
       if (evt === "ringing" || evt === "dialing" || evt === "calling") {
         setCallActive(true);
-        const name = e.data?.properties?.contact?.name ?? e.data?.properties?.external_number ?? null;
+        const contact = props.contact as Record<string, unknown> | undefined;
+        const name = (contact?.name ?? props.external_number ?? null) as string | null;
         if (name) setCallContactName(name);
       }
       if (evt === "hangup" || evt === "ended" || evt === "idle") {
@@ -1610,36 +1620,34 @@ export default function Workspace() {
         </div>
       </div>
 
-      {/* BOTTOM BAR — Call Controls: only visible when a call is active */}
-      {callActive && (
-        <div className="ws-bottom-bar">
-          <div className="ws-bb-left">
-            <div className="ws-bb-status">
-              <div className="ws-bb-pulse" />
-              {callContactName ?? contacts.find((c: any) => c.id === activeId)?.name ?? "Active Call"}
-            </div>
-          </div>
-          <div className="ws-bb-controls">
-            <button
-              className={`ws-bb-btn${isMuted ? " ws-bb-btn-active" : ""}`}
-              onClick={handleMute}
-              title={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? "Unmute" : "Mute"}
-            </button>
-            <button
-              className={`ws-bb-btn${isOnHold ? " ws-bb-btn-active" : ""}`}
-              onClick={handleHold}
-              title={isOnHold ? "Resume" : "Hold"}
-            >
-              {isOnHold ? "Resume" : "Hold"}
-            </button>
-            <button className="ws-bb-btn ws-bb-btn-end" onClick={handleEndCall} title="End Call">
-              End Call
-            </button>
+      {/* BOTTOM BAR — Call Controls */}
+      <div className="ws-bottom-bar">
+        <div className="ws-bb-left">
+          <div className="ws-bb-status">
+            <div className="ws-bb-pulse" />
+            {callContactName ?? contacts.find((c: any) => c.id === activeId)?.name ?? "No contact selected"}
           </div>
         </div>
-      )}
+        <div className="ws-bb-controls">
+          <button
+            className={`ws-bb-btn${isMuted ? " ws-bb-btn-active" : ""}`}
+            onClick={handleMute}
+            title={isMuted ? "Unmute" : "Mute"}
+          >
+            {isMuted ? "Unmute" : "Mute"}
+          </button>
+          <button
+            className={`ws-bb-btn${isOnHold ? " ws-bb-btn-active" : ""}`}
+            onClick={handleHold}
+            title={isOnHold ? "Resume" : "Hold"}
+          >
+            {isOnHold ? "Resume" : "Hold"}
+          </button>
+          <button className="ws-bb-btn ws-bb-btn-end" onClick={handleEndCall} title="End Call">
+            End Call
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
