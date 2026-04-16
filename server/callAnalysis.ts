@@ -289,17 +289,18 @@ ${stagesJson}
   "closingAttempted": <bool>,
   "magicWandUsed": <bool>,
   "customerName": "<first name of the customer if mentioned in the call, otherwise null>",
-  "subscriptionDisclosed": <bool — did the rep proactively explain this is a subscription before or during the close?>,
-  "subscriptionMisrepresented": <bool — did the rep say "No" or deny it's a subscription when the customer asked? e.g. customer: "Is this a subscription?" rep: "No" or "It's not a subscription" = TRUE. This is a CRITICAL compliance violation.>,
-  "tcRead": <bool — did the rep read or reference the Terms and Conditions / T&C to the customer?>,
-  "complianceScore": <number 0-100. CRITICAL RULE: if subscriptionMisrepresented=true, this MUST be between 0-20 regardless of how good the rest of the call was. If subscriptionDisclosed=false AND closingAttempted=true, deduct 20-30 points. If tcRead=false, deduct 10 points.>,
-  "complianceIssues": [<list of specific compliance violations as strings, e.g. "Rep denied subscription when asked", "T&C not read", "Subscription not disclosed before close">],${extraFields}
+  "subscriptionDisclosed": <bool — SUBSCRIPTION MENTION RULE: The agent does NOT need to proactively mention the word 'subscription' unprompted. Set this to FALSE only if the customer directly asked 'Is this a subscription?' or similar, AND the agent said No, denied it, or clearly dodged the question. If the customer never asked about subscriptions, set this to TRUE (no violation). If the customer asked and the agent confirmed it honestly (even briefly), set this to TRUE.>,
+  "subscriptionMisrepresented": <bool — CRITICAL: Set TRUE only if the customer directly asked about the subscription AND the agent said No, denied it, or clearly evaded the question. Do NOT set TRUE just because the agent didn't proactively mention the word 'subscription'. If the customer never asked, this must be FALSE.>,
+  "tcRead": <bool — FULL OFFER DETAILS CHECK: Set TRUE if the agent clearly communicated ALL of the following: (1) the £4.95 postage charge, (2) two products included, (3) DHL tracked delivery with a one-hour delivery slot, (4) the 21-day free trial period, (5) the £44.95 price every 60 days after the trial, AND (6) that the customer can stop, pause, cancel or amend at any time. The agent does NOT need to say the words 'terms and conditions' — what matters is that all these details were communicated. Set FALSE if any of these key details were missing.>,
+  "complianceScore": <number 0-100. CRITICAL RULE: if subscriptionMisrepresented=true, this MUST be between 0-20 regardless of how good the rest of the call was. If tcRead=false (full offer details not communicated), deduct 20-30 points. Perfect compliance = 90-100.>,
+  "complianceIssues": [<list of specific compliance violations as strings. Examples: "Rep denied subscription when directly asked", "£4.95 postage not mentioned", "21-day trial period not mentioned", "£44.95 recurring price not mentioned", "Cancellation/pause rights not mentioned", "DHL tracked delivery details not mentioned">],${extraFields}
 }
 COMPLIANCE SCORING RULES (apply strictly):
-1. If the rep said "No" or denied being a subscription when the customer asked → subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else. Even a successful sale gets a very low overall score.
-2. If the rep closed a sale WITHOUT ever mentioning it's a subscription → subscriptionDisclosed=false → deduct 20-30 from complianceScore.
-3. If T&C were not read/referenced → tcRead=false → deduct 10 from complianceScore.
-4. Perfect compliance (subscriptionDisclosed=true, tcRead=true, subscriptionMisrepresented=false) = complianceScore 90-100.
+1. SUBSCRIPTION RULE: Only flag subscriptionMisrepresented=true if the customer directly asked 'Is this a subscription?' or similar AND the rep said No, denied it, or clearly dodged. Do NOT penalise the rep for not proactively using the word 'subscription' — this is intentional sales technique.
+2. FULL OFFER DETAILS (tcRead): The rep must clearly communicate ALL of: £4.95 postage, two products, DHL tracked delivery with one-hour slot, 21-day free trial, £44.95 every 60 days, and the right to cancel/pause/stop/amend at any time. Missing any of these = tcRead=false → deduct 20-30 from complianceScore.
+3. CANCELLATION CLARITY: The rep must give some clear indication that the customer can cancel, stop, pause, or amend at any time. The exact words don't matter — flag only if the rep gives NO indication at all that the customer can exit the arrangement.
+4. Perfect compliance (subscriptionMisrepresented=false, tcRead=true) = complianceScore 90-100.
+5. If subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else.
 
 IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
 Be specific, actionable, and encouraging. Focus on the call type objectives above.`;
