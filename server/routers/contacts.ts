@@ -95,7 +95,7 @@ export const contactsRouter = router({
         leadType: z.string().optional(),
         status: z.string().optional(),
         agentName: z.string().optional(),
-        limit: z.number().min(1).max(200).default(50),
+        limit: z.number().min(1).max(5000).default(5000),
         offset: z.number().min(0).default(0),
       })
     )

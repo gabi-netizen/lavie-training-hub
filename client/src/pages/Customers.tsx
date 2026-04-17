@@ -181,7 +181,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
-    limit: 200,
+    limit: 5000,
   });
 
   const importMutation = trpc.contacts.import.useMutation({
