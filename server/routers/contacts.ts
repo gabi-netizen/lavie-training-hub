@@ -85,10 +85,8 @@ export const contactsRouter = router({
       }).catch(() => {});
       return { id: newId };
     }),
-
-  // ─── List contacts with search/filter ─────────────────────────────────────
-  list: adminProcedure
-    .input(
+  // ─── List contacts with search/filter ─────────────────────────────────────────
+  list: protectedProcedure  .input(
       z.object({
         search: z.string().optional(),
         leadType: z.string().optional(),
@@ -101,16 +99,14 @@ export const contactsRouter = router({
     .query(async ({ input }) => {
       return listContacts(input);
     }),
-
-  // ─── Get single contact with call notes ───────────────────────────────────
-  get: adminProcedure
-    .input(z.object({ id: z.number() }))
+  // ─── Get single contact with call notes ──────────────────────────────────────
+  get: protectedProcedure   .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return getContact(input.id);
     }),
 
   // ─── Update contact status / agent / lead type / callback ─────────────────────────────────────────────────
-  update: adminProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -188,7 +184,7 @@ export const contactsRouter = router({
     }),
 
   // ─── Add a call note ──────────────────────────────────────────────────────
-  addNote: adminProcedure
+  addNote: protectedProcedure
     .input(
       z.object({
         contactId: z.number(),
