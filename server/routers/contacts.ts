@@ -9,6 +9,7 @@ import {
   addCallNote,
   importContacts,
   deleteContact,
+  bulkDeleteContacts,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -491,11 +492,17 @@ export const contactsRouter = router({
       return getContactByPhone(input.phone);
     }),
 
-  // ─── Delete a contact ─────────────────────────────────────────────────────────────────
+  // ─── Delete a contact ─────────────────────────────────────────────────────────────────────────────────────
   delete: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await deleteContact(input.id);
       return { success: true };
+    }),
+  // ─── Bulk delete contacts ─────────────────────────────────────────────────────────────────────────────────────
+  bulkDelete: adminProcedure
+    .input(z.object({ ids: z.array(z.number()).min(1) }))
+    .mutation(async ({ input }) => {
+      return bulkDeleteContacts(input.ids);
     }),
 });

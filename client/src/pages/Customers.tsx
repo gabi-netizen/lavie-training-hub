@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Contact {
@@ -259,6 +260,44 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     },
   });
 
+  // ─── Bulk select state ──────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+
+  const allIds = contacts.map((c: Contact) => c.id);
+  const allSelected = allIds.length > 0 && allIds.every((id: number) => selectedIds.has(id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const toggleSelect = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  };
+
+  const bulkDeleteMutation = trpc.contacts.bulkDelete.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.deleted} contact${result.deleted !== 1 ? 's' : ''} deleted.`);
+      utils.contacts.list.invalidate();
+      setSelectedIds(new Set());
+      setShowBulkDeleteDialog(false);
+    },
+    onError: (err) => {
+      toast.error(`Bulk delete failed: ${err.message}`);
+      setShowBulkDeleteDialog(false);
+    },
+  });
+
   const activeFilters = [filterLeadType, filterStatus].filter(Boolean).length;
 
   // Stats
@@ -410,6 +449,31 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         </div>
       </div>
 
+      {/* ── Bulk Action Toolbar ── */}
+      {selectedIds.size > 0 && (
+        <div className="mx-3 md:mx-8 mt-3 flex items-center gap-3 bg-indigo-50 border-2 border-indigo-300 rounded-xl px-4 py-2.5">
+          <span className="text-sm font-semibold text-indigo-700">{selectedIds.size} selected</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-gray-700 hover:text-gray-900 h-8 px-3"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear
+          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white h-8 px-4 font-semibold"
+              onClick={() => setShowBulkDeleteDialog(true)}
+            >
+              <Trash2 size={13} className="mr-1.5" />
+              Delete {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Table ── */}
       <div className="px-3 md:px-8 py-4 md:py-6">
         {isLoading ? (
@@ -471,6 +535,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="px-4 py-3.5 w-[48px]" onClick={e => e.stopPropagation()}>
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                      className={someSelected ? "data-[state=unchecked]:bg-indigo-200" : ""}
+                    />
+                  </th>
                   <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[240px]">Name</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[160px]">Lead Type</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[130px]">Status</th>
@@ -486,9 +558,19 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 {contacts.map((c: Contact) => (
                   <tr
                     key={c.id}
-                    className="hover:bg-indigo-50/40 cursor-pointer transition-colors group border-b-2 border-gray-200 last:border-b-0"
+                    className={cn(
+                      "hover:bg-indigo-50/40 cursor-pointer transition-colors group border-b-2 border-gray-200 last:border-b-0",
+                      selectedIds.has(c.id) && "bg-indigo-50"
+                    )}
                     onClick={() => navigate(`/contacts/${c.id}`)}
                   >
+                    <td className="px-4 py-3.5" onClick={e => toggleSelect(c.id, e)}>
+                      <Checkbox
+                        checked={selectedIds.has(c.id)}
+                        onCheckedChange={() => {}}
+                        aria-label={`Select ${c.name}`}
+                      />
+                    </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
@@ -539,7 +621,29 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         )}
       </div>
 
-      {/* ─── Delete Confirmation Dialog ─────────────────────────────────────── */}
+      {/* ─── Bulk Delete Confirmation Dialog ─────────────────────────────────────────────────────────────────── */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{selectedIds.size} contact{selectedIds.size !== 1 ? 's' : ''}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => bulkDeleteMutation.mutate({ ids: Array.from(selectedIds) })}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting…" : `Delete ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── Delete Confirmation Dialog ─────────────────────────────────────────────────────────────────── */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

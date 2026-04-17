@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { contacts, contactCallNotes, type Contact, type InsertContact } from "../drizzle/schema";
-import { eq, like, or, desc, and, gte, isNull } from "drizzle-orm";
+import { eq, like, or, desc, and, gte, isNull, inArray } from "drizzle-orm";
 
 // ─── Lead Types ───────────────────────────────────────────────────────────────
 export const LEAD_TYPES = [
@@ -253,6 +253,17 @@ export async function deleteContact(id: number): Promise<void> {
   // Delete related call notes first (FK safety)
   await db.delete(contactCallNotes).where(eq(contactCallNotes.contactId, id));
   await db.delete(contacts).where(eq(contacts.id, id));
+}
+
+// ─── Bulk Delete Contacts ──────────────────────────────────────────────────────────────────────────────────
+export async function bulkDeleteContacts(ids: number[]): Promise<{ deleted: number }> {
+  if (!ids.length) return { deleted: 0 };
+  const db = await getDb();
+  if (!db) return { deleted: 0 };
+  // Delete related call notes first (FK safety)
+  await db.delete(contactCallNotes).where(inArray(contactCallNotes.contactId, ids));
+  await db.delete(contacts).where(inArray(contacts.id, ids));
+  return { deleted: ids.length };
 }
 
 // ─── Bulk CloudTalk Sync (startup / catch-up) ─────────────────────────────────
