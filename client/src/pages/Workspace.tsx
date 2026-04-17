@@ -254,12 +254,12 @@ function ContactCard({
   const [concerns, setConcerns] = useState<string[]>(() => parseConcerns(contact));
   const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
 
-  // Sync local state when a different contact is selected
+  // Sync local state when contact changes (different contact selected OR same contact refetched from DB)
   useEffect(() => {
     setConcerns(parseConcerns(contact));
     setNotes(contact.callNotes ?? contact.notes ?? "");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact.id]);
+  }, [contact.id, contact.callNotes, contact.concern, contact.skinType, contact.routine, contact.trialKit]);
 
   const { user } = useAuth();
 
@@ -1480,7 +1480,7 @@ export default function Workspace() {
   // Fetch contacts from the API
   const { data: contacts = [], refetch } = trpc.contacts.list.useQuery(
     { search: searchQuery || undefined, limit: 50 },
-    { enabled: true }
+    { enabled: true, staleTime: 0, refetchOnMount: "always" }
   );
 
   // Click-to-call mutation
@@ -1542,7 +1542,7 @@ export default function Workspace() {
   };
 
   const handleFieldChange = (contactId: number, field: string, value: any) => {
-    const persistedFields = ["name", "phone", "email", "status", "leadType", "skinType", "concern", "routine", "trialKit", "callNotes"];
+    const persistedFields = ["name", "phone", "email", "status", "leadType", "skinType", "concern", "routine", "trialKit", "callNotes", "address"];
     if (persistedFields.includes(field)) {
       updateContact.mutate({ id: contactId, [field]: value });
     } else if (field === "concerns") {
