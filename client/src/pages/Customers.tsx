@@ -93,6 +93,7 @@ function mapCsvRow(row: Record<string, string>) {
     leadType: find("lead type", "leadtype", "type", "lead"),
     status: find("status"),
     agentName: find("agent", "rep", "assigned"),
+    agentEmail: find("agent email", "agentemail") ?? "trials@lavielabs.co.uk",
     source: find("source", "campaign"),
     importedNotes: find("notes", "note", "comment", "rob"),
     leadDate: find("lead date", "date", "created"),
@@ -217,7 +218,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [showAddModal, setShowAddModal] = useState(false);
   const emptyForm = () => ({
     name: "", phone: "", email: "", leadType: "",
-    status: "new", agentName: "", agentEmail: "",
+    status: "new", agentName: "", agentEmail: "trials@lavielabs.co.uk",
     source: "", leadDate: new Date().toISOString().split("T")[0], notes: "",
   });
   const [addForm, setAddForm] = useState(emptyForm);
