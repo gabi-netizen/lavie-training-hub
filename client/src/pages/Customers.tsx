@@ -858,7 +858,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             {/* Agent Email */}
             <div>
               <Label className="text-xs font-semibold text-gray-700 mb-1 block">Agent Email</Label>
-              <Input value={addForm.agentEmail} onChange={e => setAddForm(f => ({ ...f, agentEmail: e.target.value }))} placeholder="Trials@lavielabs.co.uk" />
+              <Input value={addForm.agentEmail} onChange={e => setAddForm(f => ({ ...f, agentEmail: e.target.value }))} placeholder="trial@lavielabs.com" />
             </div>
             {/* Source */}
             <div>

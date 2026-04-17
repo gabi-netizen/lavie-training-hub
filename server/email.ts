@@ -10,7 +10,7 @@
 import { ENV } from "./_core/env";
 
 const POSTMARK_API_URL = "https://api.postmarkapp.com/email";
-const FROM_EMAIL = "noreply@lavielabs.co.uk";
+const FROM_EMAIL = "trial@lavielabs.com";
 const FROM_NAME = "Lavie Labs";
 
 interface SendEmailOptions {
@@ -273,7 +273,7 @@ export async function sendEmailToContact(options: {
     return false;
   }
 
-  const fromAddress = `${options.agentName} at Lavie Labs <trial+${options.agentSlug}@lavielabs.com>`;
+  const fromAddress = `${options.agentName} at Lavie Labs <trial@lavielabs.com>`;
   const replyToAddress = options.replyTo ?? "trial@lavielabs.com";
 
   // Wrap the body in a clean HTML template
