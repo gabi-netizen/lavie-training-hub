@@ -148,6 +148,13 @@
       "when": 1776434049397,
       "tag": "0020_long_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1776440794140,
+      "tag": "0021_quick_terrax",
+      "breakpoints": true
     }
   ]
 }

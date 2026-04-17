@@ -1499,6 +1499,7 @@ export default function Workspace() {
     for (const c of contacts as any[]) {
       if (c.status === "done_deal") fromDB[c.id] = "Sold";
       else if (c.status === "closed") fromDB[c.id] = "No";
+      else if (c.status === "skipped") fromDB[c.id] = "Skip";
     }
     return { ...fromDB, ...localDoneItems };
   }, [contacts, localDoneItems]);
@@ -1553,7 +1554,7 @@ export default function Workspace() {
     na: "closed",
     no: "closed",
     callback: "working",
-    skip: "open",
+    skip: "skipped",
   };
 
   const handleAction = (contactId: number, action: string, phone?: string) => {

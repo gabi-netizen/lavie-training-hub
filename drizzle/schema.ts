@@ -142,7 +142,7 @@ export const contacts = mysqlTable("contacts", {
    */
   status: mysqlEnum("status", [
     "new", "open", "working", "assigned",
-    "done_deal", "retained_sub", "cancelled_sub", "closed"
+    "done_deal", "retained_sub", "cancelled_sub", "closed", "skipped"
   ]).default("new").notNull(),
   /** Agent name assigned to this contact */
   agentName: varchar("agentName", { length: 256 }),

@@ -1,0 +1,1 @@
+ALTER TABLE `contacts` MODIFY COLUMN `status` enum('new','open','working','assigned','done_deal','retained_sub','cancelled_sub','closed','skipped') NOT NULL DEFAULT 'new';
