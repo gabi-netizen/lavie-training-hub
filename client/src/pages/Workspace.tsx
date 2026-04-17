@@ -25,9 +25,15 @@ interface Contact {
   leadType?: string;
   status?: string;
   skinType?: string;
+  /** comma-separated string from DB */
+  concern?: string;
+  /** UI-only: parsed from concern */
   concerns?: string[];
   routine?: string;
   trialKit?: string;
+  /** free notes from DB */
+  callNotes?: string;
+  /** UI alias for callNotes */
   notes?: string;
   importedNotes?: string;
 }
@@ -240,8 +246,20 @@ function ContactCard({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  const [concerns, setConcerns] = useState<string[]>(contact.concerns ?? []);
-  const [notes, setNotes] = useState(contact.notes ?? "");
+  // Parse concerns from DB comma-separated string, or fall back to concerns array
+  const parseConcerns = (c: Contact) => {
+    if (c.concern) return c.concern.split(", ").filter(Boolean);
+    return c.concerns ?? [];
+  };
+  const [concerns, setConcerns] = useState<string[]>(() => parseConcerns(contact));
+  const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
+
+  // Sync local state when a different contact is selected
+  useEffect(() => {
+    setConcerns(parseConcerns(contact));
+    setNotes(contact.callNotes ?? contact.notes ?? "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact.id]);
 
   const { user } = useAuth();
 
@@ -407,13 +425,23 @@ function ContactCard({
             </div>
           </div>
 
-          {/* Free Notes */}
+          {/* Free Notes — debounced save */}
           <textarea
             className="ws-notes-area"
             placeholder="Free notes..."
             value={notes}
             onChange={(e) => {
-              setNotes(e.target.value);
+              const val = e.target.value;
+              setNotes(val);
+              // Debounce: save 500ms after user stops typing
+              if ((window as any)._notesSaveTimer) clearTimeout((window as any)._notesSaveTimer);
+              (window as any)._notesSaveTimer = setTimeout(() => {
+                onFieldChange("notes", val);
+              }, 500);
+            }}
+            onBlur={(e) => {
+              // Also save immediately on blur
+              if ((window as any)._notesSaveTimer) clearTimeout((window as any)._notesSaveTimer);
               onFieldChange("notes", e.target.value);
             }}
           />
@@ -1487,14 +1515,26 @@ export default function Workspace() {
     onSuccess: () => refetch(),
   });
 
+  // Map action label → contact status for DB persistence
+  const ACTION_TO_STATUS: Record<string, string> = {
+    sold: "done_deal",
+    na: "closed",
+    no: "closed",
+    callback: "working",
+    skip: "open",
+  };
+
   const handleAction = (contactId: number, action: string, phone?: string) => {
     if (action === "call") {
       clickToCall.mutate({ contactId });
     } else if (action === "sold" || action === "na" || action === "no" || action === "skip" || action === "callback") {
-      setDoneItems((prev) => ({
-        ...prev,
-        [contactId]: action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : action === "callback" ? "Callback" : "Skip",
-      }));
+      const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : action === "callback" ? "Callback" : "Skip";
+      setDoneItems((prev) => ({ ...prev, [contactId]: displayLabel }));
+      // Persist status to DB
+      const newStatus = ACTION_TO_STATUS[action];
+      if (newStatus) {
+        updateContact.mutate({ id: contactId, status: newStatus as any });
+      }
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
@@ -1502,8 +1542,15 @@ export default function Workspace() {
   };
 
   const handleFieldChange = (contactId: number, field: string, value: any) => {
-    if (["name", "phone", "email", "status", "leadType"].includes(field)) {
+    const persistedFields = ["name", "phone", "email", "status", "leadType", "skinType", "concern", "routine", "trialKit", "callNotes"];
+    if (persistedFields.includes(field)) {
       updateContact.mutate({ id: contactId, [field]: value });
+    } else if (field === "concerns") {
+      // concerns is a string[] in UI but stored as comma-separated string in DB
+      updateContact.mutate({ id: contactId, concern: Array.isArray(value) ? value.join(", ") : value });
+    } else if (field === "notes") {
+      // "notes" in UI maps to "callNotes" in DB
+      updateContact.mutate({ id: contactId, callNotes: value });
     }
   };
 

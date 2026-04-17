@@ -160,6 +160,16 @@ export const contacts = mysqlTable("contacts", {
   callbackAt: timestamp("callbackAt"),
   /** CloudTalk contact ID — set after successful sync so we can upsert on next sync */
   cloudtalkId: varchar("cloudtalkId", { length: 64 }),
+  /** Skin type captured during Workspace call — dry, combination, oily */
+  skinType: varchar("skinType", { length: 64 }),
+  /** Main skin concern captured during Workspace call */
+  concern: varchar("concern", { length: 128 }),
+  /** Skincare routine captured during Workspace call */
+  routine: varchar("routine", { length: 64 }),
+  /** Trial kit preference captured during Workspace call */
+  trialKit: varchar("trialKit", { length: 64 }),
+  /** Free-text notes entered by the rep during/after a Workspace call */
+  callNotes: text("callNotes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -109,17 +109,25 @@ export const contactsRouter = router({
       return getContact(input.id);
     }),
 
-  // ─── Update contact status / agent / lead type / callback ─────────────────
+  // ─── Update contact status / agent / lead type / callback ─────────────────────────────────────────────────
   update: adminProcedure
     .input(
       z.object({
         id: z.number(),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        email: z.string().optional(),
         status: z.enum(CONTACT_STATUSES).optional(),
         agentName: z.string().optional(),
         leadType: z.string().optional(),
         agentEmail: z.string().optional(),
         callbackAt: z.date().optional(),
         importedNotes: z.string().optional(),
+        skinType: z.string().optional(),
+        concern: z.string().optional(),
+        routine: z.string().optional(),
+        trialKit: z.string().optional(),
+        callNotes: z.string().optional(),
         // For email notifications
         notifyEmail: z.string().optional(),
         previousStatus: z.string().optional(),
