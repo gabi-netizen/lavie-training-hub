@@ -146,6 +146,7 @@ export interface CsvContactRow {
   leadType?: string;
   status?: string;
   agentName?: string;
+  agentEmail?: string;
   notes?: string;
   source?: string;
   leadDate?: string;
@@ -194,6 +195,7 @@ export async function importContacts(rows: CsvContactRow[]): Promise<{ imported:
       leadType: row.leadType?.trim() || undefined,
       status,
       agentName: row.agentName?.trim() || undefined,
+      agentEmail: row.agentEmail?.trim() || "trials@lavielabs.co.uk",
       importedNotes: row.notes?.trim() || undefined,
       source: row.source?.trim() || undefined,
       leadDate,
