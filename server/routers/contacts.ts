@@ -129,6 +129,7 @@ export const contactsRouter = router({
         routine: z.string().optional(),
         trialKit: z.string().optional(),
         callNotes: z.string().optional(),
+        address: z.string().optional(),
         // For email notifications
         notifyEmail: z.string().optional(),
         previousStatus: z.string().optional(),

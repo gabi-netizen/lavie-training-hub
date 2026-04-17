@@ -324,3 +324,8 @@
 - [x] Update importer fuzzy header mapping: Forename+Surname → Name, Addr1+Addr2+Addr3+PostTown+PostCounty+Postcode → Address, Mobile → Phone
 - [x] Add Address field to Add Contact form
 - [x] Show Address in Contacts table and ContactCard
+
+## Callback Calendar Feature
+- [x] Show date/time picker modal when Callback button is clicked in Workspace
+- [x] Save selected datetime to callbackAt field in DB
+- [x] Auto-append "CALLBACK Scheduled on dd-mmm-yyyy HH:mm" to contact callNotes

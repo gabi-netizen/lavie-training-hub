@@ -10,7 +10,7 @@ import { useLocation } from "wouter";
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronDown, CreditCard, Search,
-  Edit3, Save, AlertCircle, Eye, Users
+  Edit3, Save, AlertCircle, Eye, Users, Calendar
 } from "lucide-react";
 
 // ==========================================
@@ -36,6 +36,7 @@ interface Contact {
   /** UI alias for callNotes */
   notes?: string;
   importedNotes?: string;
+  callbackAt?: Date | string | null;
 }
 
 // ==========================================
@@ -1394,6 +1395,10 @@ export default function Workspace() {
   const [managerMode, setManagerMode] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
+  // ── Callback scheduler modal state ──
+  const [callbackModal, setCallbackModal] = useState<{ contactId: number; contactName: string } | null>(null);
+  const [callbackDateTime, setCallbackDateTime] = useState("");
+
    // ── Call state (driven by CloudTalk postMessage events) ──
   const [callActive, setCallActive] = useState(false);
   const [callContactName, setCallContactName] = useState<string | null>(null);
@@ -1538,8 +1543,13 @@ export default function Workspace() {
   const handleAction = (contactId: number, action: string, phone?: string) => {
     if (action === "call") {
       clickToCall.mutate({ contactId });
-    } else if (action === "sold" || action === "na" || action === "no" || action === "skip" || action === "callback") {
-      const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : action === "callback" ? "Callback" : "Skip";
+    } else if (action === "callback") {
+      // Open date/time picker modal — do NOT mark done yet
+      const contact = (contacts as any[]).find((c) => c.id === contactId);
+      setCallbackDateTime("");
+      setCallbackModal({ contactId, contactName: contact?.name ?? "Contact" });
+    } else if (action === "sold" || action === "na" || action === "no" || action === "skip") {
+      const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB
       const newStatus = ACTION_TO_STATUS[action];
@@ -1550,6 +1560,39 @@ export default function Workspace() {
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
     }
+  };
+
+  // Confirm callback: save callbackAt + append note + mark working
+  const handleCallbackConfirm = () => {
+    if (!callbackModal || !callbackDateTime) return;
+    const { contactId, contactName } = callbackModal;
+    const dt = new Date(callbackDateTime);
+    // Format: "17-Apr-2026 14:30"
+    const formatted = dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(/ /g, "-") + " " + dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const noteAppend = `CALLBACK Scheduled on ${formatted}`;
+    // Get existing notes for this contact
+    const existingContact = (contacts as any[]).find((c) => c.id === contactId);
+    const existingNotes = existingContact?.callNotes ?? "";
+    const updatedNotes = existingNotes ? `${existingNotes.trimEnd()}\n${noteAppend}` : noteAppend;
+    updateContact.mutate({
+      id: contactId,
+      status: "working" as any,
+      callbackAt: dt,
+      callNotes: updatedNotes,
+    }, {
+      onSuccess: () => {
+        toast.success(`Callback scheduled for ${formatted}`);
+        refetch();
+      }
+    });
+    // Mark locally as Callback (non-interactive)
+    setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: "Callback" }));
+    // Advance to next contact
+    const currentIndex = (contacts as any[]).findIndex((c) => c.id === contactId);
+    const nextContact = (contacts as any[])[currentIndex + 1];
+    if (nextContact) setActiveId(nextContact.id);
+    setCallbackModal(null);
+    setCallbackDateTime("");
   };
 
   const handleFieldChange = (contactId: number, field: string, value: any) => {
@@ -1693,6 +1736,69 @@ export default function Workspace() {
         </div>
       </div>
 
+      {/* ── Callback Scheduler Modal ── */}
+      {callbackModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+          }}
+          onClick={() => setCallbackModal(null)}
+        >
+          <div
+            style={{
+              background: "#fff", borderRadius: 14, padding: "28px 32px",
+              minWidth: 340, maxWidth: 420, boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+              display: "flex", flexDirection: "column", gap: 18
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Calendar size={20} color="#4F46E5" />
+              <span style={{ fontWeight: 700, fontSize: 17, color: "#1f2937" }}>Schedule Callback</span>
+            </div>
+            <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
+              Scheduling callback for <strong>{callbackModal.contactName}</strong>
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Date &amp; Time</label>
+              <input
+                type="datetime-local"
+                value={callbackDateTime}
+                onChange={(e) => setCallbackDateTime(e.target.value)}
+                style={{
+                  border: "1.5px solid #d1d5db", borderRadius: 8, padding: "9px 12px",
+                  fontSize: 14, color: "#1f2937", outline: "none", width: "100%"
+                }}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setCallbackModal(null)}
+                style={{
+                  padding: "8px 18px", borderRadius: 8, border: "1.5px solid #d1d5db",
+                  background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCallbackConfirm}
+                disabled={!callbackDateTime}
+                style={{
+                  padding: "8px 20px", borderRadius: 8, border: "none",
+                  background: callbackDateTime ? "#4F46E5" : "#c7d2fe",
+                  color: "#fff", fontWeight: 700, fontSize: 14,
+                  cursor: callbackDateTime ? "pointer" : "not-allowed"
+                }}
+              >
+                Confirm Callback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
