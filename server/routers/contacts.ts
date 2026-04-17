@@ -41,7 +41,7 @@ const ADMIN_EMAIL = "gabriel@lavielabs.com";
 
 export const contactsRouter = router({
   // ─── Create a single contact ──────────────────────────────────────────────
-  create: adminProcedure
+  create: protectedProcedure
     .input(
       z.object({
         name: z.string().min(1).max(256),
@@ -202,7 +202,7 @@ export const contactsRouter = router({
     }),
 
   // ─── Bulk CSV import ──────────────────────────────────────────────────────
-  import: adminProcedure
+  import: protectedProcedure
     .input(
       z.object({
         rows: z.array(
@@ -263,18 +263,18 @@ export const contactsRouter = router({
     }),
 
   // ─── Return metadata (lead types, statuses) ───────────────────────────────
-  meta: adminProcedure.query(() => ({
+  meta: protectedProcedure.query(() => ({
     leadTypes: LEAD_TYPES,
     statuses: CONTACT_STATUSES,
   })),
 
   // ─── ActiveCampaign: get lists ────────────────────────────────────────────
-  acLists: adminProcedure.query(async () => {
+  acLists: protectedProcedure.query(async () => {
     return getLists();
   }),
 
   // ─── ActiveCampaign: get automations ─────────────────────────────────────
-  acAutomations: adminProcedure.query(async () => {
+  acAutomations: protectedProcedure.query(async () => {
     return getAutomations();
   }),
 
@@ -413,7 +413,7 @@ export const contactsRouter = router({
   }),
 
   // ─── CloudTalk: Get call history (optionally filtered by phone) ───────────
-  callHistory: adminProcedure
+  callHistory: protectedProcedure
     .input(
       z.object({
         phone: z.string().optional(),
@@ -445,7 +445,7 @@ export const contactsRouter = router({
     }),
 
   // ─── CloudTalk: Global call log (all calls, not per contact) ─────────────
-  callLog: adminProcedure
+  callLog: protectedProcedure
     .input(
       z.object({
         dateFrom: z.string().optional(),
@@ -496,21 +496,21 @@ export const contactsRouter = router({
     }),
 
   // ─── Delete a contact ─────────────────────────────────────────────────────────────────────────────────────
-  delete: adminProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await deleteContact(input.id);
       return { success: true };
     }),
   // ─── Bulk delete contacts ─────────────────────────────────────────────────────────────────────────────────────
-  bulkDelete: adminProcedure
+  bulkDelete: protectedProcedure
     .input(z.object({ ids: z.array(z.number()).min(1) }))
     .mutation(async ({ input }) => {
       return bulkDeleteContacts(input.ids);
     }),
 
   // ─── Bulk assign contacts to an agent ──────────────────────────────────────────────
-  bulkAssign: adminProcedure
+  bulkAssign: protectedProcedure
     .input(
       z.object({
         ids: z.array(z.number()).min(1),
