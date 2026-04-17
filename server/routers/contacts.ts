@@ -10,6 +10,7 @@ import {
   importContacts,
   deleteContact,
   bulkDeleteContacts,
+  bulkAssignContacts,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -505,5 +506,18 @@ export const contactsRouter = router({
     .input(z.object({ ids: z.array(z.number()).min(1) }))
     .mutation(async ({ input }) => {
       return bulkDeleteContacts(input.ids);
+    }),
+
+  // ─── Bulk assign contacts to an agent ──────────────────────────────────────────────
+  bulkAssign: adminProcedure
+    .input(
+      z.object({
+        ids: z.array(z.number()).min(1),
+        agentName: z.string().min(1),
+        agentEmail: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return bulkAssignContacts(input.ids, input.agentName, input.agentEmail);
     }),
 });

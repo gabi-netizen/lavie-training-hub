@@ -197,7 +197,7 @@ export const callCoachRouter = router({
     const db = await getDb();
     if (!db) return [];
     const rows = await db
-      .select({ id: users.id, name: users.name })
+      .select({ id: users.id, name: users.name, email: users.email })
       .from(users)
       .orderBy(users.name);
     return rows.filter(r => r.name);

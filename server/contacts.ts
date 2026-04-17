@@ -268,6 +268,22 @@ export async function bulkDeleteContacts(ids: number[]): Promise<{ deleted: numb
   return { deleted: ids.length };
 }
 
+// ─── Bulk Assign Contacts to Agent ──────────────────────────────────────────────
+export async function bulkAssignContacts(
+  ids: number[],
+  agentName: string,
+  agentEmail: string
+): Promise<{ assigned: number }> {
+  if (!ids.length) return { assigned: 0 };
+  const db = await getDb();
+  if (!db) return { assigned: 0 };
+  await db
+    .update(contacts)
+    .set({ agentName, agentEmail })
+    .where(inArray(contacts.id, ids));
+  return { assigned: ids.length };
+}
+
 // ─── Bulk CloudTalk Sync (startup / catch-up) ─────────────────────────────────
 /**
  * Sync all contacts that have no cloudtalkId yet.

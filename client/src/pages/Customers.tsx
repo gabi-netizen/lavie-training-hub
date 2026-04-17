@@ -17,6 +17,7 @@ import {
   UserCheck,
   UserPlus,
   Trash2,
+  UserCog,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -300,6 +301,32 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     },
   });
 
+  // ─── Bulk assign state ──────────────────────────────────────────────────
+  const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  const { data: agentList = [] } = trpc.callCoach.getAgentList.useQuery();
+  const bulkAssignMutation = trpc.contacts.bulkAssign.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.assigned} contact${result.assigned !== 1 ? 's' : ''} assigned.`);
+      utils.contacts.list.invalidate();
+      setSelectedIds(new Set());
+      setShowBulkAssignDialog(false);
+      setSelectedAgentId("");
+    },
+    onError: (err) => {
+      toast.error(`Assign failed: ${err.message}`);
+    },
+  });
+  const handleBulkAssign = () => {
+    const agent = agentList.find((a: any) => String(a.id) === selectedAgentId);
+    if (!agent) { toast.error("Please select an agent"); return; }
+    bulkAssignMutation.mutate({
+      ids: Array.from(selectedIds),
+      agentName: agent.name!,
+      agentEmail: agent.email ?? "trials@lavielabs.co.uk",
+    });
+  };
+
   const activeFilters = [filterLeadType, filterStatus].filter(Boolean).length;
 
   // Stats
@@ -466,6 +493,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 px-4 font-semibold"
+              onClick={() => setShowBulkAssignDialog(true)}
+            >
+              <UserCog size={13} className="mr-1.5" />
+              Assign {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}
+            </Button>
+            <Button
+              size="sm"
               className="bg-red-600 hover:bg-red-700 text-white h-8 px-4 font-semibold"
               onClick={() => setShowBulkDeleteDialog(true)}
             >
@@ -620,6 +655,43 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           </>
         )}
       </div>
+
+      {/* ─── Bulk Assign Dialog ─────────────────────────────────────────────────────────────────── */}
+      <Dialog open={showBulkAssignDialog} onOpenChange={(open) => { setShowBulkAssignDialog(open); if (!open) setSelectedAgentId(""); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Assign {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''} to Agent</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Label className="text-sm font-semibold text-gray-700 mb-2 block">Select Agent</Label>
+            <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choose an agent…" />
+              </SelectTrigger>
+              <SelectContent>
+                {agentList.map((agent: any) => (
+                  <SelectItem key={agent.id} value={String(agent.id)}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{agent.name}</span>
+                      {agent.email && <span className="text-xs text-gray-500">{agent.email}</span>}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setShowBulkAssignDialog(false); setSelectedAgentId(""); }}>Cancel</Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={handleBulkAssign}
+              disabled={!selectedAgentId || bulkAssignMutation.isPending}
+            >
+              {bulkAssignMutation.isPending ? "Assigning…" : `Assign ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Bulk Delete Confirmation Dialog ─────────────────────────────────────────────────────────────────── */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
