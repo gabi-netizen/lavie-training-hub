@@ -140,7 +140,7 @@ function mapCsvRow(row: Record<string, string>) {
     leadType: find("leadtype", "lead type", "type of lead"),
     status: find("status"),
     agentName: find("agent", "rep", "assigned"),
-    agentEmail: find("agentemail", "agent email") ?? "trials@lavielabs.com",
+    agentEmail: find("agentemail", "agent email") ?? "trial@lavielabs.com",
     source: find("source", "campaign"),
     notes: find("notes", "note", "comment", "rob"),
     leadDate: find("leaddate", "lead date", "date", "created"),
@@ -280,7 +280,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [showAddModal, setShowAddModal] = useState(false);
   const emptyForm = () => ({
     name: "", phone: "", email: "", leadType: "",
-    status: "new", agentName: "", agentEmail: "trials@lavielabs.com",
+    status: "new", agentName: "", agentEmail: "trial@lavielabs.com",
     source: "", leadDate: new Date().toISOString().split("T")[0], notes: "",
     address: "",
   });
@@ -385,7 +385,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     bulkAssignMutation.mutate({
       ids: Array.from(selectedIds),
       agentName: agent.name!,
-      agentEmail: agent.email ?? "trials@lavielabs.com",
+      agentEmail: agent.email ?? "trial@lavielabs.com",
     });
   };
 
