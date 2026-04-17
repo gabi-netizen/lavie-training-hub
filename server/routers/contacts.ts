@@ -70,7 +70,7 @@ export const contactsRouter = router({
         leadType: input.leadType?.trim() || undefined,
         status: input.status,
         agentName: input.agentName?.trim() || undefined,
-        agentEmail: input.agentEmail?.trim() || "trials@lavielabs.co.uk",
+        agentEmail: input.agentEmail?.trim() || "trials@lavielabs.com",
         source: input.source?.trim() || undefined,
         leadDate,
         importedNotes: input.notes?.trim() || undefined,

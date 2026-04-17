@@ -223,7 +223,7 @@ export async function importContacts(rows: CsvContactRow[]): Promise<{ imported:
       leadType: row.leadType?.trim() || undefined,
       status,
       agentName: row.agentName?.trim() || undefined,
-      agentEmail: row.agentEmail?.trim() || "trials@lavielabs.co.uk",
+      agentEmail: row.agentEmail?.trim() || "trials@lavielabs.com",
       importedNotes: row.notes?.trim() || undefined,
       source: row.source?.trim() || undefined,
       leadDate,
