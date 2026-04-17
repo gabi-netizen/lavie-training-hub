@@ -64,6 +64,7 @@ interface Contact {
   source?: string | null;
   leadDate?: Date | null;
   callbackAt?: Date | null;
+  address?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -645,6 +646,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[160px]">Lead Type</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[130px]">Status</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[150px]">Phone</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[200px]">Address</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[140px]">Agent</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[200px]">Agent Email</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Source</th>
@@ -683,6 +685,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                     <td className="px-4 py-3.5"><LeadTypeBadge type={c.leadType} /></td>
                     <td className="px-4 py-3.5"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-800 font-mono">{c.phone ?? "—"}</span></td>
+                    <td className="px-4 py-3.5"><span className="text-xs text-gray-700 max-w-[180px] truncate block" title={c.address ?? ""}>{c.address ?? "—"}</span></td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-800">{c.agentName ?? "—"}</span></td>
                     <td className="px-4 py-3.5">
                       <span className="text-xs text-gray-800 font-mono">{c.agentEmail ?? "—"}</span>
