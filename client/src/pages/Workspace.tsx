@@ -1402,16 +1402,6 @@ export default function Workspace() {
   // ── Callbacks-due popup state ──
   const [callbacksDueOpen, setCallbacksDueOpen] = useState(false);
   const [callbacksDueDismissed, setCallbacksDueDismissed] = useState(false);
-  const { data: callbacksDue = [] } = trpc.contacts.callbacksDue.useQuery(
-    undefined,
-    { staleTime: 0, refetchOnMount: "always", refetchInterval: 60_000 }
-  );
-  // Show popup on mount when there are due callbacks
-  useEffect(() => {
-    if (callbacksDue.length > 0 && !callbacksDueDismissed) {
-      setCallbacksDueOpen(true);
-    }
-  }, [callbacksDue.length, callbacksDueDismissed]);
 
    // ── Call state (driven by CloudTalk postMessage events) ──
   const [callActive, setCallActive] = useState(false);
@@ -1512,6 +1502,18 @@ export default function Workspace() {
     }
     return { ...fromDB, ...localDoneItems };
   }, [contacts, localDoneItems]);
+
+  // ── Callbacks due query (placed after contacts/doneItems to avoid reference errors) ──
+  const { data: callbacksDue = [] } = trpc.contacts.callbacksDue.useQuery(
+    undefined,
+    { staleTime: 0, refetchOnMount: "always", refetchInterval: 60_000 }
+  );
+  // Show popup on mount when there are due callbacks
+  useEffect(() => {
+    if (callbacksDue.length > 0 && !callbacksDueDismissed) {
+      setCallbacksDueOpen(true);
+    }
+  }, [callbacksDue.length, callbacksDueDismissed]);
 
   // Click-to-call mutation
   const clickToCall = trpc.contacts.clickToCall.useMutation({
