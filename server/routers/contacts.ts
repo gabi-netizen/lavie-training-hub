@@ -11,6 +11,7 @@ import {
   deleteContact,
   bulkDeleteContacts,
   bulkAssignContacts,
+  normalisePhone,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -62,7 +63,7 @@ export const contactsRouter = router({
       const { contacts: contactsTable } = await import("../../drizzle/schema");
       const [result] = await db.insert(contactsTable).values({
         name: input.name.trim(),
-        phone: input.phone?.trim() || undefined,
+        phone: normalisePhone(input.phone) || undefined,
         email: input.email?.trim() || undefined,
         leadType: input.leadType?.trim() || undefined,
         status: input.status,

@@ -35,6 +35,30 @@ export const CONTACT_STATUSES = [
 
 export type ContactStatus = (typeof CONTACT_STATUSES)[number];
 
+// ─── Phone normalisation ────────────────────────────────────────────────────────────────
+/**
+ * Normalise a phone number to E.164 format.
+ * - Strips spaces, dashes, brackets, dots
+ * - UK 07xxx → +447xxx
+ * - UK 447xxx (no +) → +447xxx
+ * - Already has + → leave as-is
+ * - Anything else → leave as-is
+ */
+export function normalisePhone(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+  // Strip whitespace, dashes, brackets, dots
+  let p = raw.replace(/[\s\-().]/g, "").trim();
+  if (!p) return undefined;
+  // UK: starts with 07 → +447...
+  if (/^07\d{9}$/.test(p)) return `+44${p.slice(1)}`;
+  // UK: starts with 447 (no +) → +447...
+  if (/^447\d{9}$/.test(p)) return `+${p}`;
+  // Already E.164
+  if (p.startsWith("+")) return p;
+  // Fallback: return cleaned digits
+  return p;
+}
+
 // ─── List Contacts ─────────────────────────────────────────────────────────────
 export async function listContacts({
   search,
@@ -191,7 +215,7 @@ export async function importContacts(rows: CsvContactRow[]): Promise<{ imported:
     const insert: InsertContact = {
       name: row.name.trim(),
       email: row.email?.trim() || undefined,
-      phone: row.phone?.trim() || undefined,
+      phone: normalisePhone(row.phone) || undefined,
       leadType: row.leadType?.trim() || undefined,
       status,
       agentName: row.agentName?.trim() || undefined,
