@@ -1389,7 +1389,8 @@ export default function Workspace() {
   const [, navigate] = useLocation();
   const [activeId, setActiveId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [doneItems, setDoneItems] = useState<Record<number, string>>({});
+  const [localDoneItems, setLocalDoneItems] = useState<Record<number, string>>({});
+
   const [managerMode, setManagerMode] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
@@ -1483,6 +1484,16 @@ export default function Workspace() {
     { enabled: true, staleTime: 0, refetchOnMount: "always" }
   );
 
+  // Derive done state from persisted DB status so it survives navigation
+  const doneItems = useMemo(() => {
+    const fromDB: Record<number, string> = {};
+    for (const c of contacts as any[]) {
+      if (c.status === "done_deal") fromDB[c.id] = "Sold";
+      else if (c.status === "closed") fromDB[c.id] = "No";
+    }
+    return { ...fromDB, ...localDoneItems };
+  }, [contacts, localDoneItems]);
+
   // Click-to-call mutation
   const clickToCall = trpc.contacts.clickToCall.useMutation({
     onSuccess: () => toast.success("Call initiated! Your phone will ring first."),
@@ -1529,7 +1540,7 @@ export default function Workspace() {
       clickToCall.mutate({ contactId });
     } else if (action === "sold" || action === "na" || action === "no" || action === "skip" || action === "callback") {
       const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : action === "callback" ? "Callback" : "Skip";
-      setDoneItems((prev) => ({ ...prev, [contactId]: displayLabel }));
+      setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB
       const newStatus = ACTION_TO_STATUS[action];
       if (newStatus) {
