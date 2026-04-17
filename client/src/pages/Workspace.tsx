@@ -1568,10 +1568,10 @@ export default function Workspace() {
     } else if (action === "sold" || action === "na" || action === "no" || action === "skip") {
       const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
-      // Persist status to DB
+      // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];
       if (newStatus) {
-        updateContact.mutate({ id: contactId, status: newStatus as any });
+        updateContact.mutate({ id: contactId, status: newStatus as any, callbackAt: null });
       }
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];

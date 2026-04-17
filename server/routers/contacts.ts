@@ -123,7 +123,7 @@ export const contactsRouter = router({
         agentName: z.string().optional(),
         leadType: z.string().optional(),
         agentEmail: z.string().optional(),
-        callbackAt: z.date().optional(),
+        callbackAt: z.date().nullable().optional(),
         importedNotes: z.string().optional(),
         skinType: z.string().optional(),
         concern: z.string().optional(),
