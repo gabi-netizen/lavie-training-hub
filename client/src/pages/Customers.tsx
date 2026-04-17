@@ -57,6 +57,7 @@ interface Contact {
   leadType?: string | null;
   status: string;
   agentName?: string | null;
+  agentEmail?: string | null;
   importedNotes?: string | null;
   source?: string | null;
   leadDate?: Date | null;
@@ -588,9 +589,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-800 font-mono">{c.phone ?? "—"}</span></td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-800">{c.agentName ?? "—"}</span></td>
                     <td className="px-4 py-3.5">
-                      {c.agentName ? (
-                        <span className="text-xs text-gray-800 font-mono">trial+{c.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com</span>
-                      ) : <span className="text-sm text-gray-800">—</span>}
+                      <span className="text-xs text-gray-800 font-mono">{c.agentEmail ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-700">{c.source ?? "—"}</span></td>
                     <td className="px-4 py-3.5"><span className="text-xs text-gray-800">{c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}</span></td>
