@@ -12,6 +12,7 @@ import {
   bulkDeleteContacts,
   bulkAssignContacts,
   normalisePhone,
+  getCallbacksDue,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -525,4 +526,9 @@ export const contactsRouter = router({
     .mutation(async ({ input }) => {
       return bulkAssignContacts(input.ids, input.agentName, input.agentEmail);
     }),
+
+  // ─── Get overdue callbacks (callbackAt <= now) ────────────────────────────
+  callbacksDue: protectedProcedure.query(async () => {
+    return getCallbacksDue();
+  }),
 });

@@ -329,3 +329,9 @@
 - [x] Show date/time picker modal when Callback button is clicked in Workspace
 - [x] Save selected datetime to callbackAt field in DB
 - [x] Auto-append "CALLBACK Scheduled on dd-mmm-yyyy HH:mm" to contact callNotes
+
+## Callback Due Notification (Option B)
+- [x] On Workspace mount, detect contacts where callbackAt <= now (overdue)
+- [x] Show pop-up listing all overdue callbacks with contact name, scheduled time, and "Go to contact" button
+- [x] Overdue contacts are unlocked (interactive) in the dial list regardless of status
+- [x] "Go to contact" selects and scrolls to the contact in the left panel

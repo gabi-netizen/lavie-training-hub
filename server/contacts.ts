@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { contacts, contactCallNotes, type Contact, type InsertContact } from "../drizzle/schema";
-import { eq, like, or, desc, and, gte, isNull, inArray } from "drizzle-orm";
+import { eq, like, or, desc, and, gte, lte, isNull, inArray } from "drizzle-orm";
 
 // ─── Lead Types ───────────────────────────────────────────────────────────────
 export const LEAD_TYPES = [
@@ -241,10 +241,11 @@ export async function getCallbacksDue() {
   const db = await getDb();
   if (!db) return [];
   const now = new Date();
+  // Return contacts where callbackAt is in the past (overdue) and status is still 'working'
   return db
     .select()
     .from(contacts)
-    .where(gte(contacts.callbackAt, new Date(now.getTime() - 60 * 60 * 1000)))
+    .where(lte(contacts.callbackAt, now))
     .orderBy(contacts.callbackAt);
 }
 
