@@ -170,6 +170,8 @@ export const contacts = mysqlTable("contacts", {
   trialKit: varchar("trialKit", { length: 64 }),
   /** Free-text notes entered by the rep during/after a Workspace call */
   callNotes: text("callNotes"),
+  /** Full postal address (street, town, county, postcode) */
+  address: text("address"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

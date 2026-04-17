@@ -131,7 +131,7 @@ export async function getContact(id: number) {
 // ─── Update Contact ────────────────────────────────────────────────────────────
 export async function updateContact(
   id: number,
-  updates: Partial<Pick<Contact, "name" | "phone" | "email" | "status" | "agentName" | "agentEmail" | "leadType" | "callbackAt" | "importedNotes" | "skinType" | "concern" | "routine" | "trialKit" | "callNotes">>
+  updates: Partial<Pick<Contact, "name" | "phone" | "email" | "status" | "agentName" | "agentEmail" | "leadType" | "callbackAt" | "importedNotes" | "skinType" | "concern" | "routine" | "trialKit" | "callNotes" | "address">>
 ) {
   const db = await getDb();
   if (!db) return null;
@@ -176,6 +176,7 @@ export interface CsvContactRow {
   notes?: string;
   source?: string;
   leadDate?: string;
+  address?: string;
 }
 
 export async function importContacts(rows: CsvContactRow[]): Promise<{ imported: number; skipped: number }> {
@@ -225,6 +226,7 @@ export async function importContacts(rows: CsvContactRow[]): Promise<{ imported:
       importedNotes: row.notes?.trim() || undefined,
       source: row.source?.trim() || undefined,
       leadDate,
+      address: row.address?.trim() || undefined,
     };
 
     await db.insert(contacts).values(insert);

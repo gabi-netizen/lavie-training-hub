@@ -26,6 +26,7 @@ import {
   MessageSquare,
   Send,
   X,
+  MapPin,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -426,6 +427,7 @@ export default function ContactCard() {
           <div className="p-5 flex flex-col gap-3 border-b border-gray-100">
             <InfoRow icon={Phone} value={contact.phone} />
             <InfoRow icon={Mail} value={contact.email} />
+            {contact.address && <InfoRow icon={MapPin} value={contact.address} />}
             <InfoRow icon={Tag} value={contact.source ? `Source: ${contact.source}` : null} />
             <InfoRow icon={User} value={contact.agentName ? `Agent: ${contact.agentName}` : null} />
             {contact.agentName && (

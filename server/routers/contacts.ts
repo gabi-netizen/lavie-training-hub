@@ -54,6 +54,7 @@ export const contactsRouter = router({
         source: z.string().max(128).optional(),
         leadDate: z.string().optional(),
         notes: z.string().max(2000).optional(),
+        address: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -72,6 +73,7 @@ export const contactsRouter = router({
         source: input.source?.trim() || undefined,
         leadDate,
         importedNotes: input.notes?.trim() || undefined,
+        address: input.address?.trim() || undefined,
       });
       const newId = (result as any).insertId as number;
       // ── CloudTalk: sync contact so dialer shows name/email/phone ────────
@@ -217,6 +219,7 @@ export const contactsRouter = router({
             notes: z.string().optional(),
             source: z.string().optional(),
             leadDate: z.string().optional(),
+            address: z.string().optional(),
           })
         ),
       })

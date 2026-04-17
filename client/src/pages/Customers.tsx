@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import * as XLSX from "xlsx";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Contact {
@@ -67,7 +68,9 @@ interface Contact {
   updatedAt: Date;
 }
 
-// ─── CSV helpers ──────────────────────────────────────────────────────────────
+// ─── File parsing helpers (CSV + XLSX) ───────────────────────────────────────
+
+/** Parse a CSV text string into an array of header→value maps */
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) return [];
@@ -80,25 +83,67 @@ function parseCsv(text: string): Record<string, string>[] {
   });
 }
 
+/** Parse an XLSX ArrayBuffer into an array of header→value maps */
+function parseXlsx(buffer: ArrayBuffer): Record<string, string>[] {
+  const wb = XLSX.read(buffer, { type: "array" });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+  return raw.map(r => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(r)) {
+      out[k] = v === null || v === undefined ? "" : String(v);
+    }
+    return out;
+  });
+}
+
+/**
+ * Map a raw spreadsheet row to a CRM contact row.
+ * Handles both standard CSV columns AND the purchased-data Excel format:
+ *   Forename + Surname → name
+ *   Addr1, Addr2, Addr3, PostTown, PostCounty, Postcode → address
+ *   Mobile → phone
+ */
 function mapCsvRow(row: Record<string, string>) {
+  const get = (key: string) => row[key]?.trim() || undefined;
   const find = (...keys: string[]) => {
     for (const k of keys) {
-      const val = Object.entries(row).find(([key]) => key.toLowerCase().includes(k.toLowerCase()))?.[1];
+      const val = Object.entries(row).find(([key]) =>
+        key.toLowerCase().replace(/[\s_-]/g, "").includes(k.toLowerCase().replace(/[\s_-]/g, ""))
+      )?.[1]?.trim();
       if (val) return val;
     }
     return undefined;
   };
+
+  // ── Name: prefer a combined "Name" column; fall back to Forename + Surname ──
+  const forename = get("Forename") || get("First Name") || get("FirstName");
+  const surname  = get("Surname")  || get("Last Name")  || get("LastName");
+  const combinedName = forename && surname
+    ? `${forename} ${surname}`.trim()
+    : forename || surname;
+  const name = find("name", "fullname", "customer") || combinedName || "";
+
+  // ── Address: build from purchased-data columns if present ──────────────────
+  const addrParts = [
+    get("Addr1"), get("Addr2"), get("Addr3"),
+    get("PostTown"), get("PostCounty"), get("Postcode"),
+  ].filter(Boolean);
+  const builtAddress = addrParts.length > 0 ? addrParts.join(", ") : undefined;
+  const address = find("address") || builtAddress;
+
   return {
-    name: find("name", "full name", "customer") ?? "",
+    name,
     phone: find("phone", "mobile", "tel", "number"),
     email: find("email", "mail"),
-    leadType: find("lead type", "leadtype", "type", "lead"),
+    leadType: find("leadtype", "lead type", "type of lead"),
     status: find("status"),
     agentName: find("agent", "rep", "assigned"),
-    agentEmail: find("agent email", "agentemail") ?? "trials@lavielabs.co.uk",
+    agentEmail: find("agentemail", "agent email") ?? "trials@lavielabs.co.uk",
     source: find("source", "campaign"),
-    importedNotes: find("notes", "note", "comment", "rob"),
-    leadDate: find("lead date", "date", "created"),
+    notes: find("notes", "note", "comment", "rob"),
+    leadDate: find("leaddate", "lead date", "date", "created"),
+    address,
   };
 }
 
@@ -200,19 +245,33 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const rawRows = parseCsv(text);
+    const isXlsx = file.name.toLowerCase().endsWith(".xlsx") || file.name.toLowerCase().endsWith(".xls");
+
+    const processRows = (rawRows: Record<string, string>[]) => {
       const rows = rawRows.map(mapCsvRow).filter(r => r.name);
       if (rows.length === 0) {
-        toast.error("No valid rows found. Check the CSV has a Name column.");
+        toast.error("No valid rows found. Check the file has a Name, Forename, or Surname column.");
         setImporting(false);
         return;
       }
       importMutation.mutate({ rows });
     };
-    reader.readAsText(file);
+
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const buffer = ev.target?.result as ArrayBuffer;
+        processRows(parseXlsx(buffer));
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string;
+        processRows(parseCsv(text));
+      };
+      reader.readAsText(file);
+    }
     e.target.value = "";
   }, [importMutation]);
 
@@ -222,6 +281,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     name: "", phone: "", email: "", leadType: "",
     status: "new", agentName: "", agentEmail: "trials@lavielabs.co.uk",
     source: "", leadDate: new Date().toISOString().split("T")[0], notes: "",
+    address: "",
   });
   const [addForm, setAddForm] = useState(emptyForm);
   const createMutation = trpc.contacts.create.useMutation({
@@ -246,6 +306,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       source: addForm.source || undefined,
       leadDate: addForm.leadDate || undefined,
       notes: addForm.notes || undefined,
+      address: addForm.address || undefined,
     });
   };
 
@@ -366,7 +427,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               ) : (
                 <Upload size={14} className="mr-1.5" />
               )}
-              Import CSV
+              Import CSV / XLSX
             </Button>
             <Button
               size="sm"
@@ -376,7 +437,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               <UserPlus size={14} className="mr-1.5" />
               Add Contact
             </Button>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
           </div>
         </div>
 
@@ -805,6 +866,11 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <div>
               <Label className="text-xs font-semibold text-gray-700 mb-1 block">Lead Date</Label>
               <Input type="date" value={addForm.leadDate} onChange={e => setAddForm(f => ({ ...f, leadDate: e.target.value }))} />
+            </div>
+            {/* Address */}
+            <div className="col-span-2">
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Address</Label>
+              <Input value={addForm.address} onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))} placeholder="Street, Town, County, Postcode" />
             </div>
             {/* Notes */}
             <div className="col-span-2">

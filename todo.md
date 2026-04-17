@@ -318,3 +318,9 @@
 - [ ] Add delete button (with confirmation dialog) on contact row in Contacts page
 - [ ] Add startup CloudTalk sync: on server boot, sync all contacts that have no cloudtalkId to CloudTalk
 - [ ] Add cloudtalkId column to contacts table to track which contacts have been synced
+## Address Field + XLSX Import Support
+- [x] Add `address` column to contacts DB schema and run migration
+- [x] Update importer to accept .xlsx files directly (no manual CSV conversion needed)
+- [x] Update importer fuzzy header mapping: Forename+Surname → Name, Addr1+Addr2+Addr3+PostTown+PostCounty+Postcode → Address, Mobile → Phone
+- [x] Add Address field to Add Contact form
+- [x] Show Address in Contacts table and ContactCard
