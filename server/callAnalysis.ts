@@ -65,12 +65,9 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   );
 
   const result = response as any;
-  const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
   const duration = result?.metadata?.duration ?? 0;
 
-  // Calculate rep speech percentage using diarization
-  // The rep is the speaker with the MOST total speech time (they drive the call).
-  // We cannot assume Speaker 0 is always the rep — Deepgram assigns IDs by first appearance.
+  // Build transcript from utterances with speaker labels (diarization)
   const utterances: any[] = result?.results?.utterances ?? [];
   const speakerTimes: Record<number, number> = {};
   let totalSpeechTime = 0;
@@ -82,10 +79,27 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
   }
 
-  // Rep = speaker with most speech time
+  // Rep = speaker with most speech time (they drive the call)
+  let repSpeaker = 0;
   let repSpeechTime = 0;
   if (Object.keys(speakerTimes).length > 0) {
-    repSpeechTime = Math.max(...Object.values(speakerTimes));
+    const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
+    repSpeaker = Number(maxEntry[0]);
+    repSpeechTime = maxEntry[1];
+  }
+
+  // Build formatted transcript: Agent/Customer lines from utterances
+  let transcript: string;
+  if (utterances.length > 0) {
+    transcript = utterances
+      .map((utt) => {
+        const label = utt.speaker === repSpeaker ? "Agent" : "Customer";
+        return `${label}: ${(utt.transcript ?? "").trim()}`;
+      })
+      .join("\n");
+  } else {
+    // Fallback to plain channel transcript if no utterances
+    transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
   }
 
   const repSpeechPct = totalSpeechTime > 0
