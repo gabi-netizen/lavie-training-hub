@@ -866,7 +866,50 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                 </CardHeader>
                 {showTranscript && (
                   <CardContent>
-                    <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap font-mono">{analysis.transcript}</p>
+                    <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1">
+                      {analysis.transcript
+                        .split('\n')
+                        .filter((line: string) => line.trim())
+                        .map((line: string, idx: number) => {
+                          // Detect speaker: lines starting with "Agent:", "Rep:", "Sales:", "Caller:" etc. are agent
+                          const agentMatch = line.match(/^(Agent|Rep|Sales|Caller|Advisor|Staff|Lavie|Team)\s*:/i);
+                          const customerMatch = line.match(/^(Customer|Client|Prospect|Lead|Caller|Person|User|C)\s*:/i);
+                          // If both match (e.g. "Caller"), prefer agent unless it's clearly customer
+                          const isAgent = agentMatch && !line.match(/^(Customer|Client|Prospect|Lead)\s*:/i);
+                          const isCustomer = !isAgent && customerMatch;
+
+                          if (isAgent) {
+                            const [label, ...rest] = line.split(':');
+                            const text = rest.join(':').trim();
+                            return (
+                              <div key={idx} className="flex flex-col items-end">
+                                <span className="text-xs font-semibold text-blue-600 mb-0.5 mr-1">{label.trim()}</span>
+                                <div className="max-w-[80%] bg-blue-600 text-white text-sm px-3 py-2 rounded-2xl rounded-tr-sm shadow-sm">
+                                  {text}
+                                </div>
+                              </div>
+                            );
+                          } else if (isCustomer) {
+                            const [label, ...rest] = line.split(':');
+                            const text = rest.join(':').trim();
+                            return (
+                              <div key={idx} className="flex flex-col items-start">
+                                <span className="text-xs font-semibold text-green-700 mb-0.5 ml-1">{label.trim()}</span>
+                                <div className="max-w-[80%] bg-green-100 text-green-900 text-sm px-3 py-2 rounded-2xl rounded-tl-sm shadow-sm border border-green-200">
+                                  {text}
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            // Unknown speaker or timestamp line — show as neutral
+                            return (
+                              <div key={idx} className="text-xs text-slate-500 text-center italic py-0.5">
+                                {line}
+                              </div>
+                            );
+                          }
+                        })}
+                    </div>
                   </CardContent>
                 )}
               </Card>
