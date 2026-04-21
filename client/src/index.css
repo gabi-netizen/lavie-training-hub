@@ -1116,6 +1116,14 @@
   color: #1f2937;
   font-style: italic;
 }
+.ws-obj-bullets {
+  margin: 0;
+  padding-left: 16px;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
 /* Products */
 .ws-prod-item {
