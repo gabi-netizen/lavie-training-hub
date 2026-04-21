@@ -509,24 +509,24 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
           {showFilters && (
             <>
-              <Select value={filterLeadType} onValueChange={setFilterLeadType}>
+              <Select value={filterLeadType || "__all__"} onValueChange={v => setFilterLeadType(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
                   <SelectValue placeholder="All lead types" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 max-h-64">
-                  <SelectItem value="" className="text-gray-700 text-sm">All lead types</SelectItem>
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All lead types</SelectItem>
                   {meta?.leadTypes.map(lt => (
                     <SelectItem key={lt} value={lt} className="text-gray-800 text-sm">{lt}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <Select value={filterStatus || "__all__"} onValueChange={v => setFilterStatus(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="" className="text-gray-700 text-sm">All statuses</SelectItem>
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All statuses</SelectItem>
                   {meta?.statuses.map(s => (
                     <SelectItem key={s} value={s} className="text-gray-800 text-sm">{STATUS_LABELS[s] ?? s}</SelectItem>
                   ))}
