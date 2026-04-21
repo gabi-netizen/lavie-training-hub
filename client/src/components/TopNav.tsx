@@ -19,16 +19,16 @@ import {
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
-// Admin-only tabs (CRM / Dialler) — hidden from regular agents
+// Admin-only tabs
 const ADMIN_NAV_ITEMS = [
-  { path: "/dialler", label: "Dialler", icon: Phone },
-  { path: "/contacts", label: "Contacts", icon: ContactRound },
-  { path: "/call-log", label: "Call Log", icon: PhoneCall },
   { path: "/phone-numbers", label: "Phone Pool", icon: Smartphone },
 ];
 
 // Visible to all logged-in users
 const AGENT_NAV_ITEMS = [
+  { path: "/dialler", label: "Dialler", icon: Phone },
+  { path: "/contacts", label: "Contacts", icon: ContactRound },
+  { path: "/call-log", label: "Call Log", icon: PhoneCall },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
@@ -44,7 +44,11 @@ export default function TopNav() {
   const isAdmin = user?.role === "admin";
 
   const navItems = isAdmin
-    ? [...ADMIN_NAV_ITEMS, ...AGENT_NAV_ITEMS]
+    ? [
+        ...AGENT_NAV_ITEMS.slice(0, 3), // Dialler, Contacts, Call Log
+        ...ADMIN_NAV_ITEMS,             // Phone Pool (admin only)
+        ...AGENT_NAV_ITEMS.slice(3),    // Workspace, Training, AI Coach, Team, Leaderboard
+      ]
     : AGENT_NAV_ITEMS;
 
   const initials = user?.name

@@ -52,36 +52,27 @@ function Router() {
   return (
     <AppLayout>
       <Switch>
-        {/* Default landing: admins → Dialler, agents → Training */}
+        {/* Default landing: all users → Dialler */}
         <Route path={"/"}>
           {() => {
             if (loading) return null;
-            if (isAdmin) return <Dialler />;
-            return <Home />;
+            return <Dialler />;
           }}
         </Route>
 
-        {/* Admin-only: Dialler */}
-        <Route path={"/dialler"}>
-          {() => <AdminRoute component={Dialler} />}
-        </Route>
+        {/* Dialler — all users */}
+        <Route path={"/dialler"} component={Dialler} />
 
-        {/* Admin-only: Contacts CRM */}
-        <Route path={"/contacts"}>
-          {() => <AdminRoute component={Customers} />}
-        </Route>
+        {/* Contacts CRM — all users (data filtered by role server-side) */}
+        <Route path={"/contacts"}>{() => <Customers />}</Route>
 
-        {/* Admin-only: Individual contact card */}
-        <Route path={"/contacts/:id"}>
-          {() => <AdminRoute component={ContactCard} />}
-        </Route>
+        {/* Individual contact card — all users */}
+        <Route path={"/contacts/:id"} component={ContactCard} />
 
-        {/* Admin-only: Global Call Log */}
-        <Route path={"/call-log"}>
-          {() => <AdminRoute component={CallLog} />}
-        </Route>
+        {/* Call Log — all users */}
+        <Route path={"/call-log"} component={CallLog} />
 
-        {/* Admin-only: Phone Numbers pool management */}
+        {/* Phone Numbers pool management — admin only */}
         <Route path={"/phone-numbers"}>
           {() => <AdminRoute component={PhoneNumbers} />}
         </Route>
