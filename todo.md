@@ -335,3 +335,7 @@
 - [x] Show pop-up listing all overdue callbacks with contact name, scheduled time, and "Go to contact" button
 - [x] Overdue contacts are unlocked (interactive) in the dial list regardless of status
 - [x] "Go to contact" selects and scrolls to the contact in the left panel
+
+## Importer Fixes (Apr 21 2026)
+- [x] Agent/agentName always blank on import (never pulled from any column)
+- [x] Add Zoho CRM export column mapping: First Name + Last Name → name, Mailing Street/City/Province/Postal Code → address

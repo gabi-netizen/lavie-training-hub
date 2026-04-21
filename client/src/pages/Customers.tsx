@@ -100,10 +100,12 @@ function parseXlsx(buffer: ArrayBuffer): Record<string, string>[] {
 
 /**
  * Map a raw spreadsheet row to a CRM contact row.
- * Handles both standard CSV columns AND the purchased-data Excel format:
- *   Forename + Surname → name
- *   Addr1, Addr2, Addr3, PostTown, PostCounty, Postcode → address
- *   Mobile → phone
+ * Handles standard CSV columns, purchased-data Excel format, AND Zoho CRM exports:
+ *   Forename + Surname / First Name + Last Name → name
+ *   Addr1/Addr2/Addr3/PostTown/PostCounty/Postcode → address (purchased data)
+ *   Mailing Street/Mailing Street 2/Mailing City/Mailing Province/Mailing Postal Code → address (Zoho)
+ *   Mobile / Phone → phone
+ *   Agent is always left blank — assign manually after import
  */
 function mapCsvRow(row: Record<string, string>) {
   const get = (key: string) => row[key]?.trim() || undefined;
@@ -117,33 +119,43 @@ function mapCsvRow(row: Record<string, string>) {
     return undefined;
   };
 
-  // ── Name: prefer a combined "Name" column; fall back to Forename + Surname ──
-  const forename = get("Forename") || get("First Name") || get("FirstName");
-  const surname  = get("Surname")  || get("Last Name")  || get("LastName");
+  // ── Name: First Name + Last Name (Zoho) or Forename + Surname (purchased data) ──
+  const forename = get("First Name") || get("FirstName") || get("Forename");
+  const surname  = get("Last Name")  || get("LastName")  || get("Surname");
   const combinedName = forename && surname
     ? `${forename} ${surname}`.trim()
     : forename || surname;
-  const name = find("name", "fullname", "customer") || combinedName || "";
+  // "Customers Name" is Zoho's full-name column; fall back to combined parts
+  const name = get("Customers Name") || combinedName || find("fullname") || "";
 
-  // ── Address: build from purchased-data columns if present ──────────────────
-  const addrParts = [
+  // ── Address: Zoho Mailing columns take priority, then purchased-data columns ──
+  const zohoAddrParts = [
+    get("Mailing Street"), get("Mailing Street 2"),
+    get("Mailing City"), get("Mailing Province"), get("Mailing Postal Code"),
+  ].filter(Boolean);
+  const purchasedAddrParts = [
     get("Addr1"), get("Addr2"), get("Addr3"),
     get("PostTown"), get("PostCounty"), get("Postcode"),
   ].filter(Boolean);
-  const builtAddress = addrParts.length > 0 ? addrParts.join(", ") : undefined;
-  const address = find("address") || builtAddress;
+  const builtAddress = zohoAddrParts.length > 0
+    ? zohoAddrParts.join(", ")
+    : purchasedAddrParts.length > 0
+      ? purchasedAddrParts.join(", ")
+      : undefined;
+  // Only use a generic "address" column if no structured parts found
+  const address = builtAddress || find("address");
 
   return {
     name,
-    phone: find("phone", "mobile", "tel", "number"),
+    phone: get("Mobile") || get("Phone") || find("mobile", "phone", "tel", "number"),
     email: find("email", "mail"),
     leadType: find("leadtype", "lead type", "type of lead"),
-    status: find("status"),
-    agentName: find("agent", "rep", "assigned"),
-    agentEmail: find("agentemail", "agent email") ?? "trial@lavielabs.com",
-    source: find("source", "campaign"),
-    notes: find("notes", "note", "comment", "rob"),
-    leadDate: find("leaddate", "lead date", "date", "created"),
+    status: undefined,          // always start as "new" — never import status
+    agentName: undefined,       // always blank — assign manually after import
+    agentEmail: "trial@lavielabs.com",
+    source: find("source", "campaign", "data origin"),
+    notes: find("notes", "note", "comment", "rob", "reason for cancellation"),
+    leadDate: find("leaddate", "lead date", "date created", "created date"),
     address,
   };
 }
