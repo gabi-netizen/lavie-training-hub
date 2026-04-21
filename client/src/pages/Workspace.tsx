@@ -572,7 +572,6 @@ function ContactCard({
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
             <button className="ws-btn ws-btn-no" onClick={() => onAction("no")}>No</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
-            <button className="ws-btn ws-btn-next" onClick={() => onAction("next")}>Next →</button>
           </div>
 
           {/* Take Payment + Send Email Template dropdown — 50/50 */}
