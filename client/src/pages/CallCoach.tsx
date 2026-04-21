@@ -2267,51 +2267,81 @@ function AgentProfileDrawer({ agent, onClose, onSelectCall }: { agent: OpeningAg
   );
 }
 
-// Quick-select presets
-const DATE_PRESETS = [
+//// Date preset options
+const DATE_PRESET_OPTIONS = [
   { label: "All time", value: "all" },
-  { label: "This week", value: "week" },
-  { label: "This month", value: "month" },
-  { label: "Last 30 days", value: "30d" },
-  { label: "Last 90 days", value: "90d" },
-  { label: "Custom", value: "custom" },
+  { label: "Today", value: "today" },
+  { label: "Yesterday", value: "yesterday" },
+  { label: "This Week", value: "this_week" },
+  { label: "Last 7 Days", value: "last_7" },
+  { label: "This Month", value: "this_month" },
+  { label: "Last 3 Months", value: "last_3m" },
+  { label: "This Year", value: "this_year" },
+  { label: "Previous Month", value: "prev_month" },
+  { label: "Custom Date", value: "custom" },
 ] as const;
 
-function getPresetDates(preset: string): { dateFrom?: string; dateTo?: string } {
+function getPresetDatesNew(preset: string): { dateFrom?: string; dateTo?: string } {
   const now = new Date();
   const fmt = (d: Date) => d.toISOString().split("T")[0];
-  if (preset === "week") {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
+  if (preset === "today") return { dateFrom: fmt(now), dateTo: fmt(now) };
+  if (preset === "yesterday") {
+    const d = new Date(now); d.setDate(d.getDate() - 1);
+    return { dateFrom: fmt(d), dateTo: fmt(d) };
+  }
+  if (preset === "this_week") {
+    const start = new Date(now); start.setDate(now.getDate() - now.getDay());
     return { dateFrom: fmt(start), dateTo: fmt(now) };
   }
-  if (preset === "month") {
+  if (preset === "last_7") {
+    const d = new Date(now); d.setDate(d.getDate() - 7);
+    return { dateFrom: fmt(d), dateTo: fmt(now) };
+  }
+  if (preset === "this_month") {
     return { dateFrom: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), dateTo: fmt(now) };
   }
-  if (preset === "30d") {
-    const d = new Date(now); d.setDate(d.getDate() - 30);
+  if (preset === "last_3m") {
+    const d = new Date(now); d.setMonth(d.getMonth() - 3);
     return { dateFrom: fmt(d), dateTo: fmt(now) };
   }
-  if (preset === "90d") {
-    const d = new Date(now); d.setDate(d.getDate() - 90);
-    return { dateFrom: fmt(d), dateTo: fmt(now) };
+  if (preset === "this_year") {
+    return { dateFrom: fmt(new Date(now.getFullYear(), 0, 1)), dateTo: fmt(now) };
+  }
+  if (preset === "prev_month") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { dateFrom: fmt(start), dateTo: fmt(end) };
   }
   return {};
 }
 
 function OpeningDashboard() {
   const [preset, setPreset] = useState<string>("all");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
+  // Custom date: separate day/month/year selectors
+  const [customDay, setCustomDay] = useState("");
+  const [customMonth, setCustomMonth] = useState("");
+  const [customYear, setCustomYear] = useState("");
+  const [customToDay, setCustomToDay] = useState("");
+  const [customToMonth, setCustomToMonth] = useState("");
+  const [customToYear, setCustomToYear] = useState("");
+
+  const buildCustomDate = (day: string, month: string, year: string) => {
+    if (!day || !month || !year) return undefined;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  };
 
   const queryInput = (() => {
     if (preset === "all") return {};
-    if (preset === "custom") return { dateFrom: customFrom || undefined, dateTo: customTo || undefined };
-    return getPresetDates(preset);
+    if (preset === "custom") {
+      return {
+        dateFrom: buildCustomDate(customDay, customMonth, customYear),
+        dateTo: buildCustomDate(customToDay, customToMonth, customToYear),
+      };
+    }
+    return getPresetDatesNew(preset);
   })();
 
   const { data, isLoading } = trpc.callCoach.getOpeningDashboard.useQuery(queryInput);
-  const [selectedAgent, setSelectedAgent] = useState<OpeningAgentRow | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<number | null>(null);
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
@@ -2343,8 +2373,20 @@ function OpeningDashboard() {
     </div>
   );
 
-  const activeLabel = DATE_PRESETS.find(p => p.value === preset)?.label ?? "All time";
-  const presetDates = preset !== "all" && preset !== "custom" ? getPresetDates(preset) : null;
+  const activeLabel = DATE_PRESET_OPTIONS.find(p => p.value === preset)?.label ?? "All time";
+  const presetDates = preset !== "all" && preset !== "custom" ? getPresetDatesNew(preset) : null;
+
+  // Day/month/year options
+  const days = Array.from({ length: 31 }, (_, i) => String(i + 1));
+  const months = [
+    { v: "1", l: "January" }, { v: "2", l: "February" }, { v: "3", l: "March" },
+    { v: "4", l: "April" }, { v: "5", l: "May" }, { v: "6", l: "June" },
+    { v: "7", l: "July" }, { v: "8", l: "August" }, { v: "9", l: "September" },
+    { v: "10", l: "October" }, { v: "11", l: "November" }, { v: "12", l: "December" },
+  ];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+  const selectCls = "text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-400";
 
   return (
     <div className="space-y-6">
@@ -2353,50 +2395,56 @@ function OpeningDashboard() {
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Date Range</p>
           {preset !== "all" && (
-            <button onClick={() => setPreset("all")} className="text-xs text-teal-600 hover:underline">Clear filter</button>
+            <button onClick={() => setPreset("all")} className="text-xs text-teal-600 hover:underline">Clear</button>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {DATE_PRESETS.map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPreset(p.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                preset === p.value
-                  ? "bg-teal-600 text-white border-teal-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-teal-400"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={preset}
+            onChange={e => setPreset(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 min-w-[160px]"
+          >
+            {DATE_PRESET_OPTIONS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          {presetDates && (
+            <span className="text-xs text-gray-400">{presetDates.dateFrom} → {presetDates.dateTo}</span>
+          )}
         </div>
         {preset === "custom" && (
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">From</label>
-              <input
-                type="date"
-                value={customFrom}
-                onChange={e => setCustomFrom(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-400"
-              />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-500 w-8">From</span>
+              <select value={customDay} onChange={e => setCustomDay(e.target.value)} className={selectCls}>
+                <option value="">Day</option>
+                {days.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select value={customMonth} onChange={e => setCustomMonth(e.target.value)} className={selectCls}>
+                <option value="">Month</option>
+                {months.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+              </select>
+              <select value={customYear} onChange={e => setCustomYear(e.target.value)} className={selectCls}>
+                <option value="">Year</option>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">To</label>
-              <input
-                type="date"
-                value={customTo}
-                onChange={e => setCustomTo(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-400"
-              />
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-500 w-8">To</span>
+              <select value={customToDay} onChange={e => setCustomToDay(e.target.value)} className={selectCls}>
+                <option value="">Day</option>
+                {days.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select value={customToMonth} onChange={e => setCustomToMonth(e.target.value)} className={selectCls}>
+                <option value="">Month</option>
+                {months.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+              </select>
+              <select value={customToYear} onChange={e => setCustomToYear(e.target.value)} className={selectCls}>
+                <option value="">Year</option>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
             </div>
           </div>
-        )}
-        {presetDates && (
-          <p className="text-xs text-gray-400">
-            Showing: {presetDates.dateFrom} → {presetDates.dateTo}
-          </p>
         )}
       </div>
 
@@ -2440,7 +2488,7 @@ function OpeningDashboard() {
                   <tr
                     key={i}
                     className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedAgent(agent)}
+                    onClick={() => setSelectedCallId(agent.bestCall?.id ?? null)}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -2490,14 +2538,7 @@ function OpeningDashboard() {
         </div>
       </div>
 
-      {/* Agent profile drawer */}
-      {selectedAgent && (
-        <AgentProfileDrawer
-          agent={selectedAgent}
-          onClose={() => setSelectedAgent(null)}
-          onSelectCall={(id) => { setSelectedAgent(null); setSelectedCallId(id); }}
-        />
-      )}
+
     </div>
   );
 }
