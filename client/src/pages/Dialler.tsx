@@ -424,7 +424,11 @@ export default function Dialler() {
         setCurrentSession(prev => {
           if (!prev) return prev;
           const ended = { ...prev, status: "ended" as CallStatus };
-          setSessionHistory(h => [ended, ...h].slice(0, 20));
+          // Deduplicate by uuid — both 'hangup' and 'ended' events fire for the same call
+          setSessionHistory(h => {
+            if (h.some(s => s.uuid === ended.uuid)) return h;
+            return [ended, ...h].slice(0, 20);
+          });
           return ended;
         });
         setTimeout(() => {
