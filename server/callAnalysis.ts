@@ -1051,3 +1051,203 @@ export async function getCallTypePerformance(
 
   return result;
 }
+
+// ─── OPENING TEAM DASHBOARD ───────────────────────────────────────────────────
+
+const OPENING_CALL_TYPES = new Set(["cold_call", "follow_up", "opening"]);
+
+export interface OpeningAgentRow {
+  repName: string;
+  userId: number;
+  totalCalls: number;
+  // Close rates by duration bucket
+  closeRate3Plus: number | null;   // calls >= 3 min
+  closeRate10Plus: number | null;  // calls >= 10 min
+  // Quality
+  avgCallQuality: number | null;   // avg overallScore
+  avgCompliance: number | null;    // avg complianceScore from analysisJson
+  // Trend
+  trend: "improving" | "stable" | "declining";
+  // Top compliance failure
+  topWeakSpot: string | null;
+  // For drill-down
+  scoreHistory: { date: string; score: number }[];
+  bestCall: { id: number; score: number; date: string; audioFileUrl: string | null } | null;
+  worstCall: { id: number; score: number; date: string; audioFileUrl: string | null } | null;
+  complianceFailures: { issue: string; count: number }[];
+  // Duration buckets: close rate for 3-5, 5-10, 10+
+  durationBuckets: {
+    "3-5": { calls: number; closed: number; closeRate: number | null };
+    "5-10": { calls: number; closed: number; closeRate: number | null };
+    "10+": { calls: number; closed: number; closeRate: number | null };
+  };
+}
+
+export interface OpeningDashboardData {
+  // KPI cards
+  overallCloseRate3Plus: number | null;
+  overallCloseRate10Plus: number | null;
+  avgCallQuality: number | null;
+  totalOpeningCalls: number;
+  // Per-agent rows
+  agents: OpeningAgentRow[];
+}
+
+export async function getOpeningDashboard(): Promise<OpeningDashboardData> {
+  const db = await getDb();
+  if (!db) return { overallCloseRate3Plus: null, overallCloseRate10Plus: null, avgCallQuality: null, totalOpeningCalls: 0, agents: [] };
+  const all = await db
+    .select()
+    .from(callAnalyses)
+    .where(sql`status = 'done'`);
+
+  // Filter to Opening team only
+  const openingCalls = all.filter(c =>
+    c.callType == null || OPENING_CALL_TYPES.has(c.callType)
+  );
+
+  // Group by repName (case-insensitive)
+  const byRep = new Map<string, typeof openingCalls>();
+  for (const c of openingCalls) {
+    const key = (c.repName?.trim() || "Unknown").toLowerCase();
+    if (!byRep.has(key)) byRep.set(key, []);
+    byRep.get(key)!.push(c);
+  }
+
+  // Helper: close rate for a subset of calls
+  function closeRate(calls: typeof openingCalls): number | null {
+    const withStatus = calls.filter(c => c.closeStatus != null);
+    if (withStatus.length === 0) return null;
+    const closed = withStatus.filter(c => c.closeStatus === "closed").length;
+    return Math.round((closed / withStatus.length) * 100);
+  }
+
+  // Helper: duration bucket
+  function bucket(c: (typeof openingCalls)[0]): "3-5" | "5-10" | "10+" | null {
+    const sec = c.durationSeconds;
+    if (sec == null) return null;
+    if (sec >= 600) return "10+";
+    if (sec >= 300) return "5-10";
+    if (sec >= 180) return "3-5";
+    return null;
+  }
+
+  const agents: OpeningAgentRow[] = [];
+
+  for (const [, calls] of Array.from(byRep.entries())) {
+    const repName = calls.slice().reverse().find(c => c.repName?.trim())?.repName ?? "Unknown";
+    const userId = calls[calls.length - 1]?.userId ?? 0;
+
+    // Duration-filtered close rates
+    const calls3Plus = calls.filter(c => c.durationSeconds != null && c.durationSeconds >= 180);
+    const calls10Plus = calls.filter(c => c.durationSeconds != null && c.durationSeconds >= 600);
+
+    // Duration buckets
+    const b35 = calls.filter(c => bucket(c) === "3-5");
+    const b510 = calls.filter(c => bucket(c) === "5-10");
+    const b10 = calls.filter(c => bucket(c) === "10+");
+
+    // Avg call quality (overallScore)
+    const scored = calls.filter(c => c.overallScore != null);
+    const scores = scored.map(c => c.overallScore as number);
+    const avgCallQuality = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : null;
+
+    // Avg compliance score + top weak spots from analysisJson
+    let complianceTotal = 0;
+    let complianceCount = 0;
+    const issueMap: Record<string, number> = {};
+    for (const c of scored) {
+      try {
+        const r = JSON.parse(c.analysisJson ?? "{}") as {
+          complianceScore?: number;
+          complianceIssues?: string[];
+        };
+        if (r.complianceScore != null) {
+          complianceTotal += r.complianceScore;
+          complianceCount++;
+        }
+        for (const issue of r.complianceIssues ?? []) {
+          issueMap[issue] = (issueMap[issue] ?? 0) + 1;
+        }
+      } catch { /* skip */ }
+    }
+    const avgCompliance = complianceCount > 0 ? Math.round(complianceTotal / complianceCount) : null;
+    const complianceFailures = Object.entries(issueMap)
+      .map(([issue, count]) => ({ issue, count }))
+      .sort((a, b) => b.count - a.count);
+    const topWeakSpot = complianceFailures[0]?.issue ?? null;
+
+    // Trend: last 5 vs previous 5
+    let trend: "improving" | "stable" | "declining" = "stable";
+    if (scores.length >= 6) {
+      const recent = scores.slice(-5);
+      const prev = scores.slice(-10, -5);
+      if (prev.length > 0) {
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const prevAvg = prev.reduce((a, b) => a + b, 0) / prev.length;
+        if (recentAvg - prevAvg >= 5) trend = "improving";
+        else if (prevAvg - recentAvg >= 5) trend = "declining";
+      }
+    }
+
+    // Score history
+    const scoreHistory = scored.map(c => ({
+      date: (c.createdAt ?? new Date()).toISOString().split("T")[0],
+      score: Math.round(c.overallScore as number),
+    }));
+
+    // Best / worst
+    let bestCall: OpeningAgentRow["bestCall"] = null;
+    let worstCall: OpeningAgentRow["worstCall"] = null;
+    if (scored.length > 0) {
+      const best = scored.reduce((a, b) => (a.overallScore! > b.overallScore! ? a : b));
+      const worst = scored.reduce((a, b) => (a.overallScore! < b.overallScore! ? a : b));
+      bestCall = { id: best.id, score: Math.round(best.overallScore!), date: (best.createdAt ?? new Date()).toISOString().split("T")[0], audioFileUrl: best.audioFileUrl };
+      worstCall = { id: worst.id, score: Math.round(worst.overallScore!), date: (worst.createdAt ?? new Date()).toISOString().split("T")[0], audioFileUrl: worst.audioFileUrl };
+    }
+
+    agents.push({
+      repName,
+      userId,
+      totalCalls: calls.length,
+      closeRate3Plus: closeRate(calls3Plus),
+      closeRate10Plus: closeRate(calls10Plus),
+      avgCallQuality,
+      avgCompliance,
+      trend,
+      topWeakSpot,
+      scoreHistory,
+      bestCall,
+      worstCall,
+      complianceFailures,
+      durationBuckets: {
+        "3-5": { calls: b35.length, closed: b35.filter(c => c.closeStatus === "closed").length, closeRate: closeRate(b35) },
+        "5-10": { calls: b510.length, closed: b510.filter(c => c.closeStatus === "closed").length, closeRate: closeRate(b510) },
+        "10+": { calls: b10.length, closed: b10.filter(c => c.closeStatus === "closed").length, closeRate: closeRate(b10) },
+      },
+    });
+  }
+
+  // Sort by avgCallQuality desc
+  agents.sort((a, b) => {
+    if (a.avgCallQuality == null) return 1;
+    if (b.avgCallQuality == null) return -1;
+    return b.avgCallQuality - a.avgCallQuality;
+  });
+
+  // Overall KPIs
+  const all3Plus = openingCalls.filter(c => c.durationSeconds != null && c.durationSeconds >= 180);
+  const all10Plus = openingCalls.filter(c => c.durationSeconds != null && c.durationSeconds >= 600);
+  const allScored = openingCalls.filter(c => c.overallScore != null);
+  const allScores = allScored.map(c => c.overallScore as number);
+
+  return {
+    overallCloseRate3Plus: closeRate(all3Plus),
+    overallCloseRate10Plus: closeRate(all10Plus),
+    avgCallQuality: allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : null,
+    totalOpeningCalls: openingCalls.length,
+    agents,
+  };
+}

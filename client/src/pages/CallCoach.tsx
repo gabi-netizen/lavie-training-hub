@@ -2112,8 +2112,301 @@ function TeamDashboard() {
   );
 }
 
+// ─── OPENING TEAM DASHBOARD ─────────────────────────────────────────────────
+interface OpeningAgentRow {
+  repName: string;
+  userId: number;
+  totalCalls: number;
+  closeRate3Plus: number | null;
+  closeRate10Plus: number | null;
+  avgCallQuality: number | null;
+  avgCompliance: number | null;
+  trend: "improving" | "stable" | "declining";
+  topWeakSpot: string | null;
+  scoreHistory: { date: string; score: number }[];
+  bestCall: { id: number; score: number; date: string; audioFileUrl: string | null } | null;
+  worstCall: { id: number; score: number; date: string; audioFileUrl: string | null } | null;
+  complianceFailures: { issue: string; count: number }[];
+  durationBuckets: {
+    "3-5": { calls: number; closed: number; closeRate: number | null };
+    "5-10": { calls: number; closed: number; closeRate: number | null };
+    "10+": { calls: number; closed: number; closeRate: number | null };
+  };
+}
+
+function CloseRateBar({ rate, label }: { rate: number | null; label: string }) {
+  const pct = rate ?? 0;
+  const color = pct >= 50 ? "bg-emerald-500" : pct >= 30 ? "bg-amber-500" : "bg-red-400";
+  const textColor = pct >= 50 ? "text-emerald-700" : pct >= 30 ? "text-amber-700" : "text-red-600";
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex justify-between text-xs">
+        <span className="text-gray-600">{label}</span>
+        <span className={`font-bold ${textColor}`}>{rate != null ? `${rate}%` : "—"}</span>
+      </div>
+      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function AgentProfileDrawer({ agent, onClose, onSelectCall }: { agent: OpeningAgentRow; onClose: () => void; onSelectCall: (id: number) => void }) {
+  const quality = agent.avgCallQuality;
+  const status = quality != null ? getRepStatus(quality) : null;
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
+      <div
+        className="relative w-full max-w-md h-full bg-white shadow-2xl overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-5 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{agent.repName}</h2>
+            <p className="text-xs text-gray-500">{agent.totalCalls} calls analysed</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Status + quality */}
+          {status && quality != null && (
+            <div className={`rounded-xl border p-4 flex items-center gap-4 ${status.bg} ${status.border}`}>
+              <span className="text-3xl">{status.emoji}</span>
+              <div>
+                <p className={`font-bold text-base ${status.color}`}>{status.label}</p>
+                <p className="text-xs text-gray-600">Avg Call Quality: <strong>{quality}/100</strong></p>
+              </div>
+            </div>
+          )}
+
+          {/* Close rates by duration */}
+          <div className="rounded-xl border border-gray-200 p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Close Rate by Duration</p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              {(["3-5", "5-10", "10+"] as const).map(bucket => {
+                const b = agent.durationBuckets[bucket];
+                const pct = b.closeRate;
+                const color = pct != null && pct >= 50 ? "text-emerald-600" : pct != null && pct >= 30 ? "text-amber-600" : "text-red-600";
+                return (
+                  <div key={bucket} className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-xs text-gray-500">{bucket} min</p>
+                    <p className={`text-xl font-bold ${color}`}>{pct != null ? `${pct}%` : "—"}</p>
+                    <p className="text-xs text-gray-400">{b.calls} calls</p>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 italic">Longer calls = higher close rate. If 3–5 min is low, the rep is losing customers before the pitch.</p>
+          </div>
+
+          {/* Compliance failures */}
+          {agent.complianceFailures.length > 0 && (
+            <div className="rounded-xl border border-red-100 bg-red-50 p-4 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-red-600">Top Compliance Issues</p>
+              {agent.complianceFailures.slice(0, 5).map((f, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-700">{f.issue}</span>
+                  <span className="font-bold text-red-600 ml-2">{f.count}x</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Score history */}
+          {agent.scoreHistory.length > 0 && (
+            <div className="rounded-xl border border-gray-200 p-4 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Score History (last {Math.min(agent.scoreHistory.length, 10)} calls)</p>
+              <div className="flex items-end gap-1 h-16">
+                {agent.scoreHistory.slice(-10).map((s, i) => {
+                  const h = Math.max(4, Math.round((s.score / 100) * 64));
+                  const bg = s.score >= 75 ? "bg-emerald-500" : s.score >= 50 ? "bg-amber-400" : "bg-red-400";
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center justify-end gap-0.5">
+                      <span className="text-[9px] text-gray-500">{s.score}</span>
+                      <div className={`w-full rounded-sm ${bg}`} style={{ height: `${h}px` }} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Best / Worst call */}
+          <div className="grid grid-cols-2 gap-3">
+            {agent.bestCall && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+                <p className="text-xs font-bold text-emerald-700">🏆 Best Call</p>
+                <p className="text-lg font-bold text-emerald-600">{agent.bestCall.score}/100</p>
+                <p className="text-xs text-gray-500">{agent.bestCall.date}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => onSelectCall(agent.bestCall!.id)} className="text-xs text-teal-600 underline">View analysis</button>
+                  {agent.bestCall.audioFileUrl && (
+                    <a href={agent.bestCall.audioFileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">▶ Listen</a>
+                  )}
+                </div>
+              </div>
+            )}
+            {agent.worstCall && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 space-y-1">
+                <p className="text-xs font-bold text-red-700">⚠️ Needs Work</p>
+                <p className="text-lg font-bold text-red-600">{agent.worstCall.score}/100</p>
+                <p className="text-xs text-gray-500">{agent.worstCall.date}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => onSelectCall(agent.worstCall!.id)} className="text-xs text-teal-600 underline">View analysis</button>
+                  {agent.worstCall.audioFileUrl && (
+                    <a href={agent.worstCall.audioFileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">▶ Listen</a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OpeningDashboard() {
+  const { data, isLoading } = trpc.callCoach.getOpeningDashboard.useQuery();
+  const [selectedAgent, setSelectedAgent] = useState<OpeningAgentRow | null>(null);
+  const [selectedCallId, setSelectedCallId] = useState<number | null>(null);
+
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
+
+  if (!data || data.totalOpeningCalls === 0) return (
+    <div className="text-center py-12 text-gray-500">
+      <BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+      <p>No Opening team calls analysed yet.</p>
+      <p className="text-xs mt-1">Upload cold calls or follow-ups to see the dashboard.</p>
+    </div>
+  );
+
+  if (selectedCallId !== null) {
+    return (
+      <div>
+        <button onClick={() => setSelectedCallId(null)} className="flex items-center gap-1 text-sm text-teal-600 mb-4">
+          <ArrowLeft className="w-4 h-4" /> Back to Opening Dashboard
+        </button>
+        <AnalysisReport analysisId={selectedCallId} onBack={() => setSelectedCallId(null)} onDeleted={() => setSelectedCallId(null)} />
+      </div>
+    );
+  }
+
+  const kpiCard = (label: string, value: string | null, sub: string, color: string) => (
+    <div className={`rounded-xl border p-4 space-y-1 ${color}`}>
+      <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</p>
+      <p className="text-2xl font-bold text-gray-900">{value ?? "—"}</p>
+      <p className="text-xs text-gray-500">{sub}</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {kpiCard("Close Rate (3+ min)", data.overallCloseRate3Plus != null ? `${data.overallCloseRate3Plus}%` : null, "Calls ≥ 3 minutes", "bg-white border-gray-200")}
+        {kpiCard("Close Rate (10+ min)", data.overallCloseRate10Plus != null ? `${data.overallCloseRate10Plus}%` : null, "Calls ≥ 10 minutes", "bg-white border-gray-200")}
+        {kpiCard("Avg Call Quality", data.avgCallQuality != null ? `${data.avgCallQuality}/100` : null, "Overall AI score", "bg-white border-gray-200")}
+        {kpiCard("Total Calls", `${data.totalOpeningCalls}`, "Opening team calls analysed", "bg-white border-gray-200")}
+      </div>
+
+      {/* Insight banner */}
+      <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+        <strong>💡 Key insight:</strong> Calls over 10 minutes close at a significantly higher rate. If a rep's 3–5 min close rate is low, they're losing customers before the pitch. Focus coaching on engagement in the first 3 minutes.
+      </div>
+
+      {/* Agent table */}
+      <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <p className="text-sm font-bold text-gray-700" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Opening Team — Agent Performance</p>
+          <p className="text-xs text-gray-500 mt-0.5">Sorted by Avg Call Quality. Click any row to see full agent profile.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-2 text-left">Agent</th>
+                <th className="px-4 py-2 text-center">Calls</th>
+                <th className="px-4 py-2 text-center">Close Rate (3+)</th>
+                <th className="px-4 py-2 text-center">Close Rate (10+)</th>
+                <th className="px-4 py-2 text-center">Call Quality</th>
+                <th className="px-4 py-2 text-center">Trend</th>
+                <th className="px-4 py-2 text-left">Top Issue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.agents.map((agent, i) => {
+                const quality = agent.avgCallQuality;
+                const status = quality != null ? getRepStatus(quality) : null;
+                return (
+                  <tr
+                    key={i}
+                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => setSelectedAgent(agent)}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-xs font-bold text-teal-700">
+                          {agent.repName.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-gray-900">{agent.repName}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center text-gray-600">{agent.totalCalls}</td>
+                    <td className="px-4 py-3 text-center">
+                      {agent.closeRate3Plus != null ? (
+                        <span className={`font-bold ${
+                          agent.closeRate3Plus >= 50 ? "text-emerald-600" :
+                          agent.closeRate3Plus >= 30 ? "text-amber-600" : "text-red-600"
+                        }`}>{agent.closeRate3Plus}%</span>
+                      ) : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {agent.closeRate10Plus != null ? (
+                        <span className={`font-bold ${
+                          agent.closeRate10Plus >= 50 ? "text-emerald-600" :
+                          agent.closeRate10Plus >= 30 ? "text-amber-600" : "text-red-600"
+                        }`}>{agent.closeRate10Plus}%</span>
+                      ) : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {status && quality != null ? (
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${status.bg} ${status.border} ${status.color}`}>
+                          {status.emoji} {quality}
+                        </span>
+                      ) : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {agent.trend === "improving" && <span className="text-emerald-600 text-xs flex items-center justify-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> Up</span>}
+                      {agent.trend === "declining" && <span className="text-red-600 text-xs flex items-center justify-center gap-1"><TrendingDown className="w-3.5 h-3.5" /> Down</span>}
+                      {agent.trend === "stable" && <span className="text-gray-400 text-xs flex items-center justify-center gap-1"><Minus className="w-3.5 h-3.5" /> Stable</span>}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-red-600 max-w-[160px] truncate">
+                      {agent.topWeakSpot ?? <span className="text-gray-400">None found</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Agent profile drawer */}
+      {selectedAgent && (
+        <AgentProfileDrawer
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onSelectCall={(id) => { setSelectedAgent(null); setSelectedCallId(id); }}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
-const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "performance", "manager", "feedback"] as const;
+const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "opening", "performance", "manager", "feedback"] as const;
 type TabId = typeof VALID_TABS[number];
 
 export default function CallCoach() {
@@ -2255,6 +2548,7 @@ export default function CallCoach() {
             { id: "my-calls", label: "My Calls" },
             { id: "leaderboard", label: "🏆 Leaderboard" },
             { id: "team", label: "👥 Team" },
+            { id: "opening", label: "🎯 Opening" },
             ...(isAdmin ? [{ id: "performance", label: "📊 Performance" }, { id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
           ].map((tab) => (
             <button
@@ -2283,6 +2577,7 @@ export default function CallCoach() {
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} isAdmin={isAdmin} />}
         {activeTab === "leaderboard" && <Leaderboard />}
         {activeTab === "team" && <TeamDashboard />}
+        {activeTab === "opening" && <OpeningDashboard />}
         {activeTab === "performance" && isAdmin && <CallTypePerformance />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}

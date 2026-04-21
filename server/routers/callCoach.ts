@@ -12,6 +12,7 @@ import {
   getTeamDashboard,
   getAgentDashboard,
   getCallTypePerformance,
+  getOpeningDashboard,
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
@@ -56,6 +57,11 @@ export const callCoachRouter = router({
   /** Team dashboard — all reps with full stats, visible to all logged-in users */
   getTeamDashboard: protectedProcedure.query(async () => {
     return getTeamDashboard();
+  }),
+
+  /** Opening team dashboard — KPIs + per-agent stats with close rates by duration */
+  getOpeningDashboard: protectedProcedure.query(async () => {
+    return getOpeningDashboard();
   }),
 
   /**
