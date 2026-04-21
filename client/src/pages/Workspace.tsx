@@ -572,6 +572,7 @@ function ContactCard({
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
             <button className="ws-btn ws-btn-no" onClick={() => onAction("no")}>No</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
+            <button className="ws-btn ws-btn-next" onClick={() => onAction("next")}>Next →</button>
           </div>
 
           {/* Take Payment + Send Email Template dropdown — 50/50 */}
@@ -1550,6 +1551,10 @@ export default function Workspace() {
     onSuccess: () => refetch(),
   });
 
+  const deleteContact = trpc.contacts.delete.useMutation({
+    onSuccess: () => refetch(),
+  });
+
   // Map action label → contact status for DB persistence
   const ACTION_TO_STATUS: Record<string, string> = {
     sold: "done_deal",
@@ -1567,8 +1572,23 @@ export default function Workspace() {
       const contact = (contacts as any[]).find((c) => c.id === contactId);
       setCallbackDateTime("");
       setCallbackModal({ contactId, contactName: contact?.name ?? "Contact" });
-    } else if (action === "sold" || action === "na" || action === "no" || action === "skip") {
-      const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : action === "no" ? "No" : "Skip";
+    } else if (action === "no") {
+      // "No" deletes the contact and advances to next
+      const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
+      const nextContact = contacts[currentIndex + 1] ?? contacts[currentIndex - 1];
+      deleteContact.mutate({ id: contactId }, {
+        onSuccess: () => {
+          if (nextContact) setActiveId(nextContact.id);
+          else setActiveId(null);
+        }
+      });
+    } else if (action === "next") {
+      // Advance to next contact without any status change
+      const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
+      const nextContact = contacts[currentIndex + 1];
+      if (nextContact) setActiveId(nextContact.id);
+    } else if (action === "sold" || action === "na" || action === "skip") {
+      const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];

@@ -724,6 +724,8 @@
 .ws-btn-no:hover { background: #dc2626; color: #fff; }
 .ws-btn-skip { border-color: #1a1a1a; color: #1a1a1a; }
 .ws-btn-skip:hover { background: #1a1a1a; color: #fff; }
+.ws-btn-next { border-color: #4F46E5; color: #4F46E5; font-weight: 700; }
+.ws-btn-next:hover { background: #4F46E5; color: #fff; }
 
 /* Sales Tools (Right Panel) */
 .ws-sales-tools {
