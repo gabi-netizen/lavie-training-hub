@@ -344,3 +344,14 @@
 - [x] Admin users see all contacts; agent (non-admin) users see only contacts assigned to them (agentEmail matches their email)
 - [x] Apply filter in listContacts and countContacts server helpers
 - [x] Apply same filter in Workspace today's list query
+
+## Audio Player + Best/Worst Call in AnalysisReport
+- [x] Add audio player (HTML5 <audio> with play/pause, timeline, duration) to AnalysisReport header
+- [x] Add Best Call / Worst Call navigation buttons in AnalysisReport (same agent, navigate to those calls)
+- [x] Pass bestCallId and worstCallId as optional props to AnalysisReport from OpeningDashboard
+
+## AI Best Practice Extraction
+- [x] Add getBestPractices tRPC procedure: fetches top-scoring calls (score >= 80), sends summaries to GPT-4, returns structured insights
+- [x] Add "Generate Insights" button to Opening Dashboard
+- [x] Build InsightsPanel component: displays AI-generated best practice bullets with loading state
+- [x] Store generated insights in memory (no DB needed for now) or re-generate on demand

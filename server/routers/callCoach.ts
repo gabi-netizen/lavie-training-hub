@@ -13,6 +13,7 @@ import {
   getAgentDashboard,
   getCallTypePerformance,
   getOpeningDashboard,
+  getBestPractices,
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
@@ -216,4 +217,20 @@ export const callCoachRouter = router({
       .orderBy(users.name);
     return rows.filter(r => r.name);
   }),
+
+  /**
+   * AI Best Practice Extraction — analyses top-scoring Opening calls and
+   * returns GPT-4 generated patterns that distinguish the best calls.
+   */
+  getBestPractices: protectedProcedure
+    .input(z.object({
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+    }).optional())
+    .mutation(async ({ input }) => {
+      return getBestPractices({
+        dateFrom: input?.dateFrom ? new Date(input.dateFrom) : undefined,
+        dateTo: input?.dateTo ? new Date(input.dateTo + "T23:59:59.999Z") : undefined,
+      });
+    }),
 });

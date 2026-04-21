@@ -1329,3 +1329,123 @@ export async function getOpeningDashboard(opts?: { dateFrom?: Date; dateTo?: Dat
     agents,
   };
 }
+
+// ─── BEST PRACTICE EXTRACTION ─────────────────────────────────────────────────
+export interface BestPracticeInsight {
+  pattern: string;
+  impact: string;
+  example: string;
+  category: "opening" | "pitch" | "objection" | "close" | "compliance" | "tone";
+  frequency: number;
+}
+
+export interface BestPracticesResult {
+  insights: BestPracticeInsight[];
+  topCallsAnalysed: number;
+  generatedAt: string;
+  teamAvgScore: number | null;
+  topCallsAvgScore: number | null;
+}
+
+export async function getBestPractices(opts?: { dateFrom?: Date; dateTo?: Date }): Promise<BestPracticesResult> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const allCalls = await db
+    .select()
+    .from(callAnalyses)
+    .where(sql`status = 'done' AND analysisJson IS NOT NULL`);
+
+  const openingTypes = ["cold_call", "follow_up", "opening"];
+  let openingCalls = allCalls.filter(c => !c.callType || openingTypes.includes(c.callType));
+
+  if (opts?.dateFrom || opts?.dateTo) {
+    openingCalls = openingCalls.filter(c => {
+      const d = c.callDate ? new Date(c.callDate) : (c.createdAt ? new Date(c.createdAt) : null);
+      if (!d) return false;
+      if (opts!.dateFrom && d < opts!.dateFrom) return false;
+      if (opts!.dateTo && d > opts!.dateTo) return false;
+      return true;
+    });
+  }
+
+  if (openingCalls.length < 3) {
+    throw new Error("Not enough calls to generate insights. Need at least 3 analysed calls.");
+  }
+
+  const scoredCalls = openingCalls.filter(c => c.overallScore != null);
+  const teamAvgScore = scoredCalls.length > 0
+    ? Math.round(scoredCalls.reduce((a, c) => a + (c.overallScore ?? 0), 0) / scoredCalls.length)
+    : null;
+
+  let topCalls = scoredCalls.filter(c => (c.overallScore ?? 0) >= 75);
+  if (topCalls.length < 3) {
+    const sorted = [...scoredCalls].sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0));
+    topCalls = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.3)));
+  }
+
+  const topCallsAvgScore = topCalls.length > 0
+    ? Math.round(topCalls.reduce((a, c) => a + (c.overallScore ?? 0), 0) / topCalls.length)
+    : null;
+
+  const callSummaries = topCalls.slice(0, 15).map((c, i) => {
+    const report = c.analysisJson ? JSON.parse(c.analysisJson) : {};
+    return `Call ${i + 1} (Score: ${c.overallScore}/100, Duration: ${c.durationSeconds ? Math.round(c.durationSeconds / 60) : "?"}min, Closed: ${c.closeStatus === "closed" ? "YES" : "NO"}):
+- Summary: ${report.summary ?? "N/A"}
+- Strengths: ${(report.strengths ?? []).slice(0, 3).join("; ")}
+- Magic Wand Used: ${report.magicWandUsed ? "YES" : "NO"}
+- Closing Attempted: ${report.closingAttempted ? "YES" : "NO"}
+- Subscription Disclosed: ${report.subscriptionDisclosed ? "YES" : "NO"}
+- Script Compliance: ${report.scriptComplianceScore ?? "N/A"}/100
+- Tone Score: ${report.toneScore ?? "N/A"}/100
+- Key Moments: ${(report.keyMoments ?? []).filter((m: { type: string }) => m.type === "positive").slice(0, 2).map((m: { moment: string }) => m.moment).join("; ")}`;
+  }).join("\n\n");
+
+  const prompt = `You are a sales coaching expert analysing a team of skincare sales reps at Lavie Labs.
+
+Below are summaries of the TOP ${topCalls.length} best-performing calls (score >= 75/100) from the Opening team (cold calls and follow-ups).
+
+Your task: identify 5-7 specific, actionable patterns that distinguish these top calls from average calls. Focus on CONCRETE behaviours, not vague advice.
+
+TOP CALLS:
+${callSummaries}
+
+TEAM CONTEXT:
+- Team average score: ${teamAvgScore ?? "N/A"}/100
+- Top calls average score: ${topCallsAvgScore ?? "N/A"}/100
+- Product: Lavie Labs skincare (Matinika cream, 21-day free trial, 4.95 GBP postage)
+- Key sales techniques: Magic Wand question, subscription framing, objection handling
+
+Return a JSON array of insights. Each insight must have:
+- pattern: specific behaviour observed
+- impact: measurable or observable impact
+- example: a short concrete example or quote from the calls
+- category: one of "opening", "pitch", "objection", "close", "compliance", "tone"
+- frequency: estimated % of top calls showing this pattern (0-100)
+
+Return ONLY valid JSON array, no markdown, no explanation.`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 2000,
+  });
+
+  const raw = response.choices[0]?.message?.content ?? "[]";
+  let insights: BestPracticeInsight[] = [];
+  try {
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    insights = JSON.parse(cleaned);
+  } catch {
+    insights = [];
+  }
+
+  return {
+    insights,
+    topCallsAnalysed: topCalls.length,
+    generatedAt: new Date().toISOString(),
+    teamAvgScore,
+    topCallsAvgScore,
+  };
+}

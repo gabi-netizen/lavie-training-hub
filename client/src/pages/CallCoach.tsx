@@ -22,6 +22,9 @@ import {
   Trophy,
   Medal,
   Flag,
+  Sparkles,
+  Play,
+  Pause,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -485,7 +488,7 @@ function EditDetailsModal({
 }
 
 // ─── ANALYSIS REPORT VIEW ─────────────────────────────────────────────────────
-function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number; onBack: () => void; onDeleted?: () => void }) {
+function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId, onNavigateCall }: { analysisId: number; onBack: () => void; onDeleted?: () => void; bestCallId?: number | null; worstCallId?: number | null; onNavigateCall?: (id: number) => void }) {
   const [showTranscript, setShowTranscript] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -545,11 +548,35 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
-        {/* Back button row */}
-        <div className="px-4 pt-3 pb-0">
+        {/* Back button row + Best/Worst navigation */}
+        <div className="px-4 pt-3 pb-0 flex items-center justify-between flex-wrap gap-2">
           <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-700 hover:text-gray-900 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
+          {(bestCallId || worstCallId) && onNavigateCall && (
+            <div className="flex items-center gap-2">
+              {bestCallId && bestCallId !== analysisId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onNavigateCall(bestCallId)}
+                  className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-xs gap-1"
+                >
+                  🏆 Best Call
+                </Button>
+              )}
+              {worstCallId && worstCallId !== analysisId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onNavigateCall(worstCallId)}
+                  className="text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 text-xs gap-1"
+                >
+                  ⚠️ Needs Work
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         {/* Two-column content */}
         <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60 px-0">
@@ -642,6 +669,19 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
           </div>
         </div>
       </div>
+
+      {/* Audio Player */}
+      {analysis.audioFileUrl && (
+        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">🎙️ Call Recording</p>
+          <audio
+            controls
+            src={analysis.audioFileUrl}
+            className="w-full h-10"
+            style={{ accentColor: "#0d9488" }}
+          />
+        </div>
+      )}
 
       {/* Processing states */}
       {(analysis.status === "pending" || analysis.status === "transcribing" || analysis.status === "analyzing") && (
@@ -2335,6 +2375,38 @@ function OpeningDashboard() {
   const { data, isLoading } = trpc.callCoach.getOpeningDashboard.useQuery(queryInput);
   const [selectedCallId, setSelectedCallId] = useState<number | null>(null);
 
+  // Best Practice Extraction
+  type BestPracticeInsight = {
+    pattern: string;
+    impact: string;
+    example: string;
+    category: "opening" | "pitch" | "objection" | "close" | "compliance" | "tone";
+    frequency: number;
+  };
+  type BestPracticesResult = {
+    insights: BestPracticeInsight[];
+    topCallsAnalysed: number;
+    generatedAt: string;
+    teamAvgScore: number | null;
+    topCallsAvgScore: number | null;
+  };
+  const [bestPracticesData, setBestPracticesData] = useState<BestPracticesResult | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
+  const getBestPractices = trpc.callCoach.getBestPractices.useMutation({
+    onSuccess: (result) => {
+      setBestPracticesData(result as BestPracticesResult);
+      setShowInsights(true);
+    },
+  });
+  const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    opening:    { label: "Opening",    color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
+    pitch:      { label: "Pitch",      color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200" },
+    objection:  { label: "Objection",  color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
+    close:      { label: "Close",      color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    compliance: { label: "Compliance", color: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
+    tone:       { label: "Tone",       color: "text-teal-700",    bg: "bg-teal-50",    border: "border-teal-200" },
+  };
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
 
   if (!data || data.totalOpeningCalls === 0) return (
@@ -2345,13 +2417,22 @@ function OpeningDashboard() {
     </div>
   );
 
+  // Find the agent who owns the selected call to get best/worst call IDs
+  const selectedCallAgent = selectedCallId != null
+    ? data.agents.find(a => a.bestCall?.id === selectedCallId || a.worstCall?.id === selectedCallId)
+    : null;
+
   if (selectedCallId !== null) {
     return (
       <div>
-        <button onClick={() => setSelectedCallId(null)} className="flex items-center gap-1 text-sm text-teal-600 mb-4">
-          <ArrowLeft className="w-4 h-4" /> Back to Opening Dashboard
-        </button>
-        <AnalysisReport analysisId={selectedCallId} onBack={() => setSelectedCallId(null)} onDeleted={() => setSelectedCallId(null)} />
+        <AnalysisReport
+          analysisId={selectedCallId}
+          onBack={() => setSelectedCallId(null)}
+          onDeleted={() => setSelectedCallId(null)}
+          bestCallId={selectedCallAgent?.bestCall?.id ?? null}
+          worstCallId={selectedCallAgent?.worstCall?.id ?? null}
+          onNavigateCall={(id) => setSelectedCallId(id)}
+        />
       </div>
     );
   }
@@ -2556,6 +2637,102 @@ function OpeningDashboard() {
         </div>
       </div>
 
+      {/* ── AI Best Practice Extraction ── */}
+      <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 overflow-hidden">
+        <div className="px-4 py-3 border-b border-purple-100 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-600" />
+            <div>
+              <p className="text-sm font-bold text-purple-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>AI Best Practice Extraction</p>
+              <p className="text-xs text-purple-700">Analyses your top-scoring calls and identifies what the best reps do differently</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => getBestPractices.mutate(queryInput)}
+            disabled={getBestPractices.isPending}
+            className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-2 flex-shrink-0"
+            size="sm"
+          >
+            {getBestPractices.isPending ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analysing calls...</>
+            ) : (
+              <><Sparkles className="w-3.5 h-3.5" /> Generate Insights</>
+            )}
+          </Button>
+        </div>
+
+        {getBestPractices.isError && (
+          <div className="px-4 py-3 text-sm text-red-600">
+            ⚠️ {getBestPractices.error?.message ?? "Failed to generate insights. Make sure there are at least 3 analysed calls."}
+          </div>
+        )}
+
+        {showInsights && bestPracticesData && (
+          <div className="p-4 space-y-4">
+            {/* Stats row */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="text-xs text-purple-700">
+                <span className="font-bold">{bestPracticesData.topCallsAnalysed}</span> top calls analysed
+              </div>
+              {bestPracticesData.teamAvgScore != null && (
+                <div className="text-xs text-purple-700">
+                  Team avg: <span className="font-bold">{bestPracticesData.teamAvgScore}/100</span>
+                </div>
+              )}
+              {bestPracticesData.topCallsAvgScore != null && (
+                <div className="text-xs text-purple-700">
+                  Top calls avg: <span className="font-bold text-emerald-700">{bestPracticesData.topCallsAvgScore}/100</span>
+                </div>
+              )}
+              <div className="text-xs text-purple-500 ml-auto">
+                Generated {new Date(bestPracticesData.generatedAt).toLocaleString()}
+              </div>
+            </div>
+
+            {/* Insights grid */}
+            {bestPracticesData.insights.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No patterns found. Try with more calls.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {bestPracticesData.insights.map((insight, i) => {
+                  const cat = categoryConfig[insight.category] ?? categoryConfig.tone;
+                  return (
+                    <div key={i} className="rounded-xl border border-white bg-white shadow-sm p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-gray-900 leading-snug">{insight.pattern}</p>
+                        <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cat.bg} ${cat.border} ${cat.color}`}>
+                          {cat.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600">{insight.impact}</p>
+                      {insight.example && (
+                        <blockquote className="text-xs italic text-gray-500 border-l-2 border-purple-300 pl-2">
+                          "{insight.example}"
+                        </blockquote>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-purple-400"
+                            style={{ width: `${insight.frequency}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-medium">{insight.frequency}% of top calls</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!showInsights && !getBestPractices.isPending && (
+          <div className="px-4 py-6 text-center text-sm text-purple-700 opacity-70">
+            Click <strong>Generate Insights</strong> to discover what your best reps do differently.
+          </div>
+        )}
+      </div>
 
     </div>
   );
