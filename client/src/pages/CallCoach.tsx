@@ -872,47 +872,33 @@ function AnalysisReport({ analysisId, onBack, onDeleted }: { analysisId: number;
                       const hasSpeakerLabels = lines.some((l: string) => /^(Agent|Customer)\s*:/i.test(l));
 
                       if (hasSpeakerLabels) {
-                        // Diarized format — render as chat bubbles
+                        // Diarized format — plain flowing transcript, color by speaker
                         return (
-                          <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-2">
+                          <div className="max-h-[500px] overflow-y-auto pr-1 space-y-0.5">
                             {lines.map((line: string, idx: number) => {
                               const agentMatch = line.match(/^(Agent|Rep|Sales|Caller|Advisor|Staff|Lavie|Team)\s*:/i);
                               const customerMatch = line.match(/^(Customer|Client|Prospect|Lead|Person|User)\s*:/i);
                               const isAgent = agentMatch && !line.match(/^(Customer|Client|Prospect|Lead)\s*:/i);
                               const isCustomer = !isAgent && customerMatch;
+                              const trimmed = line.trim();
+                              if (!trimmed) return null;
                               if (isAgent) {
-                                const [label, ...rest] = line.split(':');
-                                const text = rest.join(':').trim();
-                                if (!text) return null;
                                 return (
-                                  <div key={idx} className="flex justify-end w-full">
-                                    <div className="flex flex-col items-end" style={{maxWidth: '72%'}}>
-                                      <span className="text-xs font-semibold text-blue-600 mb-0.5 mr-1">{label.trim()}</span>
-                                      <div className="bg-blue-600 text-white text-sm px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm leading-relaxed break-words w-full">
-                                        {text}
-                                      </div>
-                                    </div>
-                                  </div>
+                                  <p key={idx} className="text-sm leading-relaxed text-blue-700">
+                                    <strong className="font-semibold">{line.split(':')[0].trim()}:</strong>{" "}
+                                    {line.split(':').slice(1).join(':').trim()}
+                                  </p>
                                 );
                               } else if (isCustomer) {
-                                const [label, ...rest] = line.split(':');
-                                const text = rest.join(':').trim();
-                                if (!text) return null;
                                 return (
-                                  <div key={idx} className="flex justify-start w-full">
-                                    <div className="flex flex-col items-start" style={{maxWidth: '72%'}}>
-                                      <span className="text-xs font-semibold text-emerald-700 mb-0.5 ml-1">{label.trim()}</span>
-                                      <div className="bg-emerald-50 text-emerald-900 text-sm px-4 py-2.5 rounded-2xl rounded-tl-sm shadow-sm border border-emerald-200 leading-relaxed break-words w-full">
-                                        {text}
-                                      </div>
-                                    </div>
-                                  </div>
+                                  <p key={idx} className="text-sm leading-relaxed text-emerald-700">
+                                    <strong className="font-semibold">{line.split(':')[0].trim()}:</strong>{" "}
+                                    {line.split(':').slice(1).join(':').trim()}
+                                  </p>
                                 );
                               } else {
                                 return (
-                                  <div key={idx} className="text-xs text-slate-400 text-center italic py-0.5">
-                                    {line}
-                                  </div>
+                                  <p key={idx} className="text-xs text-slate-400 italic">{trimmed}</p>
                                 );
                               }
                             })}
