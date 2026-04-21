@@ -233,13 +233,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [filterStatus, setFilterStatus] = useState("");
   const [importing, setImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [pageSize, setPageSize] = useState(100);
 
   const { data: meta } = trpc.contacts.meta.useQuery();
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
-    limit: 5000,
+    limit: pageSize,
   });
 
   const importMutation = trpc.contacts.import.useMutation({
@@ -545,6 +546,18 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               )}
             </>
           )}
+
+          {/* ── Page size picker ── */}
+          <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+            <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-gray-200">
+              {[10, 25, 50, 100, 200].map(n => (
+                <SelectItem key={n} value={String(n)} className="text-gray-800 text-sm">Show {n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <span className="ml-auto text-sm text-gray-800">
             {isLoading ? "Loading…" : `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`}
