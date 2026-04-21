@@ -1093,16 +1093,26 @@ export interface OpeningDashboardData {
   agents: OpeningAgentRow[];
 }
 
-export async function getOpeningDashboard(): Promise<OpeningDashboardData> {
+export async function getOpeningDashboard(opts?: { dateFrom?: Date; dateTo?: Date }): Promise<OpeningDashboardData> {
   const db = await getDb();
   if (!db) return { overallCloseRate3Plus: null, overallCloseRate10Plus: null, avgCallQuality: null, totalOpeningCalls: 0, agents: [] };
   const all = await db
     .select()
     .from(callAnalyses)
     .where(sql`status = 'done'`);
+  // Apply date range filter on callDate (falls back to createdAt)
+  const filtered = all.filter(c => {
+    const d = c.callDate ?? c.createdAt;
+    if (!d) return true;
+    if (opts?.dateFrom && d < opts.dateFrom) return false;
+    if (opts?.dateTo && d > opts.dateTo) return false;
+    return true;
+  });
+  // Replace `all` with `filtered` below
+  const allForDashboard = filtered;
 
   // Filter to Opening team only
-  const openingCalls = all.filter(c =>
+  const openingCalls = allForDashboard.filter(c =>
     c.callType == null || OPENING_CALL_TYPES.has(c.callType)
   );
 

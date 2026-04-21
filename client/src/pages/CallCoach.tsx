@@ -2267,8 +2267,50 @@ function AgentProfileDrawer({ agent, onClose, onSelectCall }: { agent: OpeningAg
   );
 }
 
+// Quick-select presets
+const DATE_PRESETS = [
+  { label: "All time", value: "all" },
+  { label: "This week", value: "week" },
+  { label: "This month", value: "month" },
+  { label: "Last 30 days", value: "30d" },
+  { label: "Last 90 days", value: "90d" },
+  { label: "Custom", value: "custom" },
+] as const;
+
+function getPresetDates(preset: string): { dateFrom?: string; dateTo?: string } {
+  const now = new Date();
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  if (preset === "week") {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    return { dateFrom: fmt(start), dateTo: fmt(now) };
+  }
+  if (preset === "month") {
+    return { dateFrom: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), dateTo: fmt(now) };
+  }
+  if (preset === "30d") {
+    const d = new Date(now); d.setDate(d.getDate() - 30);
+    return { dateFrom: fmt(d), dateTo: fmt(now) };
+  }
+  if (preset === "90d") {
+    const d = new Date(now); d.setDate(d.getDate() - 90);
+    return { dateFrom: fmt(d), dateTo: fmt(now) };
+  }
+  return {};
+}
+
 function OpeningDashboard() {
-  const { data, isLoading } = trpc.callCoach.getOpeningDashboard.useQuery();
+  const [preset, setPreset] = useState<string>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  const queryInput = (() => {
+    if (preset === "all") return {};
+    if (preset === "custom") return { dateFrom: customFrom || undefined, dateTo: customTo || undefined };
+    return getPresetDates(preset);
+  })();
+
+  const { data, isLoading } = trpc.callCoach.getOpeningDashboard.useQuery(queryInput);
   const [selectedAgent, setSelectedAgent] = useState<OpeningAgentRow | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<number | null>(null);
 
@@ -2301,8 +2343,63 @@ function OpeningDashboard() {
     </div>
   );
 
+  const activeLabel = DATE_PRESETS.find(p => p.value === preset)?.label ?? "All time";
+  const presetDates = preset !== "all" && preset !== "custom" ? getPresetDates(preset) : null;
+
   return (
     <div className="space-y-6">
+      {/* Date Range Filter */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Date Range</p>
+          {preset !== "all" && (
+            <button onClick={() => setPreset("all")} className="text-xs text-teal-600 hover:underline">Clear filter</button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {DATE_PRESETS.map(p => (
+            <button
+              key={p.value}
+              onClick={() => setPreset(p.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                preset === p.value
+                  ? "bg-teal-600 text-white border-teal-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-teal-400"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {preset === "custom" && (
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">From</label>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={e => setCustomFrom(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-400"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">To</label>
+              <input
+                type="date"
+                value={customTo}
+                onChange={e => setCustomTo(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-teal-400"
+              />
+            </div>
+          </div>
+        )}
+        {presetDates && (
+          <p className="text-xs text-gray-400">
+            Showing: {presetDates.dateFrom} → {presetDates.dateTo}
+          </p>
+        )}
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {kpiCard("Close Rate (3+ min)", data.overallCloseRate3Plus != null ? `${data.overallCloseRate3Plus}%` : null, "Calls ≥ 3 minutes", "bg-white border-gray-200")}
