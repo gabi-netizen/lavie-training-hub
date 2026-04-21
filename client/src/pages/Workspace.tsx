@@ -1315,7 +1315,7 @@ function ManagerView({
 // ==========================================
 const OBJECTIONS = [
   { q: '"It\'s a subscription?"', a: '"I\'m so glad you asked! Yes, after your 21-day free trial, it does automatically transition into a subscription so you never run out of your cream. But here is the best part: you are in complete control. You can cancel, pause, or change it at any time with just one click or a quick email. Most of our ladies just keep it going because they fall in love with how their skin looks — and it locks in your 30% VIP discount forever. Does that make sense?"' },
-  { q: '"I don\'t trust giving my card"', a: '"Fully regulated UK company. Encrypted payment. Thousands of 5-star Trustpilot reviews."' },
+  { q: '"I don\'t trust giving my card"', a: '"I completely understand — and honestly, I respect that you\'re careful with your card details. That tells me you\'re smart. Let me reassure you: Lavie Labs is a fully regulated UK company. We have thousands of happy customers who have shared their results on Trustpilot and across the web. Your details are completely safe with us, and we use fully encrypted, secure payment processing."' },
   { q: '"Too many products"', a: '"Matinika replaces 3 products in one — moisturiser, serum, and anti-ageing in one cream."' },
   { q: '"Need to think about it"', a: '"The trial is completely risk-free. You\'re not committing — just trying. Cancel with one click."' },
   { q: '"Is it really medical-grade?"', a: '"32% active Hyaluronic Acid — 6x more than high street. Formulated by dermatologists."' },
