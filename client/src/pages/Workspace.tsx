@@ -1646,7 +1646,7 @@ export default function Workspace() {
         </div>
         <div className="ws-topnav-tabs">
           <div className="ws-topnav-tab active">Workspace</div>
-          <div className="ws-topnav-tab" onClick={() => navigate("/")}>Training</div>
+          <div className="ws-topnav-tab" onClick={() => navigate("/training")}>Training</div>
           <div className="ws-topnav-tab" onClick={() => navigate("/contacts")}>Contacts</div>
           <div className="ws-topnav-tab" onClick={() => navigate("/ai-coach")}>AI Coach</div>
         </div>
