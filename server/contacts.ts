@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { contacts, contactCallNotes, type Contact, type InsertContact } from "../drizzle/schema";
-import { eq, like, or, desc, and, gte, lte, isNull, inArray } from "drizzle-orm";
+import { eq, like, or, desc, and, gte, lte, isNull, inArray, count } from "drizzle-orm";
 
 // ─── Lead Types ───────────────────────────────────────────────────────────────
 export const LEAD_TYPES = [
@@ -105,6 +105,38 @@ export async function listContacts({
     .orderBy(desc(contacts.createdAt))
     .limit(limit)
     .offset(offset);
+}
+
+// ─── Count Contacts (for pagination) ─────────────────────────────────────────
+export async function countContacts({
+  search,
+  leadType,
+  status,
+  agentName,
+}: {
+  search?: string;
+  leadType?: string;
+  status?: string;
+  agentName?: string;
+} = {}) {
+  const db = await getDb();
+  if (!db) return 0;
+  const conditions = [];
+  if (search) {
+    conditions.push(
+      or(
+        like(contacts.name, `%${search}%`),
+        like(contacts.phone, `%${search}%`),
+        like(contacts.email, `%${search}%`)
+      )
+    );
+  }
+  if (leadType) conditions.push(eq(contacts.leadType, leadType));
+  if (status) conditions.push(eq(contacts.status, status as ContactStatus));
+  if (agentName) conditions.push(eq(contacts.agentName, agentName));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const [row] = await db.select({ total: count() }).from(contacts).where(where);
+  return row?.total ?? 0;
 }
 
 // ─── Get Single Contact ────────────────────────────────────────────────────────

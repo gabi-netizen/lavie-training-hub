@@ -13,6 +13,7 @@ import {
   bulkAssignContacts,
   normalisePhone,
   getCallbacksDue,
+  countContacts,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -91,9 +92,21 @@ export const contactsRouter = router({
       }).catch(() => {});
       return { id: newId };
     }),
-  // ─── List contacts with search/filter ─────────────────────────────────────────
-  list: protectedProcedure  .input(
+  // ─── Count contacts matching filters (for pagination) ─────────────────────────────────────────────────
+  count: protectedProcedure
+    .input(
       z.object({
+        search: z.string().optional(),
+        leadType: z.string().optional(),
+        status: z.string().optional(),
+        agentName: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return countContacts(input);
+    }),
+  // ─── List contacts with search/filter ─────────────────────────────────────────────────
+  list: protectedProcedure  .input(z.object({
         search: z.string().optional(),
         leadType: z.string().optional(),
         status: z.string().optional(),

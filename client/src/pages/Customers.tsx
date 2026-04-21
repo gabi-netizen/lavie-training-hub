@@ -234,13 +234,23 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [importing, setImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters/search/pageSize change
+  const resetPage = () => setCurrentPage(1);
 
   const { data: meta } = trpc.contacts.meta.useQuery();
+  const { data: totalCount = 0 } = trpc.contacts.count.useQuery({
+    search: search || undefined,
+    leadType: filterLeadType || undefined,
+    status: filterStatus || undefined,
+  });
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     limit: pageSize,
+    offset: (currentPage - 1) * pageSize,
   });
 
   const importMutation = trpc.contacts.import.useMutation({
@@ -483,7 +493,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-800" />
             <Input
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); resetPage(); }}
               placeholder="Search by name, phone, or email…"
               className="pl-9 bg-white border-gray-200 text-gray-800 placeholder:text-gray-800 text-sm h-9 focus-visible:ring-indigo-400"
             />
@@ -510,7 +520,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
           {showFilters && (
             <>
-              <Select value={filterLeadType || "__all__"} onValueChange={v => setFilterLeadType(v === "__all__" ? "" : v)}>
+              <Select value={filterLeadType || "__all__"} onValueChange={v => { setFilterLeadType(v === "__all__" ? "" : v); resetPage(); }}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
                   <SelectValue placeholder="All lead types" />
                 </SelectTrigger>
@@ -522,7 +532,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
 
-              <Select value={filterStatus || "__all__"} onValueChange={v => setFilterStatus(v === "__all__" ? "" : v)}>
+              <Select value={filterStatus || "__all__"} onValueChange={v => { setFilterStatus(v === "__all__" ? "" : v); resetPage(); }}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
@@ -548,7 +558,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           )}
 
           {/* ── Page size picker ── */}
-          <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+          <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); resetPage(); }}>
             <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-28">
               <SelectValue />
             </SelectTrigger>
@@ -560,7 +570,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           </Select>
 
           <span className="ml-auto text-sm text-gray-800">
-            {isLoading ? "Loading…" : `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`}
+            {isLoading ? "Loading…" : `${totalCount} contact${totalCount !== 1 ? "s" : ""}`}
           </span>
         </div>
       </div>
@@ -743,9 +753,60 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           </div>
           </>
         )}
+
+        {/* ── Pagination bar ── */}
+        {totalCount > pageSize && (() => {
+          const totalPages = Math.ceil(totalCount / pageSize);
+          const pages: (number | "...")[] = [];
+          if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+          } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push("...");
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+            if (currentPage < totalPages - 2) pages.push("...");
+            pages.push(totalPages);
+          }
+          return (
+            <div className="flex items-center justify-center gap-1 py-4 border-t border-gray-100">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+              {pages.map((p, i) =>
+                p === "..." ? (
+                  <span key={`ellipsis-${i}`} className="px-2 text-gray-400">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p as number)}
+                    className={cn(
+                      "w-9 h-9 text-sm rounded-lg border font-medium",
+                      currentPage === p
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                    )}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
-      {/* ─── Bulk Assign Dialog ─────────────────────────────────────────────────────────────────── */}
+      {/* ─── Bulk Assign Dialog─────────────────────────────────────────────────────────────────── */}
       <Dialog open={showBulkAssignDialog} onOpenChange={(open) => { setShowBulkAssignDialog(open); if (!open) setSelectedAgentId(""); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
