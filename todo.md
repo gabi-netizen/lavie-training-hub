@@ -339,3 +339,8 @@
 ## Importer Fixes (Apr 21 2026)
 - [x] Agent/agentName always blank on import (never pulled from any column)
 - [x] Add Zoho CRM export column mapping: First Name + Last Name → name, Mailing Street/City/Province/Postal Code → address
+
+## Role-Based Contact Visibility (Apr 21 2026)
+- [x] Admin users see all contacts; agent (non-admin) users see only contacts assigned to them (agentEmail matches their email)
+- [x] Apply filter in listContacts and countContacts server helpers
+- [x] Apply same filter in Workspace today's list query

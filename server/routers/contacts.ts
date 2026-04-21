@@ -102,8 +102,12 @@ export const contactsRouter = router({
         agentName: z.string().optional(),
       })
     )
-    .query(async ({ input }) => {
-      return countContacts(input);
+    .query(async ({ ctx, input }) => {
+      // Non-admin agents only count their own assigned contacts
+      return countContacts({
+        ...input,
+        agentEmail: ctx.user.role !== 'admin' ? (ctx.user.email ?? undefined) : undefined,
+      });
     }),
   // ─── List contacts with search/filter ─────────────────────────────────────────────────
   list: protectedProcedure  .input(z.object({
@@ -115,8 +119,12 @@ export const contactsRouter = router({
         offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ input }) => {
-      return listContacts(input);
+    .query(async ({ ctx, input }) => {
+      // Non-admin agents only see contacts assigned to them
+      return listContacts({
+        ...input,
+        agentEmail: ctx.user.role !== 'admin' ? (ctx.user.email ?? undefined) : undefined,
+      });
     }),
   // ─── Get single contact with call notes ──────────────────────────────────────
   get: protectedProcedure   .input(z.object({ id: z.number() }))

@@ -68,6 +68,7 @@ export async function listContacts({
   leadType,
   status,
   agentName,
+  agentEmail,
   limit = 50,
   offset = 0,
 }: {
@@ -75,6 +76,7 @@ export async function listContacts({
   leadType?: string;
   status?: string;
   agentName?: string;
+  agentEmail?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -95,6 +97,7 @@ export async function listContacts({
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
   if (status) conditions.push(eq(contacts.status, status as ContactStatus));
   if (agentName) conditions.push(eq(contacts.agentName, agentName));
+  if (agentEmail) conditions.push(eq(contacts.agentEmail, agentEmail));
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -113,11 +116,13 @@ export async function countContacts({
   leadType,
   status,
   agentName,
+  agentEmail,
 }: {
   search?: string;
   leadType?: string;
   status?: string;
   agentName?: string;
+  agentEmail?: string;
 } = {}) {
   const db = await getDb();
   if (!db) return 0;
@@ -134,6 +139,7 @@ export async function countContacts({
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
   if (status) conditions.push(eq(contacts.status, status as ContactStatus));
   if (agentName) conditions.push(eq(contacts.agentName, agentName));
+  if (agentEmail) conditions.push(eq(contacts.agentEmail, agentEmail));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [row] = await db.select({ total: count() }).from(contacts).where(where);
   return row?.total ?? 0;
