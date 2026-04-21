@@ -598,6 +598,21 @@
   margin-bottom: 8px;
 }
 .ws-notes-area:focus { border-color: #4F46E5; }
+.ws-notes-save-btn {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  background: #4F46E5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background 0.15s;
+}
+.ws-notes-save-btn:hover { background: #4338CA; }
 
 /* Take Payment + Email Template — 50/50 pair */
 .ws-btn-pair {

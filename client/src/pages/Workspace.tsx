@@ -254,11 +254,15 @@ function ContactCard({
   };
   const [concerns, setConcerns] = useState<string[]>(() => parseConcerns(contact));
   const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
+  const [savedNotes, setSavedNotes] = useState(contact.callNotes ?? contact.notes ?? "");
+  const notesChanged = notes !== savedNotes;
 
   // Sync local state when contact changes (different contact selected OR same contact refetched from DB)
   useEffect(() => {
     setConcerns(parseConcerns(contact));
-    setNotes(contact.callNotes ?? contact.notes ?? "");
+    const freshNotes = contact.callNotes ?? contact.notes ?? "";
+    setNotes(freshNotes);
+    setSavedNotes(freshNotes);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact.id, contact.callNotes, contact.concern, contact.skinType, contact.routine, contact.trialKit]);
 
@@ -426,26 +430,24 @@ function ContactCard({
             </div>
           </div>
 
-          {/* Free Notes — debounced save */}
+          {/* Free Notes — manual save */}
           <textarea
             className="ws-notes-area"
             placeholder="Free notes..."
             value={notes}
-            onChange={(e) => {
-              const val = e.target.value;
-              setNotes(val);
-              // Debounce: save 500ms after user stops typing
-              if ((window as any)._notesSaveTimer) clearTimeout((window as any)._notesSaveTimer);
-              (window as any)._notesSaveTimer = setTimeout(() => {
-                onFieldChange("notes", val);
-              }, 500);
-            }}
-            onBlur={(e) => {
-              // Also save immediately on blur
-              if ((window as any)._notesSaveTimer) clearTimeout((window as any)._notesSaveTimer);
-              onFieldChange("notes", e.target.value);
-            }}
+            onChange={(e) => setNotes(e.target.value)}
           />
+          {notesChanged && (
+            <button
+              className="ws-notes-save-btn"
+              onClick={() => {
+                onFieldChange("notes", notes);
+                setSavedNotes(notes);
+              }}
+            >
+              Save Notes
+            </button>
+          )}
 
           {/* Email Template Modal */}
           {emailTemplateOpen && (
