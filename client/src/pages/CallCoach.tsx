@@ -492,6 +492,8 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
   const [showTranscript, setShowTranscript] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const utils = trpc.useUtils();
   const deleteAnalysis = trpc.callCoach.deleteAnalysis.useMutation({
     onSuccess: () => {
@@ -675,11 +677,16 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">🎙️ Call Recording</p>
           <audio
+            ref={audioRef}
             controls
             src={analysis.audioFileUrl}
             className="w-full h-10"
             style={{ accentColor: "#0d9488" }}
+            onTimeUpdate={() => setAudioCurrentTime(audioRef.current?.currentTime ?? 0)}
           />
+          {analysis.wordTimestamps && (
+            <p className="text-[10px] text-teal-600 mt-1">💡 Click any word in the transcript below to jump to that moment</p>
+          )}
         </div>
       )}
 
@@ -896,69 +903,137 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
             )}
 
             {/* Transcript toggle */}
-            {analysis.transcript && (
+            {analysis.transcript && (() => {
+              // Parse word timestamps if available
+              type WordTs = { word: string; start: number; end: number; speaker: "Agent" | "Customer" };
+              const wordTs: WordTs[] = analysis.wordTimestamps ? (() => { try { return JSON.parse(analysis.wordTimestamps); } catch { return []; } })() : [];
+              const hasWordTs = wordTs.length > 0;
+
+              const seekTo = (time: number) => {
+                if (audioRef.current) {
+                  audioRef.current.currentTime = time;
+                  audioRef.current.play();
+                }
+              };
+
+              return (
               <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2 cursor-pointer" onClick={() => setShowTranscript(!showTranscript)}>
                   <CardTitle className="text-sm text-gray-700 uppercase tracking-wider flex items-center justify-between">
-                    <span>Full Transcript</span>
+                    <div className="flex items-center gap-2">
+                      <span>Full Transcript</span>
+                      {hasWordTs && (
+                        <span className="text-[10px] font-normal text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                          ⚡ Interactive
+                        </span>
+                      )}
+                    </div>
                     {showTranscript ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </CardTitle>
                 </CardHeader>
                 {showTranscript && (
                   <CardContent>
-                    {(() => {
-                      // Check if transcript has speaker labels (new diarized format)
-                      const lines = analysis.transcript.split('\n').filter((l: string) => l.trim());
-                      const hasSpeakerLabels = lines.some((l: string) => /^(Agent|Customer)\s*:/i.test(l));
-
-                      if (hasSpeakerLabels) {
-                        // Diarized format — plain flowing transcript, color by speaker
-                        return (
-                          <div className="max-h-[500px] overflow-y-auto pr-1 space-y-0.5">
-                            {lines.map((line: string, idx: number) => {
-                              const agentMatch = line.match(/^(Agent|Rep|Sales|Caller|Advisor|Staff|Lavie|Team)\s*:/i);
-                              const customerMatch = line.match(/^(Customer|Client|Prospect|Lead|Person|User)\s*:/i);
-                              const isAgent = agentMatch && !line.match(/^(Customer|Client|Prospect|Lead)\s*:/i);
-                              const isCustomer = !isAgent && customerMatch;
-                              const trimmed = line.trim();
-                              if (!trimmed) return null;
-                              if (isAgent) {
-                                return (
-                                  <p key={idx} className="text-sm leading-relaxed text-blue-700">
-                                    <strong className="font-semibold">{line.split(':')[0].trim()}:</strong>{" "}
-                                    {line.split(':').slice(1).join(':').trim()}
-                                  </p>
-                                );
-                              } else if (isCustomer) {
-                                return (
-                                  <p key={idx} className="text-sm leading-relaxed text-emerald-700">
-                                    <strong className="font-semibold">{line.split(':')[0].trim()}:</strong>{" "}
-                                    {line.split(':').slice(1).join(':').trim()}
-                                  </p>
-                                );
-                              } else {
-                                return (
-                                  <p key={idx} className="text-xs text-slate-400 italic">{trimmed}</p>
-                                );
-                              }
-                            })}
-                          </div>
-                        );
-                      } else {
-                        // Plain text format (old calls without diarization) — show as readable block
-                        return (
-                          <div className="max-h-[500px] overflow-y-auto">
-                            <p className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap font-serif text-center">
-                              {analysis.transcript}
-                            </p>
-                          </div>
-                        );
-                      }
-                    })()}
+                    {hasWordTs ? (
+                      // ── INTERACTIVE TRANSCRIPT ──
+                      <div className="max-h-[500px] overflow-y-auto pr-1 space-y-1">
+                        {(() => {
+                          // Group words into utterance blocks by consecutive speaker
+                          type Block = { speaker: "Agent" | "Customer"; words: WordTs[] };
+                          const blocks: Block[] = [];
+                          for (const w of wordTs) {
+                            if (blocks.length === 0 || blocks[blocks.length - 1].speaker !== w.speaker) {
+                              blocks.push({ speaker: w.speaker, words: [w] });
+                            } else {
+                              blocks[blocks.length - 1].words.push(w);
+                            }
+                          }
+                          return blocks.map((block, bi) => (
+                            <div key={bi} className="flex gap-2">
+                              <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide mt-0.5 w-14 text-right ${
+                                block.speaker === "Agent" ? "text-blue-600" : "text-emerald-600"
+                              }`}>
+                                {block.speaker === "Agent" ? "Agent" : "Cust."}
+                              </span>
+                              <p className="text-sm leading-relaxed flex-1 flex flex-wrap gap-x-0.5">
+                                {block.words.map((w, wi) => {
+                                  const isActive = audioCurrentTime >= w.start && audioCurrentTime < w.end;
+                                  return (
+                                    <span
+                                      key={wi}
+                                      onClick={() => seekTo(w.start)}
+                                      title={`${Math.floor(w.start / 60)}:${String(Math.floor(w.start % 60)).padStart(2, '0')}`}
+                                      className={`cursor-pointer rounded px-0.5 transition-colors ${
+                                        isActive
+                                          ? block.speaker === "Agent"
+                                            ? "bg-blue-200 text-blue-900 font-semibold"
+                                            : "bg-emerald-200 text-emerald-900 font-semibold"
+                                          : block.speaker === "Agent"
+                                            ? "text-blue-700 hover:bg-blue-100"
+                                            : "text-emerald-700 hover:bg-emerald-100"
+                                      }`}
+                                    >
+                                      {w.word}
+                                    </span>
+                                  );
+                                })}
+                              </p>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    ) : (
+                      // ── PLAIN TRANSCRIPT (old calls without word timestamps) ──
+                      (() => {
+                        const lines = analysis.transcript.split('\n').filter((l: string) => l.trim());
+                        const hasSpeakerLabels = lines.some((l: string) => /^(Agent|Customer)\s*:/i.test(l));
+                        if (hasSpeakerLabels) {
+                          return (
+                            <div className="max-h-[500px] overflow-y-auto pr-1 space-y-0.5">
+                              {lines.map((line: string, idx: number) => {
+                                const agentMatch = line.match(/^(Agent|Rep|Sales|Caller|Advisor|Staff|Lavie|Team)\s*:/i);
+                                const customerMatch = line.match(/^(Customer|Client|Prospect|Lead|Person|User)\s*:/i);
+                                const isAgent = agentMatch && !line.match(/^(Customer|Client|Prospect|Lead)\s*:/i);
+                                const isCustomer = !isAgent && customerMatch;
+                                const trimmed = line.trim();
+                                if (!trimmed) return null;
+                                if (isAgent) {
+                                  return (
+                                    <p key={idx} className="text-sm leading-relaxed text-blue-700">
+                                      <strong className="font-semibold">{line.split(':')[0].trim()}:</strong>{" "}
+                                      {line.split(':').slice(1).join(':').trim()}
+                                    </p>
+                                  );
+                                } else if (isCustomer) {
+                                  return (
+                                    <p key={idx} className="text-sm leading-relaxed text-emerald-700">
+                                      <strong className="font-semibold">{line.split(':')[0].trim()}:</strong>{" "}
+                                      {line.split(':').slice(1).join(':').trim()}
+                                    </p>
+                                  );
+                                } else {
+                                  return (
+                                    <p key={idx} className="text-xs text-slate-400 italic">{trimmed}</p>
+                                  );
+                                }
+                              })}
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="max-h-[500px] overflow-y-auto">
+                              <p className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap font-serif text-center">
+                                {analysis.transcript}
+                              </p>
+                            </div>
+                          );
+                        }
+                      })()
+                    )}
                   </CardContent>
                 )}
               </Card>
-            )}
+              );
+            })()}
           {/* Flag as Incorrect + PDF Download buttons */}
           <div className="flex justify-between items-center pt-2">
             <Button

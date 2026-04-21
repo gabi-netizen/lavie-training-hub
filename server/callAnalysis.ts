@@ -48,10 +48,18 @@ function detectChannelCount(buffer: Buffer): number {
   return 1;
 }
 
+export interface WordTimestamp {
+  word: string;
+  start: number;
+  end: number;
+  speaker: "Agent" | "Customer";
+}
+
 export async function transcribeAudio(audioUrl: string): Promise<{
   transcript: string;
   repSpeechPct: number;
   durationSeconds: number;
+  wordTimestamps: WordTimestamp[];
 }> {
   // Download audio first
   const audioRes = await fetch(audioUrl);
@@ -141,6 +149,19 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     if (!transcript.trim()) {
       transcript = agentCh?.alternatives?.[0]?.transcript ?? "";
     }
+
+    // Build word timestamps for interactive transcript
+    const wordTimestamps: WordTimestamp[] = [
+      ...agentWords.map((w: any) => ({ word: w.punctuated_word ?? w.word ?? "", start: w.start ?? 0, end: w.end ?? 0, speaker: "Agent" as const })),
+      ...customerWords.map((w: any) => ({ word: w.punctuated_word ?? w.word ?? "", start: w.start ?? 0, end: w.end ?? 0, speaker: "Customer" as const })),
+    ].sort((a, b) => a.start - b.start);
+
+    return {
+      transcript,
+      repSpeechPct,
+      durationSeconds: duration,
+      wordTimestamps,
+    };
   } else {
     // Mono diarization path
     const utterances: any[] = result?.results?.utterances ?? [];
@@ -172,13 +193,29 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     repSpeechPct = totalSpeechTime > 0
       ? Math.round((repSpeechTime / totalSpeechTime) * 100)
       : 50;
-  }
 
-  return {
-    transcript,
-    repSpeechPct,
-    durationSeconds: duration,
-  };
+    // Build word timestamps from utterances (mono/diarized path)
+    const monoWordTimestamps: WordTimestamp[] = [];
+    for (const utt of utterances) {
+      const label: "Agent" | "Customer" = utt.speaker === repSpeaker ? "Agent" : "Customer";
+      const words: any[] = utt.words ?? [];
+      for (const w of words) {
+        monoWordTimestamps.push({
+          word: w.punctuated_word ?? w.word ?? "",
+          start: w.start ?? 0,
+          end: w.end ?? 0,
+          speaker: label,
+        });
+      }
+    }
+
+    return {
+      transcript,
+      repSpeechPct,
+      durationSeconds: duration,
+      wordTimestamps: monoWordTimestamps,
+    };
+  }
 }
 
 // ─── ANALYSE WITH GPT-4 ───────────────────────────────────────────────────────
@@ -446,6 +483,7 @@ export async function updateCallAnalysisStatus(
     upsellAttempted: boolean;
     upsellSucceeded: boolean;
     cancelReason: string;
+    wordTimestamps: string;
   }>
 ) {
   const db = await getDb();
@@ -558,11 +596,12 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string) 
   try {
     // Step 1: Transcribe
     await updateCallAnalysisStatus(analysisId, { status: "transcribing" });
-    const { transcript, repSpeechPct, durationSeconds } = await transcribeAudio(audioUrl);
+    const { transcript, repSpeechPct, durationSeconds, wordTimestamps } = await transcribeAudio(audioUrl);
     await updateCallAnalysisStatus(analysisId, {
       transcript,
       repSpeechPct,
       durationSeconds,
+      wordTimestamps: wordTimestamps.length > 0 ? JSON.stringify(wordTimestamps) : undefined,
     });
     // Step 2: Analyse — fetch callType from DB so the prompt is tailored
     await updateCallAnalysisStatus(analysisId, { status: "analyzing" });

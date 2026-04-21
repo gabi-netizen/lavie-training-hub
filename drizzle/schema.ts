@@ -87,6 +87,8 @@ export const callAnalyses = mysqlTable("call_analyses", {
   upsellSucceeded: boolean("upsellSucceeded"),
   /** Retention: reason the customer wanted to cancel */
   cancelReason: varchar("cancelReason", { length: 128 }),
+  /** JSON array of word-level timestamps from Deepgram: [{word, start, end, speaker}] */
+  wordTimestamps: text("wordTimestamps"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

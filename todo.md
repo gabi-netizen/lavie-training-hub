@@ -355,3 +355,12 @@
 - [x] Add "Generate Insights" button to Opening Dashboard
 - [x] Build InsightsPanel component: displays AI-generated best practice bullets with loading state
 - [x] Store generated insights in memory (no DB needed for now) or re-generate on demand
+
+## Interactive Transcript with Word Timestamps (Opening Dashboard)
+- [x] Add wordTimestamps column (JSON) to call_analyses schema
+- [x] Run pnpm db:push to migrate schema
+- [x] Update Deepgram request to capture word-level timestamps (words: true)
+- [x] Store word timestamps after transcription
+- [x] Build interactive transcript UI: each word is a clickable span with timestamp
+- [x] Wire word click to seek audio player to that timestamp
+- [x] Highlight currently playing word in real-time as audio plays
