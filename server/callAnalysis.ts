@@ -38,12 +38,22 @@ If the transcript contains phrases like "I'll send you a link", "fill in the for
 `;
 
 // ─── TRANSCRIBE WITH DEEPGRAM ─────────────────────────────────────────────────
+// ─── DETECT AUDIO CHANNEL COUNT ──────────────────────────────────────────────
+function detectChannelCount(buffer: Buffer): number {
+  // WAV: channels stored at byte offset 22-23 (little-endian uint16)
+  if (buffer.length > 24 && buffer.slice(0, 4).toString() === "RIFF") {
+    return buffer.readUInt16LE(22);
+  }
+  // MP3/other formats: assume mono — diarize handles it
+  return 1;
+}
+
 export async function transcribeAudio(audioUrl: string): Promise<{
   transcript: string;
   repSpeechPct: number;
   durationSeconds: number;
 }> {
-  // Deepgram v5 SDK uses transcribeFile — download audio first then pass as buffer
+  // Download audio first
   const audioRes = await fetch(audioUrl);
   if (!audioRes.ok) {
     throw new Error(`Failed to fetch audio for transcription: ${audioRes.status} ${audioRes.statusText}`);
@@ -51,60 +61,118 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
   const contentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
 
-  const response = await deepgram.listen.v1.media.transcribeFile(
-    audioBuffer,
-    {
-      model: "nova-2",
-      smart_format: true,
-      diarize: true,
-      punctuate: true,
-      utterances: true,
-      language: "en",
-      mimetype: contentType,
-    } as any
-  );
+  // Auto-detect stereo: if 2 channels, use multichannel (channel 0 = Agent, channel 1 = Customer)
+  const channelCount = detectChannelCount(audioBuffer);
+  const useMultichannel = channelCount >= 2;
 
+  const transcribeOptions: any = {
+    model: "nova-2",
+    smart_format: true,
+    punctuate: true,
+    utterances: true,
+    language: "en",
+    mimetype: contentType,
+  };
+
+  if (useMultichannel) {
+    transcribeOptions.multichannel = true;
+  } else {
+    transcribeOptions.diarize = true;
+  }
+
+  const response = await deepgram.listen.v1.media.transcribeFile(audioBuffer, transcribeOptions);
   const result = response as any;
   const duration = result?.metadata?.duration ?? 0;
 
-  // Build transcript from utterances with speaker labels (diarization)
-  const utterances: any[] = result?.results?.utterances ?? [];
-  const speakerTimes: Record<number, number> = {};
-  let totalSpeechTime = 0;
-
-  for (const utt of utterances) {
-    const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
-    totalSpeechTime += uttDuration;
-    const spk = utt.speaker ?? 0;
-    speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
-  }
-
-  // Rep = speaker with most speech time (they drive the call)
-  let repSpeaker = 0;
-  let repSpeechTime = 0;
-  if (Object.keys(speakerTimes).length > 0) {
-    const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
-    repSpeaker = Number(maxEntry[0]);
-    repSpeechTime = maxEntry[1];
-  }
-
-  // Build formatted transcript: Agent/Customer lines from utterances
   let transcript: string;
-  if (utterances.length > 0) {
-    transcript = utterances
-      .map((utt) => {
-        const label = utt.speaker === repSpeaker ? "Agent" : "Customer";
-        return `${label}: ${(utt.transcript ?? "").trim()}`;
-      })
-      .join("\n");
-  } else {
-    // Fallback to plain channel transcript if no utterances
-    transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
-  }
+  let repSpeechPct: number;
 
-  const repSpeechPct = totalSpeechTime > 0
-    ? Math.round((repSpeechTime / totalSpeechTime) * 100)
-    : 50;
+  if (useMultichannel) {
+    // Stereo: channel 0 = Agent (rep), channel 1 = Customer
+    const channels: any[] = result?.results?.channels ?? [];
+    const agentCh = channels[0];
+    const customerCh = channels[1];
+
+    type Line = { start: number; label: string; text: string };
+    const lines: Line[] = [];
+
+    // Try paragraphs/sentences first
+    const agentSentences = agentCh?.alternatives?.[0]?.paragraphs?.paragraphs?.flatMap((p: any) => p.sentences) ?? [];
+    const customerSentences = customerCh?.alternatives?.[0]?.paragraphs?.paragraphs?.flatMap((p: any) => p.sentences) ?? [];
+
+    for (const s of agentSentences) {
+      if ((s.text ?? "").trim()) lines.push({ start: s.start ?? 0, label: "Agent", text: s.text.trim() });
+    }
+    for (const s of customerSentences) {
+      if ((s.text ?? "").trim()) lines.push({ start: s.start ?? 0, label: "Customer", text: s.text.trim() });
+    }
+
+    // Fallback: use utterances if sentences empty
+    if (lines.length === 0) {
+      const agentUtts = agentCh?.alternatives?.[0]?.paragraphs?.transcript ?? agentCh?.alternatives?.[0]?.transcript ?? "";
+      const customerUtts = customerCh?.alternatives?.[0]?.paragraphs?.transcript ?? customerCh?.alternatives?.[0]?.transcript ?? "";
+      if (agentUtts) lines.push({ start: 0, label: "Agent", text: agentUtts });
+      if (customerUtts) lines.push({ start: 0.5, label: "Customer", text: customerUtts });
+    }
+
+    lines.sort((a, b) => a.start - b.start);
+
+    // Merge consecutive same-speaker lines
+    const merged: { label: string; text: string }[] = [];
+    for (const line of lines) {
+      if (!line.text) continue;
+      if (merged.length > 0 && merged[merged.length - 1].label === line.label) {
+        merged[merged.length - 1].text += " " + line.text;
+      } else {
+        merged.push({ label: line.label, text: line.text });
+      }
+    }
+
+    transcript = merged.map(l => `${l.label}: ${l.text}`).join("\n");
+
+    // Talk ratio from word-level timestamps
+    const agentWords: any[] = agentCh?.alternatives?.[0]?.words ?? [];
+    const customerWords: any[] = customerCh?.alternatives?.[0]?.words ?? [];
+    const agentTime = agentWords.reduce((sum: number, w: any) => sum + ((w.end ?? 0) - (w.start ?? 0)), 0);
+    const customerTime = customerWords.reduce((sum: number, w: any) => sum + ((w.end ?? 0) - (w.start ?? 0)), 0);
+    const totalTime = agentTime + customerTime;
+    repSpeechPct = totalTime > 0 ? Math.round((agentTime / totalTime) * 100) : 50;
+
+    if (!transcript.trim()) {
+      transcript = agentCh?.alternatives?.[0]?.transcript ?? "";
+    }
+  } else {
+    // Mono diarization path
+    const utterances: any[] = result?.results?.utterances ?? [];
+    const speakerTimes: Record<number, number> = {};
+    let totalSpeechTime = 0;
+    for (const utt of utterances) {
+      const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
+      totalSpeechTime += uttDuration;
+      const spk = utt.speaker ?? 0;
+      speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
+    }
+    let repSpeaker = 0;
+    let repSpeechTime = 0;
+    if (Object.keys(speakerTimes).length > 0) {
+      const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
+      repSpeaker = Number(maxEntry[0]);
+      repSpeechTime = maxEntry[1];
+    }
+    if (utterances.length > 0) {
+      transcript = utterances
+        .map((utt) => {
+          const label = utt.speaker === repSpeaker ? "Agent" : "Customer";
+          return `${label}: ${(utt.transcript ?? "").trim()}`;
+        })
+        .join("\n");
+    } else {
+      transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+    }
+    repSpeechPct = totalSpeechTime > 0
+      ? Math.round((repSpeechTime / totalSpeechTime) * 100)
+      : 50;
+  }
 
   return {
     transcript,
