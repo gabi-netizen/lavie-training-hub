@@ -32,7 +32,6 @@ const AGENT_NAV_ITEMS = [
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
-  { path: "/team", label: "Team", icon: Users },
   { path: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 

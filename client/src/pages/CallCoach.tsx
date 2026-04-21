@@ -2356,11 +2356,14 @@ function OpeningDashboard() {
     );
   }
 
-  const kpiCard = (label: string, value: string | null, sub: string, color: string) => (
-    <div className={`rounded-xl border p-4 space-y-1 ${color}`}>
-      <p className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</p>
-      <p className="text-2xl font-bold text-gray-900">{value ?? "—"}</p>
-      <p className="text-xs text-gray-500">{sub}</p>
+  const kpiCard = (label: string, value: string | null, sub: string, gradient: string, iconEl: React.ReactNode) => (
+    <div className={`rounded-2xl p-5 flex flex-col gap-2 shadow-md ${gradient}`}>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-widest opacity-75">{label}</p>
+        <div className="w-8 h-8 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">{iconEl}</div>
+      </div>
+      <p className="text-3xl font-extrabold tracking-tight leading-none">{value ?? "—"}</p>
+      <p className="text-[11px] opacity-65 font-medium">{sub}</p>
     </div>
   );
 
@@ -2440,11 +2443,35 @@ function OpeningDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {kpiCard("Close Rate (3+ min)", data.overallCloseRate3Plus != null ? `${data.overallCloseRate3Plus}%` : null, "Calls ≥ 3 minutes", "bg-white border-gray-200")}
-        {kpiCard("Close Rate (10+ min)", data.overallCloseRate10Plus != null ? `${data.overallCloseRate10Plus}%` : null, "Calls ≥ 10 minutes", "bg-white border-gray-200")}
-        {kpiCard("Avg Call Quality", data.avgCallQuality != null ? `${data.avgCallQuality}/100` : null, "Overall AI score", "bg-white border-gray-200")}
-        {kpiCard("Total Calls", `${data.totalOpeningCalls}`, "Opening team calls analysed", "bg-white border-gray-200")}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {kpiCard(
+          "Close Rate (3+ min)",
+          data.overallCloseRate3Plus != null ? `${data.overallCloseRate3Plus}%` : null,
+          "Calls ≥ 3 minutes",
+          "bg-gradient-to-br from-indigo-500 to-indigo-700 text-white",
+          <TrendingUp size={16} className="text-white" />
+        )}
+        {kpiCard(
+          "Close Rate (10+ min)",
+          data.overallCloseRate10Plus != null ? `${data.overallCloseRate10Plus}%` : null,
+          "Calls ≥ 10 minutes",
+          "bg-gradient-to-br from-violet-500 to-violet-700 text-white",
+          <Trophy size={16} className="text-white" />
+        )}
+        {kpiCard(
+          "Avg Call Quality",
+          data.avgCallQuality != null ? `${data.avgCallQuality}/100` : null,
+          "Overall AI score",
+          "bg-gradient-to-br from-emerald-500 to-emerald-700 text-white",
+          <Star size={16} className="text-white" />
+        )}
+        {kpiCard(
+          "Total Calls",
+          `${data.totalOpeningCalls}`,
+          "Opening team calls analysed",
+          "bg-gradient-to-br from-sky-500 to-sky-700 text-white",
+          <Mic size={16} className="text-white" />
+        )}
       </div>
 
       {/* Insight banner */}
