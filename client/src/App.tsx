@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import { SignIn, SignUp } from "@clerk/clerk-react";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AppLayout from "./components/AppLayout";
@@ -100,6 +101,22 @@ function Router() {
         {/* Profile settings — all authenticated users */}
         <Route path={"/profile"} component={ProfileSettings} />
         <Route path={"/profile-settings"} component={ProfileSettings} />
+
+        {/* Clerk auth pages */}
+        <Route path="/sign-in">
+          {() => (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <SignIn routing="path" path="/sign-in" />
+            </div>
+          )}
+        </Route>
+        <Route path="/sign-up">
+          {() => (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <SignUp routing="path" path="/sign-up" />
+            </div>
+          )}
+        </Route>
 
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />

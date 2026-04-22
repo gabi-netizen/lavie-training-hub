@@ -58,57 +58,86 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 };
 
 /**
- * Dispatches a project-owner notification through the Manus Notification Service.
- * Returns `true` if the request was accepted, `false` when the upstream service
- * cannot be reached (callers can fall back to email/slack). Validation errors
- * bubble up as TRPC errors so callers can fix the payload.
+ * Send notification via Postmark email (used on Railway when Manus forge is unavailable).
+ */
+async function notifyViaPostmark(title: string, content: string): Promise<boolean> {
+  if (!ENV.postmarkApiKey) {
+    console.warn("[Notification] Postmark API key not configured — skipping notification.");
+    return false;
+  }
+
+  try {
+    const response = await fetch("https://api.postmarkapp.com/email", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-Postmark-Server-Token": ENV.postmarkApiKey,
+      },
+      body: JSON.stringify({
+        From: "notifications@lavielabs.com",
+        To: "notifications@lavielabs.com",
+        Subject: `[Lavie Training Hub] ${title}`,
+        TextBody: content,
+        HtmlBody: `<h2>${title}</h2><pre style="font-family:sans-serif;white-space:pre-wrap">${content}</pre>`,
+        MessageStream: "outbound",
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(`[Notification] Postmark failed (${response.status}): ${detail}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn("[Notification] Postmark error:", error);
+    return false;
+  }
+}
+
+/**
+ * Dispatches a project-owner notification.
+ * On Manus hosting: uses the Manus Notification Service.
+ * On Railway: falls back to Postmark email.
+ * Returns `true` if the request was accepted, `false` on failure.
  */
 export async function notifyOwner(
   payload: NotificationPayload
 ): Promise<boolean> {
   const { title, content } = validatePayload(payload);
 
-  if (!ENV.forgeApiUrl) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service URL is not configured.",
-    });
-  }
+  // Use Manus notification service if available (Manus hosting)
+  if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+    const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${ENV.forgeApiKey}`,
+          "content-type": "application/json",
+          "connect-protocol-version": "1",
+        },
+        body: JSON.stringify({ title, content }),
+      });
 
-  if (!ENV.forgeApiKey) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service API key is not configured.",
-    });
-  }
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        console.warn(
+          `[Notification] Manus service failed (${response.status})${detail ? `: ${detail}` : ""} — falling back to Postmark`
+        );
+        return notifyViaPostmark(title, content);
+      }
 
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "content-type": "application/json",
-        "connect-protocol-version": "1",
-      },
-      body: JSON.stringify({ title, content }),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${
-          detail ? `: ${detail}` : ""
-        }`
-      );
-      return false;
+      return true;
+    } catch (error) {
+      console.warn("[Notification] Manus service error — falling back to Postmark:", error);
+      return notifyViaPostmark(title, content);
     }
-
-    return true;
-  } catch (error) {
-    console.warn("[Notification] Error calling notification service:", error);
-    return false;
   }
+
+  // Railway: use Postmark directly
+  return notifyViaPostmark(title, content);
 }

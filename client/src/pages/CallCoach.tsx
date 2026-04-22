@@ -1032,7 +1032,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                   </CardContent>
                 )}
               </Card>
-              );
+            );
             })()}
           {/* Flag as Incorrect + PDF Download buttons */}
           <div className="flex justify-between items-center pt-2">
@@ -1121,9 +1121,9 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
           onClose={() => setShowEditModal(false)}
           onSaved={() => setShowEditModal(false)}
         />
-        </div>
-      );
-    })()}
+          </div>
+        );
+      })()}
     </div>
   );
 }
