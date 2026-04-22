@@ -4,6 +4,7 @@ import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
+import { useRef } from "react";
 import superjson from "superjson";
 import App from "./App";
 import { CLERK_PUBLISHABLE_KEY, getLoginUrl } from "./const";
@@ -38,36 +39,53 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-// Inner component that has access to Clerk's getToken
+// Inner component that has access to Clerk's getToken.
+//
+// IMPORTANT: trpcClient MUST be stable across renders — creating it inside
+// the component body (without memoisation) causes React 19's concurrent mode
+// to throw "Should not already be working" and tRPC to throw
+// "client[procedureType] is not a function" because the client is torn down
+// and rebuilt mid-render cycle.
+//
+// Fix: create the client once with useRef. Store getToken in a separate ref
+// so the stable client always calls the latest token getter.
 function AppWithTrpc() {
   const { getToken } = useClerkAuth();
 
-  const trpcClient = trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: "/api/trpc",
-        transformer: superjson,
-        async headers() {
-          try {
-            const token = await getToken();
-            if (token) return { Authorization: `Bearer ${token}` };
-          } catch {
-            // not signed in yet
-          }
-          return {};
-        },
-        fetch(input, init) {
-          return globalThis.fetch(input, {
-            ...(init ?? {}),
-            credentials: "include",
-          });
-        },
-      }),
-    ],
-  });
+  // Keep getToken ref up-to-date without recreating the tRPC client.
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+
+  // Create the tRPC client exactly once for the lifetime of this component.
+  const trpcClientRef = useRef<ReturnType<typeof trpc.createClient> | null>(null);
+  if (!trpcClientRef.current) {
+    trpcClientRef.current = trpc.createClient({
+      links: [
+        httpBatchLink({
+          url: "/api/trpc",
+          transformer: superjson,
+          async headers() {
+            try {
+              const token = await getTokenRef.current();
+              if (token) return { Authorization: `Bearer ${token}` };
+            } catch {
+              // not signed in yet — send request without auth header
+            }
+            return {};
+          },
+          fetch(input, init) {
+            return globalThis.fetch(input, {
+              ...(init ?? {}),
+              credentials: "include",
+            });
+          },
+        }),
+      ],
+    });
+  }
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+    <trpc.Provider client={trpcClientRef.current} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>
