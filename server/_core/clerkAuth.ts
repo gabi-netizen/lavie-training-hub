@@ -13,10 +13,38 @@ import type { Request } from "express";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import * as db from "../db";
 
-const CLERK_JWKS_URL = `https://api.clerk.dev/v1/jwks`;
+// Clerk instance-specific JWKS URL.
+// Derived from VITE_CLERK_PUBLISHABLE_KEY at runtime so it works for both
+// Dev (caring-duck-98.clerk.accounts.dev) and Production instances.
+function getClerkJwksUrl(): string {
+  const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY ?? "";
+  if (publishableKey) {
+    try {
+      // pk_test_<base64url(frontendApiHost)>$ or pk_live_<base64url(frontendApiHost)>$
+      const base64Part = publishableKey.replace(/^pk_(test|live)_/, "").replace(/\$$/, "");
+      const frontendApiHost = Buffer.from(base64Part, "base64").toString("utf-8").replace(/\$$/, "");
+      if (frontendApiHost && frontendApiHost.includes(".")) {
+        console.log("[clerkAuth] Derived frontend API host:", frontendApiHost);
+        return `https://${frontendApiHost}/.well-known/jwks.json`;
+      }
+    } catch {
+      // fall through to default
+    }
+  }
+  // Fallback: known Clerk dev instance
+  return `https://caring-duck-98.clerk.accounts.dev/.well-known/jwks.json`;
+}
 
-// Cache the JWKS remote key set
-const JWKS = createRemoteJWKSet(new URL(CLERK_JWKS_URL));
+// Lazy-init JWKS so the URL is computed at first request (env vars available)
+let _JWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
+function getJWKS() {
+  if (!_JWKS) {
+    const url = getClerkJwksUrl();
+    console.log("[clerkAuth] Using JWKS URL:", url);
+    _JWKS = createRemoteJWKSet(new URL(url));
+  }
+  return _JWKS;
+}
 
 interface ClerkJwtPayload {
   sub: string;           // Clerk user ID (e.g. "user_2abc...")
@@ -25,7 +53,7 @@ interface ClerkJwtPayload {
 
 async function verifyClerkToken(token: string): Promise<ClerkJwtPayload> {
   try {
-    const { payload } = await jwtVerify(token, JWKS, {
+    const { payload } = await jwtVerify(token, getJWKS(), {
       algorithms: ["RS256"],
     });
     if (!payload.sub) {
@@ -40,10 +68,13 @@ async function verifyClerkToken(token: string): Promise<ClerkJwtPayload> {
 async function getClerkUserDetails(clerkUserId: string): Promise<{ email: string | null; name: string | null }> {
   const secretKey = process.env.CLERK_SECRET_KEY ?? "";
   try {
-    const res = await fetch(`https://api.clerk.dev/v1/users/${clerkUserId}`, {
+    const res = await fetch(`https://api.clerk.com/v1/users/${clerkUserId}`, {
       headers: { Authorization: `Bearer ${secretKey}` },
     });
-    if (!res.ok) return { email: null, name: null };
+    if (!res.ok) {
+      console.warn("[clerkAuth] Failed to fetch user details:", res.status);
+      return { email: null, name: null };
+    }
     const data = (await res.json()) as {
       email_addresses?: Array<{ email_address: string; id: string }>;
       primary_email_address_id?: string;
