@@ -102,11 +102,25 @@ function Router() {
         <Route path={"/profile"} component={ProfileSettings} />
         <Route path={"/profile-settings"} component={ProfileSettings} />
 
-        {/* Clerk auth pages */}
+        {/* Clerk auth pages — wildcard routes catch sub-paths like /sign-in/factor-one */}
+        <Route path="/sign-in/:rest*">
+          {() => (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <SignIn routing="path" path="/sign-in" />
+            </div>
+          )}
+        </Route>
         <Route path="/sign-in">
           {() => (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
               <SignIn routing="path" path="/sign-in" />
+            </div>
+          )}
+        </Route>
+        <Route path="/sign-up/:rest*">
+          {() => (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <SignUp routing="path" path="/sign-up" />
             </div>
           )}
         </Route>
