@@ -364,3 +364,9 @@
 - [x] Build interactive transcript UI: each word is a clickable span with timestamp
 - [x] Wire word click to seek audio player to that timestamp
 - [x] Highlight currently playing word in real-time as audio plays
+
+## AI Coach Timeout Fix (Apr 22 2026)
+- [ ] Add WHISPER_TIMEOUT_MS, LLM_TIMEOUT_MS, SERVER_TIMEOUT_MS, MAX_AUDIO_FILE_SIZE, WHISPER_CHUNK_SIZE constants to shared/const.ts
+- [ ] Add AbortController with 15-min timeout to server/_core/voiceTranscription.ts + chunking for files >24MB
+- [ ] Add AbortController with 15-min timeout to server/_core/llm.ts
+- [ ] Set Express server timeout to 35 minutes and body-parser limit to 250MB in server/_core/index.ts

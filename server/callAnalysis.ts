@@ -88,7 +88,14 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     transcribeOptions.diarize = true;
   }
 
-  const response = await deepgram.listen.v1.media.transcribeFile(audioBuffer, transcribeOptions);
+  // 15-minute timeout for Deepgram transcription (long calls can take several minutes)
+  const deepgramTimeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("Deepgram transcription timed out after 15 minutes")), 900_000)
+  );
+  const response = await Promise.race([
+    deepgram.listen.v1.media.transcribeFile(audioBuffer, transcribeOptions),
+    deepgramTimeout,
+  ]);
   const result = response as any;
   const duration = result?.metadata?.duration ?? 0;
 
@@ -424,14 +431,20 @@ COMPLIANCE SCORING RULES (apply strictly):
 IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
 Be specific, actionable, and encouraging. Focus on the call type objectives above.`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    temperature: 0.3,
-  });
-  const content = response.choices[0]?.message?.content ?? "{}";
-  return JSON.parse(content) as CallAnalysisReport;
+  const llmAbortController = new AbortController();
+  const llmTimeoutId = setTimeout(() => llmAbortController.abort(), 900_000); // 15 min
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    }, { signal: llmAbortController.signal });
+    const content = response.choices[0]?.message?.content ?? "{}";
+    return JSON.parse(content) as CallAnalysisReport;
+  } finally {
+    clearTimeout(llmTimeoutId);
+  }
 }
 // ─── DB HELPERS ───────────────────────────────────────────────────────────────
 export async function createCallAnalysisRecord(data: {
@@ -1464,14 +1477,20 @@ Return a JSON array of insights. Each insight must have:
 
 Return ONLY valid JSON array, no markdown, no explanation.`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
-    max_tokens: 2000,
-  });
-
-  const raw = response.choices[0]?.message?.content ?? "[]";
+  const insightsAbortController = new AbortController();
+  const insightsTimeoutId = setTimeout(() => insightsAbortController.abort(), 900_000); // 15 min
+  let raw: string;
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 2000,
+    }, { signal: insightsAbortController.signal });
+    raw = response.choices[0]?.message?.content ?? "[]";
+  } finally {
+    clearTimeout(insightsTimeoutId);
+  }
   let insights: BestPracticeInsight[] = [];
   try {
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

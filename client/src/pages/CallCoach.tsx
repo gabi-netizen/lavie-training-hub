@@ -1031,8 +1031,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                     )}
                   </CardContent>
                 )}
-              </Card>
-            );
+              </Card>);
             })()}
           {/* Flag as Incorrect + PDF Download buttons */}
           <div className="flex justify-between items-center pt-2">

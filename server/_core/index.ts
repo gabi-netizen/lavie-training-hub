@@ -31,10 +31,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-// Multer: store in memory, max 50MB
+// Multer: store in memory, max 200MB (for long call recordings)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/m4a", "audio/mp4", "video/mp4", "audio/webm", "audio/x-m4a"];
     if (allowed.includes(file.mimetype) || file.originalname.match(/\.(mp3|wav|ogg|m4a|mp4|webm)$/i)) {
@@ -48,9 +48,11 @@ const upload = multer({
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Configure body parser with larger size limit for file uploads (250MB for long call recordings)
+  app.use(express.json({ limit: "250mb" }));
+  app.use(express.urlencoded({ limit: "250mb", extended: true }));
+
   // Clerk auth routes (replaces Manus OAuth)
   registerClerkRoutes(app);
 
@@ -92,6 +94,7 @@ async function startServer() {
       createContext,
     })
   );
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
@@ -105,6 +108,11 @@ async function startServer() {
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
+
+  // Set server-level timeout to 35 minutes for long AI analysis requests
+  server.timeout = 2_100_000; // 35 minutes in ms
+  server.keepAliveTimeout = 2_100_000;
+  server.headersTimeout = 2_100_100;
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
