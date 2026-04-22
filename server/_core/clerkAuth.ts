@@ -1,70 +1,40 @@
 /**
  * Clerk-based authentication for Railway deployment.
- * Replaces the Manus OAuth SDK session verification.
+ * Uses JWKS-based JWT verification via the jose library.
  *
  * Flow:
  *  1. Frontend (ClerkProvider) issues a short-lived JWT after sign-in.
  *  2. Frontend sends the JWT in the Authorization header: "Bearer <token>"
- *  3. This module verifies the JWT with Clerk's public key (JWKS endpoint).
+ *  3. This module verifies the JWT using Clerk's JWKS endpoint.
  *  4. On success, upserts the user in our DB and returns the User row.
  */
 
 import type { Request } from "express";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import * as db from "../db";
 
 const CLERK_JWKS_URL = `https://api.clerk.dev/v1/jwks`;
 
-// Cache JWKS to avoid fetching on every request
-let cachedJwks: { keys: JsonWebKey[] } | null = null;
-let jwksCachedAt = 0;
-const JWKS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-async function getJwks(): Promise<{ keys: JsonWebKey[] }> {
-  const now = Date.now();
-  if (cachedJwks && now - jwksCachedAt < JWKS_CACHE_TTL_MS) {
-    return cachedJwks;
-  }
-  const secretKey = process.env.CLERK_SECRET_KEY ?? "";
-  const res = await fetch(CLERK_JWKS_URL, {
-    headers: { Authorization: `Bearer ${secretKey}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch Clerk JWKS: ${res.status}`);
-  }
-  cachedJwks = (await res.json()) as { keys: JsonWebKey[] };
-  jwksCachedAt = now;
-  return cachedJwks;
-}
+// Cache the JWKS remote key set
+const JWKS = createRemoteJWKSet(new URL(CLERK_JWKS_URL));
 
 interface ClerkJwtPayload {
   sub: string;           // Clerk user ID (e.g. "user_2abc...")
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  image_url?: string;
-  // Clerk puts email in email_addresses claim or in the token directly
   [key: string]: unknown;
 }
 
 async function verifyClerkToken(token: string): Promise<ClerkJwtPayload> {
-  // Use Clerk's verify endpoint for simplicity and reliability
-  const secretKey = process.env.CLERK_SECRET_KEY ?? "";
-  const res = await fetch("https://api.clerk.dev/v1/tokens/verify", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ token }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Clerk token verification failed: ${res.status} ${body}`);
+  try {
+    const { payload } = await jwtVerify(token, JWKS, {
+      algorithms: ["RS256"],
+    });
+    if (!payload.sub) {
+      throw new Error("JWT missing sub claim");
+    }
+    return payload as ClerkJwtPayload;
+  } catch (err) {
+    throw new Error(`Clerk JWT verification failed: ${err}`);
   }
-
-  const data = (await res.json()) as ClerkJwtPayload;
-  return data;
 }
 
 async function getClerkUserDetails(clerkUserId: string): Promise<{ email: string | null; name: string | null }> {
