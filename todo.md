@@ -373,3 +373,12 @@
 
 ## Audio Transcription Fix
 - [x] Fix "Failed to fetch audio for transcription: 400 Bad Request" — use storageGet to get fresh authenticated download URL before fetching audio for Deepgram
+
+## AI Compliance Rules Fixes (Apr 24 2026)
+- [x] Retention calls EXEMPT: live_sub, pre_cycle_cancelled, pre_cycle_decline, end_of_instalment, from_cat, other → complianceScore=null, tcRead=null, subscriptionMisrepresented=false, complianceIssues=[]
+- [x] Deal type detection: Subscription vs Instalment (£75 + £37.73 x 11) — Instalment → Cancellation Clarity = N/A
+- [x] Fix tcRead: replace 'DHL tracked delivery with one-hour slot' with '48 Hour Premium Delivery with signature'; T&Cs must be READ OUT not just communicated
+- [x] Fix 'other' call type: route to Retention (exempt), not Opening Team
+- [x] Audio chunking: files over 24MB split into chunks, each transcribed separately, merged before analysis
+- [x] Fix £44.95 → £44.90 everywhere in code and prompts
+- [x] Update SKILL.md with all corrected rules

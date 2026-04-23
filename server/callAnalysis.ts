@@ -71,6 +71,73 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
   const contentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
 
+  // ─── AUDIO CHUNKING: files over 24MB are split into 24MB chunks ─────────────
+  // Deepgram's API has a 25MB limit per request. We split large files into
+  // 24MB chunks, transcribe each separately, then merge the transcripts.
+  const CHUNK_SIZE = 24 * 1024 * 1024; // 24MB
+  let mergedTranscript = "";
+  let mergedRepSpeechPct = 50;
+  let mergedDuration = 0;
+  const mergedWordTimestamps: WordTimestamp[] = [];
+
+  if (audioBuffer.length > CHUNK_SIZE) {
+    console.log(`[Transcription] File is ${(audioBuffer.length / 1024 / 1024).toFixed(1)}MB — splitting into chunks`);
+    const chunks: Buffer[] = [];
+    for (let offset = 0; offset < audioBuffer.length; offset += CHUNK_SIZE) {
+      chunks.push(audioBuffer.slice(offset, offset + CHUNK_SIZE));
+    }
+    let totalAgentTime = 0;
+    let totalSpeechTime = 0;
+    let timeOffset = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`[Transcription] Processing chunk ${i + 1}/${chunks.length}`);
+      const chunkOptions: any = { model: "nova-2", smart_format: true, punctuate: true, utterances: true, language: "en", mimetype: contentType, diarize: true };
+      const chunkTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Deepgram chunk ${i + 1} timed out after 15 minutes`)), 900_000)
+      );
+      const chunkResponse = await Promise.race([
+        deepgram.listen.v1.media.transcribeFile(chunks[i], chunkOptions),
+        chunkTimeout,
+      ]) as any;
+      const chunkDuration = chunkResponse?.metadata?.duration ?? 0;
+      const utterances: any[] = chunkResponse?.results?.utterances ?? [];
+      // Detect rep speaker (most speech) in this chunk
+      const speakerTimes: Record<number, number> = {};
+      for (const utt of utterances) {
+        const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
+        const spk = utt.speaker ?? 0;
+        speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
+      }
+      let repSpeaker = 0;
+      if (Object.keys(speakerTimes).length > 0) {
+        repSpeaker = Number(Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a)[0]);
+      }
+      for (const utt of utterances) {
+        const label: "Agent" | "Customer" = utt.speaker === repSpeaker ? "Agent" : "Customer";
+        const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
+        totalSpeechTime += uttDuration;
+        if (label === "Agent") totalAgentTime += uttDuration;
+        if ((utt.transcript ?? "").trim()) {
+          mergedTranscript += (mergedTranscript ? "\n" : "") + `${label}: ${utt.transcript.trim()}`;
+        }
+        // Adjust word timestamps by chunk time offset
+        for (const w of (utt.words ?? [])) {
+          mergedWordTimestamps.push({
+            word: w.punctuated_word ?? w.word ?? "",
+            start: (w.start ?? 0) + timeOffset,
+            end: (w.end ?? 0) + timeOffset,
+            speaker: label,
+          });
+        }
+      }
+      timeOffset += chunkDuration;
+      mergedDuration += chunkDuration;
+    }
+    mergedRepSpeechPct = totalSpeechTime > 0 ? Math.round((totalAgentTime / totalSpeechTime) * 100) : 50;
+    return { transcript: mergedTranscript, repSpeechPct: mergedRepSpeechPct, durationSeconds: mergedDuration, wordTimestamps: mergedWordTimestamps };
+  }
+
+  // ─── SINGLE FILE PATH (under 24MB) ───────────────────────────────────────────
   // Auto-detect stereo: if 2 channels, use multichannel (channel 0 = Agent, channel 1 = Customer)
   const channelCount = detectChannelCount(audioBuffer);
   const useMultichannel = channelCount >= 2;
@@ -356,6 +423,22 @@ Score LOW for: failing to resolve.
     };
   }
 
+  // "other" call type = Retention team (EXEMPT from compliance)
+  if (callType === "other") {
+    return {
+      context: `
+CALL TYPE: Other (Retention Team)
+This is a general retention call. Score on rapport, problem-solving, and customer satisfaction.
+Compliance checks do NOT apply to this call type.
+`,
+      stages: ["Opening & Rapport", "Understand Customer Situation", "Resolve / Assist", "Close / Confirm"],
+      extraFields: `
+  "saved": <bool — did the rep successfully help/retain the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": null,`,
+    };
+  }
   // Opening: cold_call, follow_up, or legacy "opening"
   return {
     context: callType === "follow_up"
@@ -384,10 +467,48 @@ export async function analyseCallWithAI(
   durationMinutes: number,
   callType: string = "cold_call"
 ): Promise<CallAnalysisReport> {
+  // ─── RETENTION EXEMPTION ─────────────────────────────────────────────────────
+  // Retention call types are EXEMPT from all compliance checks.
+  const RETENTION_CALL_TYPES = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "retention_cancel_trial", "retention_win_back"]);
+  const isRetentionCall = RETENTION_CALL_TYPES.has(callType);
+
   const { context: callTypeContext, stages, extraFields } = getCallTypeContext(callType);
   const stagesJson = stages.map(s =>
     `    { "stage": "${s}", "detected": <bool>, "quality": "strong|weak|missing", "note": "<brief note>" }`
   ).join(",\n");
+
+  // Compliance fields — only for Opening Team (cold_call, follow_up, opening)
+  const complianceFields = isRetentionCall
+    ? `
+  "subscriptionDisclosed": true,
+  "subscriptionMisrepresented": false,
+  "tcRead": null,
+  "complianceScore": null,
+  "complianceIssues": [],`
+    : `
+  "subscriptionDisclosed": <bool — SUBSCRIPTION MENTION RULE: The agent does NOT need to use the word 'subscription' at all. Set this to FALSE only if the customer directly asked 'Is this a subscription?' or similar, AND the agent said No, denied it, or clearly dodged the question. If the customer never asked, set this to TRUE (no violation). If the customer asked and the agent confirmed it honestly in any way — including phrases like 'we'll top you up every 60 days', 'we'll send you a new Matinika every 60 days', 'we'll send it out every other month', 'we'll send it out every 2 months', or any similar explanation of the recurring delivery — set this to TRUE.>,
+  "subscriptionMisrepresented": <bool — CRITICAL: Set TRUE only if the customer directly asked about the subscription AND the agent said No, denied it, or clearly evaded the question. Do NOT set TRUE just because the agent didn't use the word 'subscription' — explaining the recurring arrangement in plain language counts as a full and honest answer. If the customer never asked, this must be FALSE.>,
+  "tcRead": <bool — FULL OFFER DETAILS CHECK: Set TRUE ONLY if the agent VERBALLY READ OUT ALL of the following during the call — they must be explicitly stated, not just referenced or implied: (1) the £4.95 postage charge, (2) the 21-day free trial period, (3) the £44.90 recurring charge every 60 days after the trial, (4) 48 Hour Premium Delivery with signature, (5) that the customer can stop, pause, cancel or amend at any time. Set FALSE if ANY of these were not explicitly read out. NOTE: For Instalment deals (e.g. £75 upfront + £37.73 x 11), Cancellation Clarity is N/A — do not penalise for missing cancellation mention.>,
+  "complianceScore": <number 0-100. CRITICAL RULE: if subscriptionMisrepresented=true, this MUST be between 0-20 regardless of how good the rest of the call was. If tcRead=false (full offer details not read out), deduct 20-30 points. Perfect compliance = 90-100.>,
+  "complianceIssues": [<list of specific compliance violations as strings. Examples: "Rep denied subscription when directly asked", "£4.95 postage not mentioned", "21-day trial period not mentioned", "£44.90 recurring price not mentioned", "Cancellation/pause rights not mentioned", "48 Hour Premium Delivery with signature not mentioned">],`;
+
+  // Deal type detection block — only for Opening Team calls
+  const dealTypeBlock = isRetentionCall ? `` : `
+DEAL TYPE DETECTION:
+Detect whether this call resulted in a Subscription deal or an Instalment deal:
+- Subscription: recurring £4.95 trial → £44.90 every 60 days (all cancellation rules apply)
+- Instalment: fixed payments (e.g. £75 upfront + £37.73 x 11 monthly instalments) → Cancellation Clarity = N/A for instalment deals
+If you detect an instalment deal, do NOT penalise the rep for not mentioning cancellation rights.
+`;
+
+  const complianceRules = isRetentionCall
+    ? `NOTE: This is a Retention call. Compliance checks do NOT apply. complianceScore=null, tcRead=null, subscriptionMisrepresented=false, complianceIssues=[].`
+    : `COMPLIANCE SCORING RULES (apply strictly):
+1. SUBSCRIPTION RULE: Only flag subscriptionMisrepresented=true if the customer directly asked 'Is this a subscription?' or similar AND the rep said No, denied it, or clearly dodged. Do NOT penalise the rep for not using the word 'subscription' — explaining the recurring arrangement in plain language is equally valid.
+2. FULL OFFER DETAILS (tcRead): The rep must VERBALLY READ OUT ALL of: £4.95 postage, 21-day free trial, £44.90 every 60 days, 48 Hour Premium Delivery with signature, and the right to cancel/pause/stop/amend at any time. Missing any of these = tcRead=false → deduct 20-30 from complianceScore. For Instalment deals, Cancellation Clarity is N/A.
+3. CANCELLATION CLARITY: The rep must give some clear indication that the customer can cancel, stop, pause, or amend at any time. Flag only if the rep gives NO indication at all. N/A for Instalment deals.
+4. Perfect compliance (subscriptionMisrepresented=false, tcRead=true) = complianceScore 90-100.
+5. If subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else.`;
 
   const prompt = `${LAVIE_SCRIPT_CONTEXT}
 ${callTypeContext}
@@ -417,18 +538,9 @@ ${stagesJson}
   "closingAttempted": <bool>,
   "magicWandUsed": <bool>,
   "customerName": "<first name of the customer if mentioned in the call, otherwise null>",
-  "subscriptionDisclosed": <bool — SUBSCRIPTION MENTION RULE: The agent does NOT need to use the word 'subscription' at all. Set this to FALSE only if the customer directly asked 'Is this a subscription?' or similar, AND the agent said No, denied it, or clearly dodged the question. If the customer never asked, set this to TRUE (no violation). If the customer asked and the agent confirmed it honestly in any way — including phrases like 'we'll top you up every 60 days', 'we'll send you a new Matinika every 60 days', 'we'll send it out every other month', 'we'll send it out every 2 months', or any similar explanation of the recurring delivery — set this to TRUE.>,
-  "subscriptionMisrepresented": <bool — CRITICAL: Set TRUE only if the customer directly asked about the subscription AND the agent said No, denied it, or clearly evaded the question. Do NOT set TRUE just because the agent didn't use the word 'subscription' — explaining the recurring arrangement in plain language (e.g. 'we top you up every 60 days', 'we send a new one every 2 months') counts as a full and honest answer. If the customer never asked, this must be FALSE.>,
-  "tcRead": <bool — FULL OFFER DETAILS CHECK: Set TRUE if the agent clearly communicated ALL of the following: (1) the £4.95 postage charge, (2) two products included, (3) DHL tracked delivery with a one-hour delivery slot, (4) the 21-day free trial period, (5) the £44.95 price every 60 days after the trial, AND (6) that the customer can stop, pause, cancel or amend at any time. The agent does NOT need to say the words 'terms and conditions' — what matters is that all these details were communicated. Set FALSE if any of these key details were missing.>,
-  "complianceScore": <number 0-100. CRITICAL RULE: if subscriptionMisrepresented=true, this MUST be between 0-20 regardless of how good the rest of the call was. If tcRead=false (full offer details not communicated), deduct 20-30 points. Perfect compliance = 90-100.>,
-  "complianceIssues": [<list of specific compliance violations as strings. Examples: "Rep denied subscription when directly asked", "£4.95 postage not mentioned", "21-day trial period not mentioned", "£44.95 recurring price not mentioned", "Cancellation/pause rights not mentioned", "DHL tracked delivery details not mentioned">],${extraFields}
+${complianceFields}${extraFields}
 }
-COMPLIANCE SCORING RULES (apply strictly):
-1. SUBSCRIPTION RULE: Only flag subscriptionMisrepresented=true if the customer directly asked 'Is this a subscription?' or similar AND the rep said No, denied it, or clearly dodged. Do NOT penalise the rep for not using the word 'subscription' — explaining the recurring arrangement in plain language is equally valid and acceptable. Examples of acceptable answers when asked: 'we'll top you up every 60 days', 'we'll send you a new Matinika every 60 days', 'we'll send it out every other month / every 2 months', or any similar honest description of the recurring delivery.
-2. FULL OFFER DETAILS (tcRead): The rep must clearly communicate ALL of: £4.95 postage, two products, DHL tracked delivery with one-hour slot, 21-day free trial, £44.95 every 60 days, and the right to cancel/pause/stop/amend at any time. Missing any of these = tcRead=false → deduct 20-30 from complianceScore.
-3. CANCELLATION CLARITY: The rep must give some clear indication that the customer can cancel, stop, pause, or amend at any time. The exact words don't matter — flag only if the rep gives NO indication at all that the customer can exit the arrangement.
-4. Perfect compliance (subscriptionMisrepresented=false, tcRead=true) = complianceScore 90-100.
-5. If subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else.
+${dealTypeBlock}${complianceRules}
 
 IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
 Be specific, actionable, and encouraging. Focus on the call type objectives above.`;
