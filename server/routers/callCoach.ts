@@ -103,7 +103,7 @@ export const callCoachRouter = router({
         contactId: input.contactId ?? null,
       });
 
-      processCallAnalysis(analysisId, input.audioFileUrl).catch(err =>
+      processCallAnalysis(analysisId, input.audioFileUrl, input.audioFileKey).catch(err =>
         console.error("[callCoach] processCallAnalysis error:", err)
       );
 

@@ -370,3 +370,6 @@
 - [ ] Add AbortController with 15-min timeout to server/_core/voiceTranscription.ts + chunking for files >24MB
 - [ ] Add AbortController with 15-min timeout to server/_core/llm.ts
 - [ ] Set Express server timeout to 35 minutes and body-parser limit to 250MB in server/_core/index.ts
+
+## Audio Transcription Fix
+- [x] Fix "Failed to fetch audio for transcription: 400 Bad Request" — use storageGet to get fresh authenticated download URL before fetching audio for Deepgram
