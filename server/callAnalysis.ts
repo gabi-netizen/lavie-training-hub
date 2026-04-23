@@ -1134,24 +1134,38 @@ export interface AgentSummary {
   }>;
 }
 
-export async function getAgentDashboard(): Promise<AgentSummary[]> {
+export async function getAgentDashboard(
+  timeRange: "today" | "week" | "month" | "all" = "month"
+): Promise<AgentSummary[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const all = await db.select().from(callAnalyses).orderBy(callAnalyses.createdAt);
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Compute the window start for the selected range
+  let rangeStart: Date | null = null;
+  if (timeRange === "today") rangeStart = todayStart;
+  else if (timeRange === "week") rangeStart = weekStart;
+  else if (timeRange === "month") rangeStart = monthStart;
+
+  const allRaw = await db.select().from(callAnalyses).orderBy(callAnalyses.createdAt);
   const allUsers = await db.select().from(users);
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
+
+  // Filter to selected time range (but keep all calls for trend/score history)
+  const all = rangeStart
+    ? allRaw.filter((c) => new Date(c.createdAt) >= rangeStart!)
+    : allRaw;
 
   const byUser = new Map<number, typeof all>();
   for (const row of all) {
     if (!byUser.has(row.userId)) byUser.set(row.userId, []);
     byUser.get(row.userId)!.push(row);
   }
-
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - 7);
 
   const summaries: AgentSummary[] = [];
 
@@ -1177,8 +1191,8 @@ export async function getAgentDashboard(): Promise<AgentSummary[]> {
     const trendIndicator: "improving" | "stable" | "declining" =
       trendDelta >= 5 ? "improving" : trendDelta <= -5 ? "declining" : "stable";
 
-    const callsToday = calls.filter((c) => new Date(c.createdAt) >= todayStart).length;
-    const callsThisWeek = calls.filter((c) => new Date(c.createdAt) >= weekStart).length;
+    const callsToday = allRaw.filter((c) => c.userId === userId && new Date(c.createdAt) >= todayStart).length;
+    const callsThisWeek = allRaw.filter((c) => c.userId === userId && new Date(c.createdAt) >= weekStart).length;
 
     const lastCall = calls[calls.length - 1] ?? null;
 
@@ -1749,25 +1763,38 @@ export interface MyCoachingDashboard {
   }>;
 }
 
-export async function getMyCoachingDashboard(userId: number): Promise<MyCoachingDashboard> {
+export async function getMyCoachingDashboard(
+  userId: number,
+  timeRange: "today" | "week" | "month" | "all" = "month"
+): Promise<MyCoachingDashboard> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   const all = await db.select().from(callAnalyses)
     .where(eq(callAnalyses.userId, userId))
     .orderBy(callAnalyses.createdAt);
-
   const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(weekStart.getDate() - 7);
-  const twoWeeksStart = new Date(now);
-  twoWeeksStart.setDate(twoWeeksStart.getDate() - 14);
-
+  // Compute window start based on timeRange
+  let windowStart: Date;
+  if (timeRange === "today") {
+    windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (timeRange === "week") {
+    windowStart = new Date(now);
+    windowStart.setDate(windowStart.getDate() - 7);
+  } else if (timeRange === "month") {
+    windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    windowStart = new Date(0); // all time
+  }
+  // Previous window of same length for comparison
+  const windowMs = now.getTime() - windowStart.getTime();
+  const prevWindowStart = new Date(windowStart.getTime() - windowMs);
+  const weekStart = windowStart; // alias for compatibility
+  const twoWeeksStart = prevWindowStart;
   const thisWeekCalls = all.filter(c => new Date(c.createdAt) >= weekStart);
   const lastWeekCalls = all.filter(c => {
     const d = new Date(c.createdAt);
     return d >= twoWeeksStart && d < weekStart;
-  });
+  });;
 
   const doneCalls = (calls: typeof all) => calls.filter(c => c.status === "done");
   const thisWeekDone = doneCalls(thisWeekCalls);

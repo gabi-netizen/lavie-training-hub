@@ -344,7 +344,8 @@ export default function ManagerCoachingDashboard({
 }: {
   onSelectCall: (id: number) => void;
 }) {
-  const { data: agents, isLoading } = trpc.callCoach.getAgentDashboard.useQuery(undefined, {
+  const [timeRange, setTimeRange] = useState<"today" | "week" | "month" | "all">("month");
+  const { data: agents, isLoading } = trpc.callCoach.getAgentDashboard.useQuery({ timeRange }, {
     refetchInterval: 10_000,
   });
   const { data: allAnalyses } = trpc.callCoach.getAllAnalyses.useQuery(undefined, {
@@ -408,8 +409,32 @@ export default function ManagerCoachingDashboard({
   const redCount = rows.filter(r => r.urgency === "red").length;
   const orangeCount = rows.filter(r => r.urgency === "orange").length;
 
+  const TIME_LABELS: Record<typeof timeRange, string> = {
+    today: "Today",
+    week: "This Week",
+    month: "This Month",
+    all: "All Time",
+  };
+
   return (
     <div className="space-y-5 pb-8">
+      {/* ── Time range filter ── */}
+      <div className="flex gap-2 flex-wrap">
+        {(["today", "week", "month", "all"] as const).map(r => (
+          <button
+            key={r}
+            onClick={() => setTimeRange(r)}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+              timeRange === r
+                ? "bg-black text-white border-black"
+                : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+            }`}
+          >
+            {TIME_LABELS[r]}
+          </button>
+        ))}
+      </div>
+
       {/* ── Summary strip ── */}
       <div className="grid grid-cols-4 gap-3">
         {[

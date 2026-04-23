@@ -22,10 +22,12 @@ import {
 } from "../callAnalysis";
 
 export const callCoachRouter = router({
-  /** Agent personal coaching dashboard — last 7 days stats, strengths, improvements, compliance */
-  getMyCoachingDashboard: protectedProcedure.query(async ({ ctx }) => {
-    return getMyCoachingDashboard(ctx.user.id);
-  }),
+  /** Agent personal coaching dashboard — stats, strengths, improvements, compliance for selected time range */
+  getMyCoachingDashboard: protectedProcedure
+    .input(z.object({ timeRange: z.enum(["today", "week", "month", "all"]).default("month") }).optional())
+    .query(async ({ ctx, input }) => {
+      return getMyCoachingDashboard(ctx.user.id, input?.timeRange ?? "month");
+    }),
 
   getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
     // Admins see all agents' calls; regular agents see only their own
@@ -51,10 +53,12 @@ export const callCoachRouter = router({
   }),
 
   /** Admin agent dashboard — per-agent summary cards with recent calls */
-  getAgentDashboard: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin") throw new Error("Forbidden");
-    return getAgentDashboard();
-  }),
+  getAgentDashboard: protectedProcedure
+    .input(z.object({ timeRange: z.enum(["today", "week", "month", "all"]).default("month") }).optional())
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new Error("Forbidden");
+      return getAgentDashboard(input?.timeRange ?? "month");
+    }),
 
   /** Public leaderboard — visible to all logged-in users */
   getLeaderboard: protectedProcedure.query(async () => {

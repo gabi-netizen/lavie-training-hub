@@ -395,3 +395,13 @@
 ## Manager Coaching Dashboard (Apr 24 2026)
 - [x] Build ManagerCoachingDashboard component — coaching queue sorted by urgency (red/orange/green), one row per agent, top issue visible without expanding, expand to see all issues + recent calls with Play Call links
 - [x] Replace AdminAgentDashboard in MyCalls with ManagerCoachingDashboard for admin users
+
+## Debbie Hobbs & My Performance Card (Apr 24 2026)
+- [ ] Create Debbie Hobbs user account in the database (agent role)
+- [ ] Add "My Performance" coaching card to Workspace page — compact card shown above Workspace content with agent's weekly stats and top coaching insight, collapses/dismisses when agent starts working
+
+## Time Range Filter for Coaching Dashboards (Apr 24 2026)
+- [x] Add timeRange param to getAgentDashboard backend — support today/week/month/all, default month
+- [x] Add time filter UI buttons (Today / This Week / This Month / All Time) to ManagerCoachingDashboard
+- [x] Add time filter UI buttons to AgentCoachingDashboard
+- [x] Fix Ashley Walker visibility — she has calls from last month, should appear with "This Month" default

@@ -195,7 +195,8 @@ export default function AgentCoachingDashboard({
 }: {
   onSelectCall: (id: number) => void;
 }) {
-  const { data, isLoading } = trpc.callCoach.getMyCoachingDashboard.useQuery(undefined, {
+  const [timeRange, setTimeRange] = useState<"today" | "week" | "month" | "all">("month");
+  const { data, isLoading } = trpc.callCoach.getMyCoachingDashboard.useQuery({ timeRange }, {
     refetchInterval: 30_000,
   });
 
@@ -239,8 +240,32 @@ export default function AgentCoachingDashboard({
 
   const noData = data.totalCallsThisWeek === 0;
 
+  const TIME_LABELS: Record<typeof timeRange, string> = {
+    today: "Today",
+    week: "This Week",
+    month: "This Month",
+    all: "All Time",
+  };
+
   return (
     <div className="space-y-5 pb-8">
+      {/* ── Time range filter ── */}
+      <div className="flex gap-2 flex-wrap">
+        {(["today", "week", "month", "all"] as const).map(r => (
+          <button
+            key={r}
+            onClick={() => setTimeRange(r)}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+              timeRange === r
+                ? "bg-black text-white border-black"
+                : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+            }`}
+          >
+            {TIME_LABELS[r]}
+          </button>
+        ))}
+      </div>
+
       {/* ── 3 Stats ── */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
