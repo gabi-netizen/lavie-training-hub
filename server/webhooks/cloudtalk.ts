@@ -29,8 +29,8 @@ import {
 } from "../callAnalysis";
 
 // ─── Normalize phone for matching ─────────────────────────────────────────────
-function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-().+]/g, "");
+function normalizePhone(phone: string | number): string {
+  return String(phone).replace(/[\s\-().+]/g, "");
 }
 
 // ─── Find user by CloudTalk agent ID ─────────────────────────────────────────
@@ -47,7 +47,7 @@ async function findUserByCloudtalkAgentId(agentId: string | number) {
 }
 
 // ─── Find contact by phone number ─────────────────────────────────────────────
-async function findContactByPhone(phone: string) {
+async function findContactByPhone(phone: string | number) {
   const db = await getDb();
   if (!db) return null;
   const normalized = normalizePhone(phone);
@@ -236,7 +236,7 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
     }
 
     // Find matching contact by phone
-    const contact = callerPhone ? await findContactByPhone(callerPhone) : null;
+    const contact = callerPhone ? await findContactByPhone(String(callerPhone)) : null;
 
     // Download recording and upload to S3
     console.log(`[CloudTalk Webhook] Downloading recording from ${recordingUrl}`);
