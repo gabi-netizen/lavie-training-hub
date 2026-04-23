@@ -239,58 +239,98 @@ export async function transcribeAudio(audioUrl: string): Promise<{
       wordTimestamps,
     };
   } else {
-    // Mono diarization path
+    // ─── MONO DIARIZATION PATH ────────────────────────────────────────────────
+    // We use WORD-LEVEL speaker tags (not utterances) so that every single-word
+    // customer response ("No", "Neither", "Yes") gets its own line.
+    // Utterance-level grouping merges short responses into the previous speaker.
+    const allWords: any[] = result?.results?.channels?.[0]?.alternatives?.[0]?.words ?? [];
+
+    // Fallback: if no word-level data, use utterances
     const utterances: any[] = result?.results?.utterances ?? [];
-    const speakerTimes: Record<number, number> = {};
-    let totalSpeechTime = 0;
-    for (const utt of utterances) {
-      const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
-      totalSpeechTime += uttDuration;
-      const spk = utt.speaker ?? 0;
-      speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
-    }
-    let repSpeaker = 0;
-    let repSpeechTime = 0;
-    if (Object.keys(speakerTimes).length > 0) {
-      const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
-      repSpeaker = Number(maxEntry[0]);
-      repSpeechTime = maxEntry[1];
-    }
-    if (utterances.length > 0) {
-      transcript = utterances
-        .map((utt) => {
-          const label = utt.speaker === repSpeaker ? "Agent" : "Customer";
-          return `${label}: ${(utt.transcript ?? "").trim()}`;
-        })
-        .join("\n");
-    } else {
-      transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
-    }
-    repSpeechPct = totalSpeechTime > 0
-      ? Math.round((repSpeechTime / totalSpeechTime) * 100)
-      : 50;
 
-    // Build word timestamps from utterances (mono/diarized path)
-    const monoWordTimestamps: WordTimestamp[] = [];
-    for (const utt of utterances) {
-      const label: "Agent" | "Customer" = utt.speaker === repSpeaker ? "Agent" : "Customer";
-      const words: any[] = utt.words ?? [];
-      for (const w of words) {
-        monoWordTimestamps.push({
-          word: w.punctuated_word ?? w.word ?? "",
-          start: w.start ?? 0,
-          end: w.end ?? 0,
-          speaker: label,
-        });
+    if (allWords.length > 0) {
+      // Step 1: determine rep speaker = speaker with most total word duration
+      const speakerTimes: Record<number, number> = {};
+      for (const w of allWords) {
+        const spk = w.speaker ?? 0;
+        const dur = (w.end ?? 0) - (w.start ?? 0);
+        speakerTimes[spk] = (speakerTimes[spk] ?? 0) + dur;
       }
-    }
+      let repSpeaker = 0;
+      let repSpeechTime = 0;
+      let totalSpeechTime = 0;
+      if (Object.keys(speakerTimes).length > 0) {
+        const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
+        repSpeaker = Number(maxEntry[0]);
+        repSpeechTime = maxEntry[1];
+        totalSpeechTime = Object.values(speakerTimes).reduce((a, b) => a + b, 0);
+      }
+      repSpeechPct = totalSpeechTime > 0 ? Math.round((repSpeechTime / totalSpeechTime) * 100) : 50;
 
-    return {
-      transcript,
-      repSpeechPct,
-      durationSeconds: duration,
-      wordTimestamps: monoWordTimestamps,
-    };
+      // Step 2: group consecutive words by speaker into segments
+      // Each speaker change = new line. This guarantees single-word responses
+      // like "No." or "Neither." always appear as their own Customer line.
+      type Segment = { label: "Agent" | "Customer"; words: string[]; start: number; end: number };
+      const segments: Segment[] = [];
+      for (const w of allWords) {
+        const label: "Agent" | "Customer" = w.speaker === repSpeaker ? "Agent" : "Customer";
+        const wordText = (w.punctuated_word ?? w.word ?? "").trim();
+        if (!wordText) continue;
+        if (segments.length === 0 || segments[segments.length - 1].label !== label) {
+          segments.push({ label, words: [wordText], start: w.start ?? 0, end: w.end ?? 0 });
+        } else {
+          segments[segments.length - 1].words.push(wordText);
+          segments[segments.length - 1].end = w.end ?? 0;
+        }
+      }
+      transcript = segments.map(s => `${s.label}: ${s.words.join(" ")}`).join("\n");
+      if (!transcript.trim()) {
+        transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+      }
+
+      // Step 3: build word timestamps
+      const monoWordTimestamps: WordTimestamp[] = allWords.map((w: any) => ({
+        word: w.punctuated_word ?? w.word ?? "",
+        start: w.start ?? 0,
+        end: w.end ?? 0,
+        speaker: w.speaker === repSpeaker ? "Agent" as const : "Customer" as const,
+      }));
+
+      return { transcript, repSpeechPct, durationSeconds: duration, wordTimestamps: monoWordTimestamps };
+
+    } else {
+      // Utterance fallback (no word-level data available)
+      const speakerTimes: Record<number, number> = {};
+      let totalSpeechTime = 0;
+      for (const utt of utterances) {
+        const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
+        totalSpeechTime += uttDuration;
+        const spk = utt.speaker ?? 0;
+        speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
+      }
+      let repSpeaker = 0;
+      let repSpeechTime = 0;
+      if (Object.keys(speakerTimes).length > 0) {
+        const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
+        repSpeaker = Number(maxEntry[0]);
+        repSpeechTime = maxEntry[1];
+      }
+      transcript = utterances.length > 0
+        ? utterances.map((utt) => {
+            const label = utt.speaker === repSpeaker ? "Agent" : "Customer";
+            return `${label}: ${(utt.transcript ?? "").trim()}`;
+          }).join("\n")
+        : result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+      repSpeechPct = totalSpeechTime > 0 ? Math.round((repSpeechTime / totalSpeechTime) * 100) : 50;
+      const monoWordTimestamps: WordTimestamp[] = [];
+      for (const utt of utterances) {
+        const label: "Agent" | "Customer" = utt.speaker === repSpeaker ? "Agent" : "Customer";
+        for (const w of (utt.words ?? [])) {
+          monoWordTimestamps.push({ word: w.punctuated_word ?? w.word ?? "", start: w.start ?? 0, end: w.end ?? 0, speaker: label });
+        }
+      }
+      return { transcript, repSpeechPct, durationSeconds: duration, wordTimestamps: monoWordTimestamps };
+    }
   }
 }
 

@@ -382,3 +382,6 @@
 - [x] Audio chunking: files over 24MB split into chunks, each transcribed separately, merged before analysis
 - [x] Fix £44.95 → £44.90 everywhere in code and prompts
 - [x] Update SKILL.md with all corrected rules
+
+## Speaker Diarization Fix (Apr 24 2026)
+- [x] Fix mono diarization: rebuild transcript from word-level speaker tags instead of utterances so single-word customer responses appear on their own line
