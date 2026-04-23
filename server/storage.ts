@@ -34,9 +34,15 @@ async function s3Put(
   const key = relKey.replace(/^\/+/, "");
   const body = typeof data === "string" ? Buffer.from(data) : Buffer.from(data as Uint8Array);
   await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
-  // Build public URL: R2 uses endpoint-based URL, AWS uses standard S3 URL
+  // Build public URL:
+  // 1. If R2 public dev URL is configured, use it (no auth needed)
+  // 2. If custom R2 endpoint, build path-style URL
+  // 3. Fall back to standard AWS S3 URL
+  const r2PublicUrl = ENV.r2PublicUrl;
   const endpoint = ENV.awsEndpointUrl;
-  const url = endpoint
+  const url = r2PublicUrl
+    ? `${r2PublicUrl.replace(/\/+$/, "")}/${key}`
+    : endpoint
     ? `${endpoint.replace(/\/+$/, "")}/${bucket}/${key}`
     : `https://${bucket}.s3.${ENV.awsRegion || "us-east-1"}.amazonaws.com/${key}`;
   return { key, url };

@@ -3,6 +3,8 @@ import OpenAI from "openai";
 import { getDb } from "./db";
 import { callAnalyses, aiFeedback, users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
+import { storageGet } from "./storage";
+import { ENV } from "./_core/env";
 
 const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY ?? "" });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -609,8 +611,29 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
   try {
     // Step 1: Transcribe
     await updateCallAnalysisStatus(analysisId, { status: "transcribing" });
-    // CloudFront URLs returned by manusPut are publicly accessible — use audioUrl directly.
-    const { transcript, repSpeechPct, durationSeconds, wordTimestamps } = await transcribeAudio(audioUrl);
+    // Determine the URL to fetch audio from:
+    // 1. If R2_PUBLIC_URL is set (Railway with public R2 bucket): build public URL from key — no auth needed
+    // 2. If on Manus (BUILT_IN_FORGE_API_URL set): use storageGet to get a signed CloudFront URL
+    // 3. Fallback: use the stored audioUrl directly
+    let fetchUrl = audioUrl;
+    if (audioFileKey && ENV.r2PublicUrl) {
+      // Railway path: R2 bucket is public — build URL directly, no presigning needed
+      const cleanKey = audioFileKey.replace(/^\/+/, "");
+      fetchUrl = `${ENV.r2PublicUrl.replace(/\/+$/, "")}/${cleanKey}`;
+      console.log(`[CallAnalysis] Using public R2 URL: ${fetchUrl}`);
+    } else if (audioFileKey && ENV.forgeApiUrl) {
+      // Manus path: use storageGet to get signed CloudFront URL
+      try {
+        const { url } = await storageGet(audioFileKey);
+        fetchUrl = url;
+        console.log(`[CallAnalysis] Using Manus signed URL for key: ${audioFileKey}`);
+      } catch (err) {
+        console.warn(`[CallAnalysis] storageGet failed, using stored URL as fallback:`, err);
+      }
+    } else {
+      console.log(`[CallAnalysis] Using stored audioUrl directly: ${fetchUrl}`);
+    }
+    const { transcript, repSpeechPct, durationSeconds, wordTimestamps } = await transcribeAudio(fetchUrl);
     await updateCallAnalysisStatus(analysisId, {
       transcript,
       repSpeechPct,

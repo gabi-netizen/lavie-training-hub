@@ -29,4 +29,6 @@ export const ENV = {
   awsS3Bucket: process.env.AWS_S3_BUCKET ?? "",
   // Cloudflare R2 custom endpoint (e.g. https://xxxx.r2.cloudflarestorage.com)
   awsEndpointUrl: process.env.AWS_ENDPOINT_URL ?? "",
+  // Cloudflare R2 public dev URL (e.g. https://pub-xxx.r2.dev) — makes files publicly accessible without presigning
+  r2PublicUrl: process.env.R2_PUBLIC_URL ?? "",
 };
