@@ -1576,8 +1576,34 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
     },
   });
 
-  // Admins get the coaching queue dashboard
-  if (isAdmin) return <ManagerCoachingDashboard onSelectCall={onSelect} />;
+  const [viewMode, setViewMode] = useState<"manager" | "agent">("manager");
+
+  // Admins get the coaching queue dashboard with toggle to preview agent view
+  if (isAdmin) return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <button
+          onClick={() => setViewMode("manager")}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+            viewMode === "manager" ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+          }`}
+        >
+          Manager View
+        </button>
+        <button
+          onClick={() => setViewMode("agent")}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+            viewMode === "agent" ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+          }`}
+        >
+          Agent View
+        </button>
+      </div>
+      {viewMode === "manager"
+        ? <ManagerCoachingDashboard onSelectCall={onSelect} />
+        : <AgentCoachingDashboard onSelectCall={onSelect} />}
+    </div>
+  );
 
   // Agents see their personal coaching dashboard
   return <AgentCoachingDashboard onSelectCall={onSelect} />;
