@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import { getDb } from "./db";
 import { callAnalyses, aiFeedback, users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
-import { storageGet } from "./storage";
 
 const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY ?? "" });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -610,19 +609,8 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
   try {
     // Step 1: Transcribe
     await updateCallAnalysisStatus(analysisId, { status: "transcribing" });
-    // The URL returned by storagePut (Manus storage) requires auth headers to fetch.
-    // Use storageGet to get a fresh presigned/authenticated download URL instead.
-    let fetchUrl = audioUrl;
-    if (audioFileKey) {
-      try {
-        const { url } = await storageGet(audioFileKey);
-        fetchUrl = url;
-        console.log(`[CallAnalysis] Using fresh download URL for key: ${audioFileKey}`);
-      } catch (err) {
-        console.warn(`[CallAnalysis] storageGet failed, falling back to stored URL:`, err);
-      }
-    }
-    const { transcript, repSpeechPct, durationSeconds, wordTimestamps } = await transcribeAudio(fetchUrl);
+    // CloudFront URLs returned by manusPut are publicly accessible — use audioUrl directly.
+    const { transcript, repSpeechPct, durationSeconds, wordTimestamps } = await transcribeAudio(audioUrl);
     await updateCallAnalysisStatus(analysisId, {
       transcript,
       repSpeechPct,
