@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import AgentCoachingDashboard from "@/components/AgentCoachingDashboard";
+import ManagerCoachingDashboard from "@/components/ManagerCoachingDashboard";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
@@ -1575,8 +1576,8 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
     },
   });
 
-  // Admins get the full agent dashboard view
-  if (isAdmin) return <AdminAgentDashboard onSelect={onSelect} />;
+  // Admins get the coaching queue dashboard
+  if (isAdmin) return <ManagerCoachingDashboard onSelectCall={onSelect} />;
 
   // Agents see their personal coaching dashboard
   return <AgentCoachingDashboard onSelectCall={onSelect} />;

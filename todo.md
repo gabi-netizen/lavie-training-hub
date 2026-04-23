@@ -391,3 +391,7 @@
 - [x] Build AgentCoachingDashboard component — traffic light colors only (green/orange/red), positive feedback first then improvements, each card shows relevant calls to listen to
 - [x] Replace current agent "My Calls" tab content with new AgentCoachingDashboard for non-admin users
 - [x] Add compliance checklist section with progress bars (5 items)
+
+## Manager Coaching Dashboard (Apr 24 2026)
+- [x] Build ManagerCoachingDashboard component — coaching queue sorted by urgency (red/orange/green), one row per agent, top issue visible without expanding, expand to see all issues + recent calls with Play Call links
+- [x] Replace AdminAgentDashboard in MyCalls with ManagerCoachingDashboard for admin users
