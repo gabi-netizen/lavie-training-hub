@@ -368,6 +368,19 @@ export interface CallAnalysisReport {
   upsellAttempted?: boolean | null;
   upsellSucceeded?: boolean | null;
   cancelReason?: string | null;
+  // ─── 8-DIMENSION COACHING FIELDS ───
+  rapportScore?: number | null;           // 0-100: personal connection with customer
+  rapportQuote?: string | null;           // direct quote from the call
+  excitementScore?: number | null;        // 0-100: product pitch enthusiasm
+  excitementQuote?: string | null;        // direct quote showing pitch tone
+  silenceAfterClose?: boolean | null;     // true = rep stayed silent after close
+  silenceQuote?: string | null;           // what happened after close attempt
+  callControl?: number | null;            // 0-100: did rep lead the conversation
+  callControlQuote?: string | null;       // moment showing control or loss of it
+  authenticityScore?: number | null;      // 0-100: natural vs scripted
+  authenticityQuote?: string | null;      // most scripted or authentic moment
+  objectionHandlingScore?: number | null; // 0-100: how well objections were handled
+  objectionHandlingQuote?: string | null; // the objection and rep's response
 }
 
 // ─── CALL TYPE CONTEXT BUILDERS ───────────────────────────────────────────────
@@ -578,6 +591,18 @@ ${stagesJson}
   "closingAttempted": <bool>,
   "magicWandUsed": <bool>,
   "customerName": "<first name of the customer if mentioned in the call, otherwise null>",
+  "rapportScore": <number 0-100 — how well did the rep build personal connection? Did they ask personal questions, respond warmly, use the customer's name?>,
+  "rapportQuote": "<best or worst rapport moment — a direct quote from the call, or null>",
+  "excitementScore": <number 0-100 — how enthusiastically did the rep describe the product? Did they use vivid language like 'feel', 'imagine', 'wake up with'? Or was it dry and technical?>,
+  "excitementQuote": "<a direct quote showing the rep's product pitch tone, or null>",
+  "silenceAfterClose": <bool — did the rep stay silent after asking for the close, or did they fill the silence by talking?>,
+  "silenceQuote": "<quote showing what happened after the close attempt, or null>",
+  "callControl": <number 0-100 — did the rep lead the conversation, or did the customer take over? Did the rep redirect off-topic conversations back to the sale?>,
+  "callControlQuote": "<a moment where the rep lost or maintained control, or null>",
+  "authenticityScore": <number 0-100 — did the rep sound like a real person or a scripted robot? Penalise heavy repetition of filler words like 'absolutely', 'definitely', 'of course'.>,
+  "authenticityQuote": "<the most scripted-sounding or most authentic moment, or null>",
+  "objectionHandlingScore": <number 0-100 — if there was an objection, how well did the rep handle it? Did they use the script? Did they give up too quickly? If no objection occurred, return 100.>,
+  "objectionHandlingQuote": "<the objection and the rep's response, or null if no objection>",
 ${complianceFields}${extraFields}
 }
 ${dealTypeBlock}${complianceRules}
@@ -1788,6 +1813,20 @@ export async function getMyCoachingDashboard(userId: number): Promise<MyCoaching
   let subMisrepCount = 0, subMisrepTotal = 0;
   let closingAttemptedCount = 0;
   let magicWandCount = 0;
+  // 8-dimension accumulators
+  let rapportTotal = 0, rapportCount = 0;
+  let excitementTotal = 0, excitementCount = 0;
+  let silenceOkCount = 0, silenceTotal = 0;
+  let callControlTotal = 0, callControlCount = 0;
+  let authenticityTotal = 0, authenticityCount = 0;
+  let objectionTotal = 0, objectionCount = 0;
+  // Best quotes per dimension (from highest-scoring call)
+  let bestRapportQuote: { quote: string; callId: number } | null = null;
+  let bestExcitementQuote: { quote: string; callId: number } | null = null;
+  let worstSilenceQuote: { quote: string; callId: number } | null = null;
+  let worstCallControlQuote: { quote: string; callId: number } | null = null;
+  let worstAuthenticityQuote: { quote: string; callId: number } | null = null;
+  let worstObjectionQuote: { quote: string; callId: number } | null = null;
 
   for (const { id, report } of parsed) {
     for (const s of report.strengths ?? []) {
@@ -1818,6 +1857,13 @@ export async function getMyCoachingDashboard(userId: number): Promise<MyCoaching
     if (report.subscriptionMisrepresented != null) { subMisrepTotal++; if (!report.subscriptionMisrepresented) subMisrepCount++; }
     if (report.closingAttempted) closingAttemptedCount++;
     if (report.magicWandUsed) magicWandCount++;
+    // 8-dimension aggregation
+    if (report.rapportScore != null) { rapportTotal += report.rapportScore; rapportCount++; if (report.rapportQuote && !bestRapportQuote) bestRapportQuote = { quote: report.rapportQuote, callId: id }; }
+    if (report.excitementScore != null) { excitementTotal += report.excitementScore; excitementCount++; if (report.excitementQuote && !bestExcitementQuote) bestExcitementQuote = { quote: report.excitementQuote, callId: id }; }
+    if (report.silenceAfterClose != null) { silenceTotal++; if (report.silenceAfterClose) silenceOkCount++; else if (report.silenceQuote && !worstSilenceQuote) worstSilenceQuote = { quote: report.silenceQuote, callId: id }; }
+    if (report.callControl != null) { callControlTotal += report.callControl; callControlCount++; if (report.callControlQuote && report.callControl < 60 && !worstCallControlQuote) worstCallControlQuote = { quote: report.callControlQuote, callId: id }; }
+    if (report.authenticityScore != null) { authenticityTotal += report.authenticityScore; authenticityCount++; if (report.authenticityQuote && report.authenticityScore < 70 && !worstAuthenticityQuote) worstAuthenticityQuote = { quote: report.authenticityQuote, callId: id }; }
+    if (report.objectionHandlingScore != null) { objectionTotal += report.objectionHandlingScore; objectionCount++; if (report.objectionHandlingQuote && report.objectionHandlingScore < 70 && !worstObjectionQuote) worstObjectionQuote = { quote: report.objectionHandlingQuote, callId: id }; }
   }
 
   const positives: CoachingFeedbackItem[] = Object.entries(strengthCounts)
@@ -1853,6 +1899,50 @@ export async function getMyCoachingDashboard(userId: number): Promise<MyCoaching
   if (totalParsed > 0 && closingAttemptedCount / totalParsed < 0.7) {
     const missedIds = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).closingAttempted; } catch { return false; } }).map(c => c.id).slice(0, 3);
     improvements.push({ category: "Closing Attempt", status: "red", title: "You're not attempting the close on every call", detail: `You only attempted to close in ${closingAttemptedCount} of ${totalParsed} calls. You can't win a sale you don't ask for. Every call needs a close attempt.`, quote: null, callsAffected: totalParsed - closingAttemptedCount, relevantCallIds: missedIds });
+  }
+
+  // ── 8-dimension: add to positives / improvements based on averages ──
+  const avgRapport = rapportCount > 0 ? Math.round(rapportTotal / rapportCount) : null;
+  const avgExcitement = excitementCount > 0 ? Math.round(excitementTotal / excitementCount) : null;
+  const silencePct = silenceTotal > 0 ? Math.round((silenceOkCount / silenceTotal) * 100) : null;
+  const avgCallControl = callControlCount > 0 ? Math.round(callControlTotal / callControlCount) : null;
+  const avgAuthenticity = authenticityCount > 0 ? Math.round(authenticityTotal / authenticityCount) : null;
+  const avgObjection = objectionCount > 0 ? Math.round(objectionTotal / objectionCount) : null;
+
+  if (avgRapport != null && avgRapport >= 75) {
+    positives.push({ category: "Rapport", status: "green", title: "You build strong personal connections", detail: `Your rapport score averages ${avgRapport}/100 this week. Customers who feel connected to you are far more likely to close.`, quote: bestRapportQuote?.quote ?? null, callsAffected: rapportCount, relevantCallIds: bestRapportQuote ? [bestRapportQuote.callId] : [] });
+  } else if (avgRapport != null && avgRapport < 60) {
+    improvements.push({ category: "Rapport", status: avgRapport < 45 ? "red" : "orange", title: "Build more personal connection with customers", detail: `Your rapport score averages ${avgRapport}/100. Ask personal questions, use her name, and respond to what she shares. Calls with strong rapport close 2x more.`, quote: bestRapportQuote?.quote ?? null, callsAffected: rapportCount, relevantCallIds: bestRapportQuote ? [bestRapportQuote.callId] : [] });
+  }
+
+  if (avgExcitement != null && avgExcitement >= 75) {
+    positives.push({ category: "Product Excitement", status: "green", title: "Your product pitch is vivid and enthusiastic", detail: `Your excitement score averages ${avgExcitement}/100. You're using emotional language that makes customers want the product.`, quote: bestExcitementQuote?.quote ?? null, callsAffected: excitementCount, relevantCallIds: bestExcitementQuote ? [bestExcitementQuote.callId] : [] });
+  } else if (avgExcitement != null && avgExcitement < 60) {
+    improvements.push({ category: "Product Excitement", status: avgExcitement < 45 ? "red" : "orange", title: "Your product pitch sounds too technical", detail: `Your excitement score averages ${avgExcitement}/100. Replace technical language with vivid words: 'feel', 'imagine', 'wake up with glowing skin'. Make her want it.`, quote: bestExcitementQuote?.quote ?? null, callsAffected: excitementCount, relevantCallIds: bestExcitementQuote ? [bestExcitementQuote.callId] : [] });
+  }
+
+  if (silencePct != null && silencePct >= 70) {
+    positives.push({ category: "Silence After Close", status: "green", title: "You hold the silence after the close", detail: `You stayed silent after the close in ${silenceOkCount} of ${silenceTotal} calls. That pause is where the sale is won — and you're nailing it.`, quote: null, callsAffected: silenceOkCount, relevantCallIds: [] });
+  } else if (silencePct != null && silencePct < 50) {
+    improvements.push({ category: "Silence After Close", status: "red", title: "You're filling the silence after the close", detail: `You talked over the silence after the close in ${silenceTotal - silenceOkCount} of ${silenceTotal} calls. After you ask for the close — stop talking. The next person who speaks loses.`, quote: worstSilenceQuote?.quote ?? null, callsAffected: silenceTotal - silenceOkCount, relevantCallIds: worstSilenceQuote ? [worstSilenceQuote.callId] : [] });
+  }
+
+  if (avgCallControl != null && avgCallControl >= 75) {
+    positives.push({ category: "Call Control", status: "green", title: "You lead the conversation confidently", detail: `Your call control score averages ${avgCallControl}/100. You're steering the conversation back to the sale when customers go off-topic.`, quote: null, callsAffected: callControlCount, relevantCallIds: [] });
+  } else if (avgCallControl != null && avgCallControl < 60) {
+    improvements.push({ category: "Call Control", status: avgCallControl < 45 ? "red" : "orange", title: "Customers are taking over the conversation", detail: `Your call control score averages ${avgCallControl}/100. When a customer goes off-topic, gently redirect: 'That's interesting — let me just finish this one point and we'll come back to that.'`, quote: worstCallControlQuote?.quote ?? null, callsAffected: callControlCount, relevantCallIds: worstCallControlQuote ? [worstCallControlQuote.callId] : [] });
+  }
+
+  if (avgAuthenticity != null && avgAuthenticity >= 75) {
+    positives.push({ category: "Authenticity", status: "green", title: "You sound natural and genuine", detail: `Your authenticity score averages ${avgAuthenticity}/100. Customers trust you because you sound like a real person, not a script.`, quote: null, callsAffected: authenticityCount, relevantCallIds: [] });
+  } else if (avgAuthenticity != null && avgAuthenticity < 60) {
+    improvements.push({ category: "Authenticity", status: avgAuthenticity < 45 ? "red" : "orange", title: "You sound too scripted", detail: `Your authenticity score averages ${avgAuthenticity}/100. Remove filler words like 'absolutely', 'definitely', 'of course'. Just say what you mean — customers disengage when they feel they're talking to a robot.`, quote: worstAuthenticityQuote?.quote ?? null, callsAffected: authenticityCount, relevantCallIds: worstAuthenticityQuote ? [worstAuthenticityQuote.callId] : [] });
+  }
+
+  if (avgObjection != null && avgObjection >= 75) {
+    positives.push({ category: "Objection Handling", status: "green", title: "You handle objections well", detail: `Your objection handling score averages ${avgObjection}/100. You're using the right responses and not giving up too quickly.`, quote: null, callsAffected: objectionCount, relevantCallIds: [] });
+  } else if (avgObjection != null && avgObjection < 60) {
+    improvements.push({ category: "Objection Handling", status: avgObjection < 45 ? "red" : "orange", title: "You're giving up on objections too quickly", detail: `Your objection handling score averages ${avgObjection}/100. When a customer says 'I need to think about it', don't accept it — ask which of the two concerns it is. Use the script.`, quote: worstObjectionQuote?.quote ?? null, callsAffected: objectionCount, relevantCallIds: worstObjectionQuote ? [worstObjectionQuote.callId] : [] });
   }
 
   const pct = (count: number, total: number) => total > 0 ? Math.round((count / total) * 100) : 100;

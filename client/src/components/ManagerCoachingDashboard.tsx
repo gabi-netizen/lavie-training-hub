@@ -109,6 +109,38 @@ function extractIssues(
         if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: null, category: "Improvement" };
         issueCounts[key].count++;
       }
+
+      // 8-dimension coaching checks
+      if (r.rapportScore != null && r.rapportScore < 60) {
+        const key = "Low rapport — not building personal connection";
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: r.rapportQuote ?? null, category: "Rapport" };
+        issueCounts[key].count++;
+      }
+      if (r.excitementScore != null && r.excitementScore < 60) {
+        const key = "Product pitch too technical — not creating desire";
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: r.excitementQuote ?? null, category: "Excitement" };
+        issueCounts[key].count++;
+      }
+      if (r.silenceAfterClose === false) {
+        const key = "Filling the silence after the close";
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: r.silenceQuote ?? null, category: "Silence" };
+        issueCounts[key].count++;
+      }
+      if (r.callControl != null && r.callControl < 60) {
+        const key = "Losing control of the conversation";
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: r.callControlQuote ?? null, category: "Call Control" };
+        issueCounts[key].count++;
+      }
+      if (r.authenticityScore != null && r.authenticityScore < 60) {
+        const key = "Sounding scripted — overusing filler words";
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: r.authenticityQuote ?? null, category: "Authenticity" };
+        issueCounts[key].count++;
+      }
+      if (r.objectionHandlingScore != null && r.objectionHandlingScore < 60) {
+        const key = "Giving up on objections too quickly";
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, callId: call.id, quote: r.objectionHandlingQuote ?? null, category: "Objections" };
+        issueCounts[key].count++;
+      }
     } catch { /* skip */ }
   }
 
