@@ -14,6 +14,7 @@ import {
   getCallTypePerformance,
   getOpeningDashboard,
   getBestPractices,
+  getMyCoachingDashboard,
   submitFeedback,
   getFeedbackSummary,
   updateCallDetails,
@@ -21,6 +22,11 @@ import {
 } from "../callAnalysis";
 
 export const callCoachRouter = router({
+  /** Agent personal coaching dashboard — last 7 days stats, strengths, improvements, compliance */
+  getMyCoachingDashboard: protectedProcedure.query(async ({ ctx }) => {
+    return getMyCoachingDashboard(ctx.user.id);
+  }),
+
   getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
     // Admins see all agents' calls; regular agents see only their own
     if (ctx.user.role === "admin") {

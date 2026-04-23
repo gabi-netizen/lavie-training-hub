@@ -1683,3 +1683,198 @@ Return ONLY valid JSON array, no markdown, no explanation.`;
     topCallsAvgScore,
   };
 }
+
+// ─── AGENT PERSONAL COACHING DASHBOARD ───────────────────────────────────────
+export interface CoachingFeedbackItem {
+  category: string;
+  status: "green" | "orange" | "red";
+  title: string;
+  detail: string;
+  quote: string | null;
+  callsAffected: number;
+  relevantCallIds: number[];
+}
+
+export interface ComplianceCheckItem {
+  label: string;
+  pct: number;
+  status: "green" | "orange" | "red";
+}
+
+export interface MyCoachingDashboard {
+  closesThisWeek: number;
+  closesLastWeek: number;
+  avgScoreThisWeek: number | null;
+  avgScoreLastWeek: number | null;
+  complianceRate: number | null;
+  complianceRateLastWeek: number | null;
+  totalCallsThisWeek: number;
+  positives: CoachingFeedbackItem[];
+  improvements: CoachingFeedbackItem[];
+  complianceChecklist: ComplianceCheckItem[];
+  recentCalls: Array<{
+    id: number;
+    callDate: string | null;
+    customerName: string | null;
+    overallScore: number | null;
+    closeStatus: string | null;
+    status: string;
+    durationSeconds: number | null;
+    audioFileUrl: string;
+  }>;
+}
+
+export async function getMyCoachingDashboard(userId: number): Promise<MyCoachingDashboard> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const all = await db.select().from(callAnalyses)
+    .where(eq(callAnalyses.userId, userId))
+    .orderBy(callAnalyses.createdAt);
+
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - 7);
+  const twoWeeksStart = new Date(now);
+  twoWeeksStart.setDate(twoWeeksStart.getDate() - 14);
+
+  const thisWeekCalls = all.filter(c => new Date(c.createdAt) >= weekStart);
+  const lastWeekCalls = all.filter(c => {
+    const d = new Date(c.createdAt);
+    return d >= twoWeeksStart && d < weekStart;
+  });
+
+  const doneCalls = (calls: typeof all) => calls.filter(c => c.status === "done");
+  const thisWeekDone = doneCalls(thisWeekCalls);
+  const lastWeekDone = doneCalls(lastWeekCalls);
+
+  const closesThisWeek = thisWeekDone.filter(c => c.closeStatus === "closed").length;
+  const closesLastWeek = lastWeekDone.filter(c => c.closeStatus === "closed").length;
+
+  const avgOf = (calls: typeof all) => {
+    const scored = calls.filter(c => c.overallScore != null);
+    if (!scored.length) return null;
+    return Math.round(scored.reduce((s, c) => s + (c.overallScore as number), 0) / scored.length);
+  };
+  const avgScoreThisWeek = avgOf(thisWeekDone);
+  const avgScoreLastWeek = avgOf(lastWeekDone);
+
+  const complianceAvg = (calls: typeof all) => {
+    let total = 0; let count = 0;
+    for (const c of calls) {
+      if (!c.analysisJson) continue;
+      try {
+        const r = JSON.parse(c.analysisJson) as CallAnalysisReport;
+        if (r.complianceScore != null) { total += r.complianceScore; count++; }
+      } catch { /* skip */ }
+    }
+    return count > 0 ? Math.round(total / count) : null;
+  };
+  const complianceRate = complianceAvg(thisWeekDone);
+  const complianceRateLastWeek = complianceAvg(lastWeekDone);
+
+  interface ParsedCall { id: number; report: CallAnalysisReport; }
+  const parsed: ParsedCall[] = [];
+  for (const c of thisWeekDone) {
+    if (!c.analysisJson) continue;
+    try { parsed.push({ id: c.id, report: JSON.parse(c.analysisJson) as CallAnalysisReport }); } catch { /* skip */ }
+  }
+  const totalParsed = parsed.length;
+
+  const strengthCounts: Record<string, { count: number; ids: number[]; quotes: string[] }> = {};
+  const improvementCounts: Record<string, { count: number; ids: number[]; quotes: string[] }> = {};
+  let tcReadCount = 0, tcReadTotal = 0;
+  let subDisclosedCount = 0, subDisclosedTotal = 0;
+  let subMisrepCount = 0, subMisrepTotal = 0;
+  let closingAttemptedCount = 0;
+  let magicWandCount = 0;
+
+  for (const { id, report } of parsed) {
+    for (const s of report.strengths ?? []) {
+      const key = s.slice(0, 80);
+      if (!strengthCounts[key]) strengthCounts[key] = { count: 0, ids: [], quotes: [] };
+      strengthCounts[key].count++; strengthCounts[key].ids.push(id);
+    }
+    for (const imp of report.improvements ?? []) {
+      const key = imp.slice(0, 80);
+      if (!improvementCounts[key]) improvementCounts[key] = { count: 0, ids: [], quotes: [] };
+      improvementCounts[key].count++; improvementCounts[key].ids.push(id);
+    }
+    for (const km of report.keyMoments ?? []) {
+      if (km.type === "negative" || km.type === "critical") {
+        const key = km.coaching.slice(0, 80);
+        if (!improvementCounts[key]) improvementCounts[key] = { count: 0, ids: [], quotes: [] };
+        improvementCounts[key].count++; improvementCounts[key].ids.push(id);
+        if (km.moment && improvementCounts[key].quotes.length < 1) improvementCounts[key].quotes.push(km.moment);
+      } else if (km.type === "positive") {
+        const key = km.coaching.slice(0, 80);
+        if (!strengthCounts[key]) strengthCounts[key] = { count: 0, ids: [], quotes: [] };
+        strengthCounts[key].count++; strengthCounts[key].ids.push(id);
+        if (km.moment && strengthCounts[key].quotes.length < 1) strengthCounts[key].quotes.push(km.moment);
+      }
+    }
+    if (report.tcRead != null) { tcReadTotal++; if (report.tcRead) tcReadCount++; }
+    if (report.subscriptionDisclosed != null) { subDisclosedTotal++; if (report.subscriptionDisclosed) subDisclosedCount++; }
+    if (report.subscriptionMisrepresented != null) { subMisrepTotal++; if (!report.subscriptionMisrepresented) subMisrepCount++; }
+    if (report.closingAttempted) closingAttemptedCount++;
+    if (report.magicWandUsed) magicWandCount++;
+  }
+
+  const positives: CoachingFeedbackItem[] = Object.entries(strengthCounts)
+    .sort((a, b) => b[1].count - a[1].count).slice(0, 3)
+    .map(([key, val]) => ({
+      category: "Strength", status: "green" as const,
+      title: key,
+      detail: `This came up as a strength in ${val.count} of your calls this week. Keep doing this — it's working.`,
+      quote: val.quotes[0] ?? null,
+      callsAffected: val.count,
+      relevantCallIds: Array.from(new Set(val.ids)).slice(0, 3),
+    }));
+
+  if (totalParsed > 0 && closingAttemptedCount / totalParsed >= 0.7) {
+    positives.push({ category: "Closing Attempt", status: "green", title: "You attempt the close consistently", detail: `You asked for the close in ${closingAttemptedCount} of ${totalParsed} calls. Consistent closing attempts are the #1 driver of conversions.`, quote: null, callsAffected: closingAttemptedCount, relevantCallIds: thisWeekDone.slice(0, 3).map(c => c.id) });
+  }
+  if (totalParsed > 0 && magicWandCount / totalParsed >= 0.6) {
+    positives.push({ category: "Magic Wand Question", status: "green", title: "You're using the Magic Wand question", detail: `You asked the Magic Wand question in ${magicWandCount} of ${totalParsed} calls. Customers who answer this question are far more likely to close.`, quote: null, callsAffected: magicWandCount, relevantCallIds: thisWeekDone.slice(0, 3).map(c => c.id) });
+  }
+
+  const improvements: CoachingFeedbackItem[] = Object.entries(improvementCounts)
+    .sort((a, b) => b[1].count - a[1].count).slice(0, 4)
+    .map(([key, val]) => {
+      const pct = totalParsed > 0 ? val.count / totalParsed : 0;
+      const status: "red" | "orange" = pct >= 0.5 ? "red" : "orange";
+      return { category: "Improvement", status, title: key, detail: `This came up in ${val.count} of your calls this week. Focus on this in your next call.`, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 3) };
+    });
+
+  if (totalParsed > 0 && magicWandCount / totalParsed < 0.5) {
+    const missedIds = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).magicWandUsed; } catch { return false; } }).map(c => c.id).slice(0, 3);
+    improvements.push({ category: "Magic Wand Question", status: "orange", title: "Magic Wand question not used consistently", detail: `You only asked the Magic Wand question in ${magicWandCount} of ${totalParsed} calls. Ask it every single call — it opens the door to the close.`, quote: null, callsAffected: totalParsed - magicWandCount, relevantCallIds: missedIds });
+  }
+  if (totalParsed > 0 && closingAttemptedCount / totalParsed < 0.7) {
+    const missedIds = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).closingAttempted; } catch { return false; } }).map(c => c.id).slice(0, 3);
+    improvements.push({ category: "Closing Attempt", status: "red", title: "You're not attempting the close on every call", detail: `You only attempted to close in ${closingAttemptedCount} of ${totalParsed} calls. You can't win a sale you don't ask for. Every call needs a close attempt.`, quote: null, callsAffected: totalParsed - closingAttemptedCount, relevantCallIds: missedIds });
+  }
+
+  const pct = (count: number, total: number) => total > 0 ? Math.round((count / total) * 100) : 100;
+  const trafficLight = (p: number): "green" | "orange" | "red" => p >= 85 ? "green" : p >= 60 ? "orange" : "red";
+  const complianceChecklist: ComplianceCheckItem[] = [
+    { label: "Full offer details read aloud (T&Cs)", pct: pct(tcReadCount, tcReadTotal), status: trafficLight(pct(tcReadCount, tcReadTotal)) },
+    { label: "Subscription clearly explained", pct: pct(subDisclosedCount, subDisclosedTotal), status: trafficLight(pct(subDisclosedCount, subDisclosedTotal)) },
+    { label: "No subscription misrepresentation", pct: pct(subMisrepCount, subMisrepTotal), status: trafficLight(pct(subMisrepCount, subMisrepTotal)) },
+    { label: "Close attempted every call", pct: pct(closingAttemptedCount, totalParsed), status: trafficLight(pct(closingAttemptedCount, totalParsed)) },
+    { label: "Magic Wand question asked", pct: pct(magicWandCount, totalParsed), status: trafficLight(pct(magicWandCount, totalParsed)) },
+  ];
+
+  const recentCalls = [...all].reverse().slice(0, 10).map(c => ({
+    id: c.id, callDate: c.callDate ? new Date(c.callDate).toISOString() : null,
+    customerName: c.customerName ?? null, overallScore: c.overallScore != null ? Math.round(c.overallScore) : null,
+    closeStatus: c.closeStatus ?? null, status: c.status, durationSeconds: c.durationSeconds ?? null, audioFileUrl: c.audioFileUrl,
+  }));
+
+  return {
+    closesThisWeek, closesLastWeek, avgScoreThisWeek, avgScoreLastWeek,
+    complianceRate, complianceRateLastWeek, totalCallsThisWeek: thisWeekCalls.length,
+    positives: positives.slice(0, 3), improvements: improvements.slice(0, 4),
+    complianceChecklist, recentCalls,
+  };
+}

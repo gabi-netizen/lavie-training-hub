@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import AgentCoachingDashboard from "@/components/AgentCoachingDashboard";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
@@ -1577,32 +1578,8 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
   // Admins get the full agent dashboard view
   if (isAdmin) return <AdminAgentDashboard onSelect={onSelect} />;
 
-  // Agents see their own calls
-  const { data: analyses, isLoading } = trpc.callCoach.getMyAnalyses.useQuery(undefined, {
-    refetchInterval: 5000,
-  });
-
-  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
-  if (!analyses?.length) return (
-    <div className="text-center py-12 text-gray-500">
-      <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
-      <p className="text-sm">No calls yet. Your calls will appear here automatically after each call.</p>
-    </div>
-  );
-
-  return (
-    <div className="space-y-2">
-      {[...analyses].reverse().map((a) => (
-        <CallRow
-          key={a.id}
-          a={a}
-          onSelect={onSelect}
-          onDelete={(id) => deleteAnalysis.mutate({ id })}
-          deleteIsPending={deleteAnalysis.isPending}
-        />
-      ))}
-    </div>
-  );
+  // Agents see their personal coaching dashboard
+  return <AgentCoachingDashboard onSelectCall={onSelect} />;
 }
 
 // ─── MANAGER DASHBOARD ────────────────────────────────────────────────────────

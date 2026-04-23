@@ -385,3 +385,9 @@
 
 ## Speaker Diarization Fix (Apr 24 2026)
 - [x] Fix mono diarization: rebuild transcript from word-level speaker tags instead of utterances so single-word customer responses appear on their own line
+
+## Agent Personal Dashboard (My Coaching)
+- [x] Add getMyCoachingDashboard tRPC procedure — returns last 7 days: closes, avg score, compliance rate, top 3 strengths, top 3 improvements, compliance checklist, recent calls list
+- [x] Build AgentCoachingDashboard component — traffic light colors only (green/orange/red), positive feedback first then improvements, each card shows relevant calls to listen to
+- [x] Replace current agent "My Calls" tab content with new AgentCoachingDashboard for non-admin users
+- [x] Add compliance checklist section with progress bars (5 items)
