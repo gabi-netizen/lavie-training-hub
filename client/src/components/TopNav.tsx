@@ -14,6 +14,12 @@ import {
   PhoneCall,
   LayoutDashboard,
   Smartphone,
+  Mic,
+  Target,
+  TrendingUp,
+  Flag,
+  Upload,
+  ListChecks,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -29,12 +35,26 @@ const CALLS_ITEMS_ADMIN = [
   { path: "/phone-numbers", label: "Phone Pool", icon: Smartphone },
 ];
 
-// Main nav items (always visible)
-const MAIN_NAV_ITEMS = [
-  { path: "/workspace", label: "Workspace", icon: LayoutDashboard },
-  { path: "/training", label: "Training", icon: BookOpen },
-  { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
+// Items inside the "AI Coach" dropdown
+const AI_COACH_ITEMS_AGENT = [
+  { tab: "opening", label: "Opening", icon: Target },
+  { tab: "upload", label: "Upload Call", icon: Upload },
+  { tab: "my-calls", label: "My Calls", icon: ListChecks },
+  { tab: "team", label: "Team", icon: Users },
 ];
+const AI_COACH_ITEMS_ADMIN = [
+  { tab: "opening", label: "Opening", icon: Target },
+  { tab: "upload", label: "Upload Call", icon: Upload },
+  { tab: "my-calls", label: "My Calls", icon: ListChecks },
+  { tab: "team", label: "Team", icon: Users },
+  { tab: "performance", label: "Performance", icon: TrendingUp },
+  { tab: "manager", label: "Manager View", icon: BarChart3 },
+  { tab: "feedback", label: "AI Feedback", icon: Flag },
+];
+
+// Workspace-only nav item
+const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDashboard };
+const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
 const MOBILE_NAV_ITEMS_AGENT = [
@@ -52,21 +72,27 @@ const MOBILE_NAV_ITEMS_ADMIN = [
 ];
 
 export default function TopNav() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [callsOpen, setCallsOpen] = useState(false);
+  const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const callsRef = useRef<HTMLDivElement>(null);
+  const aiCoachRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === "admin";
   const callsItems = isAdmin ? CALLS_ITEMS_ADMIN : CALLS_ITEMS_AGENT;
+  const aiCoachItems = isAdmin ? AI_COACH_ITEMS_ADMIN : AI_COACH_ITEMS_AGENT;
   const mobileItems = isAdmin ? MOBILE_NAV_ITEMS_ADMIN : MOBILE_NAV_ITEMS_AGENT;
 
-  // Close Calls dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (callsRef.current && !callsRef.current.contains(e.target as Node)) {
         setCallsOpen(false);
+      }
+      if (aiCoachRef.current && !aiCoachRef.current.contains(e.target as Node)) {
+        setAiCoachOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -76,6 +102,7 @@ export default function TopNav() {
   const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers", "/"].some(
     (p) => location === p
   );
+  const aiCoachActive = location === "/ai-coach" || location.startsWith("/ai-coach");
 
   const initials = user?.name
     ? user.name
@@ -85,6 +112,12 @@ export default function TopNav() {
         .toUpperCase()
         .slice(0, 2)
     : "?";
+
+  // Navigate to AI Coach with a specific tab
+  const goToAiCoachTab = (tab: string) => {
+    setAiCoachOpen(false);
+    navigate(`/ai-coach?tab=${tab}`);
+  };
 
   return (
     <>
@@ -108,7 +141,7 @@ export default function TopNav() {
           {/* Calls dropdown */}
           <div className="relative" ref={callsRef}>
             <button
-              onClick={() => setCallsOpen((v) => !v)}
+              onClick={() => { setCallsOpen((v) => !v); setAiCoachOpen(false); }}
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 callsActive
@@ -145,25 +178,76 @@ export default function TopNav() {
             )}
           </div>
 
-          {/* Main nav items */}
-          {MAIN_NAV_ITEMS.map(({ path, label, icon: Icon }) => {
-            const active = location === path;
-            return (
-              <Link key={path} href={path}>
-                <button
-                  className={cn(
-                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
-                    active
-                      ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                      : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
-                  )}
-                >
-                  <Icon size={14} />
-                  {label}
-                </button>
-              </Link>
-            );
-          })}
+          {/* Workspace */}
+          <Link href={WORKSPACE_ITEM.path}>
+            <button
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                location === WORKSPACE_ITEM.path
+                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+              )}
+            >
+              <LayoutDashboard size={14} />
+              Workspace
+            </button>
+          </Link>
+
+          {/* Training */}
+          <Link href={TRAINING_ITEM.path}>
+            <button
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                location === TRAINING_ITEM.path
+                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+              )}
+            >
+              <BookOpen size={14} />
+              Training
+            </button>
+          </Link>
+
+          {/* AI Coach dropdown */}
+          <div className="relative" ref={aiCoachRef}>
+            <button
+              onClick={() => { setAiCoachOpen((v) => !v); setCallsOpen(false); }}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                aiCoachActive
+                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+              )}
+            >
+              <Mic size={14} />
+              AI Coach
+              <ChevronDown size={12} className={cn("transition-transform duration-150", aiCoachOpen && "rotate-180")} />
+            </button>
+
+            {aiCoachOpen && (
+              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-gray-200 shadow-lg bg-white py-1 z-50">
+                {aiCoachItems.map(({ tab, label, icon: Icon }) => {
+                  const active = location === "/ai-coach" && new URLSearchParams(window.location.search).get("tab") === tab;
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => goToAiCoachTab(tab)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors text-left",
+                        active
+                          ? "text-indigo-600 bg-indigo-50 font-medium"
+                          : "text-gray-700 hover:text-gray-800 hover:bg-gray-50"
+                      )}
+                    >
+                      <Icon size={14} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* User avatar */}
