@@ -230,19 +230,19 @@ export function getPaymentPageHtml(stripePk: string): string {
     cardExpiry.mount('#card-expiry');
     cardCvc.mount('#card-cvc');
 
-    // ── Stripe protocol: create PaymentIntent on page load and cache it.
-    // Apple Pay / Google Pay Payment Request Button requires the clientSecret
-    // to be available immediately when the wallet sheet opens.
-    var clientSecretPromise = fetch('/api/stripe/create-payment-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentName: agentName })
-    }).then(function(res) {
-      if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Server error'); });
-      return res.json();
-    }).then(function(data) {
-      return data.clientSecret;
-    });
+    // ── Helper: create a fresh PaymentIntent each time
+    function createIntent() {
+      return fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentName: agentName })
+      }).then(function(res) {
+        if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Server error'); });
+        return res.json();
+      }).then(function(data) {
+        return data.clientSecret;
+      });
+    }
 
     // ── Apple Pay / Google Pay button
     var paymentRequest = stripe.paymentRequest({
@@ -269,7 +269,7 @@ export function getPaymentPageHtml(stripePk: string): string {
 
     paymentRequest.on('paymentmethod', function(ev) {
       showMsg('', '');
-      clientSecretPromise.then(function(clientSecret) {
+      createIntent().then(function(clientSecret) {
         return stripe.confirmCardPayment(
           clientSecret,
           { payment_method: ev.paymentMethod.id },
@@ -302,7 +302,7 @@ export function getPaymentPageHtml(stripePk: string): string {
       btn.textContent = 'Processing...';
       showMsg('', '');
 
-      clientSecretPromise.then(function(clientSecret) {
+      createIntent().then(function(clientSecret) {
         return stripe.confirmCardPayment(clientSecret, {
           payment_method: { card: cardNumber }
         });
