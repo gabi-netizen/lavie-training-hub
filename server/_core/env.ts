@@ -31,4 +31,9 @@ export const ENV = {
   awsEndpointUrl: process.env.AWS_ENDPOINT_URL ?? "",
   // Cloudflare R2 public dev URL (e.g. https://pub-xxx.r2.dev) — makes files publicly accessible without presigning
   r2PublicUrl: process.env.R2_PUBLIC_URL ?? "",
+  // Stripe payment processing
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  // Stripe publishable key (exposed to frontend via VITE_ prefix)
+  stripePublishableKey: process.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "",
 };

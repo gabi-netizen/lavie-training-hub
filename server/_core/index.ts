@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
+import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -49,6 +50,15 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // ─── Stripe Webhook ────────────────────────────────────────────────────────
+  // MUST be registered BEFORE express.json() because Stripe requires the raw body
+  // to verify the webhook signature.
+  app.post(
+    "/api/webhooks/stripe",
+    express.raw({ type: "application/json" }),
+    handleStripeWebhook
+  );
+
   // Configure body parser with larger size limit for file uploads (250MB for long call recordings)
   app.use(express.json({ limit: "250mb" }));
   app.use(express.urlencoded({ limit: "250mb", extended: true }));
@@ -60,6 +70,10 @@ async function startServer() {
   // CloudTalk sends POST requests here when a call ends.
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/webhooks/cloudtalk", handleCloudTalkWebhook);
+
+  // ─── Stripe PaymentIntent creation ────────────────────────────────────────
+  // Public endpoint — called by the /pay page to initiate a Stripe payment.
+  app.post("/api/stripe/create-payment-intent", createPaymentIntent);
 
   // ─── File upload endpoint ─────────────────────────────────────────────────
   app.post(
