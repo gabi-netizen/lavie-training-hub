@@ -261,8 +261,9 @@ export function getPaymentPageHtml(stripePk: string): string {
       country: 'GB',
       currency: 'gbp',
       total: { label: 'Matinika Trial Package', amount: 495 },
-      requestPayerName: true,
+      requestPayerName: false,
       requestPayerEmail: false,
+      requestShipping: false,
     });
 
     const prButton = elements.create('paymentRequestButton', {
