@@ -15,19 +15,37 @@ import {
   LayoutDashboard,
   Smartphone,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 
-// Admin-only tabs
-const ADMIN_NAV_ITEMS = [
-  { path: "/phone-numbers", label: "Phone Pool", icon: Smartphone },
-];
-
-// Visible to all logged-in users
-const AGENT_NAV_ITEMS = [
+// Items inside the "Calls" dropdown
+const CALLS_ITEMS_AGENT = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/call-log", label: "Call Log", icon: PhoneCall },
+];
+const CALLS_ITEMS_ADMIN = [
+  ...CALLS_ITEMS_AGENT,
+  { path: "/phone-numbers", label: "Phone Pool", icon: Smartphone },
+];
+
+// Main nav items (always visible)
+const MAIN_NAV_ITEMS = [
+  { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
+  { path: "/training", label: "Training", icon: BookOpen },
+  { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
+];
+
+// Mobile bottom bar items (flat — no dropdown on mobile)
+const MOBILE_NAV_ITEMS_AGENT = [
+  { path: "/dialler", label: "Dialler", icon: Phone },
+  { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
+  { path: "/training", label: "Training", icon: BookOpen },
+  { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
+];
+const MOBILE_NAV_ITEMS_ADMIN = [
+  { path: "/dialler", label: "Dialler", icon: Phone },
+  { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
@@ -37,16 +55,27 @@ export default function TopNav() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [callsOpen, setCallsOpen] = useState(false);
+  const callsRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === "admin";
+  const callsItems = isAdmin ? CALLS_ITEMS_ADMIN : CALLS_ITEMS_AGENT;
+  const mobileItems = isAdmin ? MOBILE_NAV_ITEMS_ADMIN : MOBILE_NAV_ITEMS_AGENT;
 
-  const navItems = isAdmin
-    ? [
-        ...AGENT_NAV_ITEMS.slice(0, 3), // Dialler, Contacts, Call Log
-        ...ADMIN_NAV_ITEMS,             // Phone Pool (admin only)
-        ...AGENT_NAV_ITEMS.slice(3),    // Workspace, Training, AI Coach, Team, Leaderboard
-      ]
-    : AGENT_NAV_ITEMS;
+  // Close Calls dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (callsRef.current && !callsRef.current.contains(e.target as Node)) {
+        setCallsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers"].some(
+    (p) => location === p || (p === "/dialler" && location === "/")
+  );
 
   const initials = user?.name
     ? user.name
@@ -75,10 +104,51 @@ export default function TopNav() {
 
         {/* Nav tabs */}
         <div className="flex items-center gap-1">
-          {navItems.map(({ path, label, icon: Icon, highlight }: any) => {
+
+          {/* Calls dropdown */}
+          <div className="relative" ref={callsRef}>
+            <button
+              onClick={() => setCallsOpen((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                callsActive
+                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+              )}
+            >
+              <Phone size={14} />
+              Calls
+              <ChevronDown size={12} className={cn("transition-transform duration-150", callsOpen && "rotate-180")} />
+            </button>
+
+            {callsOpen && (
+              <div className="absolute left-0 top-full mt-1 w-44 rounded-lg border border-gray-200 shadow-lg bg-white py-1 z-50">
+                {callsItems.map(({ path, label, icon: Icon }) => {
+                  const active = location === path || (path === "/dialler" && location === "/");
+                  return (
+                    <Link key={path} href={path} onClick={() => setCallsOpen(false)}>
+                      <div
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors",
+                          active
+                            ? "text-indigo-600 bg-indigo-50 font-medium"
+                            : "text-gray-700 hover:text-gray-800 hover:bg-gray-50"
+                        )}
+                      >
+                        <Icon size={14} />
+                        {label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Main nav items */}
+          {MAIN_NAV_ITEMS.map(({ path, label, icon: Icon, highlight }) => {
             const active =
               location === path ||
-              (path === "/dialler" && location === "/" && isAdmin) ||
               (path === "/training" && location === "/" && !isAdmin);
             return (
               <Link key={path} href={path}>
@@ -156,7 +226,7 @@ export default function TopNav() {
 
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t-2 border-gray-900 px-2 py-2 shadow-lg">
-        {navItems.map(({ path, label, icon: Icon, highlight }: any) => {
+        {mobileItems.map(({ path, label, icon: Icon, highlight }: any) => {
           const active =
             location === path ||
             (path === "/dialler" && location === "/" && isAdmin) ||
