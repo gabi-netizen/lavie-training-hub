@@ -31,7 +31,7 @@ const CALLS_ITEMS_ADMIN = [
 
 // Main nav items (always visible)
 const MAIN_NAV_ITEMS = [
-  { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
+  { path: "/workspace", label: "Workspace", icon: LayoutDashboard },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
@@ -146,7 +146,7 @@ export default function TopNav() {
           </div>
 
           {/* Main nav items */}
-          {MAIN_NAV_ITEMS.map(({ path, label, icon: Icon, highlight }) => {
+          {MAIN_NAV_ITEMS.map(({ path, label, icon: Icon }) => {
             const active =
               location === path ||
               (path === "/training" && location === "/" && !isAdmin);
@@ -154,12 +154,10 @@ export default function TopNav() {
               <Link key={path} href={path}>
                 <button
                   className={cn(
-                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150",
-                    highlight && !active
-                      ? "font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
-                      : active
-                      ? "font-medium text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                      : "font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                    active
+                      ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                      : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
                   )}
                 >
                   <Icon size={14} />
