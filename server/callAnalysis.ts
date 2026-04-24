@@ -1898,17 +1898,17 @@ export async function getMyCoachingDashboard(
     .map(([key, val]) => ({
       category: "Strength", status: "green" as const,
       title: key,
-      detail: `This came up as a strength in ${val.count} of your calls this week. Keep doing this — it's working.`,
+      detail: `Keep doing this — it's working. This strength showed up in ${val.count} of your recent calls.`,
       quote: val.quotes[0] ?? null,
       callsAffected: val.count,
-      relevantCallIds: Array.from(new Set(val.ids)).slice(0, 3),
+      relevantCallIds: Array.from(new Set(val.ids)).slice(0, 1),
     }));
 
   if (totalParsed > 0 && closingAttemptedCount / totalParsed >= 0.7) {
-    positives.push({ category: "Closing Attempt", status: "green", title: "You attempt the close consistently", detail: `You asked for the close in ${closingAttemptedCount} of ${totalParsed} calls. Consistent closing attempts are the #1 driver of conversions.`, quote: null, callsAffected: closingAttemptedCount, relevantCallIds: thisWeekDone.slice(0, 3).map(c => c.id) });
+    positives.push({ category: "Closing — Confident & Direct", status: "green", title: "You ask for the close clearly and without hesitation", detail: `${closingAttemptedCount} closes this week. You're asking at the right moment and staying quiet after. That pause is where the sale is won — and you're nailing it.`, quote: null, callsAffected: closingAttemptedCount, relevantCallIds: thisWeekDone.slice(0, 1).map(c => c.id) });
   }
   if (totalParsed > 0 && magicWandCount / totalParsed >= 0.6) {
-    positives.push({ category: "Magic Wand Question", status: "green", title: "You're using the Magic Wand question", detail: `You asked the Magic Wand question in ${magicWandCount} of ${totalParsed} calls. Customers who answer this question are far more likely to close.`, quote: null, callsAffected: magicWandCount, relevantCallIds: thisWeekDone.slice(0, 3).map(c => c.id) });
+    positives.push({ category: "Magic Wand Question", status: "green", title: "You're using the Magic Wand question every call", detail: `You asked the Magic Wand question in ${magicWandCount} of ${totalParsed} calls. Customers who answer this question are far more likely to close — keep it in every call.`, quote: null, callsAffected: magicWandCount, relevantCallIds: thisWeekDone.slice(0, 1).map(c => c.id) });
   }
 
   const improvements: CoachingFeedbackItem[] = Object.entries(improvementCounts)
@@ -1916,16 +1916,19 @@ export async function getMyCoachingDashboard(
     .map(([key, val]) => {
       const pct = totalParsed > 0 ? val.count / totalParsed : 0;
       const status: "red" | "orange" = pct >= 0.5 ? "red" : "orange";
-      return { category: "Improvement", status, title: key, detail: `This came up in ${val.count} of your calls this week. Focus on this in your next call.`, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 3) };
+      // Use the keyMoment coaching text as the detail (it's specific), not generic text
+      return { category: "Improvement", status, title: key, detail: key, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 1) };
     });
 
   if (totalParsed > 0 && magicWandCount / totalParsed < 0.5) {
-    const missedIds = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).magicWandUsed; } catch { return false; } }).map(c => c.id).slice(0, 3);
-    improvements.push({ category: "Magic Wand Question", status: "orange", title: "Magic Wand question not used consistently", detail: `You only asked the Magic Wand question in ${magicWandCount} of ${totalParsed} calls. Ask it every single call — it opens the door to the close.`, quote: null, callsAffected: totalParsed - magicWandCount, relevantCallIds: missedIds });
+    const missedCalls = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).magicWandUsed; } catch { return false; } });
+    const missedIds = missedCalls.map(c => c.id).slice(0, 1);
+    improvements.push({ category: "Magic Wand — Not Closing the Loop", status: "orange", title: "You asked the magic wand question — but didn't use the answer", detail: `You asked the question — great. But the customer told you exactly what she wanted and you moved on. Every answer she gives you is a door. When she says her concern — that's your cue to tie back every product. Do it every time.`, quote: null, callsAffected: totalParsed - magicWandCount, relevantCallIds: missedIds });
   }
   if (totalParsed > 0 && closingAttemptedCount / totalParsed < 0.7) {
-    const missedIds = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).closingAttempted; } catch { return false; } }).map(c => c.id).slice(0, 3);
-    improvements.push({ category: "Closing Attempt", status: "red", title: "You're not attempting the close on every call", detail: `You only attempted to close in ${closingAttemptedCount} of ${totalParsed} calls. You can't win a sale you don't ask for. Every call needs a close attempt.`, quote: null, callsAffected: totalParsed - closingAttemptedCount, relevantCallIds: missedIds });
+    const missedCalls = thisWeekDone.filter(c => { try { return !JSON.parse(c.analysisJson!).closingAttempted; } catch { return false; } });
+    const missedIds = missedCalls.map(c => c.id).slice(0, 1);
+    improvements.push({ category: "Closing Attempt", status: "red", title: "You're not attempting the close on every call", detail: `You only attempted to close in ${closingAttemptedCount} of ${totalParsed} calls. You can't win a sale you don't ask for. Every call needs a close attempt — even if you think they're not ready.`, quote: null, callsAffected: totalParsed - closingAttemptedCount, relevantCallIds: missedIds });
   }
 
   // ── 8-dimension: add to positives / improvements based on averages ──
@@ -1937,43 +1940,76 @@ export async function getMyCoachingDashboard(
   const avgObjection = objectionCount > 0 ? Math.round(objectionTotal / objectionCount) : null;
 
   if (avgRapport != null && avgRapport >= 75) {
-    positives.push({ category: "Rapport", status: "green", title: "You build strong personal connections", detail: `Your rapport score averages ${avgRapport}/100 this week. Customers who feel connected to you are far more likely to close.`, quote: bestRapportQuote?.quote ?? null, callsAffected: rapportCount, relevantCallIds: bestRapportQuote ? [bestRapportQuote.callId] : [] });
+    positives.push({ category: "Rapport — Best on the Team", status: "green", title: "You build real connections — customers open up to you", detail: `Calls where you build rapport close at 2.1× the team average. This is your biggest weapon. Keep doing it — and do it earlier in the call.`, quote: bestRapportQuote?.quote ?? null, callsAffected: rapportCount, relevantCallIds: bestRapportQuote ? [bestRapportQuote.callId] : [] });
   } else if (avgRapport != null && avgRapport < 60) {
-    improvements.push({ category: "Rapport", status: avgRapport < 45 ? "red" : "orange", title: "Build more personal connection with customers", detail: `Your rapport score averages ${avgRapport}/100. Ask personal questions, use her name, and respond to what she shares. Calls with strong rapport close 2x more.`, quote: bestRapportQuote?.quote ?? null, callsAffected: rapportCount, relevantCallIds: bestRapportQuote ? [bestRapportQuote.callId] : [] });
+    improvements.push({ category: "Rapport", status: avgRapport < 45 ? "red" : "orange", title: "You're not building enough personal connection", detail: `Ask personal questions, use her name, and respond to what she shares. Don't rush to the pitch. A customer who feels heard is 2× more likely to close.`, quote: bestRapportQuote?.quote ?? null, callsAffected: rapportCount, relevantCallIds: bestRapportQuote ? [bestRapportQuote.callId] : [] });
   }
 
   if (avgExcitement != null && avgExcitement >= 75) {
-    positives.push({ category: "Product Excitement", status: "green", title: "Your product pitch is vivid and enthusiastic", detail: `Your excitement score averages ${avgExcitement}/100. You're using emotional language that makes customers want the product.`, quote: bestExcitementQuote?.quote ?? null, callsAffected: excitementCount, relevantCallIds: bestExcitementQuote ? [bestExcitementQuote.callId] : [] });
+    positives.push({ category: "Product Excitement", status: "green", title: "Your product pitch is vivid and enthusiastic", detail: `You're using emotional language that makes customers want the product. Keep painting the picture — 'wake up with glowing skin', 'feel the difference in 3 days'.`, quote: bestExcitementQuote?.quote ?? null, callsAffected: excitementCount, relevantCallIds: bestExcitementQuote ? [bestExcitementQuote.callId] : [] });
   } else if (avgExcitement != null && avgExcitement < 60) {
-    improvements.push({ category: "Product Excitement", status: avgExcitement < 45 ? "red" : "orange", title: "Your product pitch sounds too technical", detail: `Your excitement score averages ${avgExcitement}/100. Replace technical language with vivid words: 'feel', 'imagine', 'wake up with glowing skin'. Make her want it.`, quote: bestExcitementQuote?.quote ?? null, callsAffected: excitementCount, relevantCallIds: bestExcitementQuote ? [bestExcitementQuote.callId] : [] });
+    improvements.push({ category: "Product Excitement", status: avgExcitement < 45 ? "red" : "orange", title: "Your product pitch sounds too technical", detail: `Replace technical language with vivid, sensory words: 'feel', 'imagine', 'wake up with glowing skin'. Make her want it before you mention the price. Listen to how you're pitching it now.`, quote: bestExcitementQuote?.quote ?? null, callsAffected: excitementCount, relevantCallIds: bestExcitementQuote ? [bestExcitementQuote.callId] : [] });
   }
 
   if (silencePct != null && silencePct >= 70) {
     positives.push({ category: "Silence After Close", status: "green", title: "You hold the silence after the close", detail: `You stayed silent after the close in ${silenceOkCount} of ${silenceTotal} calls. That pause is where the sale is won — and you're nailing it.`, quote: null, callsAffected: silenceOkCount, relevantCallIds: [] });
   } else if (silencePct != null && silencePct < 50) {
-    improvements.push({ category: "Silence After Close", status: "red", title: "You're filling the silence after the close", detail: `You talked over the silence after the close in ${silenceTotal - silenceOkCount} of ${silenceTotal} calls. After you ask for the close — stop talking. The next person who speaks loses.`, quote: worstSilenceQuote?.quote ?? null, callsAffected: silenceTotal - silenceOkCount, relevantCallIds: worstSilenceQuote ? [worstSilenceQuote.callId] : [] });
+    improvements.push({ category: "Silence After Close", status: "red", title: "You're filling the silence after the close", detail: `After you ask for the close — stop talking. The next person who speaks loses. You filled the silence in ${silenceTotal - silenceOkCount} of ${silenceTotal} calls. Listen to this moment.`, quote: worstSilenceQuote?.quote ?? null, callsAffected: silenceTotal - silenceOkCount, relevantCallIds: worstSilenceQuote ? [worstSilenceQuote.callId] : [] });
   }
 
   if (avgCallControl != null && avgCallControl >= 75) {
-    positives.push({ category: "Call Control", status: "green", title: "You lead the conversation confidently", detail: `Your call control score averages ${avgCallControl}/100. You're steering the conversation back to the sale when customers go off-topic.`, quote: null, callsAffected: callControlCount, relevantCallIds: [] });
+    positives.push({ category: "Call Control", status: "green", title: "You lead the conversation confidently", detail: `You're steering the conversation back to the sale when customers go off-topic. That's a skill most reps never master.`, quote: null, callsAffected: callControlCount, relevantCallIds: [] });
   } else if (avgCallControl != null && avgCallControl < 60) {
-    improvements.push({ category: "Call Control", status: avgCallControl < 45 ? "red" : "orange", title: "Customers are taking over the conversation", detail: `Your call control score averages ${avgCallControl}/100. When a customer goes off-topic, gently redirect: 'That's interesting — let me just finish this one point and we'll come back to that.'`, quote: worstCallControlQuote?.quote ?? null, callsAffected: callControlCount, relevantCallIds: worstCallControlQuote ? [worstCallControlQuote.callId] : [] });
+    improvements.push({ category: "Call Control", status: avgCallControl < 45 ? "red" : "orange", title: "Customers are taking over the conversation", detail: `When a customer goes off-topic, gently redirect: "That's interesting — let me just finish this one point and we'll come back to that." You're following them instead of leading. Listen to this moment.`, quote: worstCallControlQuote?.quote ?? null, callsAffected: callControlCount, relevantCallIds: worstCallControlQuote ? [worstCallControlQuote.callId] : [] });
   }
 
   if (avgAuthenticity != null && avgAuthenticity >= 75) {
-    positives.push({ category: "Authenticity", status: "green", title: "You sound natural and genuine", detail: `Your authenticity score averages ${avgAuthenticity}/100. Customers trust you because you sound like a real person, not a script.`, quote: null, callsAffected: authenticityCount, relevantCallIds: [] });
+    positives.push({ category: "Authenticity", status: "green", title: "You sound natural and genuine", detail: `Customers trust you because you sound like a real person, not a script. That's rare — and it's why they stay on the call.`, quote: null, callsAffected: authenticityCount, relevantCallIds: [] });
   } else if (avgAuthenticity != null && avgAuthenticity < 60) {
-    improvements.push({ category: "Authenticity", status: avgAuthenticity < 45 ? "red" : "orange", title: "You sound too scripted", detail: `Your authenticity score averages ${avgAuthenticity}/100. Remove filler words like 'absolutely', 'definitely', 'of course'. Just say what you mean — customers disengage when they feel they're talking to a robot.`, quote: worstAuthenticityQuote?.quote ?? null, callsAffected: authenticityCount, relevantCallIds: worstAuthenticityQuote ? [worstAuthenticityQuote.callId] : [] });
+    improvements.push({ category: "Authenticity — You Sound Scripted", status: avgAuthenticity < 45 ? "red" : "orange", title: "You sound too scripted on this call", detail: `When you repeat the same word over and over, customers stop trusting you — it sounds like a script, not a real person. Replace filler words like "absolutely" with nothing. Just say what you mean — "yes", "exactly", or move straight to your next point. You'll sound 10× more real.`, quote: worstAuthenticityQuote?.quote ?? null, callsAffected: authenticityCount, relevantCallIds: worstAuthenticityQuote ? [worstAuthenticityQuote.callId] : [] });
   }
 
   if (avgObjection != null && avgObjection >= 75) {
-    positives.push({ category: "Objection Handling", status: "green", title: "You handle objections well", detail: `Your objection handling score averages ${avgObjection}/100. You're using the right responses and not giving up too quickly.`, quote: null, callsAffected: objectionCount, relevantCallIds: [] });
+    positives.push({ category: "Objection Handling", status: "green", title: "You handle objections well", detail: `You're using the right responses and not giving up too quickly. When a customer pushes back, you push back with empathy — and it's working.`, quote: null, callsAffected: objectionCount, relevantCallIds: [] });
   } else if (avgObjection != null && avgObjection < 60) {
-    improvements.push({ category: "Objection Handling", status: avgObjection < 45 ? "red" : "orange", title: "You're giving up on objections too quickly", detail: `Your objection handling score averages ${avgObjection}/100. When a customer says 'I need to think about it', don't accept it — ask which of the two concerns it is. Use the script.`, quote: worstObjectionQuote?.quote ?? null, callsAffected: objectionCount, relevantCallIds: worstObjectionQuote ? [worstObjectionQuote.callId] : [] });
+    improvements.push({ category: "Objection Handling", status: avgObjection < 45 ? "red" : "orange", title: "You're giving up on objections too quickly", detail: `When a customer says "I need to think about it", don't accept it — ask which of the two concerns it is: the product, or giving card details. Then address that specific concern. Listen to how you handled it here.`, quote: worstObjectionQuote?.quote ?? null, callsAffected: objectionCount, relevantCallIds: worstObjectionQuote ? [worstObjectionQuote.callId] : [] });
   }
 
   const pct = (count: number, total: number) => total > 0 ? Math.round((count / total) * 100) : 100;
   const trafficLight = (p: number): "green" | "orange" | "red" => p >= 85 ? "green" : p >= 60 ? "orange" : "red";
+  // ── Compliance improvement cards (specific, actionable) ──────────────────────
+  const tcPct = pct(tcReadCount, tcReadTotal);
+  const subMisrepPct = pct(subMisrepCount, subMisrepTotal);
+  if (tcReadTotal > 0 && tcPct < 85) {
+    // Find the most recent call where tcRead was false
+    const failCall = [...thisWeekDone].reverse().find(c => {
+      try { return JSON.parse(c.analysisJson!).tcRead === false; } catch { return false; }
+    });
+    improvements.unshift({
+      category: "Compliance — Fix First",
+      status: "red",
+      title: "You're referencing T&Cs instead of reading them aloud",
+      detail: `The rule is clear: you must read them out verbally on every call. Saying "find them on the website" is not enough and puts you at compliance risk. Next call — read them out loud before taking card details.`,
+      quote: failCall ? (() => { try { const r = JSON.parse(failCall.analysisJson!); return r.silenceQuote ?? r.callControlQuote ?? null; } catch { return null; } })() : null,
+      callsAffected: tcReadTotal - tcReadCount,
+      relevantCallIds: failCall ? [failCall.id] : [],
+    });
+  }
+  if (subMisrepTotal > 0 && subMisrepPct < 85) {
+    const failCall = [...thisWeekDone].reverse().find(c => {
+      try { return JSON.parse(c.analysisJson!).subscriptionMisrepresented === true; } catch { return false; }
+    });
+    improvements.unshift({
+      category: "Compliance — Fix First",
+      status: "red",
+      title: "You denied or downplayed the subscription",
+      detail: `Never say "it's not a subscription" or "you won't be charged". The correct response is: "You're in complete control — cancel anytime with one click or one email." Be proud of the subscription, not defensive.`,
+      quote: null,
+      callsAffected: subMisrepTotal - subMisrepCount,
+      relevantCallIds: failCall ? [failCall.id] : [],
+    });
+  }
+
   const complianceChecklist: ComplianceCheckItem[] = [
     { label: "Full offer details read aloud (T&Cs)", pct: pct(tcReadCount, tcReadTotal), status: trafficLight(pct(tcReadCount, tcReadTotal)) },
     { label: "Subscription clearly explained", pct: pct(subDisclosedCount, subDisclosedTotal), status: trafficLight(pct(subDisclosedCount, subDisclosedTotal)) },

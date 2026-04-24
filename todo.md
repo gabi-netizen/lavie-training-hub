@@ -406,3 +406,7 @@
 - [x] Add time filter UI buttons to AgentCoachingDashboard
 - [x] Fix Ashley Walker visibility — she has calls from last month, should appear with "This Month" default
 - [x] Fix AgentCoachingDashboard: cards open by default, quote + detail + listen link all visible without clicking — exactly as approved mockup
+- [x] Fix getMyCoachingDashboard: return specific quote from a real call per issue (not generic text), specific coaching instruction, and exact callId for "listen" link
+- [x] Fix AgentCoachingDashboard UI: show specific quote in italic blockquote, specific coaching instruction text, "Listen to the call where this happened" link pointing to exact call
+- [x] Fix AgentCoachingDashboard: improvements shown FIRST (as per approved mockup), then positives
+- [x] Fix AgentCoachingDashboard: single "Listen to the call where this happened" link instead of multiple Call 1/2/3 buttons

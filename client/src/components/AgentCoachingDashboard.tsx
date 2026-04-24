@@ -3,8 +3,8 @@
  * ─────────────────────
  * Shown to non-admin reps on the "My Calls" tab.
  * Traffic-light colors only: green / orange / red.
- * Positive feedback first, then improvements.
- * Each card shows relevant calls to listen to.
+ * Improvements shown FIRST (as per approved mockup), then positives.
+ * Each card shows a specific quote + precise coaching + single listen link.
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -121,21 +121,13 @@ function FeedbackCard({
 
           {item.relevantCallIds.length > 0 && (
             <div className="pt-1">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                Listen to {item.relevantCallIds.length === 1 ? "this call" : "these calls"}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {item.relevantCallIds.map((id, i) => (
-                  <button
-                    key={id}
-                    onClick={() => onSelectCall(id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors"
-                  >
-                    <Play className="w-3 h-3" />
-                    Call {i + 1}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => onSelectCall(item.relevantCallIds[0])}
+                className="flex items-center gap-1.5 text-xs font-bold text-black hover:text-gray-600 transition-colors"
+              >
+                <Play className="w-3 h-3 flex-shrink-0" />
+                <span>Listen to the call where this happened</span>
+              </button>
             </div>
           )}
         </div>
@@ -153,7 +145,7 @@ function ComplianceChecklist({
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5">
       <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">
-        Compliance Checklist — Last 7 Days
+        Compliance Checklist
       </div>
       <div className="space-y-3">
         {items.map((item) => (
@@ -221,16 +213,16 @@ export default function AgentCoachingDashboard({
   const scoreChange = (() => {
     if (data.avgScoreThisWeek == null || data.avgScoreLastWeek == null) return undefined;
     const diff = data.avgScoreThisWeek - data.avgScoreLastWeek;
-    if (diff > 0) return { label: `↑ +${diff} vs last week`, dir: "up" as const };
-    if (diff < 0) return { label: `↓ ${diff} vs last week`, dir: "down" as const };
-    return { label: "Same as last week", dir: "same" as const };
+    if (diff > 0) return { label: `↑ +${diff} vs last period`, dir: "up" as const };
+    if (diff < 0) return { label: `↓ ${diff} vs last period`, dir: "down" as const };
+    return { label: "Same as last period", dir: "same" as const };
   })();
 
   const closesChange = (() => {
     const diff = data.closesThisWeek - data.closesLastWeek;
-    if (diff > 0) return { label: `↑ +${diff} vs last week`, dir: "up" as const };
-    if (diff < 0) return { label: `↓ ${diff} vs last week`, dir: "down" as const };
-    return { label: "Same as last week", dir: "same" as const };
+    if (diff > 0) return { label: `↑ +${diff} vs last period`, dir: "up" as const };
+    if (diff < 0) return { label: `↓ ${diff} vs last period`, dir: "down" as const };
+    return { label: "Same as last period", dir: "same" as const };
   })();
 
   const complianceStatus: "green" | "orange" | "red" =
@@ -271,7 +263,7 @@ export default function AgentCoachingDashboard({
         <StatCard
           icon="🎯"
           value={String(data.closesThisWeek)}
-          label="Closes This Week"
+          label="Closes"
           change={closesChange?.label}
           changeDir={closesChange?.dir}
         />
@@ -290,7 +282,7 @@ export default function AgentCoachingDashboard({
             data.complianceRate == null ? undefined :
             data.complianceRate >= 85 ? "All good" :
             data.complianceRate >= 60 ? "Needs attention — see below" :
-            "⚠ Fix this first — see below"
+            "T&Cs issue — see below"
           }
           changeDir={complianceStatus === "green" ? "up" : complianceStatus === "orange" ? "same" : "down"}
         />
@@ -298,30 +290,30 @@ export default function AgentCoachingDashboard({
 
       {noData && (
         <div className="text-center py-8 text-gray-400 text-sm">
-          No calls this week yet — upload a call to see your coaching feedback.
+          No calls in this period yet — upload a call to see your coaching feedback.
         </div>
       )}
 
       {!noData && (
         <>
-          {/* ── What you're doing well ── */}
-          {data.positives.length > 0 && (
+          {/* ── What to work on — FIRST (as per approved mockup) ── */}
+          {data.improvements.length > 0 && (
             <div>
-              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
+              <SectionLabel>🔧 What to work on — from your recent calls</SectionLabel>
               <div className="space-y-2">
-                {data.positives.map((item, i) => (
+                {data.improvements.map((item, i) => (
                   <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── What to work on ── */}
-          {data.improvements.length > 0 && (
+          {/* ── What you're doing well ── */}
+          {data.positives.length > 0 && (
             <div>
-              <SectionLabel>🔧 What to work on — from your last 7 days</SectionLabel>
+              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
               <div className="space-y-2">
-                {data.improvements.map((item, i) => (
+                {data.positives.map((item, i) => (
                   <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
                 ))}
               </div>
