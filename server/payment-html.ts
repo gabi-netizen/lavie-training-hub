@@ -102,18 +102,6 @@ export function getPaymentPageHtml(stripePk: string): string {
     }
     .stripe-input.StripeElement--focus { border-color: #2d6a4f; background: #fff; }
     .stripe-input.StripeElement--invalid { border-color: #e74c3c; }
-    .text-input {
-      width: 100%;
-      border: 1.5px solid #ddd;
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 14px;
-      background: #fafafa;
-      margin-bottom: 14px;
-      outline: none;
-      font-family: inherit;
-    }
-    .text-input:focus { border-color: #2d6a4f; background: #fff; }
     .pay-btn {
       width: 100%;
       background: #1a3c2e;
@@ -182,40 +170,25 @@ export function getPaymentPageHtml(stripePk: string): string {
     </div>
 
     <div class="payment">
-      <div class="payment-title">Pay With Card</div>
+      <div class="payment-title">Secure Payment</div>
       <div id="msg" class="msg"></div>
 
+      <!-- Apple Pay / Google Pay button -->
       <div id="payment-request-btn" style="display:none;"></div>
       <div id="divider" class="divider" style="display:none;">or pay with card</div>
 
+      <!-- Card fields only — no email, no name, no address -->
       <div class="field-label">Card Number</div>
       <div id="card-number" class="stripe-input"></div>
 
       <div style="display:flex;gap:12px;">
         <div style="flex:1;">
-          <div class="field-label">Expiration Date</div>
+          <div class="field-label">Expiry</div>
           <div id="card-expiry" class="stripe-input"></div>
         </div>
         <div style="flex:1;">
           <div class="field-label">CVC</div>
           <div id="card-cvc" class="stripe-input"></div>
-        </div>
-      </div>
-
-      <div class="field-label">Cardholder Name</div>
-      <input id="cardholder-name" type="text" placeholder="Full name on card" class="text-input" />
-
-      <div class="field-label">Address Line 1</div>
-      <input id="address1" type="text" placeholder="Address Line 1" class="text-input" />
-
-      <div style="display:flex;gap:12px;">
-        <div style="flex:1;">
-          <div class="field-label">City / Town</div>
-          <input id="city" type="text" placeholder="City" class="text-input" />
-        </div>
-        <div style="flex:1;">
-          <div class="field-label">Postcode</div>
-          <input id="postcode" type="text" placeholder="Postcode" class="text-input" />
         </div>
       </div>
 
@@ -257,6 +230,7 @@ export function getPaymentPageHtml(stripePk: string): string {
     cardExpiry.mount('#card-expiry');
     cardCvc.mount('#card-cvc');
 
+    // Apple Pay / Google Pay — no email, no name, no shipping
     const paymentRequest = stripe.paymentRequest({
       country: 'GB',
       currency: 'gbp',
@@ -302,6 +276,7 @@ export function getPaymentPageHtml(stripePk: string): string {
       }
     });
 
+    // Manual card payment — no extra fields
     document.getElementById('pay-btn').addEventListener('click', async () => {
       const btn = document.getElementById('pay-btn');
       btn.disabled = true;
@@ -309,24 +284,9 @@ export function getPaymentPageHtml(stripePk: string): string {
       showMsg('', '');
       try {
         const { clientSecret } = await createIntent();
-        const name     = document.getElementById('cardholder-name').value.trim();
-        const address1 = document.getElementById('address1').value.trim();
-        const city     = document.getElementById('city').value.trim();
-        const postcode = document.getElementById('postcode').value.trim();
 
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: {
-            card: cardNumber,
-            billing_details: {
-              name: name || undefined,
-              address: {
-                line1: address1 || undefined,
-                city: city || undefined,
-                postal_code: postcode || undefined,
-                country: 'GB'
-              },
-            },
-          },
+          payment_method: { card: cardNumber },
         });
 
         if (error) {
