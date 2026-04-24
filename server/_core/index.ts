@@ -1,7 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import fs from "fs";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import multer from "multer";
 import { registerClerkRoutes } from "./clerkRoutes";
@@ -108,6 +110,22 @@ async function startServer() {
       createContext,
     })
   );
+
+  // ─── Standalone Payment Page ───────────────────────────────────────────────
+  // Pure HTML/JS page — no React, no tRPC, no Clerk auth.
+  // MUST be registered BEFORE serveStatic/setupVite so the React catch-all
+  // never intercepts this path.
+  // Usage: https://training.lavielabs.com/payment-link-lavielabs?agent=AgentName
+  //
+  // ⚠️  TEST IN A TEST ENVIRONMENT BEFORE USING IN PRODUCTION.
+  //     The Stripe publishable key is injected server-side from VITE_STRIPE_PUBLISHABLE_KEY.
+  app.get("/payment-link-lavielabs", (_req, res) => {
+    const htmlPath = path.resolve(import.meta.dirname, "../payment-page.html");
+    let html = fs.readFileSync(htmlPath, "utf-8");
+    html = html.replace("__STRIPE_PK__", process.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  });
 
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
