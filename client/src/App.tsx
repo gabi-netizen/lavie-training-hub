@@ -52,7 +52,7 @@ function Router() {
   const [location] = useLocation();
 
   // Public routes — no AppLayout, no TopNav, no auth required
-  if (location === "/pay" || location.startsWith("/pay?") || location.startsWith("/pay/")) {
+  if (location === "/payment-link-lavielabs" || location.startsWith("/payment-link-lavielabs?") || location.startsWith("/payment-link-lavielabs/")) {
     return <PaymentForm />;
   }
 
@@ -102,7 +102,7 @@ function Router() {
         <Route path={"/workspace"} component={Workspace} />
 
         {/* Public payment form — sent to customers by agents */}
-        <Route path={"/pay"} component={PaymentForm} />
+        <Route path={"/payment-link-lavielabs"} component={PaymentForm} />
 
         {/* Profile settings — all authenticated users */}
         <Route path={"/profile"} component={ProfileSettings} />
