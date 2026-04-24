@@ -1,2 +1,0 @@
-[deploy]
-startCommand = "pnpm db:push && node dist/index.js"
