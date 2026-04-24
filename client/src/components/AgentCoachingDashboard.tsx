@@ -35,21 +35,21 @@ const C = {
     label:     "text-[#dc2626]",
     badge:     "bg-red-100 text-[#dc2626]",
     highlight: "text-[#dc2626] font-semibold",
-    link:      "text-[#dc2626] hover:text-[#b91c1c]",
+    link:      "text-[#6d28d9] hover:text-[#5b21b6]",
   },
   orange: {
     border:    "border-l-[#d97706]",
     label:     "text-[#d97706]",
     badge:     "bg-amber-100 text-[#b45309]",
     highlight: "text-[#d97706] font-semibold",
-    link:      "text-[#d97706] hover:text-[#b45309]",
+    link:      "text-[#6d28d9] hover:text-[#5b21b6]",
   },
   green: {
     border:    "border-l-[#16a34a]",
     label:     "text-[#16a34a]",
     badge:     "bg-green-100 text-[#16a34a]",
     highlight: "text-[#16a34a] font-semibold",
-    link:      "text-[#16a34a] hover:text-[#15803d]",
+    link:      "text-[#6d28d9] hover:text-[#5b21b6]",
   },
 } satisfies Record<CardColor, Record<string, string>>;
 
