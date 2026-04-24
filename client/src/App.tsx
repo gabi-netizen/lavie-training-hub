@@ -15,7 +15,6 @@ import ProfileSettings from "./pages/ProfileSettings";
 import CallLog from "./pages/CallLog";
 import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
-import PaymentForm from "./pages/PaymentForm";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -49,12 +48,6 @@ function TabRedirect({ tab }: { tab: string }) {
 function Router() {
   const { user, loading } = useAuth();
   const isAdmin = !loading && user?.role === "admin";
-  const [location] = useLocation();
-
-  // Public routes — no AppLayout, no TopNav, no auth required
-  if (location === "/payment-link-lavielabs" || location.startsWith("/payment-link-lavielabs?") || location.startsWith("/payment-link-lavielabs/")) {
-    return <PaymentForm />;
-  }
 
   return (
     <AppLayout>
@@ -100,9 +93,6 @@ function Router() {
 
         {/* Workspace — agent calling workspace */}
         <Route path={"/workspace"} component={Workspace} />
-
-        {/* Public payment form — sent to customers by agents */}
-        <Route path={"/payment-link-lavielabs"} component={PaymentForm} />
 
         {/* Profile settings — all authenticated users */}
         <Route path={"/profile"} component={ProfileSettings} />
