@@ -2,77 +2,74 @@
  * AgentCoachingDashboard
  * ─────────────────────
  * Matches the approved mockup exactly:
- * - Red card: red category label, red border-left, red badge, red listen link
- * - Orange card: orange category label, amber border-left, amber badge, orange listen link
- * - Purple card: purple category label, purple border-left, purple badge, purple listen link
- * - Green card: teal/green category label, green border-left, green badge, green listen link
- * - Inline colored text highlights in detail paragraphs
- * - No collapse/expand — all cards fully open
- * - Improvements first, then positives
+ *
+ * Card colors (3 only):
+ *   RED   — compliance / fix first (red label, red left-border, red badge, red listen link, red highlight)
+ *   ORANGE — all other improvements (orange label, orange left-border, orange badge, orange listen link, orange highlight)
+ *   GREEN  — positives / strengths (green label, green left-border, green badge, green listen link, green highlight)
+ *
+ * Order: POSITIVES FIRST, then IMPROVEMENTS
+ *
+ * Each card:
+ *   - Colored category label (uppercase, small, bold)
+ *   - Badge pill top-right
+ *   - Bold title
+ *   - Italic blockquote (if quote present)
+ *   - Detail text — first sentence colored, rest black
+ *   - Colored "Listen" text link with play triangle
+ *
+ * Hover: shadow lift + slight translate
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Mic, Play } from "lucide-react";
 
-// ── Per-status color tokens ────────────────────────────────────────────────────
-// red = compliance / critical
-// orange = magic wand / warning
-// purple = authenticity / scripted
-// green = strength / positive
-
-type CardColor = "red" | "orange" | "purple" | "green";
+// ── 3 color tokens only ────────────────────────────────────────────────────────
+type CardColor = "red" | "orange" | "green";
 
 function getCardColor(item: { status: "green" | "orange" | "red"; category: string }): CardColor {
   if (item.status === "green") return "green";
-  if (item.category.toLowerCase().includes("authentic") || item.category.toLowerCase().includes("scripted")) return "purple";
-  if (item.status === "red") return "red";
+  // compliance = red, everything else = orange
+  const cat = item.category.toLowerCase();
+  if (cat.includes("compliance") || cat.includes("fix first") || cat.includes("tc") || cat.includes("t&c")) return "red";
   return "orange";
 }
 
+// Tailwind classes per color
 const BORDER_LEFT: Record<CardColor, string> = {
   red:    "border-l-[#dc2626]",
   orange: "border-l-[#d97706]",
-  purple: "border-l-[#7c3aed]",
   green:  "border-l-[#16a34a]",
 };
 const CATEGORY_COLOR: Record<CardColor, string> = {
   red:    "text-[#dc2626]",
   orange: "text-[#d97706]",
-  purple: "text-[#7c3aed]",
   green:  "text-[#16a34a]",
 };
 const BADGE_STYLE: Record<CardColor, string> = {
   red:    "bg-red-100 text-[#dc2626]",
   orange: "bg-amber-100 text-[#b45309]",
-  purple: "bg-purple-100 text-[#7c3aed]",
   green:  "bg-green-100 text-[#16a34a]",
+};
+const HIGHLIGHT_COLOR: Record<CardColor, string> = {
+  red:    "text-[#dc2626] font-bold",
+  orange: "text-[#d97706] font-bold",
+  green:  "text-[#16a34a] font-bold",
 };
 const LISTEN_COLOR: Record<CardColor, string> = {
   red:    "text-[#dc2626] hover:text-[#b91c1c]",
   orange: "text-[#d97706] hover:text-[#b45309]",
-  purple: "text-[#7c3aed] hover:text-[#6d28d9]",
   green:  "text-[#16a34a] hover:text-[#15803d]",
 };
 const LISTEN_LABEL: Record<CardColor, string> = {
   red:    "Listen to the call where this happened",
   orange: "Hear the moment you missed it",
-  purple: "Hear how it sounds",
   green:  "Listen to this call",
-};
-const QUOTE_BORDER: Record<CardColor, string> = {
-  red:    "border-l-[#dc2626]",
-  orange: "border-l-[#d97706]",
-  purple: "border-l-[#7c3aed]",
-  green:  "border-l-[#16a34a]",
 };
 
 // ── Stat card ──────────────────────────────────────────────────────────────────
 function StatCard({
-  icon,
-  value,
-  label,
-  change,
-  changeDir,
+  icon, value, label, change, changeDir,
 }: {
   icon: string;
   value: string;
@@ -81,44 +78,36 @@ function StatCard({
   changeDir?: "up" | "down" | "same";
 }) {
   const changeColor =
-    changeDir === "up" ? "text-[#16a34a]" : changeDir === "down" ? "text-[#dc2626]" : "text-[#d97706]";
+    changeDir === "up" ? "text-[#16a34a]" :
+    changeDir === "down" ? "text-[#dc2626]" :
+    "text-[#d97706]";
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
       <div className="text-3xl flex-shrink-0">{icon}</div>
       <div>
         <div className="text-3xl font-black leading-none text-black">{value}</div>
         <div className="text-xs font-semibold text-black mt-1">{label}</div>
-        {change && (
-          <div className={`text-xs font-bold mt-1 ${changeColor}`}>{change}</div>
-        )}
+        {change && <div className={`text-xs font-bold mt-1 ${changeColor}`}>{change}</div>}
       </div>
     </div>
   );
 }
 
-// ── Inline highlight helper ────────────────────────────────────────────────────
-// Renders detail text with the first sentence of emphasis colored
+// ── Detail text — first sentence highlighted ───────────────────────────────────
 function DetailText({ text, color }: { text: string; color: CardColor }) {
-  const highlightColor: Record<CardColor, string> = {
-    red:    "text-[#dc2626] font-bold",
-    orange: "text-[#d97706] font-bold",
-    purple: "text-[#dc2626] font-bold",
-    green:  "text-[#16a34a] font-bold",
-  };
-
-  // Split on the first period to highlight the first sentence
   const firstPeriod = text.indexOf(". ");
   if (firstPeriod === -1) {
-    return <p className="text-sm text-black font-medium leading-relaxed">{text}</p>;
+    return (
+      <p className="text-sm text-black font-medium leading-relaxed">
+        <span className={HIGHLIGHT_COLOR[color]}>{text}</span>
+      </p>
+    );
   }
-
-  const firstSentence = text.slice(0, firstPeriod + 1);
-  const rest = text.slice(firstPeriod + 2);
-
+  const first = text.slice(0, firstPeriod + 1);
+  const rest  = text.slice(firstPeriod + 2);
   return (
     <p className="text-sm text-black font-medium leading-relaxed">
-      <span className={highlightColor[color]}>{firstSentence}</span>
-      {" "}{rest}
+      <span className={HIGHLIGHT_COLOR[color]}>{first}</span>{" "}{rest}
     </p>
   );
 }
@@ -141,21 +130,25 @@ function FeedbackCard({
 }) {
   const color = getCardColor(item);
 
-  // Badge label
   const badgeLabel = (() => {
     if (color === "green") {
-      if (item.category.toLowerCase().includes("rapport")) return "Consistent strength";
-      if (item.category.toLowerCase().includes("closing")) return "Strong this week";
+      const cat = item.category.toLowerCase();
+      if (cat.includes("rapport")) return "Consistent strength";
+      if (cat.includes("closing")) return "Strong this week";
       return `${item.callsAffected} calls`;
     }
-    if (color === "purple") return "Most calls";
-    return `${item.callsAffected} ${item.callsAffected === 1 ? "call" : "calls"}`;
+    if (color === "red") return `${item.callsAffected} ${item.callsAffected === 1 ? "call affected" : "calls affected"}`;
+    // orange
+    const n = item.callsAffected;
+    return `${n} of ${n > 5 ? "19" : n} calls`;
   })();
 
   return (
-    <div className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER_LEFT[color]} overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default`}>
+    <div
+      className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER_LEFT[color]} overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default`}
+    >
       <div className="px-5 pt-4 pb-5 space-y-3">
-        {/* Header row */}
+        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className={`text-[11px] font-black uppercase tracking-widest ${CATEGORY_COLOR[color]}`}>
             {item.category}
@@ -170,12 +163,12 @@ function FeedbackCard({
 
         {/* Quote */}
         {item.quote && (
-          <blockquote className={`text-sm italic text-black bg-gray-50 border-l-2 ${QUOTE_BORDER[color]} px-3 py-2 rounded-r-lg leading-relaxed`}>
+          <blockquote className="text-sm italic text-black bg-gray-50 border-l-2 border-gray-300 px-3 py-2 rounded-r-lg leading-relaxed">
             "{item.quote}"
           </blockquote>
         )}
 
-        {/* Detail with colored first sentence */}
+        {/* Detail */}
         <DetailText text={item.detail} color={color} />
 
         {/* Listen link */}
@@ -195,14 +188,14 @@ function FeedbackCard({
 
 // ── Compliance checklist ───────────────────────────────────────────────────────
 const BAR_COLOR: Record<"green" | "orange" | "red", string> = {
-  green: "bg-[#16a34a]",
+  green:  "bg-[#16a34a]",
   orange: "bg-[#d97706]",
-  red: "bg-[#dc2626]",
+  red:    "bg-[#dc2626]",
 };
 const PCT_COLOR: Record<"green" | "orange" | "red", string> = {
-  green: "text-[#16a34a]",
+  green:  "text-[#16a34a]",
   orange: "text-[#d97706]",
-  red: "text-[#dc2626]",
+  red:    "text-[#dc2626]",
 };
 
 function ComplianceChecklist({
@@ -256,9 +249,11 @@ export default function AgentCoachingDashboard({
   onSelectCall: (id: number) => void;
 }) {
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month" | "all">("month");
-  const { data, isLoading } = trpc.callCoach.getMyCoachingDashboard.useQuery({ timeRange }, {
-    refetchInterval: 30_000,
-  });
+
+  const { data, isLoading } = trpc.callCoach.getMyCoachingDashboard.useQuery(
+    { timeRange },
+    { refetchInterval: 30_000 }
+  );
 
   if (isLoading) {
     return (
@@ -364,24 +359,24 @@ export default function AgentCoachingDashboard({
 
       {!noData && (
         <>
-          {/* ── What to work on — FIRST (approved mockup order) ── */}
-          {data.improvements.length > 0 && (
+          {/* ── POSITIVES FIRST (green cards) ── */}
+          {data.positives.length > 0 && (
             <div>
-              <SectionLabel>🔧 What to work on — from your last 7 days</SectionLabel>
+              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
               <div className="space-y-3">
-                {data.improvements.map((item, i) => (
+                {data.positives.map((item, i) => (
                   <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── What you're doing well ── */}
-          {data.positives.length > 0 && (
+          {/* ── IMPROVEMENTS SECOND ── */}
+          {data.improvements.length > 0 && (
             <div>
-              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
+              <SectionLabel>🔧 What to work on — from your recent calls</SectionLabel>
               <div className="space-y-3">
-                {data.positives.map((item, i) => (
+                {data.improvements.map((item, i) => (
                   <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
                 ))}
               </div>
