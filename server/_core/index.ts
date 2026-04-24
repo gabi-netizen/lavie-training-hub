@@ -1,9 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
-import fs from "fs";
 import net from "net";
-import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import multer from "multer";
 import { registerClerkRoutes } from "./clerkRoutes";
@@ -14,6 +12,7 @@ import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
+import { getPaymentPageHtml } from "../payment-html";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -74,7 +73,7 @@ async function startServer() {
   app.post("/api/webhooks/cloudtalk", handleCloudTalkWebhook);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
-  // Public endpoint — called by the /pay page to initiate a Stripe payment.
+  // Public endpoint — called by the payment page to initiate a Stripe payment.
   app.post("/api/stripe/create-payment-intent", createPaymentIntent);
 
   // ─── File upload endpoint ─────────────────────────────────────────────────
@@ -113,16 +112,13 @@ async function startServer() {
 
   // ─── Standalone Payment Page ───────────────────────────────────────────────
   // Pure HTML/JS page — no React, no tRPC, no Clerk auth.
+  // HTML is inlined as a TS string (via payment-html.ts) so esbuild bundles it
+  // into dist/index.js — no file-copy step needed on Railway.
   // MUST be registered BEFORE serveStatic/setupVite so the React catch-all
   // never intercepts this path.
-  // Usage: https://training.lavielabs.com/payment-link-lavielabs?agent=AgentName
-  //
-  // ⚠️  TEST IN A TEST ENVIRONMENT BEFORE USING IN PRODUCTION.
-  //     The Stripe publishable key is injected server-side from VITE_STRIPE_PUBLISHABLE_KEY.
+  // Usage: /payment-link-lavielabs?agent=AgentName
   app.get("/payment-link-lavielabs", (_req, res) => {
-    const htmlPath = path.resolve(import.meta.dirname, "../payment-page.html");
-    let html = fs.readFileSync(htmlPath, "utf-8");
-    html = html.replace("__STRIPE_PK__", process.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+    const html = getPaymentPageHtml(process.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "");
     res.setHeader("Content-Type", "text/html");
     res.send(html);
   });
