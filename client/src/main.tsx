@@ -96,9 +96,9 @@ function AppWithTrpc() {
 createRoot(document.getElementById("root")!).render(
   <ClerkProvider
     publishableKey={CLERK_PUBLISHABLE_KEY}
-    signInUrl="https://caring-duck-98.accounts.dev/sign-in"
-    signUpUrl="https://caring-duck-98.accounts.dev/sign-up"
-    afterSignOutUrl="https://caring-duck-98.accounts.dev/sign-in"
+    signInUrl="https://accounts.training.lavielabs.com/sign-in"
+    signUpUrl="https://accounts.training.lavielabs.com/sign-up"
+    afterSignOutUrl="https://accounts.training.lavielabs.com/sign-in"
   >
     <AppWithTrpc />
   </ClerkProvider>
