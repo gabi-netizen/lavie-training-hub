@@ -405,3 +405,4 @@
 - [x] Add time filter UI buttons (Today / This Week / This Month / All Time) to ManagerCoachingDashboard
 - [x] Add time filter UI buttons to AgentCoachingDashboard
 - [x] Fix Ashley Walker visibility — she has calls from last month, should appear with "This Month" default
+- [x] Fix AgentCoachingDashboard: cards open by default, quote + detail + listen link all visible without clicking — exactly as approved mockup

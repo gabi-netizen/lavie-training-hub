@@ -78,7 +78,7 @@ function FeedbackCard({
   };
   onSelectCall: (id: number) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const s = item.status;
 
   return (
