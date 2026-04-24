@@ -1667,25 +1667,6 @@ export default function Workspace() {
 
   return (
     <div className="ws-layout">
-      {/* TOP NAV */}
-      <div className="ws-topnav">
-        <div className="ws-topnav-logo">
-          LAVIÉ <span>LABS</span>
-        </div>
-        <div className="ws-topnav-tabs">
-          <div className="ws-topnav-tab active">Workspace</div>
-          <div className="ws-topnav-tab" onClick={() => navigate("/training")}>Training</div>
-          <div className="ws-topnav-tab" onClick={() => navigate("/contacts")}>Contacts</div>
-          <div className="ws-topnav-tab" onClick={() => navigate("/ai-coach")}>AI Coach</div>
-        </div>
-        <div className="ws-topnav-user">
-          <div className="ws-topnav-avatar">
-            {user?.name?.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) ?? "?"}
-          </div>
-          {user?.name ?? "Agent"}
-        </div>
-      </div>
-
       {/* MAIN CONTENT */}
       <div className="ws-main">
         {/* LEFT: DIAL LIST */}
