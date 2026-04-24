@@ -368,6 +368,8 @@ export interface CallAnalysisReport {
   upsellAttempted?: boolean | null;
   upsellSucceeded?: boolean | null;
   cancelReason?: string | null;
+  /** AI-classified retention call type (only returned when initial callType is 'other'/retention placeholder) */
+  retentionCallType?: "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "retention_win_back" | "other" | null;
   // ─── 8-DIMENSION COACHING FIELDS ───
   rapportScore?: number | null;           // 0-100: personal connection with customer
   rapportQuote?: string | null;           // direct quote from the call
@@ -480,16 +482,28 @@ Score LOW for: failing to resolve.
   if (callType === "other") {
     return {
       context: `
-CALL TYPE: Other (Retention Team)
-This is a general retention call. Score on rapport, problem-solving, and customer satisfaction.
-Compliance checks do NOT apply to this call type.
+CALL TYPE: Retention (Auto-Classify Required)
+This is a retention team call. Your FIRST task is to classify the exact call type from the transcript.
+Compliance checks do NOT apply to retention calls.
+
+CALL TYPE DEFINITIONS:
+- live_sub: Customer is an ACTIVE subscriber who has NOT requested to cancel. Rep is upselling.
+- pre_cycle_cancelled: Customer wants to cancel before or during their first payment cycle (trial cancellation).
+- pre_cycle_decline: Customer's payment was declined before their first charge. Rep is recovering payment details.
+- end_of_instalment: Customer previously had an instalment plan and is being reactivated / winback.
+- from_cat: Call was escalated/transferred from the Opening team ("from Cat" / "from the opening team").
+- retention_win_back: Customer has already cancelled and rep is trying to win them back.
+- other: None of the above categories fit.
+
+Score on rapport, problem-solving, and customer satisfaction.
 `,
       stages: ["Opening & Rapport", "Understand Customer Situation", "Resolve / Assist", "Close / Confirm"],
       extraFields: `
   "saved": <bool — did the rep successfully help/retain the customer?>,
   "upsellAttempted": <bool — did the rep attempt an upsell?>,
   "upsellSucceeded": <bool — did the upsell succeed?>,
-  "cancelReason": null,`,
+  "cancelReason": "<Can't afford | Skin reaction | No results | Too many products | Didn't understand subscription | Other | null>",
+  "retentionCallType": "<live_sub | pre_cycle_cancelled | pre_cycle_decline | end_of_instalment | from_cat | retention_win_back | other>",`,
     };
   }
   // Opening: cold_call, follow_up, or legacy "opening"
@@ -676,11 +690,13 @@ export async function updateCallAnalysisStatus(
     upsellSucceeded: boolean;
     cancelReason: string;
     wordTimestamps: string;
+    callType: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_win_back";
   }>
-) {
+)
+{
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(callAnalyses).set(update).where(eq(callAnalyses.id, id));
+  await db.update(callAnalyses).set(update as any).where(eq(callAnalyses.id, id));
 }
 
 export async function getCallAnalysisById(id: number) {
@@ -834,6 +850,11 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
     if (report.upsellAttempted !== undefined && report.upsellAttempted !== null) savePayload.upsellAttempted = report.upsellAttempted;
     if (report.upsellSucceeded !== undefined && report.upsellSucceeded !== null) savePayload.upsellSucceeded = report.upsellSucceeded;
     if (report.cancelReason) savePayload.cancelReason = report.cancelReason;
+    // If AI classified the retention call type, update callType in DB
+    if (callType === "other" && report.retentionCallType && report.retentionCallType !== "other") {
+      (savePayload as any).callType = report.retentionCallType;
+      console.log(`[CallAnalysis] AI classified retention call #${analysisId} as: ${report.retentionCallType}`);
+    }
     await updateCallAnalysisStatus(analysisId, savePayload);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

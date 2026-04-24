@@ -33,6 +33,44 @@ function normalizePhone(phone: string | number): string {
   return String(phone).replace(/[\s\-().+]/g, "");
 }
 
+// ─── Stripe customer name lookup ─────────────────────────────────────────────
+/**
+ * Look up a customer's name in Stripe by phone number.
+ * Tries multiple phone formats (E.164, local UK) to maximise match rate.
+ * Returns the customer's full name, or null if not found.
+ */
+async function lookupStripeCustomerName(phone: string | number): Promise<string | null> {
+  const stripeKey = process.env.STRIPE_API_KEY;
+  if (!stripeKey) return null;
+  const raw = String(phone).trim();
+  // Build candidate phone formats to try
+  const candidates: string[] = [raw];
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) candidates.push(`+44${digits.slice(1)}`, `0${digits.slice(1)}`);
+  if (digits.length === 11 && digits.startsWith("0")) candidates.push(`+44${digits.slice(1)}`);
+  if (digits.length === 12 && digits.startsWith("44")) candidates.push(`+${digits}`, `0${digits.slice(2)}`);
+  for (const candidate of candidates) {
+    try {
+      const query = encodeURIComponent(`phone:"${candidate}"`);
+      const res = await fetch(`https://api.stripe.com/v1/customers/search?query=${query}&limit=1`, {
+        headers: { Authorization: `Bearer ${stripeKey}` },
+      });
+      const json = await res.json() as any;
+      if (json?.data?.length > 0) {
+        const customer = json.data[0];
+        const name = customer.name ?? customer.description ?? null;
+        if (name) {
+          console.log(`[Stripe] Found customer "${name}" for phone ${candidate}`);
+          return name;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Stripe] Lookup failed for ${candidate}:`, err);
+    }
+  }
+  return null;
+}
+
 // ─── Find user by CloudTalk agent ID ─────────────────────────────────────────
 async function findUserByCloudtalkAgentId(agentId: string | number) {
   const db = await getDb();
@@ -316,15 +354,25 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
 
     // Find matching contact by phone
     const contact = callerPhone ? await findContactByPhone(String(callerPhone)) : null;
-
+    // Stripe customer name lookup (for retention agents or any call with a phone number)
+    let stripeCustomerName: string | null = null;
+    if (callerPhone) {
+      stripeCustomerName = await lookupStripeCustomerName(String(callerPhone));
+      if (stripeCustomerName) {
+        console.log(`[CloudTalk Webhook] Stripe customer name: "${stripeCustomerName}"`);
+      }
+    }
     // Download recording and upload to S3
     console.log(`[CloudTalk Webhook] Downloading recording from ${recordingUrl}`);
     const { fileKey, fileUrl } = await downloadAndStoreRecording(recordingUrl, String(callId));
-
     // Determine repName: prefer CloudTalk agent name from payload, fallback to user record name
     const repName = cloudtalkAgentName || agent.name || null;
     console.log(`[CloudTalk Webhook] Agent name resolved: "${repName}" (from payload: "${cloudtalkAgentName}", from user: "${agent.name}")`);
-
+    // Determine initial callType based on agent team
+    // Retention agents get 'other' as placeholder — AI will classify the exact type from transcript
+    // Opening agents get 'cold_call' as default
+    const isRetentionAgent = (agent as any).team === "retention";
+    const initialCallType = isRetentionAgent ? "other" : "cold_call";
     // Create analysis record
     const analysisId = await createCallAnalysisRecord({
       userId: agent.id,
@@ -336,8 +384,9 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       source: "webhook",
       cloudtalkCallId: String(callId),
       contactId: contact?.id ?? null,
-    });
-
+      callType: initialCallType,
+      customerName: stripeCustomerName ?? undefined,
+     } as any);
     console.log(`[CloudTalk Webhook] Created analysis record #${analysisId} for call ${callId}`);
 
     // Respond immediately — don't wait for analysis to complete

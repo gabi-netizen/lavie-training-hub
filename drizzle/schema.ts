@@ -22,6 +22,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   /** CloudTalk Agent ID for click-to-call (e.g. 178617) */
   cloudtalkAgentId: varchar("cloudtalkAgentId", { length: 32 }),
+  /** Team assignment: 'opening' or 'retention'. Null = unassigned / admin */
+  team: mysqlEnum("team", ["opening", "retention"]),
 });
 
 export type User = typeof users.$inferSelect;
@@ -65,7 +67,7 @@ export const callAnalyses = mysqlTable("call_analyses", {
     "cold_call", "follow_up",
     "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat",
     "other",
-    "opening", "retention_cancel_trial", "retention_win_back"
+    "opening", "retention_win_back"
   ]).default("cold_call"),
   /** User ID of the person who last edited the call details (repName/callDate/closeStatus) */
   lastEditedByUserId: int("lastEditedByUserId"),

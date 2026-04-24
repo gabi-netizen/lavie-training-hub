@@ -1,0 +1,1 @@
+ALTER TABLE `call_analyses` MODIFY COLUMN `callType` enum('cold_call','follow_up','live_sub','pre_cycle_cancelled','pre_cycle_decline','end_of_instalment','from_cat','other','opening','retention_win_back') DEFAULT 'cold_call';
