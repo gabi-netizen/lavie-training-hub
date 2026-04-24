@@ -31,4 +31,6 @@ export const ENV = {
   awsEndpointUrl: process.env.AWS_ENDPOINT_URL ?? "",
   // Cloudflare R2 public dev URL (e.g. https://pub-xxx.r2.dev) — makes files publicly accessible without presigning
   r2PublicUrl: process.env.R2_PUBLIC_URL ?? "",
+  // n8n Cloud webhook base URL (e.g. https://gabilavie.app.n8n.cloud/webhook)
+  n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
 };

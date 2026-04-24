@@ -37,6 +37,7 @@ import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { notifyNewContact } from "../n8n";
 
 // Admin email for notifications
 const ADMIN_EMAIL = "gabriel@lavielabs.com";
@@ -78,6 +79,21 @@ export const contactsRouter = router({
         address: input.address?.trim() || undefined,
       });
       const newId = (result as any).insertId as number;
+
+      // ── n8n: notify new contact created (fire-and-forget) ───────────────
+      notifyNewContact({
+        id: newId,
+        name: input.name.trim(),
+        phone: input.phone?.trim() || null,
+        email: input.email?.trim() || null,
+        leadType: input.leadType?.trim() || null,
+        status: input.status,
+        agentName: input.agentName?.trim() || null,
+        agentEmail: input.agentEmail?.trim() || null,
+        source: input.source?.trim() || null,
+        createdAt: new Date().toISOString(),
+      });
+
       // ── CloudTalk: sync contact so dialer shows name/email/phone ────────
       syncContactToCloudTalk({
         name: input.name.trim(),
