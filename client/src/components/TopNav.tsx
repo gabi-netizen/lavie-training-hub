@@ -39,13 +39,13 @@ const CALLS_ITEMS_ADMIN = [
 const AI_COACH_ITEMS_AGENT = [
   { tab: "opening", label: "Opening", icon: Target },
   { tab: "upload", label: "Upload Call", icon: Upload },
-  { tab: "my-calls", label: "My Calls", icon: ListChecks },
+  { tab: "my-calls", label: "Agent View", icon: Users },
   { tab: "team", label: "Team", icon: Users },
 ];
 const AI_COACH_ITEMS_ADMIN = [
   { tab: "opening", label: "Opening", icon: Target },
   { tab: "upload", label: "Upload Call", icon: Upload },
-  { tab: "my-calls", label: "My Calls", icon: ListChecks },
+  { tab: "my-calls", label: "Agent View", icon: Users },
   { tab: "team", label: "Team", icon: Users },
   { tab: "performance", label: "Performance", icon: TrendingUp },
   { tab: "manager", label: "Manager View", icon: BarChart3 },
@@ -114,9 +114,10 @@ export default function TopNav() {
     : "?";
 
   // Navigate to AI Coach with a specific tab
+  // Use window.location.href so the query string change is always detected
   const goToAiCoachTab = (tab: string) => {
     setAiCoachOpen(false);
-    navigate(`/ai-coach?tab=${tab}`);
+    window.location.href = `/ai-coach?tab=${tab}`;
   };
 
   return (
