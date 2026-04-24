@@ -110,6 +110,18 @@ async function startServer() {
     })
   );
 
+  // ─── Temporary debug endpoint — remove after key issue is resolved ──────────
+  app.get("/api/debug-key", (_req, res) => {
+    const sk = process.env.STRIPE_SECRET_KEY ?? "";
+    const pk = process.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "";
+    res.json({
+      sk_prefix: sk.substring(0, 8),
+      sk_length: sk.length,
+      pk_prefix: pk.substring(0, 8),
+      pk_length: pk.length,
+    });
+  });
+
   // ─── Standalone Payment Page ───────────────────────────────────────────────
   // Pure HTML/JS page — no React, no tRPC, no Clerk auth.
   // HTML is inlined as a TS string (via payment-html.ts) so esbuild bundles it

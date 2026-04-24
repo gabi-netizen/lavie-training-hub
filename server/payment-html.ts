@@ -270,28 +270,33 @@ export function getPaymentPageHtml(stripePk: string): string {
     paymentRequest.on('paymentmethod', function(ev) {
       showMsg('', '');
       createIntent().then(function(clientSecret) {
+        // Step 1: confirm without handling 3DS actions yet
         return stripe.confirmCardPayment(
           clientSecret,
           { payment_method: ev.paymentMethod.id },
           { handleActions: false }
-        ).then(function(result) {
-          if (result.error) {
+        ).then(function(confirmResult) {
+          if (confirmResult.error) {
+            // Payment failed immediately
             ev.complete('fail');
-            showMsg(result.error.message, 'error');
+            showMsg(confirmResult.error.message, 'error');
             return;
           }
+          // Tell the payment sheet it can close
           ev.complete('success');
-          if (result.paymentIntent.status === 'requires_action') {
+          // Step 2: if 3DS required, handle it now (after sheet closed)
+          if (confirmResult.paymentIntent.status === 'requires_action') {
             return stripe.confirmCardPayment(clientSecret).then(function(r) {
               if (r.error) { showMsg(r.error.message, 'error'); }
               else { showSuccess(); }
             });
           }
+          // Payment succeeded immediately
           showSuccess();
         });
       }).catch(function(e) {
         ev.complete('fail');
-        showMsg(e.message || 'Payment failed', 'error');
+        showMsg(e.message || 'Payment failed. Please try again.', 'error');
       });
     });
 
