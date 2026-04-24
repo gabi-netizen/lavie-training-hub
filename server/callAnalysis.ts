@@ -717,7 +717,7 @@ export interface LeaderboardEntry {
   isReliable: boolean; // true if 5+ calls
 }
 
-export async function getLeaderboard(department: "outbound" | "retention" | null = null): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -725,19 +725,10 @@ export async function getLeaderboard(department: "outbound" | "retention" | null
     .where(eq(callAnalyses.status, "done"))
     .orderBy(callAnalyses.createdAt);
 
-  // If department filter is set, get user IDs for that department
-  let allowedUserIds: Set<number> | null = null;
-  if (department) {
-    const deptUsers = await db.select({ id: users.id }).from(users).where(eq(users.department, department));
-    allowedUserIds = new Set(deptUsers.map(u => u.id));
-  }
-
   // Group by userId
   type CallRow = (typeof all)[number];
   const byUser = new Map<number, CallRow[]>();
   for (const row of all) {
-    // Filter by department if specified
-    if (allowedUserIds && !allowedUserIds.has(row.userId)) continue;
     if (!byUser.has(row.userId)) byUser.set(row.userId, []);
     byUser.get(row.userId)!.push(row);
   }
@@ -974,25 +965,13 @@ export interface RepProfileData {
   isReliable: boolean; // true if 5+ calls
 }
 
-export async function getTeamDashboard(department: "outbound" | "retention" | null = null): Promise<RepProfileData[]> {
+export async function getTeamDashboard(): Promise<RepProfileData[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // If department filter is set, get user IDs for that department
-  let allowedUserIds: Set<number> | null = null;
-  if (department) {
-    const deptUsers = await db.select({ id: users.id }).from(users).where(eq(users.department, department));
-    allowedUserIds = new Set(deptUsers.map(u => u.id));
-  }
-
-  const allRaw = await db.select().from(callAnalyses)
+  const all = await db.select().from(callAnalyses)
     .where(eq(callAnalyses.status, "done"))
     .orderBy(callAnalyses.createdAt);
-
-  // Filter by department if specified (by userId)
-  const all = allowedUserIds
-    ? allRaw.filter(c => allowedUserIds!.has(c.userId))
-    : allRaw;
 
   type CallRow = (typeof all)[number];
 

@@ -36,7 +36,7 @@ export const pitchRouter = router({
   allUsers: adminProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, department: users.department }).from(users);
+    return db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users);
   }),
 
   agentsOverview: adminProcedure.query(async () => {

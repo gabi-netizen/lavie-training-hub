@@ -1746,10 +1746,8 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
   );
 }
 
-// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
+/// ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 function Leaderboard() {
-  const { data: profile } = trpc.contacts.myProfile.useQuery();
-  const department = (profile as any)?.department ?? null;
   const { data: entries, isLoading } = trpc.callCoach.getLeaderboard.useQuery(undefined, {
     refetchInterval: 30000,
   });
@@ -1757,7 +1755,8 @@ function Leaderboard() {
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
   if (!entries?.length) return (
     <div className="text-center py-12 text-gray-800">
-      <Trophy className="w-10 h-10 mx-auto mb-3 opacity-40" />   <p>No calls analysed yet. Be the first to upload!</p>
+      <Trophy className="w-10 h-10 mx-auto mb-3 opacity-40" />
+      <p>No calls analysed yet. Be the first to upload!</p>
       <p className="text-xs mt-2 text-gray-800">Minimum 5 calls required for a reliable ranking.</p>
     </div>
   );
