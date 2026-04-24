@@ -49,6 +49,12 @@ function TabRedirect({ tab }: { tab: string }) {
 function Router() {
   const { user, loading } = useAuth();
   const isAdmin = !loading && user?.role === "admin";
+  const [location] = useLocation();
+
+  // Public routes — no AppLayout, no TopNav, no auth required
+  if (location === "/pay" || location.startsWith("/pay?") || location.startsWith("/pay/")) {
+    return <PaymentForm />;
+  }
 
   return (
     <AppLayout>
