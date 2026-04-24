@@ -55,20 +55,20 @@ const AI_COACH_ITEMS_ADMIN = [
 
 // Workspace-only nav item
 const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDashboard };
-const TRAINING_ITEM = { path: "/training", label: "Killer Instinct Blueprint", icon: BookOpen };
+const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
 const MOBILE_NAV_ITEMS_AGENT = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
-  { path: "/training", label: "Killer Instinct Blueprint", icon: BookOpen },
+  { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
 const MOBILE_NAV_ITEMS_ADMIN = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
-  { path: "/training", label: "Killer Instinct Blueprint", icon: BookOpen },
+  { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
 
@@ -206,7 +206,7 @@ export default function TopNav() {
               )}
             >
               <BookOpen size={14} />
-              Killer Instinct Blueprint
+              Training
             </button>
           </Link>
 
