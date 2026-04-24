@@ -83,7 +83,7 @@ function StatCard({
   const changeColor =
     changeDir === "up" ? "text-[#16a34a]" : changeDir === "down" ? "text-[#dc2626]" : "text-[#d97706]";
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
+    <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
       <div className="text-3xl flex-shrink-0">{icon}</div>
       <div>
         <div className="text-3xl font-black leading-none text-black">{value}</div>
@@ -153,7 +153,7 @@ function FeedbackCard({
   })();
 
   return (
-    <div className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER_LEFT[color]} overflow-hidden`}>
+    <div className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER_LEFT[color]} overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default`}>
       <div className="px-5 pt-4 pb-5 space-y-3">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
