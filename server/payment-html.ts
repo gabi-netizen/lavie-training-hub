@@ -66,7 +66,7 @@ export function getPaymentPageHtml(stripePk: string): string {
     .product-price { font-size: 22px; font-weight: 700; color: #2d6a4f; margin-bottom: 16px; }
     .trust-items { list-style: none; }
     .trust-items li { font-size: 13px; color: #444; padding: 4px 0; }
-    .trust-items li::before { content: "\2713  "; color: #2d6a4f; font-weight: 700; }
+    .trust-items li::before { content: "\u2713  "; color: #2d6a4f; font-weight: 700; }
     .payment {
       flex: 1;
       background: #fff;
