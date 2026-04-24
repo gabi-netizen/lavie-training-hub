@@ -12,7 +12,7 @@ export function getPaymentPageHtml(stripePk: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lavie Labs - Secure Payment</title>
+  <title>Lavi&#233; Labs &#8212; Secure Payment</title>
   <script src="https://js.stripe.com/v3/"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,7 +66,7 @@ export function getPaymentPageHtml(stripePk: string): string {
     .product-price { font-size: 22px; font-weight: 700; color: #2d6a4f; margin-bottom: 16px; }
     .trust-items { list-style: none; }
     .trust-items li { font-size: 13px; color: #444; padding: 4px 0; }
-    .trust-items li::before { content: "checkmark  "; color: #2d6a4f; font-weight: 700; }
+    .trust-items li::before { content: "\2713  "; color: #2d6a4f; font-weight: 700; }
     .payment {
       flex: 1;
       background: #fff;
@@ -144,7 +144,7 @@ export function getPaymentPageHtml(stripePk: string): string {
 </head>
 <body>
   <div class="header">
-    <div class="header-title">Lavie</div>
+    <div class="header-title">Lavi&#233;</div>
   </div>
 
   <div class="page">
