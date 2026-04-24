@@ -12,7 +12,7 @@ export function getPaymentPageHtml(stripePk: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lavié Labs — Secure Payment</title>
+  <title>Lavie Labs - Secure Payment</title>
   <script src="https://js.stripe.com/v3/"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,7 +66,7 @@ export function getPaymentPageHtml(stripePk: string): string {
     .product-price { font-size: 22px; font-weight: 700; color: #2d6a4f; margin-bottom: 16px; }
     .trust-items { list-style: none; }
     .trust-items li { font-size: 13px; color: #444; padding: 4px 0; }
-    .trust-items li::before { content: "✓  "; color: #2d6a4f; font-weight: 700; }
+    .trust-items li::before { content: "checkmark  "; color: #2d6a4f; font-weight: 700; }
     .payment {
       flex: 1;
       background: #fff;
@@ -144,7 +144,7 @@ export function getPaymentPageHtml(stripePk: string): string {
 </head>
 <body>
   <div class="header">
-    <div class="header-title">Lavié</div>
+    <div class="header-title">Lavie</div>
   </div>
 
   <div class="page">
@@ -152,20 +152,20 @@ export function getPaymentPageHtml(stripePk: string): string {
       <img src="https://training.lavielabs.com/assets/matinika-product.png"
            onerror="this.style.display='none'"
            alt="Matinika Age Defying Cream" />
-      <div class="product-name">Matinika™ Age Defying Cream</div>
-      <div class="product-stars">★★★★★</div>
+      <div class="product-name">Matinika Age Defying Cream</div>
+      <div class="product-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
       <div class="product-reviews">(830 reviews)</div>
       <div class="product-desc">
         Enhance your complexion with this transformative skin treatment,
         crafted to refine texture and deliver a visibly tighter,
         more resilient appearance.
       </div>
-      <div class="product-price">🇬🇧 £4.95 P&amp;P</div>
+      <div class="product-price">&#127468;&#127463; &pound;4.95 P&amp;P</div>
       <ul class="trust-items">
         <li>21-Day Free Trial</li>
         <li>Cancel Anytime</li>
         <li>Secure &amp; Encrypted</li>
-        <li>All Skin Types · Anti-Aging</li>
+        <li>All Skin Types &middot; Anti-Aging</li>
       </ul>
     </div>
 
@@ -177,7 +177,7 @@ export function getPaymentPageHtml(stripePk: string): string {
       <div id="payment-request-btn" style="display:none;"></div>
       <div id="divider" class="divider" style="display:none;">or pay with card</div>
 
-      <!-- Card fields only — no email, no name, no address -->
+      <!-- Card fields only -->
       <div class="field-label">Card Number</div>
       <div id="card-number" class="stripe-input"></div>
 
@@ -192,8 +192,8 @@ export function getPaymentPageHtml(stripePk: string): string {
         </div>
       </div>
 
-      <button id="pay-btn" class="pay-btn">Pay £4.95</button>
-      <div class="secure-note">🔒 Your payment is secured by Stripe</div>
+      <button id="pay-btn" class="pay-btn">Pay &pound;4.95</button>
+      <div class="secure-note">&#128274; Your payment is secured by Stripe</div>
     </div>
   </div>
 
@@ -203,49 +203,63 @@ export function getPaymentPageHtml(stripePk: string): string {
     <span>Dermatologist Tested</span>
     <span>60-Day Guarantee</span>
   </div>
-  <div class="footer">© 2025 Lavié Labs. All rights reserved.</div>
+  <div class="footer">&copy; 2025 Lavie Labs. All rights reserved.</div>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const agentName = params.get('agent') || '';
+    var params = new URLSearchParams(window.location.search);
+    var agentName = params.get('agent') || '';
 
-    const stripe = Stripe('${stripePk}');
-    const elements = stripe.elements();
+    var stripe = Stripe('${stripePk}');
+    var elements = stripe.elements();
 
-    const style = {
+    var style = {
       base: {
         fontSize: '15px',
         color: '#1a1a1a',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        '::placeholder': { color: '#aaa' },
+        '::placeholder': { color: '#aaa' }
       },
-      invalid: { color: '#e74c3c' },
+      invalid: { color: '#e74c3c' }
     };
 
-    const cardNumber = elements.create('cardNumber', { style });
-    const cardExpiry = elements.create('cardExpiry', { style });
-    const cardCvc   = elements.create('cardCvc',    { style });
+    var cardNumber = elements.create('cardNumber', { style: style });
+    var cardExpiry = elements.create('cardExpiry', { style: style });
+    var cardCvc    = elements.create('cardCvc',    { style: style });
 
     cardNumber.mount('#card-number');
     cardExpiry.mount('#card-expiry');
     cardCvc.mount('#card-cvc');
 
-    // Apple Pay / Google Pay — no email, no name, no shipping
-    const paymentRequest = stripe.paymentRequest({
+    // ── Stripe protocol: create PaymentIntent on page load and cache it.
+    // Apple Pay / Google Pay Payment Request Button requires the clientSecret
+    // to be available immediately when the wallet sheet opens.
+    var clientSecretPromise = fetch('/api/stripe/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentName: agentName })
+    }).then(function(res) {
+      if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Server error'); });
+      return res.json();
+    }).then(function(data) {
+      return data.clientSecret;
+    });
+
+    // ── Apple Pay / Google Pay button
+    var paymentRequest = stripe.paymentRequest({
       country: 'GB',
       currency: 'gbp',
       total: { label: 'Matinika Trial Package', amount: 495 },
       requestPayerName: false,
       requestPayerEmail: false,
-      requestShipping: false,
+      requestShipping: false
     });
 
-    const prButton = elements.create('paymentRequestButton', {
-      paymentRequest,
-      style: { paymentRequestButton: { type: 'buy', theme: 'dark', height: '50px' } },
+    var prButton = elements.create('paymentRequestButton', {
+      paymentRequest: paymentRequest,
+      style: { paymentRequestButton: { type: 'buy', theme: 'dark', height: '50px' } }
     });
 
-    paymentRequest.canMakePayment().then(result => {
+    paymentRequest.canMakePayment().then(function(result) {
       if (result) {
         document.getElementById('payment-request-btn').style.display = 'block';
         document.getElementById('divider').style.display = 'flex';
@@ -253,72 +267,68 @@ export function getPaymentPageHtml(stripePk: string): string {
       }
     });
 
-    paymentRequest.on('paymentmethod', async (ev) => {
+    paymentRequest.on('paymentmethod', function(ev) {
       showMsg('', '');
-      try {
-        const { clientSecret } = await createIntent();
-        const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
+      clientSecretPromise.then(function(clientSecret) {
+        return stripe.confirmCardPayment(
           clientSecret,
           { payment_method: ev.paymentMethod.id },
           { handleActions: false }
-        );
-        if (confirmError) { ev.complete('fail'); showMsg(confirmError.message, 'error'); return; }
-        ev.complete('success');
-        if (paymentIntent.status === 'requires_action') {
-          const { error } = await stripe.confirmCardPayment(clientSecret);
-          if (error) { showMsg(error.message, 'error'); return; }
-        }
-        showMsg('Payment successful! Thank you.', 'success');
-        document.getElementById('pay-btn').disabled = true;
-      } catch (e) {
+        ).then(function(result) {
+          if (result.error) {
+            ev.complete('fail');
+            showMsg(result.error.message, 'error');
+            return;
+          }
+          ev.complete('success');
+          if (result.paymentIntent.status === 'requires_action') {
+            return stripe.confirmCardPayment(clientSecret).then(function(r) {
+              if (r.error) { showMsg(r.error.message, 'error'); }
+              else { showSuccess(); }
+            });
+          }
+          showSuccess();
+        });
+      }).catch(function(e) {
         ev.complete('fail');
         showMsg(e.message || 'Payment failed', 'error');
-      }
+      });
     });
 
-    // Manual card payment — no extra fields
-    document.getElementById('pay-btn').addEventListener('click', async () => {
-      const btn = document.getElementById('pay-btn');
+    // ── Manual card payment
+    document.getElementById('pay-btn').addEventListener('click', function() {
+      var btn = document.getElementById('pay-btn');
       btn.disabled = true;
-      btn.textContent = 'Processing…';
+      btn.textContent = 'Processing...';
       showMsg('', '');
-      try {
-        const { clientSecret } = await createIntent();
 
-        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: { card: cardNumber },
+      clientSecretPromise.then(function(clientSecret) {
+        return stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: cardNumber }
         });
-
-        if (error) {
-          showMsg(error.message, 'error');
+      }).then(function(result) {
+        if (result.error) {
+          showMsg(result.error.message, 'error');
           btn.disabled = false;
-          btn.textContent = 'Pay £4.95';
-        } else if (paymentIntent.status === 'succeeded') {
-          showMsg('Payment successful! Thank you.', 'success');
-          btn.textContent = 'Paid ✓';
+          btn.textContent = 'Pay \u00a34.95';
+        } else if (result.paymentIntent.status === 'succeeded') {
+          showSuccess();
+          btn.textContent = 'Paid \u2713';
         }
-      } catch (e) {
+      }).catch(function(e) {
         showMsg(e.message || 'Something went wrong', 'error');
         btn.disabled = false;
-        btn.textContent = 'Pay £4.95';
-      }
+        btn.textContent = 'Pay \u00a34.95';
+      });
     });
 
-    async function createIntent() {
-      const res = await fetch('/api/stripe/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentName }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Could not connect to payment server');
-      }
-      return res.json();
+    function showSuccess() {
+      showMsg('Payment successful! Thank you.', 'success');
+      document.getElementById('pay-btn').disabled = true;
     }
 
     function showMsg(text, type) {
-      const el = document.getElementById('msg');
+      var el = document.getElementById('msg');
       el.textContent = text;
       el.className = 'msg' + (type ? ' ' + type : '');
     }
