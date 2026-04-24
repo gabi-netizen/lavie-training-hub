@@ -5,7 +5,6 @@ import {
   BarChart3,
   LogOut,
   Phone,
-  Trophy,
   Users,
   BookOpen,
   ChevronDown,
@@ -32,7 +31,6 @@ const AGENT_NAV_ITEMS = [
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
-  { path: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 
 export default function TopNav() {
