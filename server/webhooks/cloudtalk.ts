@@ -46,6 +46,64 @@ async function findUserByCloudtalkAgentId(agentId: string | number) {
   return results[0] ?? null;
 }
 
+// ─── Find user by email ───────────────────────────────────────────────────────
+async function findUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const results = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return results[0] ?? null;
+}
+
+// ─── Auto-create user from CloudTalk agent data ───────────────────────────────
+async function findOrCreateAgentUser(agentId: string | number, agentName: string | null, agentEmail: string | null) {
+  const db = await getDb();
+  if (!db) return null;
+  const agentIdStr = String(agentId);
+
+  // 1. Try by cloudtalkAgentId
+  let user = await findUserByCloudtalkAgentId(agentIdStr);
+  if (user) return user;
+
+  // 2. Try by email (agent may already have a Clerk account)
+  if (agentEmail) {
+    user = await findUserByEmail(agentEmail);
+    if (user) {
+      // Link the cloudtalkAgentId to the existing account
+      await db.update(users)
+        .set({ cloudtalkAgentId: agentIdStr })
+        .where(eq(users.id, user.id));
+      console.log(`[CloudTalk Webhook] Linked cloudtalkAgentId ${agentIdStr} to existing user #${user.id} (${user.name})`);
+      return { ...user, cloudtalkAgentId: agentIdStr };
+    }
+  }
+
+  // 3. Auto-create a new user account
+  const name = agentName ?? `Agent ${agentIdStr}`;
+  const openId = `cloudtalk-${agentIdStr}`; // placeholder until they log in via Clerk
+  try {
+    const [result] = await db.insert(users).values({
+      openId,
+      name,
+      email: agentEmail ?? null,
+      cloudtalkAgentId: agentIdStr,
+      role: "user",
+    });
+    const newId = (result as any).insertId as number;
+    const newUsers = await db.select().from(users).where(eq(users.id, newId)).limit(1);
+    console.log(`[CloudTalk Webhook] Auto-created user #${newId} for CloudTalk agent ${agentIdStr} (${name})`);
+    return newUsers[0] ?? null;
+  } catch (err: any) {
+    // Duplicate openId — fetch the existing one
+    console.warn(`[CloudTalk Webhook] Auto-create failed (probably duplicate): ${err?.message}`);
+    const existing = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+    return existing[0] ?? null;
+  }
+}
+
 // ─── Find contact by phone number ─────────────────────────────────────────────
 async function findContactByPhone(phone: string | number) {
   const db = await getDb();
@@ -175,6 +233,24 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.Agent?.id ||
       payload?.agent_id;
 
+    // Extract agent name directly from CloudTalk payload
+    const cloudtalkAgentName: string | null =
+      payload?.agent?.name ||
+      payload?.agent?.full_name ||
+      (payload?.agent?.firstname ? `${payload.agent.firstname} ${payload.agent.lastname ?? ""}`.trim() : null) ||
+      call?.Agent?.name ||
+      call?.Agent?.full_name ||
+      call?.agentName ||
+      call?.agent_name ||
+      null;
+
+    // Extract agent email from CloudTalk payload
+    const cloudtalkAgentEmail: string | null =
+      payload?.agent?.email ||
+      call?.Agent?.email ||
+      call?.agentEmail ||
+      null;
+
     const callerPhone =
       payload?.external_number ||  // CloudTalk v2 top-level
       call?.caller_number ||
@@ -218,10 +294,13 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       return;
     }
 
-    // Find the agent (user) — fallback to a system/admin user if not found
-    let agent = agentId ? await findUserByCloudtalkAgentId(agentId) : null;
+    // Find or auto-create the agent user
+    let agent = agentId
+      ? await findOrCreateAgentUser(agentId, cloudtalkAgentName, cloudtalkAgentEmail)
+      : null;
+
     if (!agent) {
-      // Fallback: use the first admin user
+      // Last resort: fallback to first admin (should rarely happen — no agentId in payload)
       const db = await getDb();
       if (db) {
         const admins = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
@@ -242,10 +321,14 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
     console.log(`[CloudTalk Webhook] Downloading recording from ${recordingUrl}`);
     const { fileKey, fileUrl } = await downloadAndStoreRecording(recordingUrl, String(callId));
 
+    // Determine repName: prefer CloudTalk agent name from payload, fallback to user record name
+    const repName = cloudtalkAgentName || agent.name || null;
+    console.log(`[CloudTalk Webhook] Agent name resolved: "${repName}" (from payload: "${cloudtalkAgentName}", from user: "${agent.name}")`);
+
     // Create analysis record
     const analysisId = await createCallAnalysisRecord({
       userId: agent.id,
-      repName: agent.name ?? null,
+      repName,
       audioFileKey: fileKey,
       audioFileUrl: fileUrl,
       fileName: `cloudtalk-${callId}.mp3`,
