@@ -2961,31 +2961,7 @@ export default function CallCoach() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white/50 rounded-lg p-1">
-          {[
-            { id: "upload", label: "Upload Call" },
-            { id: "my-calls", label: "My Calls" },
-            { id: "leaderboard", label: "🏆 Leaderboard" },
-            { id: "team", label: "👥 Team" },
-            { id: "opening", label: "🎯 Opening" },
-            ...(isAdmin ? [{ id: "performance", label: "📊 Performance" }, { id: "manager", label: "Manager View" }, { id: "feedback", label: "🚩 AI Feedback" }] : []),
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "bg-teal-600 text-gray-900"
-                  : "text-gray-700 hover:text-gray-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
+        {/* Tab content — navigation via TopNav AI Coach dropdown */}
         {activeTab === "upload" && (
           <UploadZone
             onUploaded={(id) => {
