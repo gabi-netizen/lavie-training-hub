@@ -190,6 +190,13 @@
       "when": 1777012987342,
       "tag": "0026_gorgeous_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1777034345821,
+      "tag": "0027_military_lady_deathstrike",
+      "breakpoints": true
     }
   ]
 }
