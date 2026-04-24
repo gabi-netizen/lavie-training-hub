@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import AgentCoachingDashboard from "@/components/AgentCoachingDashboard";
 import ManagerCoachingDashboard from "@/components/ManagerCoachingDashboard";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -2822,16 +2823,24 @@ type TabId = typeof VALID_TABS[number];
 
 export default function CallCoach() {
   const { user, loading, isAuthenticated } = useAuth();
+  const [location] = useLocation();
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Read initial tab from URL query param (?tab=team etc.)
-  const initialTab = (): TabId => {
+  // Read tab from URL query param (?tab=team etc.)
+  const getTabFromUrl = (): TabId => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab") as TabId | null;
     return t && VALID_TABS.includes(t) ? t : "upload";
   };
 
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const [activeTab, setActiveTab] = useState<TabId>(getTabFromUrl);
+
+  // Sync tab when URL changes (e.g. from TopNav dropdown)
+  useEffect(() => {
+    setActiveTab(getTabFromUrl());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
+
   const utils = trpc.useUtils();
 
   if (loading) {
