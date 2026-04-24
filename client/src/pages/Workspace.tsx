@@ -1196,6 +1196,46 @@ function AgentPitchPanel() {
 }
 
 // ==========================================
+// DEPARTMENT MANAGER — assign departments to agents
+// ==========================================
+function DepartmentManager() {
+  const { data: allUsers, refetch } = trpc.pitch.allUsers.useQuery();
+  const updateDept = trpc.callCoach.updateUserDepartment.useMutation({
+    onSuccess: () => { refetch(); toast.success("Department updated!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const agents = (allUsers ?? []).filter((u: any) => u.name);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Assign Agent Departments</p>
+      {agents.length === 0 && (
+        <p className="text-sm text-gray-400">No agents found.</p>
+      )}
+      {agents.map((agent: any) => (
+        <div key={agent.id} className="flex items-center justify-between gap-3 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{agent.name}</p>
+            <p className="text-xs text-gray-400 truncate">{agent.email}</p>
+          </div>
+          <select
+            value={agent.department ?? ""}
+            onChange={(e) => updateDept.mutate({ userId: agent.id, department: (e.target.value as any) || null })}
+            className="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white text-gray-700 focus:outline-none focus:border-indigo-400"
+            disabled={updateDept.isPending}
+          >
+            <option value="">No dept</option>
+            <option value="outbound">Outbound</option>
+            <option value="retention">Retention</option>
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==========================================
 // MANAGER VIEW — see & edit agent pitches
 // ==========================================
 function ManagerView({
@@ -1755,16 +1795,24 @@ export default function Workspace() {
                     <Edit3 size={14} /> My Pitch
                   </button>
                   <button
-                    className={`ws-mode-btn ${managerMode ? "active" : ""}`}
+                    className={`ws-mode-btn ${managerMode === true ? "active" : ""}`}
                     onClick={() => setManagerMode(true)}
                   >
                     <Users size={14} /> Manager View
+                  </button>
+                  <button
+                    className={`ws-mode-btn ${(managerMode as any) === "dept" ? "active" : ""}`}
+                    onClick={() => setManagerMode("dept" as any)}
+                  >
+                    <Users size={14} /> Departments
                   </button>
                 </div>
               )}
 
               {/* ── Pitch Panel (7-stage with Edit/Reset) ── */}
-              {managerMode && isAdmin ? (
+              {(managerMode as any) === "dept" && isAdmin ? (
+                <DepartmentManager />
+              ) : managerMode && isAdmin ? (
                 <ManagerView
                   selectedAgentId={selectedAgentId}
                   setSelectedAgentId={setSelectedAgentId}

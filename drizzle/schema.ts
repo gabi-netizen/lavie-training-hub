@@ -22,6 +22,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   /** CloudTalk Agent ID for click-to-call (e.g. 178617) */
   cloudtalkAgentId: varchar("cloudtalkAgentId", { length: 32 }),
+  /** Department: outbound (Opening team) or retention (Retention team) */
+  department: mysqlEnum("department", ["outbound", "retention"]),
 });
 
 export type User = typeof users.$inferSelect;

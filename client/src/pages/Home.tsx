@@ -10,6 +10,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { ChevronDown, ChevronUp, Play, BookOpen, Shield, Home as HomeIcon } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
 // ─── VIDEO CDN URLS ───────────────────────────────────────────────────────────
 const OBJ1_CLIPS = [
@@ -845,6 +847,10 @@ const DIAGNOSTICS = [
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Home() {
+  const { user } = useAuth();
+  const { data: profile } = trpc.contacts.myProfile.useQuery();
+  const department = (profile as any)?.department ?? user?.department ?? null;
+
   const [activeTab, setActiveTab] = useState<"home" | "install" | "objections" | "pitch" | "fullscript" | "livescript" | "diagnostics" | "productvalue" | "cheatsheet" | "rapport">("home");
   const [rapportOpen, setRapportOpen] = useState<number | null>(null);
   const [pvOpen, setPvOpen] = useState<"stack" | "why" | "reframes" | null>(null);
@@ -854,6 +860,39 @@ export default function Home() {
   const [activeObjId, setActiveObjId] = useState<number | null>(null);
 
   const activeObj = OBJECTIONS.find((o) => o.id === activeObjId);
+
+  // Department gate: retention agents should not see outbound content
+  // Admins always see everything
+  if (user && user.role !== "admin" && department === "retention") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-7 h-7 text-teal-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Retention Hub</h2>
+          <p className="text-gray-500 text-sm leading-relaxed mb-4">You're on the Retention team. Your training content will be available here soon.</p>
+          <p className="text-xs text-gray-400">Contact your manager if you have questions.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No department assigned yet
+  if (user && user.role !== "admin" && !department) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-7 h-7 text-indigo-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Opening Hub</h2>
+          <p className="text-gray-500 text-sm leading-relaxed mb-4">Your manager hasn't assigned your department yet. Once they do, your training content will appear here.</p>
+          <p className="text-xs text-gray-400">Contact your manager to get set up.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

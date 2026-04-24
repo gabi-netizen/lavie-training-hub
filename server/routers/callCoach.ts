@@ -2,6 +2,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 import {
   createCallAnalysisRecord,
   getCallAnalysisById,
@@ -60,14 +61,14 @@ export const callCoachRouter = router({
       return getAgentDashboard(input?.timeRange ?? "month");
     }),
 
-  /** Public leaderboard — visible to all logged-in users */
-  getLeaderboard: protectedProcedure.query(async () => {
-    return getLeaderboard();
+  /** Public leaderboard — visible to all logged-in users, filtered by caller's department */
+  getLeaderboard: protectedProcedure.query(async ({ ctx }) => {
+    return getLeaderboard(ctx.user.department ?? null);
   }),
 
-  /** Team dashboard — all reps with full stats, visible to all logged-in users */
-  getTeamDashboard: protectedProcedure.query(async () => {
-    return getTeamDashboard();
+  /** Team dashboard — all reps with full stats, filtered by caller's department */
+  getTeamDashboard: protectedProcedure.query(async ({ ctx }) => {
+    return getTeamDashboard(ctx.user.department ?? null);
   }),
 
   /** Opening team dashboard — KPIs + per-agent stats with close rates by duration */
@@ -222,11 +223,28 @@ export const callCoachRouter = router({
     const db = await getDb();
     if (!db) return [];
     const rows = await db
-      .select({ id: users.id, name: users.name, email: users.email })
+      .select({ id: users.id, name: users.name, email: users.email, department: users.department })
       .from(users)
       .orderBy(users.name);
     return rows.filter(r => r.name);
   }),
+
+  /**
+   * Admin-only: assign a department to an agent.
+   */
+  updateUserDepartment: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      department: z.enum(["outbound", "retention"]).nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.update(users)
+        .set({ department: input.department as any })
+        .where(eq(users.id, input.userId));
+      return { success: true };
+    }),
 
   /**
    * AI Best Practice Extraction — analyses top-scoring Opening calls and
