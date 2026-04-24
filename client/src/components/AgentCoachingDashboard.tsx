@@ -1,35 +1,69 @@
 /**
  * AgentCoachingDashboard
  * ─────────────────────
- * Shown to non-admin reps on the "My Calls" tab.
- * Traffic-light colors only: green / orange / red.
- * Improvements shown FIRST (as per approved mockup), then positives.
- * Each card shows a specific quote + precise coaching + single listen link.
+ * Matches the approved mockup exactly:
+ * - Red card: red category label, red border-left, red badge, red listen link
+ * - Orange card: orange category label, amber border-left, amber badge, orange listen link
+ * - Purple card: purple category label, purple border-left, purple badge, purple listen link
+ * - Green card: teal/green category label, green border-left, green badge, green listen link
+ * - Inline colored text highlights in detail paragraphs
+ * - No collapse/expand — all cards fully open
+ * - Improvements first, then positives
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Mic, ChevronDown, ChevronUp, Play } from "lucide-react";
+import { Loader2, Mic, Play } from "lucide-react";
 
-// ── Color helpers ──────────────────────────────────────────────────────────────
-const DOT: Record<"green" | "orange" | "red", string> = {
-  green: "bg-[#16a34a]",
-  orange: "bg-[#d97706]",
-  red: "bg-[#dc2626]",
-};
-const BORDER: Record<"green" | "orange" | "red", string> = {
-  green: "border-l-[#16a34a]",
+// ── Per-status color tokens ────────────────────────────────────────────────────
+// red = compliance / critical
+// orange = magic wand / warning
+// purple = authenticity / scripted
+// green = strength / positive
+
+type CardColor = "red" | "orange" | "purple" | "green";
+
+function getCardColor(item: { status: "green" | "orange" | "red"; category: string }): CardColor {
+  if (item.status === "green") return "green";
+  if (item.category.toLowerCase().includes("authentic") || item.category.toLowerCase().includes("scripted")) return "purple";
+  if (item.status === "red") return "red";
+  return "orange";
+}
+
+const BORDER_LEFT: Record<CardColor, string> = {
+  red:    "border-l-[#dc2626]",
   orange: "border-l-[#d97706]",
-  red: "border-l-[#dc2626]",
+  purple: "border-l-[#7c3aed]",
+  green:  "border-l-[#16a34a]",
 };
-const LABEL_COLOR: Record<"green" | "orange" | "red", string> = {
-  green: "text-[#16a34a]",
+const CATEGORY_COLOR: Record<CardColor, string> = {
+  red:    "text-[#dc2626]",
   orange: "text-[#d97706]",
-  red: "text-[#dc2626]",
+  purple: "text-[#7c3aed]",
+  green:  "text-[#16a34a]",
 };
-const BAR_COLOR: Record<"green" | "orange" | "red", string> = {
-  green: "bg-[#16a34a]",
-  orange: "bg-[#d97706]",
-  red: "bg-[#dc2626]",
+const BADGE_STYLE: Record<CardColor, string> = {
+  red:    "bg-red-100 text-[#dc2626]",
+  orange: "bg-amber-100 text-[#b45309]",
+  purple: "bg-purple-100 text-[#7c3aed]",
+  green:  "bg-green-100 text-[#16a34a]",
+};
+const LISTEN_COLOR: Record<CardColor, string> = {
+  red:    "text-[#dc2626] hover:text-[#b91c1c]",
+  orange: "text-[#d97706] hover:text-[#b45309]",
+  purple: "text-[#7c3aed] hover:text-[#6d28d9]",
+  green:  "text-[#16a34a] hover:text-[#15803d]",
+};
+const LISTEN_LABEL: Record<CardColor, string> = {
+  red:    "Listen to the call where this happened",
+  orange: "Hear the moment you missed it",
+  purple: "Hear how it sounds",
+  green:  "Listen to this call",
+};
+const QUOTE_BORDER: Record<CardColor, string> = {
+  red:    "border-l-[#dc2626]",
+  orange: "border-l-[#d97706]",
+  purple: "border-l-[#7c3aed]",
+  green:  "border-l-[#16a34a]",
 };
 
 // ── Stat card ──────────────────────────────────────────────────────────────────
@@ -47,18 +81,45 @@ function StatCard({
   changeDir?: "up" | "down" | "same";
 }) {
   const changeColor =
-    changeDir === "up" ? "text-[#16a34a]" : changeDir === "down" ? "text-[#dc2626]" : "text-gray-400";
+    changeDir === "up" ? "text-[#16a34a]" : changeDir === "down" ? "text-[#dc2626]" : "text-[#d97706]";
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
       <div className="text-3xl flex-shrink-0">{icon}</div>
       <div>
         <div className="text-3xl font-black leading-none text-black">{value}</div>
-        <div className="text-xs font-semibold text-gray-500 mt-1">{label}</div>
+        <div className="text-xs font-semibold text-black mt-1">{label}</div>
         {change && (
           <div className={`text-xs font-bold mt-1 ${changeColor}`}>{change}</div>
         )}
       </div>
     </div>
+  );
+}
+
+// ── Inline highlight helper ────────────────────────────────────────────────────
+// Renders detail text with the first sentence of emphasis colored
+function DetailText({ text, color }: { text: string; color: CardColor }) {
+  const highlightColor: Record<CardColor, string> = {
+    red:    "text-[#dc2626] font-bold",
+    orange: "text-[#d97706] font-bold",
+    purple: "text-[#dc2626] font-bold",
+    green:  "text-[#16a34a] font-bold",
+  };
+
+  // Split on the first period to highlight the first sentence
+  const firstPeriod = text.indexOf(". ");
+  if (firstPeriod === -1) {
+    return <p className="text-sm text-black font-medium leading-relaxed">{text}</p>;
+  }
+
+  const firstSentence = text.slice(0, firstPeriod + 1);
+  const rest = text.slice(firstPeriod + 2);
+
+  return (
+    <p className="text-sm text-black font-medium leading-relaxed">
+      <span className={highlightColor[color]}>{firstSentence}</span>
+      {" "}{rest}
+    </p>
   );
 }
 
@@ -78,65 +139,72 @@ function FeedbackCard({
   };
   onSelectCall: (id: number) => void;
 }) {
-  const [open, setOpen] = useState(true);
-  const s = item.status;
+  const color = getCardColor(item);
+
+  // Badge label
+  const badgeLabel = (() => {
+    if (color === "green") {
+      if (item.category.toLowerCase().includes("rapport")) return "Consistent strength";
+      if (item.category.toLowerCase().includes("closing")) return "Strong this week";
+      return `${item.callsAffected} calls`;
+    }
+    if (color === "purple") return "Most calls";
+    return `${item.callsAffected} ${item.callsAffected === 1 ? "call" : "calls"}`;
+  })();
 
   return (
-    <div className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER[s]} overflow-hidden`}>
-      {/* Header row — always visible */}
-      <button
-        className="w-full text-left px-5 py-4 flex items-start justify-between gap-3"
-        onClick={() => setOpen(o => !o)}
-      >
-        <div className="flex items-start gap-3 min-w-0">
-          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${DOT[s]}`} />
-          <div className="min-w-0">
-            <div className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${LABEL_COLOR[s]}`}>
-              {item.category}
-            </div>
-            <div className="text-sm font-bold text-black leading-snug">{item.title}</div>
+    <div className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER_LEFT[color]} overflow-hidden`}>
+      <div className="px-5 pt-4 pb-5 space-y-3">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className={`text-[11px] font-black uppercase tracking-widest ${CATEGORY_COLOR[color]}`}>
+            {item.category}
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-            s === "green" ? "bg-green-50 text-[#16a34a]" :
-            s === "orange" ? "bg-amber-50 text-[#d97706]" :
-            "bg-red-50 text-[#dc2626]"
-          }`}>
-            {item.callsAffected} {item.callsAffected === 1 ? "call" : "calls"}
+          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0 ${BADGE_STYLE[color]}`}>
+            {badgeLabel}
           </span>
-          {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
         </div>
-      </button>
 
-      {/* Expanded content */}
-      {open && (
-        <div className="px-5 pb-5 space-y-3">
-          {item.quote && (
-            <blockquote className="text-sm italic text-gray-500 bg-gray-50 border-l-2 border-gray-200 px-3 py-2 rounded-r-lg leading-relaxed">
-              "{item.quote}"
-            </blockquote>
-          )}
-          <p className="text-sm text-black font-medium leading-relaxed">{item.detail}</p>
+        {/* Title */}
+        <div className="text-[15px] font-bold text-black leading-snug">{item.title}</div>
 
-          {item.relevantCallIds.length > 0 && (
-            <div className="pt-1">
-              <button
-                onClick={() => onSelectCall(item.relevantCallIds[0])}
-                className="flex items-center gap-1.5 text-xs font-bold text-black hover:text-gray-600 transition-colors"
-              >
-                <Play className="w-3 h-3 flex-shrink-0" />
-                <span>Listen to the call where this happened</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+        {/* Quote */}
+        {item.quote && (
+          <blockquote className={`text-sm italic text-black bg-gray-50 border-l-2 ${QUOTE_BORDER[color]} px-3 py-2 rounded-r-lg leading-relaxed`}>
+            "{item.quote}"
+          </blockquote>
+        )}
+
+        {/* Detail with colored first sentence */}
+        <DetailText text={item.detail} color={color} />
+
+        {/* Listen link */}
+        {item.relevantCallIds.length > 0 && (
+          <button
+            onClick={() => onSelectCall(item.relevantCallIds[0])}
+            className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${LISTEN_COLOR[color]}`}
+          >
+            <Play className="w-3 h-3 flex-shrink-0 fill-current" />
+            <span>{LISTEN_LABEL[color]}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── Compliance checklist ───────────────────────────────────────────────────────
+const BAR_COLOR: Record<"green" | "orange" | "red", string> = {
+  green: "bg-[#16a34a]",
+  orange: "bg-[#d97706]",
+  red: "bg-[#dc2626]",
+};
+const PCT_COLOR: Record<"green" | "orange" | "red", string> = {
+  green: "text-[#16a34a]",
+  orange: "text-[#d97706]",
+  red: "text-[#dc2626]",
+};
+
 function ComplianceChecklist({
   items,
 }: {
@@ -144,14 +212,14 @@ function ComplianceChecklist({
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5">
-      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">
-        Compliance Checklist
+      <div className="text-[10px] font-black uppercase tracking-widest text-black mb-4">
+        📋 Compliance Checklist — Last 7 Days
       </div>
       <div className="space-y-3">
         {items.map((item) => (
           <div key={item.label} className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${DOT[item.status]}`} />
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${BAR_COLOR[item.status]}`} />
               <span className="text-sm font-medium text-black truncate">{item.label}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -161,7 +229,7 @@ function ComplianceChecklist({
                   style={{ width: `${item.pct}%` }}
                 />
               </div>
-              <span className={`text-xs font-black w-8 text-right ${LABEL_COLOR[item.status]}`}>
+              <span className={`text-xs font-black w-8 text-right ${PCT_COLOR[item.status]}`}>
                 {item.pct}%
               </span>
             </div>
@@ -175,7 +243,7 @@ function ComplianceChecklist({
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-0.5">
+    <div className="text-[10px] font-black uppercase tracking-widest text-black mb-2 px-0.5">
       {children}
     </div>
   );
@@ -195,14 +263,14 @@ export default function AgentCoachingDashboard({
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-black" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-black">
         <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
         <p className="text-sm">No calls yet. Your coaching dashboard will appear after your first call is analysed.</p>
       </div>
@@ -250,7 +318,7 @@ export default function AgentCoachingDashboard({
             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
               timeRange === r
                 ? "bg-black text-white border-black"
-                : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+                : "bg-white text-black border-gray-300 hover:border-black"
             }`}
           >
             {TIME_LABELS[r]}
@@ -289,18 +357,18 @@ export default function AgentCoachingDashboard({
       </div>
 
       {noData && (
-        <div className="text-center py-8 text-gray-400 text-sm">
+        <div className="text-center py-8 text-black text-sm">
           No calls in this period yet — upload a call to see your coaching feedback.
         </div>
       )}
 
       {!noData && (
         <>
-          {/* ── What to work on — FIRST (as per approved mockup) ── */}
+          {/* ── What to work on — FIRST (approved mockup order) ── */}
           {data.improvements.length > 0 && (
             <div>
-              <SectionLabel>🔧 What to work on — from your recent calls</SectionLabel>
-              <div className="space-y-2">
+              <SectionLabel>🔧 What to work on — from your last 7 days</SectionLabel>
+              <div className="space-y-3">
                 {data.improvements.map((item, i) => (
                   <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
                 ))}
@@ -312,7 +380,7 @@ export default function AgentCoachingDashboard({
           {data.positives.length > 0 && (
             <div>
               <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {data.positives.map((item, i) => (
                   <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
                 ))}
