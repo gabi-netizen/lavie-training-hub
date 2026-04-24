@@ -2891,9 +2891,7 @@ export default function CallCoach() {
             <Mic className="w-7 h-7 text-teal-600" />
             AI Call Coach
           </h1>
-          <p className="text-gray-700 mt-1 text-sm">
-            Upload a call recording — AI transcribes, analyses script compliance, and gives you actionable coaching.
-          </p>
+
         </div>
 
         {/* Tab content — navigation via TopNav AI Coach dropdown */}
