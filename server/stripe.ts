@@ -42,12 +42,7 @@ function getStripe(): Stripe {
  */
 export async function createPaymentIntent(req: Request, res: Response): Promise<void> {
   try {
-    const { email, agentName } = req.body as { email?: string; agentName?: string };
-
-    if (!email || typeof email !== "string") {
-      res.status(400).json({ error: "email is required" });
-      return;
-    }
+    const { agentName } = req.body as { agentName?: string };
 
     const stripe = getStripe();
 
@@ -56,12 +51,10 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
       currency: "gbp",
       automatic_payment_methods: { enabled: true },
       metadata: {
-        email,
         agentName: agentName ?? "",
         source: "lavie-training-hub",
       },
       description: "Lavié Labs Trial Package — £4.95 P&P",
-      receipt_email: email,
     });
 
     // Pre-create a form_submission record in "new" status so we can link it
@@ -69,8 +62,8 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
     const db = await getDb();
     if (db) {
       await db.insert(formSubmissions).values({
-        email,
-        cardholderName: "", // will be filled by webhook / Stripe billing details
+        email: "",
+        cardholderName: "",
         agentName: agentName ?? "",
         status: "new",
         stripePaymentIntentId: paymentIntent.id,
