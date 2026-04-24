@@ -2452,39 +2452,7 @@ function OpeningDashboard() {
   })();
 
   const { data, isLoading } = trpc.callCoach.getOpeningDashboard.useQuery(queryInput);
-  const [selectedCallId, setSelectedCallId] = useState<number | null>(null);
-
-  // Best Practice Extraction
-  type BestPracticeInsight = {
-    pattern: string;
-    impact: string;
-    example: string;
-    category: "opening" | "pitch" | "objection" | "close" | "compliance" | "tone";
-    frequency: number;
-  };
-  type BestPracticesResult = {
-    insights: BestPracticeInsight[];
-    topCallsAnalysed: number;
-    generatedAt: string;
-    teamAvgScore: number | null;
-    topCallsAvgScore: number | null;
-  };
-  const [bestPracticesData, setBestPracticesData] = useState<BestPracticesResult | null>(null);
-  const [showInsights, setShowInsights] = useState(false);
-  const getBestPractices = trpc.callCoach.getBestPractices.useMutation({
-    onSuccess: (result) => {
-      setBestPracticesData(result as BestPracticesResult);
-      setShowInsights(true);
-    },
-  });
-  const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    opening:    { label: "Opening",    color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
-    pitch:      { label: "Pitch",      color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200" },
-    objection:  { label: "Objection",  color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
-    close:      { label: "Close",      color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-    compliance: { label: "Compliance", color: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
-    tone:       { label: "Tone",       color: "text-teal-700",    bg: "bg-teal-50",    border: "border-teal-200" },
-  };
+   const [selectedCallId, setSelectedCallId] = useState<number | null>(null);
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-teal-600" /></div>;
 
@@ -2716,109 +2684,144 @@ function OpeningDashboard() {
         </div>
       </div>
 
-      {/* ── AI Best Practice Extraction ── */}
-      <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 overflow-hidden">
-        <div className="px-4 py-3 border-b border-purple-100 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            <div>
-              <p className="text-sm font-bold text-purple-900" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>AI Best Practice Extraction</p>
-              <p className="text-xs text-purple-700">Analyses your top-scoring calls and identifies what the best reps do differently</p>
-            </div>
-          </div>
-          <Button
-            onClick={() => getBestPractices.mutate(queryInput)}
-            disabled={getBestPractices.isPending}
-            className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-2 flex-shrink-0"
-            size="sm"
-          >
-            {getBestPractices.isPending ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analysing calls...</>
-            ) : (
-              <><Sparkles className="w-3.5 h-3.5" /> Generate Insights</>
-            )}
-          </Button>
+    </div>
+  );
+}
+
+// ─── WHAT WINNERS DO ────────────────────────────────────────────────────────
+function WhatWinnersDo() {
+  type BestPracticeInsight = {
+    pattern: string;
+    impact: string;
+    example: string;
+    category: "opening" | "pitch" | "objection" | "close" | "compliance" | "tone";
+    frequency: number;
+  };
+  type BestPracticesResult = {
+    insights: BestPracticeInsight[];
+    topCallsAnalysed: number;
+    generatedAt: string;
+    teamAvgScore: number | null;
+    topCallsAvgScore: number | null;
+  };
+  const [bestPracticesData, setBestPracticesData] = useState<BestPracticesResult | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
+  const getBestPractices = trpc.callCoach.getBestPractices.useMutation({
+    onSuccess: (result) => {
+      setBestPracticesData(result as BestPracticesResult);
+      setShowInsights(true);
+    },
+  });
+  const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    opening:    { label: "Opening",    color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200" },
+    pitch:      { label: "Pitch",      color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200" },
+    objection:  { label: "Objection",  color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200" },
+    close:      { label: "Close",      color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
+    compliance: { label: "Compliance", color: "text-red-700",     bg: "bg-red-50",     border: "border-red-200" },
+    tone:       { label: "Tone",       color: "text-teal-700",    bg: "bg-teal-50",    border: "border-teal-200" },
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 p-6 text-white">
+        <div className="flex items-center gap-3 mb-2">
+          <Sparkles className="w-7 h-7 text-purple-200" />
+          <h2 className="text-xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>What Winners Do</h2>
         </div>
-
-        {getBestPractices.isError && (
-          <div className="px-4 py-3 text-sm text-red-600">
-            ⚠️ {getBestPractices.error?.message ?? "Failed to generate insights. Make sure there are at least 3 analysed calls."}
-          </div>
-        )}
-
-        {showInsights && bestPracticesData && (
-          <div className="p-4 space-y-4">
-            {/* Stats row */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="text-xs text-purple-700">
-                <span className="font-bold">{bestPracticesData.topCallsAnalysed}</span> top calls analysed
-              </div>
-              {bestPracticesData.teamAvgScore != null && (
-                <div className="text-xs text-purple-700">
-                  Team avg: <span className="font-bold">{bestPracticesData.teamAvgScore}/100</span>
-                </div>
-              )}
-              {bestPracticesData.topCallsAvgScore != null && (
-                <div className="text-xs text-purple-700">
-                  Top calls avg: <span className="font-bold text-emerald-700">{bestPracticesData.topCallsAvgScore}/100</span>
-                </div>
-              )}
-              <div className="text-xs text-purple-500 ml-auto">
-                Generated {new Date(bestPracticesData.generatedAt).toLocaleString()}
-              </div>
-            </div>
-
-            {/* Insights grid */}
-            {bestPracticesData.insights.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">No patterns found. Try with more calls.</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {bestPracticesData.insights.map((insight, i) => {
-                  const cat = categoryConfig[insight.category] ?? categoryConfig.tone;
-                  return (
-                    <div key={i} className="rounded-xl border border-white bg-white shadow-sm p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-gray-900 leading-snug">{insight.pattern}</p>
-                        <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cat.bg} ${cat.border} ${cat.color}`}>
-                          {cat.label}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600">{insight.impact}</p>
-                      {insight.example && (
-                        <blockquote className="text-xs italic text-gray-500 border-l-2 border-purple-300 pl-2">
-                          "{insight.example}"
-                        </blockquote>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-purple-400"
-                            style={{ width: `${insight.frequency}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-gray-400 font-medium">{insight.frequency}% of top calls</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {!showInsights && !getBestPractices.isPending && (
-          <div className="px-4 py-6 text-center text-sm text-purple-700 opacity-70">
-            Click <strong>Generate Insights</strong> to discover what your best reps do differently.
-          </div>
-        )}
+        <p className="text-purple-200 text-sm">AI analyses your top-scoring calls and extracts the patterns that separate your best reps from the rest.</p>
+        <Button
+          onClick={() => getBestPractices.mutate({})}
+          disabled={getBestPractices.isPending}
+          className="mt-4 bg-white text-purple-700 hover:bg-purple-50 font-semibold text-sm gap-2"
+          size="sm"
+        >
+          {getBestPractices.isPending ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Analysing top calls...</>
+          ) : (
+            <><Sparkles className="w-4 h-4" /> Generate Insights</>
+          )}
+        </Button>
       </div>
 
+      {getBestPractices.isError && (
+        <div className="px-4 py-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-200">
+          ⚠️ {getBestPractices.error?.message ?? "Failed to generate insights. Make sure there are at least 3 analysed calls."}
+        </div>
+      )}
+
+      {showInsights && bestPracticesData && (
+        <div className="space-y-4">
+          {/* Stats row */}
+          <div className="flex items-center gap-4 flex-wrap bg-white rounded-xl border border-purple-100 px-4 py-3">
+            <div className="text-sm text-purple-700">
+              <span className="font-bold">{bestPracticesData.topCallsAnalysed}</span> top calls analysed
+            </div>
+            {bestPracticesData.teamAvgScore != null && (
+              <div className="text-sm text-purple-700">
+                Team avg: <span className="font-bold">{bestPracticesData.teamAvgScore}/100</span>
+              </div>
+            )}
+            {bestPracticesData.topCallsAvgScore != null && (
+              <div className="text-sm text-purple-700">
+                Top calls avg: <span className="font-bold text-emerald-700">{bestPracticesData.topCallsAvgScore}/100</span>
+              </div>
+            )}
+            <div className="text-xs text-purple-400 ml-auto">
+              Generated {new Date(bestPracticesData.generatedAt).toLocaleString()}
+            </div>
+          </div>
+
+          {/* Insights grid */}
+          {bestPracticesData.insights.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-8">No patterns found. Try with more calls.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {bestPracticesData.insights.map((insight, i) => {
+                const cat = categoryConfig[insight.category] ?? categoryConfig.tone;
+                return (
+                  <div key={i} className="rounded-xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-900 leading-snug">{insight.pattern}</p>
+                      <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cat.bg} ${cat.border} ${cat.color}`}>
+                        {cat.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600">{insight.impact}</p>
+                    {insight.example && (
+                      <blockquote className="text-xs italic text-gray-500 border-l-2 border-purple-300 pl-2">
+                        "{insight.example}"
+                      </blockquote>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-purple-400 to-indigo-500"
+                          style={{ width: `${insight.frequency}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">{insight.frequency}% of top calls</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!showInsights && !getBestPractices.isPending && (
+        <div className="text-center py-16 text-purple-400">
+          <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">Click <strong className="text-purple-600">Generate Insights</strong> to discover what your best reps do differently.</p>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
-const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "opening", "performance", "manager", "feedback"] as const;
+const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "opening", "performance", "manager", "feedback", "ai-feedback"] as const;
 type TabId = typeof VALID_TABS[number];
 
 export default function CallCoach() {
@@ -2910,6 +2913,7 @@ export default function CallCoach() {
         {activeTab === "performance" && isAdmin && <CallTypePerformance />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}
+        {activeTab === "ai-feedback" && isAdmin && <WhatWinnersDo />}
       </div>
     </div>
   );

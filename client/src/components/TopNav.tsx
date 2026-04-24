@@ -20,6 +20,7 @@ import {
   Flag,
   Upload,
   ListChecks,
+  Sparkles,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -49,7 +50,7 @@ const AI_COACH_ITEMS_ADMIN = [
   { tab: "team", label: "Team", icon: Users },
   { tab: "performance", label: "Performance", icon: TrendingUp },
   { tab: "manager", label: "Manager View", icon: BarChart3 },
-  { tab: "feedback", label: "AI Feedback", icon: Flag },
+  { tab: "ai-feedback", label: "What Winners Do", icon: Sparkles },
 ];
 
 // Workspace-only nav item
