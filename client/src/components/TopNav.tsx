@@ -73,8 +73,8 @@ export default function TopNav() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers"].some(
-    (p) => location === p || (p === "/dialler" && location === "/")
+  const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers", "/"].some(
+    (p) => location === p
   );
 
   const initials = user?.name
@@ -147,9 +147,7 @@ export default function TopNav() {
 
           {/* Main nav items */}
           {MAIN_NAV_ITEMS.map(({ path, label, icon: Icon }) => {
-            const active =
-              location === path ||
-              (path === "/training" && location === "/" && !isAdmin);
+            const active = location === path;
             return (
               <Link key={path} href={path}>
                 <button
