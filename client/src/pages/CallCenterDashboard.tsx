@@ -705,7 +705,7 @@ export default function CallCenterDashboard() {
                     <div className="flex items-center gap-2.5">
                       {callTypeIcon(call.callType, call.overallScore)}
                       <div>
-                        <div className="text-[13px] font-medium text-gray-900">{call.callTypeLabel}</div>
+                        <div className="text-[13px] font-medium text-gray-900 capitalize">{call.agentTeam || call.callTypeLabel}</div>
                         <div className="text-xs text-gray-600">{formatDuration(call.durationSeconds)}</div>
                       </div>
                     </div>
