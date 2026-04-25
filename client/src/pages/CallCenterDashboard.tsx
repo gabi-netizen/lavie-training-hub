@@ -434,14 +434,14 @@ export default function CallCenterDashboard() {
 
       <div className="px-8 py-6">
         {/* ═══════ FILTER BAR ═══════ */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5 flex flex-wrap gap-3 items-end">
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5 flex flex-wrap gap-4 items-end">
           {/* Agent */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Agent</label>
             <select
               value={draft.agentId ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, agentId: e.target.value ? Number(e.target.value) : undefined }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[150px] transition-colors"
+              className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[150px] transition-colors"
             >
               <option value="">All Agents</option>
               {agentsList?.map((agent) => (
@@ -453,12 +453,12 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Team */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Team</label>
             <select
               value={draft.team ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, team: (e.target.value || undefined) as any }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[130px] transition-colors"
+              className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[130px] transition-colors"
             >
               <option value="">All Teams</option>
               <option value="opening">Opening</option>
@@ -467,7 +467,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* AI Score Range */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">AI Score Range</label>
             <div className="flex items-center gap-1.5">
               <input
@@ -476,7 +476,7 @@ export default function CallCenterDashboard() {
                 max={100}
                 value={draft.scoreMin}
                 onChange={(e) => setDraft((d) => ({ ...d, scoreMin: Number(e.target.value) || 0 }))}
-                className="w-[60px] px-2 py-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+                className="w-[60px] h-[38px] px-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
               />
               <span className="text-gray-600 text-xs">–</span>
               <input
@@ -485,18 +485,18 @@ export default function CallCenterDashboard() {
                 max={100}
                 value={draft.scoreMax}
                 onChange={(e) => setDraft((d) => ({ ...d, scoreMax: Number(e.target.value) || 100 }))}
-                className="w-[60px] px-2 py-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+                className="w-[60px] h-[38px] px-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
               />
             </div>
           </div>
 
           {/* Date Range */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Date Range</label>
             <select
               value={draft.dateRange}
               onChange={(e) => setDraft((d) => ({ ...d, dateRange: e.target.value }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[130px] transition-colors"
+              className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[130px] transition-colors"
             >
               {DATE_RANGES.map((dr) => (
                 <option key={dr.value} value={dr.value}>
@@ -507,12 +507,12 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Call Type */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Call Type</label>
             <select
               value={draft.callType}
               onChange={(e) => setDraft((d) => ({ ...d, callType: e.target.value }))}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[120px] transition-colors"
+              className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[120px] transition-colors"
             >
               {CALL_TYPE_OPTIONS.map((ct) => (
                 <option key={ct.value} value={ct.value}>
@@ -523,7 +523,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Search */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Search</label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -533,7 +533,7 @@ export default function CallCenterDashboard() {
                 value={draft.search}
                 onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === "Enter") applyFilters(); }}
-                className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[200px] transition-colors"
+                className="h-[38px] pl-8 pr-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[200px] transition-colors"
               />
             </div>
           </div>
@@ -541,13 +541,13 @@ export default function CallCenterDashboard() {
           {/* Buttons */}
           <button
             onClick={applyFilters}
-            className="px-5 py-2 rounded-lg bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors h-[37px]"
+            className="px-5 rounded-lg bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors h-[38px]"
           >
             Apply
           </button>
           <button
             onClick={resetFilters}
-            className="px-5 py-2 rounded-lg bg-gray-100 text-gray-600 border border-gray-200 text-sm font-medium hover:bg-gray-200 transition-colors h-[37px]"
+            className="px-5 rounded-lg bg-gray-100 text-gray-600 border border-gray-200 text-sm font-medium hover:bg-gray-200 transition-colors h-[38px]"
           >
             Reset
           </button>
