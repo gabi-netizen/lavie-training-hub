@@ -1747,7 +1747,7 @@ Return ONLY valid JSON array, no markdown, no explanation.`;
 // ─── AGENT PERSONAL COACHING DASHBOARD ───────────────────────────────────────
 export interface CoachingFeedbackItem {
   category: string;
-  status: "green" | "orange" | "red";
+  status: "green" | "orange" | "red" | "yellow";
   title: string;
   detail: string;
   quote: string | null;
@@ -1758,7 +1758,7 @@ export interface CoachingFeedbackItem {
 export interface ComplianceCheckItem {
   label: string;
   pct: number;
-  status: "green" | "orange" | "red";
+  status: "green" | "orange" | "red" | "yellow";
 }
 
 export interface MyCoachingDashboard {
@@ -1936,9 +1936,14 @@ export async function getMyCoachingDashboard(
     .sort((a, b) => b[1].count - a[1].count).slice(0, 4)
     .map(([key, val]) => {
       const pct = totalParsed > 0 ? val.count / totalParsed : 0;
-      const status: "red" | "orange" = pct >= 0.5 ? "red" : "orange";
+      let status: "red" | "orange" | "yellow" = pct >= 0.5 ? "red" : "orange";
+      let category = "Improvement";
+      if (key.toUpperCase().includes("AUTHENTICITY") || key.toUpperCase().includes("SCRIPTED")) {
+        status = "yellow";
+        category = "AUTHENTICITY — YOU SOUND SCRIPTED";
+      }
       // Use the keyMoment coaching text as the detail (it's specific), not generic text
-      return { category: "Improvement", status, title: key, detail: key, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 1) };
+      return { category, status, title: key, detail: key, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 1) };
     });
 
   if (totalParsed > 0 && magicWandCount / totalParsed < 0.5) {
