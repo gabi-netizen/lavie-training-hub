@@ -13,6 +13,7 @@ import Customers from "./pages/Customers";
 import ContactCard from "./pages/ContactCard";
 import ProfileSettings from "./pages/ProfileSettings";
 import CallLog from "./pages/CallLog";
+import CallCenterDashboard from "./pages/CallCenterDashboard";
 import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -52,13 +53,16 @@ function Router() {
   return (
     <AppLayout>
       <Switch>
-        {/* Default landing: all users → Dialler */}
-        <Route path={"/"}>
+        {/* Default landing: all users → Call Center Dashboard */}
+        <Route path="/">
           {() => {
             if (loading) return null;
-            return <Dialler />;
+            return <CallCenterDashboard />;
           }}
         </Route>
+
+        {/* Call Center Dashboard */}
+        <Route path="/call-center-dashboard" component={CallCenterDashboard} />
 
         {/* Dialler — all users */}
         <Route path={"/dialler"} component={Dialler} />

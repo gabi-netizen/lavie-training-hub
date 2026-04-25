@@ -27,6 +27,7 @@ import { Link, useLocation } from "wouter";
 
 // Items inside the "Calls" dropdown
 const CALLS_ITEMS_AGENT = [
+  { path: "/call-center-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/call-log", label: "Call Log", icon: PhoneCall },
@@ -59,12 +60,14 @@ const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
 const MOBILE_NAV_ITEMS_AGENT = [
+  { path: "/call-center-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/training", label: "Training", icon: BookOpen },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
 const MOBILE_NAV_ITEMS_ADMIN = [
+  { path: "/call-center-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
@@ -100,7 +103,7 @@ export default function TopNav() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers", "/"].some(
+  const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers", "/", "/call-center-dashboard"].some(
     (p) => location === p
   );
   const aiCoachActive = location === "/ai-coach" || location.startsWith("/ai-coach");
