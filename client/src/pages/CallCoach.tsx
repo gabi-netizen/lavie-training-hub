@@ -1579,6 +1579,20 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
 
   const [viewMode, setViewMode] = useState<"manager" | "agent">("manager");
 
+  // Check URL for agentId param (from manager grid card click)
+  const urlAgentId = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("agentId");
+    return id ? parseInt(id, 10) : null;
+  })();
+
+  // If agentId is in URL, auto-switch to agent view
+  useEffect(() => {
+    if (urlAgentId) {
+      setViewMode("agent");
+    }
+  }, [urlAgentId]);
+
   // Admins get the coaching queue dashboard with toggle to preview agent view
   if (isAdmin) return (
     <div className="space-y-4">
@@ -1586,7 +1600,7 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
         <button
           onClick={() => setViewMode("manager")}
           className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
-            viewMode === "manager" ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+            viewMode === "manager" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
           }`}
         >
           Manager View
@@ -1594,7 +1608,7 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
         <button
           onClick={() => setViewMode("agent")}
           className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
-            viewMode === "agent" ? "bg-black text-white border-black" : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
+            viewMode === "agent" ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
           }`}
         >
           Agent View
@@ -1602,7 +1616,7 @@ function MyCalls({ onSelect, isAdmin }: { onSelect: (id: number) => void; isAdmi
       </div>
       {viewMode === "manager"
         ? <ManagerCoachingDashboard onSelectCall={onSelect} />
-        : <AgentCoachingDashboard onSelectCall={onSelect} />}
+        : <AgentCoachingDashboard onSelectCall={onSelect} isAdmin={true} initialAgentId={urlAgentId} />}
     </div>
   );
 

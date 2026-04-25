@@ -21,10 +21,13 @@
  *   5. Listen link (colored, play triangle)
  *
  * Section order: IMPROVEMENTS FIRST (🔥), then POSITIVES (💪)
+ *
+ * Change 1: When isAdmin=true, show an agent dropdown at the top so managers
+ * can view any agent's coaching dashboard.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Mic, Play } from "lucide-react";
+import { Loader2, Mic, Play, ChevronDown } from "lucide-react";
 
 type CardColor = "red" | "orange" | "green" | "yellow";
 
@@ -86,8 +89,8 @@ function StatCard({
     <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
       <div className="text-3xl flex-shrink-0">{icon}</div>
       <div>
-        <div className="text-3xl font-black leading-none text-black">{value}</div>
-        <div className="text-xs font-semibold text-black mt-1">{label}</div>
+        <div className="text-3xl font-black leading-none text-gray-800">{value}</div>
+        <div className="text-xs font-semibold text-gray-800 mt-1">{label}</div>
         {change && <div className={`text-xs font-bold mt-1 ${changeColor}`}>{change}</div>}
       </div>
     </div>
@@ -99,13 +102,13 @@ function DetailText({ text, color }: { text: string; color: CardColor }) {
   const dot = text.indexOf(". ");
   if (dot === -1) {
     return (
-      <p className="text-sm text-black leading-relaxed">
+      <p className="text-sm text-gray-800 leading-relaxed">
         <span className={C[color].highlight}>{text}</span>
       </p>
     );
   }
   return (
-    <p className="text-sm text-black leading-relaxed">
+    <p className="text-sm text-gray-800 leading-relaxed">
       <span className={C[color].highlight}>{text.slice(0, dot + 1)}</span>
       {" "}{text.slice(dot + 2)}
     </p>
@@ -164,7 +167,7 @@ function FeedbackCard({
         </div>
 
         {/* Row 2: title */}
-        <div className="text-[15px] font-bold text-black leading-snug">
+        <div className="text-[15px] font-bold text-gray-800 leading-snug">
           {item.title}
         </div>
 
@@ -213,7 +216,7 @@ function ComplianceChecklist({
   };
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5">
-      <div className="text-[10px] font-black uppercase tracking-widest text-black mb-4">
+      <div className="text-[10px] font-black uppercase tracking-widest text-gray-800 mb-4">
         📋 Compliance Checklist — Last 7 Days
       </div>
       <div className="space-y-3">
@@ -221,7 +224,7 @@ function ComplianceChecklist({
           <div key={item.label} className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${barColor[item.status]}`} />
-              <span className="text-sm font-medium text-black truncate">{item.label}</span>
+              <span className="text-sm font-medium text-gray-800 truncate">{item.label}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -241,42 +244,94 @@ function ComplianceChecklist({
 // ── Section label ──────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-black uppercase tracking-widest text-black mb-2 px-0.5">
+    <div className="text-[10px] font-black uppercase tracking-widest text-gray-800 mb-2 px-0.5">
       {children}
     </div>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
-export default function AgentCoachingDashboard({
-  onSelectCall,
+// ── Agent selector dropdown for managers ──────────────────────────────────────
+function AgentSelector({
+  selectedAgentId,
+  onSelect,
 }: {
-  onSelectCall: (id: number) => void;
+  selectedAgentId: number | null;
+  onSelect: (agentId: number | null) => void;
 }) {
-  const [timeRange, setTimeRange] = useState<"today" | "week" | "month" | "all">("month");
+  const [open, setOpen] = useState(false);
+  const { data: agents } = trpc.callCoach.getAgentList.useQuery();
 
-  const { data, isLoading } = trpc.callCoach.getMyCoachingDashboard.useQuery(
-    { timeRange },
-    { refetchInterval: 30_000 }
+  const selectedAgent = agents?.find(a => a.id === selectedAgentId);
+  const displayName = selectedAgent?.name ?? "Select an agent...";
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 hover:border-gray-400 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {selectedAgent && (
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+              {selectedAgent.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <span>{displayName}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && agents && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
+          {/* Option to view own dashboard */}
+          <button
+            onClick={() => { onSelect(null); setOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
+              selectedAgentId === null ? "bg-indigo-50 text-indigo-700 font-bold" : "text-gray-800"
+            }`}
+          >
+            <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+              Me
+            </div>
+            <span>My Dashboard</span>
+          </button>
+
+          <div className="border-t border-gray-100" />
+
+          {agents.map(agent => (
+            <button
+              key={agent.id}
+              onClick={() => { onSelect(agent.id); setOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors hover:bg-gray-50 ${
+                selectedAgentId === agent.id ? "bg-indigo-50 text-indigo-700 font-bold" : "text-gray-800"
+              }`}
+            >
+              <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">
+                {agent.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+              <span>{agent.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
+}
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-black" />
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="text-center py-12 text-black">
-        <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
-        <p className="text-sm">No calls yet. Your coaching dashboard will appear after your first call is analysed.</p>
-      </div>
-    );
-  }
-
+// ── Dashboard content (shared between own & agent view) ───────────────────────
+function DashboardContent({
+  data,
+  timeRange,
+  setTimeRange,
+  onSelectCall,
+  agentName,
+}: {
+  data: any;
+  timeRange: "today" | "week" | "month" | "all";
+  setTimeRange: (r: "today" | "week" | "month" | "all") => void;
+  onSelectCall: (id: number) => void;
+  agentName?: string | null;
+}) {
   const scoreChange = (() => {
     if (data.avgScoreThisWeek == null || data.avgScoreLastWeek == null) return undefined;
     const diff = data.avgScoreThisWeek - data.avgScoreLastWeek;
@@ -304,7 +359,20 @@ export default function AgentCoachingDashboard({
   };
 
   return (
-    <div className="space-y-5 pb-8">
+    <>
+      {/* Agent name banner when viewing another agent */}
+      {agentName && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-black flex-shrink-0">
+            {agentName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div className="text-sm font-bold text-gray-800">{agentName}</div>
+            <div className="text-xs text-gray-600">Coaching Dashboard</div>
+          </div>
+        </div>
+      )}
+
       {/* Time range filter */}
       <div className="flex gap-2 flex-wrap">
         {(["today", "week", "month", "all"] as const).map(r => (
@@ -313,8 +381,8 @@ export default function AgentCoachingDashboard({
             onClick={() => setTimeRange(r)}
             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
               timeRange === r
-                ? "bg-black text-white border-black"
-                : "bg-white text-black border-gray-300 hover:border-black"
+                ? "bg-gray-800 text-white border-gray-800"
+                : "bg-white text-gray-800 border-gray-300 hover:border-gray-800"
             }`}
           >
             {TIME_LABELS[r]}
@@ -353,8 +421,8 @@ export default function AgentCoachingDashboard({
       </div>
 
       {noData && (
-        <div className="text-center py-8 text-black text-sm">
-          No calls in this period yet — upload a call to see your coaching feedback.
+        <div className="text-center py-8 text-gray-800 text-sm">
+          No calls in this period yet{agentName ? ` for ${agentName}` : ""} — upload a call to see coaching feedback.
         </div>
       )}
 
@@ -363,9 +431,9 @@ export default function AgentCoachingDashboard({
           {/* IMPROVEMENTS FIRST (red/orange/yellow) */}
           {data.improvements.length > 0 && (
             <div>
-              <SectionLabel>🔥 What to work on — from your recent calls</SectionLabel>
+              <SectionLabel>🔥 What to work on — from {agentName ? `${agentName}'s` : "your"} recent calls</SectionLabel>
               <div className="space-y-3">
-                {data.improvements.map((item, i) => (
+                {data.improvements.map((item: any, i: number) => (
                   <FeedbackCard key={i} item={item as any} onSelectCall={onSelectCall} />
                 ))}
               </div>
@@ -375,9 +443,9 @@ export default function AgentCoachingDashboard({
           {/* POSITIVES SECOND (green) */}
           {data.positives.length > 0 && (
             <div>
-              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
+              <SectionLabel>💪 What {agentName ? `${agentName} is` : "you're"} doing well — keep it up</SectionLabel>
               <div className="space-y-3">
-                {data.positives.map((item, i) => (
+                {data.positives.map((item: any, i: number) => (
                   <FeedbackCard key={i} item={item as any} onSelectCall={onSelectCall} />
                 ))}
               </div>
@@ -388,6 +456,102 @@ export default function AgentCoachingDashboard({
           <ComplianceChecklist items={data.complianceChecklist} />
         </>
       )}
+    </>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+export default function AgentCoachingDashboard({
+  onSelectCall,
+  isAdmin = false,
+  initialAgentId,
+}: {
+  onSelectCall: (id: number) => void;
+  isAdmin?: boolean;
+  initialAgentId?: number | null;
+}) {
+  const [timeRange, setTimeRange] = useState<"today" | "week" | "month" | "all">("month");
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(initialAgentId ?? null);
+
+  // Sync with external initialAgentId changes (e.g. from URL)
+  useEffect(() => {
+    if (initialAgentId !== undefined && initialAgentId !== null) {
+      setSelectedAgentId(initialAgentId);
+    }
+  }, [initialAgentId]);
+
+  // Own dashboard query (used when no agent selected or not admin)
+  const ownDashboard = trpc.callCoach.getMyCoachingDashboard.useQuery(
+    { timeRange },
+    {
+      refetchInterval: 30_000,
+      enabled: !isAdmin || selectedAgentId === null,
+    }
+  );
+
+  // Agent-specific dashboard query (admin only)
+  const agentDashboard = trpc.callCoach.getAgentCoachingDashboard.useQuery(
+    { agentId: selectedAgentId!, timeRange },
+    {
+      refetchInterval: 30_000,
+      enabled: isAdmin && selectedAgentId !== null,
+    }
+  );
+
+  // Agent list for name resolution
+  const { data: agents } = trpc.callCoach.getAgentList.useQuery(undefined, {
+    enabled: isAdmin,
+  });
+
+  const isLoading = selectedAgentId !== null ? agentDashboard.isLoading : ownDashboard.isLoading;
+  const data = selectedAgentId !== null ? agentDashboard.data : ownDashboard.data;
+  const agentName = selectedAgentId !== null ? agents?.find(a => a.id === selectedAgentId)?.name : null;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5 pb-8">
+        {isAdmin && (
+          <AgentSelector selectedAgentId={selectedAgentId} onSelect={setSelectedAgentId} />
+        )}
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-gray-800" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="space-y-5 pb-8">
+        {isAdmin && (
+          <AgentSelector selectedAgentId={selectedAgentId} onSelect={setSelectedAgentId} />
+        )}
+        <div className="text-center py-12 text-gray-800">
+          <Mic className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">
+            {selectedAgentId !== null && agentName
+              ? `No calls yet for ${agentName}. Their coaching dashboard will appear after their first call is analysed.`
+              : "No calls yet. Your coaching dashboard will appear after your first call is analysed."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5 pb-8">
+      {/* Agent selector for admins */}
+      {isAdmin && (
+        <AgentSelector selectedAgentId={selectedAgentId} onSelect={setSelectedAgentId} />
+      )}
+
+      <DashboardContent
+        data={data}
+        timeRange={timeRange}
+        setTimeRange={setTimeRange}
+        onSelectCall={onSelectCall}
+        agentName={agentName}
+      />
     </div>
   );
 }

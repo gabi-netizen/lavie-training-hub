@@ -29,6 +29,17 @@ export const callCoachRouter = router({
       return getMyCoachingDashboard(ctx.user.id, input?.timeRange ?? "month");
     }),
 
+  /** Admin: view any agent's coaching dashboard by userId */
+  getAgentCoachingDashboard: protectedProcedure
+    .input(z.object({
+      agentId: z.number(),
+      timeRange: z.enum(["today", "week", "month", "all"]).default("month"),
+    }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new Error("Forbidden");
+      return getMyCoachingDashboard(input.agentId, input.timeRange);
+    }),
+
   getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
     // Admins see all agents' calls; regular agents see only their own
     if (ctx.user.role === "admin") {
