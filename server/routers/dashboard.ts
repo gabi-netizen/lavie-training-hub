@@ -1,8 +1,14 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { callAnalyses, users, contacts } from "../../drizzle/schema";
 import { eq, sql, and, gte, lte, like, or, desc, inArray } from "drizzle-orm";
+import { getCallHistory } from "../cloudtalk";
+import { storagePut } from "../storage";
+import {
+  createCallAnalysisRecord,
+  processCallAnalysis,
+} from "../callAnalysis";
 
 // ─── Date range helper ───────────────────────────────────────────────────────
 function getDateRange(range: string): { from: Date; to: Date } {
@@ -72,6 +78,153 @@ function callTypeLabel(ct: string | null): string {
   }
 }
 
+// ─── Normalize phone for matching ─────────────────────────────────────────────
+function normalizePhone(phone: string | number): string {
+  return String(phone).replace(/[\s\-().+]/g, "");
+}
+
+// ─── Find user by CloudTalk agent ID ─────────────────────────────────────────
+async function findUserByCloudtalkAgentId(agentId: string | number) {
+  const db = await getDb();
+  if (!db) return null;
+  const agentIdStr = String(agentId);
+  const results = await db
+    .select()
+    .from(users)
+    .where(eq(users.cloudtalkAgentId, agentIdStr))
+    .limit(1);
+  return results[0] ?? null;
+}
+
+// ─── Find user by email ───────────────────────────────────────────────────────
+async function findUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const results = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return results[0] ?? null;
+}
+
+// ─── Auto-create user from CloudTalk agent data ───────────────────────────────
+async function findOrCreateAgentUser(agentId: string | number, agentName: string | null, agentEmail: string | null) {
+  const db = await getDb();
+  if (!db) return null;
+  const agentIdStr = String(agentId);
+
+  // 1. Try by cloudtalkAgentId
+  let user = await findUserByCloudtalkAgentId(agentIdStr);
+  if (user) return user;
+
+  // 2. Try by email
+  if (agentEmail) {
+    user = await findUserByEmail(agentEmail);
+    if (user) {
+      await db.update(users)
+        .set({ cloudtalkAgentId: agentIdStr })
+        .where(eq(users.id, user.id));
+      return { ...user, cloudtalkAgentId: agentIdStr };
+    }
+  }
+
+  // 3. Auto-create a new user account
+  const name = agentName ?? `Agent ${agentIdStr}`;
+  const openId = `cloudtalk-${agentIdStr}`;
+  try {
+    const [result] = await db.insert(users).values({
+      openId,
+      name,
+      email: agentEmail ?? null,
+      cloudtalkAgentId: agentIdStr,
+      role: "user",
+    });
+    const newId = (result as any).insertId as number;
+    const newUsers = await db.select().from(users).where(eq(users.id, newId)).limit(1);
+    return newUsers[0] ?? null;
+  } catch (err: any) {
+    const existing = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+    return existing[0] ?? null;
+  }
+}
+
+// ─── Find contact by phone number ─────────────────────────────────────────────
+async function findContactByPhone(phone: string | number) {
+  const db = await getDb();
+  if (!db) return null;
+  const normalized = normalizePhone(phone);
+  const results = await db
+    .select()
+    .from(contacts)
+    .where(
+      or(
+        like(contacts.phone, `%${normalized}%`),
+        like(contacts.phone, `%${phone}%`)
+      )
+    )
+    .limit(1);
+  return results[0] ?? null;
+}
+
+// ─── Check if call already processed (deduplication) ─────────────────────────
+async function isCallAlreadyProcessed(cloudtalkCallId: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const results = await db
+    .select({ id: callAnalyses.id })
+    .from(callAnalyses)
+    .where(eq(callAnalyses.cloudtalkCallId, cloudtalkCallId))
+    .limit(1);
+  return results.length > 0;
+}
+
+// ─── Download recording and upload to S3 ─────────────────────────────────────
+async function downloadAndStoreRecording(
+  recordingUrl: string,
+  callId: string
+): Promise<{ fileKey: string; fileUrl: string }> {
+  const response = await fetch(recordingUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download recording: ${response.status} ${response.statusText}`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const contentType = response.headers.get("content-type") ?? "audio/mpeg";
+  const ext = contentType.includes("wav") ? "wav" : "mp3";
+  const fileKey = `call-recordings/sync-${callId}-${Date.now()}.${ext}`;
+  const { url } = await storagePut(fileKey, buffer, contentType);
+  return { fileKey, fileUrl: url };
+}
+
+// ─── Stripe customer name lookup ─────────────────────────────────────────────
+async function lookupStripeCustomerName(phone: string | number): Promise<string | null> {
+  const stripeKey = process.env.STRIPE_API_KEY;
+  if (!stripeKey) return null;
+  const raw = String(phone).trim();
+  const candidates: string[] = [raw];
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) candidates.push(`+44${digits.slice(1)}`, `0${digits.slice(1)}`);
+  if (digits.length === 11 && digits.startsWith("0")) candidates.push(`+44${digits.slice(1)}`);
+  if (digits.length === 12 && digits.startsWith("44")) candidates.push(`+${digits}`, `0${digits.slice(2)}`);
+  for (const candidate of candidates) {
+    try {
+      const query = encodeURIComponent(`phone:"${candidate}"`);
+      const res = await fetch(`https://api.stripe.com/v1/customers/search?query=${query}&limit=1`, {
+        headers: { Authorization: `Bearer ${stripeKey}` },
+      });
+      const json = await res.json() as any;
+      if (json?.data?.length > 0) {
+        const customer = json.data[0];
+        const name = customer.name ?? customer.description ?? null;
+        if (name) return name;
+      }
+    } catch {
+      // continue
+    }
+  }
+  return null;
+}
+
 export const dashboardRouter = router({
   /**
    * getDashboardCalls — paginated, filtered query on call_analyses joined with users.
@@ -115,7 +268,6 @@ export const dashboardRouter = router({
 
       // Team filter — join with users to filter by team
       if (team) {
-        // We'll handle this via a subquery
         const teamUsers = await db
           .select({ id: users.id })
           .from(users)
@@ -124,7 +276,6 @@ export const dashboardRouter = router({
         if (teamUserIds.length > 0) {
           conditions.push(inArray(callAnalyses.userId, teamUserIds));
         } else {
-          // No users in this team — return empty
           return { calls: [], totalCount: 0, page, limit };
         }
       }
@@ -201,13 +352,12 @@ export const dashboardRouter = router({
         .limit(limit)
         .offset(offset);
 
-      // If search includes phone, also try to match via contacts
+      // Enrich with contact phone numbers
       let enrichedRows = rows.map((row) => ({
         ...row,
         contactPhone: null as string | null,
       }));
 
-      // Enrich with contact phone numbers if contacts are linked
       const contactIds = rows.filter((r) => r.contactId).map((r) => r.contactId!);
       if (contactIds.length > 0) {
         const contactRows = await db
@@ -318,7 +468,6 @@ export const dashboardRouter = router({
       let strongestAgent: { name: string; avgScore: number; userId: number } | null = null;
 
       if (agentStatsToday.length > 0) {
-        // Get user names
         const agentUserIds = agentStatsToday.map((a) => a.userId);
         const agentUsers = await db
           .select({ id: users.id, name: users.name })
@@ -326,7 +475,6 @@ export const dashboardRouter = router({
           .where(inArray(users.id, agentUserIds));
         const userNameMap = new Map(agentUsers.map((u) => [u.id, u.name ?? "Unknown"]));
 
-        // Sort by avg score
         const sorted = agentStatsToday
           .map((a) => ({
             userId: a.userId,
@@ -338,7 +486,6 @@ export const dashboardRouter = router({
         weakestAgent = sorted[0] ?? null;
         strongestAgent = sorted[sorted.length - 1] ?? null;
 
-        // If only one agent, they are both weakest and strongest
         if (sorted.length === 1) {
           strongestAgent = sorted[0];
         }
@@ -366,7 +513,6 @@ export const dashboardRouter = router({
 
   /**
    * getAgentsList — returns list of agents for the dropdown filter.
-   * Includes team info for filtering.
    */
   getAgentsList: protectedProcedure.query(async () => {
     const db = await getDb();
@@ -384,4 +530,194 @@ export const dashboardRouter = router({
 
     return rows.filter((r) => r.name);
   }),
+
+  /**
+   * syncCalls — Fetch recent calls from CloudTalk (last 24 hours, with recordings,
+   * duration > 2 minutes) and process them through the existing analysis pipeline.
+   * Deduplicates by cloudtalkCallId.
+   */
+  syncCalls: protectedProcedure
+    .mutation(async () => {
+      const now = new Date();
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const dateFrom = yesterday.toISOString().split("T")[0];
+      const dateTo = now.toISOString().split("T")[0];
+
+      console.log(`[Dashboard Sync] Starting sync for ${dateFrom} to ${dateTo}`);
+
+      // Fetch call history from CloudTalk — paginate through all pages
+      let allCalls: any[] = [];
+      let page = 1;
+      let pageCount = 1;
+
+      while (page <= pageCount) {
+        const result = await getCallHistory({
+          dateFrom,
+          dateTo,
+          status: "answered",
+          limit: 100,
+          page,
+        });
+        allCalls = allCalls.concat(result.calls);
+        pageCount = result.pageCount;
+        page++;
+      }
+
+      console.log(`[Dashboard Sync] Fetched ${allCalls.length} total calls from CloudTalk`);
+
+      // Filter: must have recording, duration > 120 seconds (2 minutes)
+      const eligibleCalls = allCalls.filter((call) => {
+        const duration = call.call_times?.talking_time ?? 0;
+        const hasRecording = call.recorded === true;
+        return hasRecording && duration > 120;
+      });
+
+      console.log(`[Dashboard Sync] ${eligibleCalls.length} calls eligible (recorded + >2min)`);
+
+      let synced = 0;
+      let skipped = 0;
+      let errors = 0;
+
+      for (const call of eligibleCalls) {
+        const callId = String(call.cdr_id || call.uuid || "");
+        if (!callId) {
+          skipped++;
+          continue;
+        }
+
+        // Deduplicate
+        if (await isCallAlreadyProcessed(callId)) {
+          skipped++;
+          continue;
+        }
+
+        try {
+          // Get recording URL from CloudTalk
+          const recordingUrl = `https://my.cloudtalk.io/api/calls/recording/${call.cdr_id}.json`;
+
+          // Fetch the actual recording URL via the API
+          const keyId = process.env.CLOUDTALK_API_KEY_ID;
+          const keySecret = process.env.CLOUDTALK_API_KEY_SECRET;
+          if (!keyId || !keySecret) throw new Error("CloudTalk API credentials not configured");
+          const authHeader = "Basic " + Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+
+          const recRes = await fetch(recordingUrl, {
+            headers: { Authorization: authHeader },
+          });
+
+          if (!recRes.ok) {
+            console.warn(`[Dashboard Sync] Failed to get recording for call ${callId}: ${recRes.status}`);
+            skipped++;
+            continue;
+          }
+
+          // Check content type — if it's audio, download directly; if JSON, extract URL
+          const contentType = recRes.headers.get("content-type") ?? "";
+          let audioBuffer: Buffer;
+          let audioContentType: string;
+
+          if (contentType.includes("audio") || contentType.includes("wav") || contentType.includes("mpeg")) {
+            audioBuffer = Buffer.from(await recRes.arrayBuffer());
+            audioContentType = contentType;
+          } else {
+            // JSON response with redirect URL
+            const recJson = await recRes.json() as any;
+            const audioUrl = recJson?.responseData?.url ?? recJson?.url ?? null;
+            if (!audioUrl) {
+              console.warn(`[Dashboard Sync] No audio URL in recording response for call ${callId}`);
+              skipped++;
+              continue;
+            }
+            const audioRes = await fetch(audioUrl);
+            if (!audioRes.ok) {
+              console.warn(`[Dashboard Sync] Failed to download audio for call ${callId}`);
+              skipped++;
+              continue;
+            }
+            audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+            audioContentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
+          }
+
+          // Upload to S3
+          const ext = audioContentType.includes("wav") ? "wav" : "mp3";
+          const fileKey = `call-recordings/sync-${callId}-${Date.now()}.${ext}`;
+          const { url: fileUrl } = await storagePut(fileKey, audioBuffer, audioContentType);
+
+          // Find or create the agent user
+          const agentId = call.agent?.id;
+          const agentName = call.agent?.name ?? null;
+          const agentEmail = call.agent?.email ?? null;
+          let agent = agentId
+            ? await findOrCreateAgentUser(agentId, agentName, agentEmail)
+            : null;
+
+          if (!agent) {
+            const db = await getDb();
+            if (db) {
+              const admins = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
+              agent = admins[0] ?? null;
+            }
+          }
+
+          if (!agent) {
+            console.warn(`[Dashboard Sync] No agent found for call ${callId} — skipping`);
+            skipped++;
+            continue;
+          }
+
+          // Find contact by phone
+          const callerPhone = call.contact?.number ?? null;
+          const contact = callerPhone ? await findContactByPhone(callerPhone) : null;
+
+          // Stripe customer name lookup
+          let customerName: string | undefined;
+          if (callerPhone) {
+            const stripeName = await lookupStripeCustomerName(callerPhone);
+            if (stripeName) customerName = stripeName;
+          }
+
+          // Determine initial callType based on agent team
+          const isRetentionAgent = (agent as any).team === "retention";
+          const initialCallType = isRetentionAgent ? "other" : "cold_call";
+
+          const repName = agentName || (agent as any).name || null;
+
+          // Create analysis record
+          const analysisId = await createCallAnalysisRecord({
+            userId: agent.id,
+            repName,
+            audioFileKey: fileKey,
+            audioFileUrl: fileUrl,
+            fileName: `cloudtalk-sync-${callId}.mp3`,
+            callDate: call.date ? new Date(call.date) : new Date(),
+            source: "webhook",
+            cloudtalkCallId: callId,
+            contactId: contact?.id ?? null,
+            callType: initialCallType,
+          } as any);
+
+          console.log(`[Dashboard Sync] Created analysis #${analysisId} for call ${callId}`);
+
+          // Kick off async analysis (don't await)
+          processCallAnalysis(analysisId, fileUrl).catch((err) => {
+            console.error(`[Dashboard Sync] Analysis #${analysisId} failed:`, err);
+          });
+
+          synced++;
+        } catch (err: any) {
+          console.error(`[Dashboard Sync] Error processing call ${callId}:`, err?.message ?? err);
+          errors++;
+        }
+      }
+
+      console.log(`[Dashboard Sync] Done. Synced: ${synced}, Skipped: ${skipped}, Errors: ${errors}`);
+
+      return {
+        totalFetched: allCalls.length,
+        eligible: eligibleCalls.length,
+        synced,
+        skipped,
+        errors,
+      };
+    }),
 });

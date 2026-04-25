@@ -5,16 +5,18 @@
   Filter bar, summary cards, paginated call history table.
 */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   UserMinus,
   UserPlus,
   Clock,
   Play,
+  Pause,
   MoreVertical,
   Search,
   ArrowUpRight,
@@ -24,6 +26,8 @@ import {
   ChevronRight,
   Download,
   Phone,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 
 const PAGE_SIZE = 16;
@@ -56,6 +60,17 @@ const CALL_TYPE_OPTIONS = [
   { value: "retention", label: "Retention" },
   { value: "other", label: "Other" },
 ];
+
+// ─── Default filter state ────────────────────────────────────────────────────
+const DEFAULT_FILTERS = {
+  agentId: undefined as number | undefined,
+  team: undefined as "opening" | "retention" | undefined,
+  scoreMin: 0,
+  scoreMax: 100,
+  dateRange: "today",
+  callType: "all",
+  search: "",
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatDuration(seconds: number | null): string {
@@ -133,7 +148,6 @@ function statusBadge(status: string) {
 }
 
 function callTypeIcon(callType: string | null, score: number | null) {
-  // Low score = red X, otherwise outbound arrow for cold_call, inbound arrow for follow_up/retention
   if (score !== null && score < 40) {
     return (
       <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
@@ -225,24 +239,21 @@ function Pagination({
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function CallCenterDashboard() {
   const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [page, setPage] = useState(1);
 
+  // Audio player state
+  const [playingCallId, setPlayingCallId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Filter state (applied)
-  const [filters, setFilters] = useState({
-    agentId: undefined as number | undefined,
-    team: undefined as "opening" | "retention" | undefined,
-    scoreMin: 0,
-    scoreMax: 100,
-    dateRange: "today",
-    callType: "all",
-    search: "",
-  });
+  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
 
   // Filter state (draft — before Apply)
-  const [draft, setDraft] = useState({ ...filters });
+  const [draft, setDraft] = useState({ ...DEFAULT_FILTERS });
 
   const applyFilters = useCallback(() => {
     setFilters({ ...draft });
@@ -250,18 +261,62 @@ export default function CallCenterDashboard() {
   }, [draft]);
 
   const resetFilters = useCallback(() => {
-    const defaults = {
-      agentId: undefined as number | undefined,
-      team: undefined as "opening" | "retention" | undefined,
-      scoreMin: 0,
-      scoreMax: 100,
-      dateRange: "today",
-      callType: "all",
-      search: "",
-    };
-    setDraft(defaults);
-    setFilters(defaults);
+    setDraft({ ...DEFAULT_FILTERS });
+    setFilters({ ...DEFAULT_FILTERS });
     setPage(1);
+  }, []);
+
+  // Helper to apply filters programmatically from summary cards
+  const applyCardFilter = useCallback((overrides: Partial<typeof DEFAULT_FILTERS>) => {
+    const newFilters = { ...DEFAULT_FILTERS, ...overrides };
+    setDraft(newFilters);
+    setFilters(newFilters);
+    setPage(1);
+  }, []);
+
+  // ─── Audio playback ───────────────────────────────────────────────────────
+  const togglePlay = useCallback((callId: number, audioUrl: string) => {
+    if (playingCallId === callId) {
+      // Pause current
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setPlayingCallId(null);
+    } else {
+      // Stop any currently playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      // Start new
+      const audio = new Audio(audioUrl);
+      audio.addEventListener("ended", () => {
+        setPlayingCallId(null);
+        audioRef.current = null;
+      });
+      audio.addEventListener("error", () => {
+        toast.error("Failed to play recording");
+        setPlayingCallId(null);
+        audioRef.current = null;
+      });
+      audio.play().then(() => {
+        audioRef.current = audio;
+        setPlayingCallId(callId);
+      }).catch(() => {
+        toast.error("Failed to play recording — audio may not be available");
+      });
+    }
+  }, [playingCallId]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   // ─── Queries ───────────────────────────────────────────────────────────────
@@ -284,6 +339,22 @@ export default function CallCenterDashboard() {
 
   const totalPages = callsData ? Math.ceil(callsData.totalCount / PAGE_SIZE) : 1;
 
+  // ─── Sync Calls mutation ──────────────────────────────────────────────────
+  const syncCallsMutation = trpc.dashboard.syncCalls.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        `Sync complete: ${data.synced} new calls synced, ${data.skipped} skipped, ${data.errors} errors`,
+        { duration: 5000 }
+      );
+      // Refetch dashboard data
+      utils.dashboard.getDashboardCalls.invalidate();
+      utils.dashboard.getDashboardStats.invalidate();
+    },
+    onError: (err) => {
+      toast.error(`Sync failed: ${err.message}`);
+    },
+  });
+
   // ─── Navigate to call detail ───────────────────────────────────────────────
   const goToCall = (id: number) => {
     navigate(`/ai-coach?tab=my-calls&analysisId=${id}`);
@@ -305,9 +376,17 @@ export default function CallCenterDashboard() {
             <Download size={16} />
             Export CSV
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors">
-            <Phone size={16} />
-            Sync Calls
+          <button
+            onClick={() => syncCallsMutation.mutate()}
+            disabled={syncCallsMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {syncCallsMutation.isPending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            {syncCallsMutation.isPending ? "Syncing..." : "Sync Calls"}
           </button>
         </div>
       </div>
@@ -454,7 +533,10 @@ export default function CallCenterDashboard() {
         {/* ═══════ SUMMARY CARDS ═══════ */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {/* Card 1: Calls Below 40 Score Today */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer">
+          <div
+            onClick={() => applyCardFilter({ scoreMin: 0, scoreMax: 40, dateRange: "today" })}
+            className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
+          >
             <div className="w-11 h-11 rounded-[10px] bg-red-100 text-red-500 flex items-center justify-center flex-shrink-0">
               <AlertTriangle size={22} />
             </div>
@@ -467,7 +549,14 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Card 2: Weakest Agent Today */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer">
+          <div
+            onClick={() => {
+              if (stats?.weakestAgent?.userId) {
+                applyCardFilter({ agentId: stats.weakestAgent.userId, dateRange: "today" });
+              }
+            }}
+            className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
+          >
             <div className="w-11 h-11 rounded-[10px] bg-amber-100 text-amber-500 flex items-center justify-center flex-shrink-0">
               <UserMinus size={22} />
             </div>
@@ -493,7 +582,14 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Card 3: Strongest Agent Today */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer">
+          <div
+            onClick={() => {
+              if (stats?.strongestAgent?.userId) {
+                applyCardFilter({ agentId: stats.strongestAgent.userId, dateRange: "today" });
+              }
+            }}
+            className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
+          >
             <div className="w-11 h-11 rounded-[10px] bg-green-100 text-green-500 flex items-center justify-center flex-shrink-0">
               <UserPlus size={22} />
             </div>
@@ -519,7 +615,10 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Card 4: Pending Analysis */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer">
+          <div
+            onClick={() => applyCardFilter({ dateRange: "this_year", scoreMin: 0, scoreMax: 100 })}
+            className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
+          >
             <div className="w-11 h-11 rounded-[10px] bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0">
               <Clock size={22} />
             </div>
@@ -570,6 +669,7 @@ export default function CallCenterDashboard() {
                 const date = new Date(call.createdAt);
                 const dateStr = date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
                 const timeStr = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                const isPlaying = playingCallId === call.id;
 
                 return (
                   <div
@@ -626,18 +726,24 @@ export default function CallCenterDashboard() {
                     {/* Status */}
                     <div>{statusBadge(call.status)}</div>
 
-                    {/* Play */}
+                    {/* Play / Pause */}
                     <div onClick={(e) => e.stopPropagation()}>
                       {call.audioFileUrl ? (
                         <button
-                          onClick={() => {
-                            const audio = new Audio(call.audioFileUrl);
-                            audio.play().catch(() => {});
-                          }}
-                          className="w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-500 flex items-center justify-center hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                          title="Play recording"
+                          onClick={() => togglePlay(call.id, call.audioFileUrl)}
+                          className={cn(
+                            "w-8 h-8 rounded-full border flex items-center justify-center transition-colors",
+                            isPlaying
+                              ? "border-blue-400 bg-blue-50 text-blue-600"
+                              : "border-gray-200 bg-white text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50"
+                          )}
+                          title={isPlaying ? "Pause recording" : "Play recording"}
                         >
-                          <Play size={14} fill="currentColor" />
+                          {isPlaying ? (
+                            <Pause size={14} fill="currentColor" />
+                          ) : (
+                            <Play size={14} fill="currentColor" />
+                          )}
                         </button>
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>
