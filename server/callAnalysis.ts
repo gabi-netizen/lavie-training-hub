@@ -761,6 +761,7 @@ export async function createCallAnalysisRecord(data: {
   source?: "manual" | "webhook";
   cloudtalkCallId?: string | null;
   contactId?: number | null;
+  customerName?: string | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -778,6 +779,7 @@ export async function createCallAnalysisRecord(data: {
     source: data.source ?? "manual",
     cloudtalkCallId: data.cloudtalkCallId ?? null,
     contactId: data.contactId ?? null,
+    customerName: data.customerName ?? null,
   });
 
   return (result as any).insertId as number;

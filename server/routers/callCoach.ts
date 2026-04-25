@@ -233,10 +233,10 @@ export const callCoachRouter = router({
     const db = await getDb();
     if (!db) return [];
     const rows = await db
-      .select({ id: users.id, name: users.name, email: users.email })
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
       .from(users)
       .orderBy(users.name);
-    return rows.filter(r => r.name);
+    return rows.filter(r => r.name && r.role !== "admin");
   }),
 
   /**

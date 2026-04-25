@@ -158,7 +158,7 @@ function FeedbackCard({
 
         {/* Row 1: category label + badge */}
         <div className="flex items-start justify-between gap-3">
-          <span className={`text-[11px] font-black uppercase tracking-widest ${t.label}`}>
+          <span className="text-[11px] font-black uppercase tracking-widest text-purple-500">
             {item.category}
           </span>
           <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0 ${t.badge}`}>

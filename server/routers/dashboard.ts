@@ -725,9 +725,12 @@ export const dashboardRouter = router({
           const callerPhone = call.contact?.number ?? null;
           const contact = callerPhone ? await findContactByPhone(callerPhone) : null;
 
-          // Stripe customer name lookup
+          // Customer name: prefer CloudTalk contact name, then Stripe lookup
+          const cloudtalkContactName = call.contact?.name ?? null;
           let customerName: string | undefined;
-          if (callerPhone) {
+          if (cloudtalkContactName) {
+            customerName = cloudtalkContactName;
+          } else if (callerPhone) {
             const stripeName = await lookupStripeCustomerName(callerPhone);
             if (stripeName) customerName = stripeName;
           }
@@ -750,7 +753,29 @@ export const dashboardRouter = router({
             cloudtalkCallId: callId,
             contactId: contact?.id ?? null,
             callType: initialCallType,
+            customerName: customerName ?? null,
           } as any);
+
+          // If we have a phone but no contact in our DB, create one so the phone shows in dashboard
+          if (callerPhone && !contact) {
+            try {
+              const db = await getDb();
+              if (db) {
+                const [newContact] = await db.insert(contacts).values({
+                  name: customerName || cloudtalkContactName || "Unknown",
+                  phone: callerPhone,
+                });
+                const newContactId = (newContact as any).insertId as number;
+                if (newContactId) {
+                  await db.update(callAnalyses)
+                    .set({ contactId: newContactId })
+                    .where(eq(callAnalyses.id, analysisId));
+                }
+              }
+            } catch (e) {
+              console.warn(`[Dashboard Sync] Could not create contact for ${callerPhone}:`, e);
+            }
+          }
 
           console.log(`[Dashboard Sync] Created analysis #${analysisId} for call ${callId}`);
 
