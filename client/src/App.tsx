@@ -47,19 +47,11 @@ function TabRedirect({ tab }: { tab: string }) {
 }
 
 function Router() {
-  const { user, loading } = useAuth();
-  const isAdmin = !loading && user?.role === "admin";
-
   return (
     <AppLayout>
       <Switch>
         {/* Default landing: all users → Call Center Dashboard */}
-        <Route path="/">
-          {() => {
-            if (loading) return null;
-            return <CallCenterDashboard />;
-          }}
-        </Route>
+        <Route path="/" component={CallCenterDashboard} />
 
         {/* Call Center Dashboard */}
         <Route path="/call-center-dashboard" component={CallCenterDashboard} />
