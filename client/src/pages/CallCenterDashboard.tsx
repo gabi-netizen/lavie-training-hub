@@ -205,7 +205,7 @@ function Pagination({
       </button>
       {pages.map((p, i) =>
         p === "dots" ? (
-          <span key={`dots-${i}`} className="text-sm text-gray-400 px-1.5">
+          <span key={`dots-${i}`} className="text-sm text-gray-600 px-1.5">
             ...
           </span>
         ) : (
@@ -437,7 +437,7 @@ export default function CallCenterDashboard() {
         <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5 flex flex-wrap gap-3 items-end">
           {/* Agent */}
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Agent</label>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Agent</label>
             <select
               value={draft.agentId ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, agentId: e.target.value ? Number(e.target.value) : undefined }))}
@@ -454,7 +454,7 @@ export default function CallCenterDashboard() {
 
           {/* Team */}
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Team</label>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Team</label>
             <select
               value={draft.team ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, team: (e.target.value || undefined) as any }))}
@@ -468,7 +468,7 @@ export default function CallCenterDashboard() {
 
           {/* AI Score Range */}
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">AI Score Range</label>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">AI Score Range</label>
             <div className="flex items-center gap-1.5">
               <input
                 type="number"
@@ -478,7 +478,7 @@ export default function CallCenterDashboard() {
                 onChange={(e) => setDraft((d) => ({ ...d, scoreMin: Number(e.target.value) || 0 }))}
                 className="w-[60px] px-2 py-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
               />
-              <span className="text-gray-400 text-xs">–</span>
+              <span className="text-gray-600 text-xs">–</span>
               <input
                 type="number"
                 min={0}
@@ -492,7 +492,7 @@ export default function CallCenterDashboard() {
 
           {/* Date Range */}
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Date Range</label>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Date Range</label>
             <select
               value={draft.dateRange}
               onChange={(e) => setDraft((d) => ({ ...d, dateRange: e.target.value }))}
@@ -508,7 +508,7 @@ export default function CallCenterDashboard() {
 
           {/* Call Type */}
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Call Type</label>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Call Type</label>
             <select
               value={draft.callType}
               onChange={(e) => setDraft((d) => ({ ...d, callType: e.target.value }))}
@@ -524,9 +524,9 @@ export default function CallCenterDashboard() {
 
           {/* Search */}
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Search</label>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Search</label>
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 placeholder="Customer name or phone..."
@@ -566,7 +566,7 @@ export default function CallCenterDashboard() {
             <div className="flex-1 min-w-0">
               <div className="text-[28px] font-bold text-red-600 leading-tight">{stats?.callsBelowForty ?? 0}</div>
               <div className="text-[13px] text-gray-600 mt-0.5">Calls Below 40 Score Today</div>
-              <div className="text-[11.5px] text-gray-500 mt-1.5">Requires manager review</div>
+              <div className="text-[11.5px] text-gray-600 mt-1.5">Requires manager review</div>
               <div className="text-[11px] text-blue-500 font-semibold mt-2 hover:underline">View these calls →</div>
             </div>
           </div>
@@ -648,7 +648,7 @@ export default function CallCenterDashboard() {
             <div className="flex-1 min-w-0">
               <div className="text-[28px] font-bold text-blue-600 leading-tight">{stats?.pendingCount ?? 0}</div>
               <div className="text-[13px] text-gray-600 mt-0.5">Pending Analysis</div>
-              <div className="text-[11.5px] text-gray-500 mt-1.5">Calls still being processed by AI</div>
+              <div className="text-[11.5px] text-gray-600 mt-1.5">Calls still being processed by AI</div>
               <div className="text-[11px] text-blue-500 font-semibold mt-2 hover:underline">Check status →</div>
             </div>
           </div>
@@ -663,7 +663,7 @@ export default function CallCenterDashboard() {
         {/* ═══════ CALL TABLE ═══════ */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           {/* Table head */}
-          <div className="grid grid-cols-[180px_200px_190px_140px_100px_100px_80px_50px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="grid grid-cols-[180px_200px_190px_140px_100px_100px_80px_50px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wide">
             <div>Type</div>
             <div>Contact</div>
             <div>Agent</div>
@@ -676,12 +676,12 @@ export default function CallCenterDashboard() {
 
           {/* Loading state */}
           {callsLoading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-24 text-gray-500">
               <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
               <p className="text-sm">Loading calls...</p>
             </div>
           ) : !callsData?.calls?.length ? (
-            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-24 text-gray-500">
               <Phone size={36} className="mb-3 opacity-40" />
               <p className="text-sm font-medium">No calls found</p>
               <p className="text-xs mt-1">Try adjusting your filters</p>
@@ -705,14 +705,14 @@ export default function CallCenterDashboard() {
                       {callTypeIcon(call.callType, call.overallScore)}
                       <div>
                         <div className="text-[13px] font-medium text-gray-900">{call.callTypeLabel}</div>
-                        <div className="text-xs text-gray-400">{formatDuration(call.durationSeconds)}</div>
+                        <div className="text-xs text-gray-600">{formatDuration(call.durationSeconds)}</div>
                       </div>
                     </div>
 
                     {/* Contact */}
                     <div>
                       <div className="text-[13px] font-medium text-gray-900 truncate">{call.customerName || "—"}</div>
-                      <div className="text-xs text-gray-400 truncate">{call.contactPhone || ""}</div>
+                      <div className="text-xs text-gray-600 truncate">{call.contactPhone || ""}</div>
                     </div>
 
                     {/* Agent */}
@@ -725,14 +725,14 @@ export default function CallCenterDashboard() {
                       </div>
                       <div>
                         <div className="text-[13px] font-medium text-gray-900 truncate">{call.agentName || "—"}</div>
-                        <div className="text-[11px] text-gray-400 capitalize">{call.agentTeam || ""}</div>
+                        <div className="text-[11px] text-gray-600 capitalize">{call.agentTeam || ""}</div>
                       </div>
                     </div>
 
                     {/* Date */}
                     <div>
                       <div className="text-[13px] text-gray-900">{dateStr}</div>
-                      <div className="text-xs text-gray-400">{timeStr}</div>
+                      <div className="text-xs text-gray-600">{timeStr}</div>
                     </div>
 
                     {/* AI Score */}
@@ -742,7 +742,7 @@ export default function CallCenterDashboard() {
                           {call.overallScore}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-gray-600">—</span>
                       )}
                     </div>
 
@@ -769,13 +769,13 @@ export default function CallCenterDashboard() {
                           )}
                         </button>
                       ) : (
-                        <span className="text-gray-300 text-xs">—</span>
+                        <span className="text-gray-500 text-xs">—</span>
                       )}
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                      <button className="w-7 h-7 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 flex items-center justify-center transition-colors">
+                      <button className="w-7 h-7 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-600 flex items-center justify-center transition-colors">
                         <MoreVertical size={16} />
                       </button>
                     </div>
@@ -789,7 +789,7 @@ export default function CallCenterDashboard() {
         {/* ═══════ BOTTOM PAGINATION ═══════ */}
         {callsData && callsData.totalCount > 0 && (
           <div className="flex items-center justify-between mt-4">
-            <p className="text-[13px] text-gray-500">
+            <p className="text-[13px] text-gray-700">
               Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, callsData.totalCount)} of{" "}
               {callsData.totalCount.toLocaleString()} calls
             </p>
