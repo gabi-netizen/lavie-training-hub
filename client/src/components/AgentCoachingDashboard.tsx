@@ -322,8 +322,8 @@ export default function AgentCoachingDashboard({
         ))}
       </div>
 
-      {/* 3 Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* 4 Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           icon="🎯"
           value={String(data.closesThisWeek)}
@@ -349,6 +349,23 @@ export default function AgentCoachingDashboard({
             "T&Cs issue — see below"
           }
           changeDir={complianceChangeDir}
+        />
+        <StatCard
+          icon="🗣️"
+          value={data.avgRepSpeechPct != null ? `${data.avgRepSpeechPct}%` : "—"}
+          label="Avg Talk Time"
+          change={
+            data.avgRepSpeechPct == null ? undefined :
+            data.avgRepSpeechPct > 65   ? "Talking too much" :
+            data.avgRepSpeechPct < 30   ? "Too passive" :
+            "Good ratio (40–65%)"
+          }
+          changeDir={
+            data.avgRepSpeechPct == null ? undefined :
+            data.avgRepSpeechPct > 65   ? "down" :
+            data.avgRepSpeechPct < 30   ? "down" :
+            "up"
+          }
         />
       </div>
 
