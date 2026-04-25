@@ -36,4 +36,6 @@ export const ENV = {
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
   // Stripe publishable key (exposed to frontend via VITE_ prefix)
   stripePublishableKey: process.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "",
+  // n8n Cloud webhook base URL (e.g. https://gabilavie.app.n8n.cloud/webhook)
+  n8nWebhookUrl: process.env.N8N_WEBHOOK_URL ?? "",
 };
