@@ -50,6 +50,121 @@ function detectChannelCount(buffer: Buffer): number {
   return 1;
 }
 
+// ─── SMART AGENT SPEAKER DETECTION ──────────────────────────────────────────
+/**
+ * Determines which Deepgram speaker ID corresponds to the sales agent.
+ *
+ * Strategy (in order of priority):
+ * 1. Content-based: scan early utterances/words for agent-identifying phrases
+ *    (self-introduction with company name, product names, pricing, etc.)
+ * 2. Speech-time heuristic: in outbound sales calls the agent typically speaks
+ *    more than the customer — pick the speaker with the most total speech time.
+ * 3. Final fallback: first speaker (original behaviour).
+ *
+ * @param items  Array of utterances or word objects, each with `.speaker` (number)
+ *               and `.transcript` / `.word` / `.punctuated_word` text.
+ * @param firstSpeaker  The speaker ID of the very first item (used as fallback).
+ * @returns The speaker ID that most likely belongs to the agent.
+ */
+function detectAgentSpeaker(
+  items: Array<{ speaker?: number; transcript?: string; word?: string; punctuated_word?: string; start?: number; end?: number }>,
+  firstSpeaker: number
+): number {
+  // ── 1. Content-based detection ──────────────────────────────────────────────
+  // Patterns that strongly indicate the speaker is the Lavie Labs sales agent.
+  // We check the first 60 items so we don't scan the entire (potentially huge) array.
+  const AGENT_PATTERNS = [
+    // Self-introduction / company name
+    /\bla\s*vie\b/i,
+    /\blavie\b/i,
+    /\bla\s*vie\s*labs\b/i,
+    /\blovely\s*labs\b/i,
+    // Product names
+    /\bmatinika\b/i,
+    /\boulala\b/i,
+    /\bashkara\b/i,
+    // Pricing / offer language unique to agent
+    /\b4\.95\b/,
+    /\b£\s*4\.95\b/,
+    /\b21[\s-]day\s*(free\s*)?trial\b/i,
+    /\b44\.90\b/,
+    /\b£\s*44\.90\b/,
+    /\bhyaluronic\s*acid\b/i,
+    /\bretinol\b/i,
+    /\btrustpilot\b/i,
+    // Classic agent opening phrases
+    /\bthis\s+is\s+\w+\s+from\b/i,
+    /\bmy\s+name\s+is\s+\w+\s+(?:from|calling\s+from)\b/i,
+    /\bcalling\s+(?:from|on\s+behalf\s+of)\b/i,
+    /\bfree\s+trial\b/i,
+    /\bmagic\s+wand\b/i,
+    /\bcancel\s+any\s*time\b/i,
+    /\bpostage\b/i,
+    /\bdelivery\s+address\b/i,
+    /\blong\s+number\b/i,   // asking for card number
+    /\bsort\s+code\b/i,
+    /\bexpiry\b/i,
+  ];
+
+  // Collect text per speaker from the first 60 items
+  const speakerTexts: Record<number, string> = {};
+  const speakerTimes: Record<number, number> = {};
+  const SCAN_LIMIT = 60;
+
+  for (let i = 0; i < Math.min(items.length, SCAN_LIMIT); i++) {
+    const item = items[i];
+    const spk = item.speaker ?? firstSpeaker;
+    const text = (item.transcript ?? item.punctuated_word ?? item.word ?? "").toLowerCase();
+    speakerTexts[spk] = (speakerTexts[spk] ?? "") + " " + text;
+  }
+
+  // Also accumulate speech time across ALL items for the fallback heuristic
+  for (const item of items) {
+    const spk = item.speaker ?? firstSpeaker;
+    const dur = (item.end ?? 0) - (item.start ?? 0);
+    speakerTimes[spk] = (speakerTimes[spk] ?? 0) + dur;
+  }
+
+  // Score each speaker by how many agent patterns match their early text
+  const speakerScores: Record<number, number> = {};
+  for (const [spkStr, text] of Object.entries(speakerTexts)) {
+    const spk = Number(spkStr);
+    let score = 0;
+    for (const pattern of AGENT_PATTERNS) {
+      if (pattern.test(text)) score++;
+    }
+    speakerScores[spk] = score;
+  }
+
+  const bestContentMatch = Object.entries(speakerScores)
+    .sort(([, a], [, b]) => b - a)[0];
+
+  if (bestContentMatch && Number(bestContentMatch[1]) >= 1) {
+    const detectedSpeaker = Number(bestContentMatch[0]);
+    console.log(`[SpeakerDetection] Content-based: speaker_${detectedSpeaker} identified as Agent (score=${bestContentMatch[1]})`);
+    return detectedSpeaker;
+  }
+
+  // ── 2. Speech-time heuristic ─────────────────────────────────────────────────
+  // In outbound sales calls the agent typically talks more than the customer.
+  // Pick the speaker with the most cumulative speech time.
+  const speechEntries = Object.entries(speakerTimes);
+  if (speechEntries.length >= 2) {
+    const [longestSpkStr] = speechEntries.sort(([, a], [, b]) => b - a)[0];
+    const longestSpk = Number(longestSpkStr);
+    if (longestSpk !== firstSpeaker) {
+      console.log(`[SpeakerDetection] Speech-time heuristic: speaker_${longestSpk} identified as Agent (most speech time)`);
+    } else {
+      console.log(`[SpeakerDetection] Speech-time heuristic confirms first speaker (speaker_${longestSpk}) as Agent`);
+    }
+    return longestSpk;
+  }
+
+  // ── 3. Fallback: first speaker ───────────────────────────────────────────────
+  console.log(`[SpeakerDetection] Fallback: using first speaker (speaker_${firstSpeaker}) as Agent`);
+  return firstSpeaker;
+}
+
 export interface WordTimestamp {
   word: string;
   start: number;
@@ -102,18 +217,13 @@ export async function transcribeAudio(audioUrl: string): Promise<{
       ]) as any;
       const chunkDuration = chunkResponse?.metadata?.duration ?? 0;
       const utterances: any[] = chunkResponse?.results?.utterances ?? [];
-      // Detect rep speaker: for the first chunk, use the first speaker (agent initiates the call).
+      // Detect rep speaker: for the first chunk, use smart detection (content + speech-time).
       // For subsequent chunks, reuse the repSpeaker from the first chunk for consistency.
       if (i === 0 && utterances.length > 0) {
-        firstChunkRepSpeaker = utterances[0].speaker ?? 0;
+        const firstSpk = utterances[0].speaker ?? 0;
+        firstChunkRepSpeaker = detectAgentSpeaker(utterances, firstSpk);
       }
       const repSpeaker = firstChunkRepSpeaker;
-      const speakerTimes: Record<number, number> = {};
-      for (const utt of utterances) {
-        const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
-        const spk = utt.speaker ?? 0;
-        speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
-      }
       for (const utt of utterances) {
         const label: "Agent" | "Customer" = utt.speaker === repSpeaker ? "Agent" : "Customer";
         const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
@@ -251,12 +361,12 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     const utterances: any[] = result?.results?.utterances ?? [];
 
     if (allWords.length > 0) {
-      // Step 1: determine rep speaker = FIRST speaker in the call.
-      // In outbound sales calls the agent always speaks first ("Hello, it's X from LovelyLabs").
-      // The previous heuristic (most total speech time) was unreliable because customers
-      // sometimes talk more than the rep, causing labels to swap.
+      // Step 1: determine rep speaker using smart detection.
+      // detectAgentSpeaker() checks content patterns first (company/product names, pricing),
+      // then falls back to speech-time heuristic, then to first speaker.
+      // This correctly handles incoming calls where the customer speaks first.
       const firstSpeaker = allWords[0]?.speaker ?? 0;
-      const repSpeaker = firstSpeaker;
+      const repSpeaker = detectAgentSpeaker(allWords, firstSpeaker);
 
       // Compute speech-time stats for repSpeechPct
       const speakerTimes: Record<number, number> = {};
@@ -302,8 +412,9 @@ export async function transcribeAudio(audioUrl: string): Promise<{
 
     } else {
       // Utterance fallback (no word-level data available)
-      // Use first speaker = Agent (outbound sales calls: agent speaks first)
-      const repSpeaker = utterances.length > 0 ? (utterances[0].speaker ?? 0) : 0;
+      // Use smart detection to identify the agent speaker.
+      const firstUttSpeaker = utterances.length > 0 ? (utterances[0].speaker ?? 0) : 0;
+      const repSpeaker = utterances.length > 0 ? detectAgentSpeaker(utterances, firstUttSpeaker) : 0;
       const speakerTimes: Record<number, number> = {};
       let totalSpeechTime = 0;
       for (const utt of utterances) {
