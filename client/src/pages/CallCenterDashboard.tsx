@@ -670,7 +670,7 @@ export default function CallCenterDashboard() {
             <div>Date</div>
             <div>AI Score</div>
             <div>Status</div>
-            <div>Talk Ratio</div>
+            <div>Agent Talk</div>
             <div></div>
             <div></div>
           </div>
@@ -750,29 +750,18 @@ export default function CallCenterDashboard() {
                     {/* Status */}
                     <div>{statusBadge(call.status)}</div>
 
-                    {/* Talk Ratio */}
+                    {/* Agent Talk Time */}
                     <div>
                       {call.repSpeechPct != null ? (() => {
                         const agentPct = call.repSpeechPct as number;
-                        const custPct = 100 - agentPct;
                         const barColor = agentPct > 65 ? "bg-red-400" : agentPct < 30 ? "bg-amber-400" : "bg-emerald-400";
                         const textColor = agentPct > 65 ? "text-red-700" : agentPct < 30 ? "text-amber-700" : "text-emerald-700";
                         return (
-                          <div className="flex flex-col gap-0.5" title={`Agent: ${agentPct}% | Customer: ${custPct}%`}>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-gray-600 w-3">A</span>
-                              <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${agentPct}%` }} />
-                              </div>
-                              <span className={`text-[10px] font-semibold ${textColor}`}>{agentPct}%</span>
+                          <div className="flex items-center gap-1.5" title={`Agent spoke ${agentPct}% of the call`}>
+                            <div className="w-14 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${agentPct}%` }} />
                             </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-gray-600 w-3">C</span>
-                              <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-blue-300" style={{ width: `${custPct}%` }} />
-                              </div>
-                              <span className="text-[10px] font-semibold text-blue-700">{custPct}%</span>
-                            </div>
+                            <span className={`text-[12px] font-semibold ${textColor}`}>{agentPct}%</span>
                           </div>
                         );
                       })() : (
