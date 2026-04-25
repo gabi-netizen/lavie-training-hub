@@ -342,10 +342,33 @@ export default function CallCenterDashboard() {
   // ─── Sync Calls mutation ──────────────────────────────────────────────────
   const syncCallsMutation = trpc.dashboard.syncCalls.useMutation({
     onSuccess: (data) => {
-      toast.success(
-        `Sync complete: ${data.synced} new calls synced, ${data.skipped} skipped, ${data.errors} errors`,
-        { duration: 5000 }
-      );
+      const { totalFromApi, answeredCalls, eligibleCalls, alreadyInDb, newSynced, skipped, errors } = data;
+
+      // Build a concise funnel summary: Total → Answered → Eligible → Already in DB → New
+      const funnel = `${totalFromApi} from CloudTalk → ${answeredCalls} answered → ${eligibleCalls} eligible → ${alreadyInDb} already in DB → ${newSynced} new`;
+
+      let message: string;
+      if (newSynced > 0) {
+        message = `Synced ${newSynced} new call${newSynced !== 1 ? "s" : ""}. (${funnel})`;
+      } else if (eligibleCalls === 0 && answeredCalls > 0) {
+        message = `0 new calls. Found ${answeredCalls} answered but none had a recording over 2 minutes.`;
+      } else if (answeredCalls === 0) {
+        message = `0 new calls. No answered calls found in the last 24 hours (${totalFromApi} total fetched).`;
+      } else if (alreadyInDb === eligibleCalls) {
+        message = `0 new calls — all ${eligibleCalls} eligible call${eligibleCalls !== 1 ? "s" : ""} already in DB. (${funnel})`;
+      } else {
+        message = `0 new calls synced. (${funnel}${skipped > 0 ? `, ${skipped} failed to download` : ""})`;
+      }
+
+      if (errors.length > 0) {
+        toast.warning(message, {
+          description: `${errors.length} error${errors.length !== 1 ? "s" : ""} occurred during sync.`,
+          duration: 8000,
+        });
+      } else {
+        toast.success(message, { duration: 6000 });
+      }
+
       // Refetch dashboard data
       utils.dashboard.getDashboardCalls.invalidate();
       utils.dashboard.getDashboardStats.invalidate();

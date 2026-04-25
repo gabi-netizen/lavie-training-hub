@@ -535,6 +535,15 @@ export const dashboardRouter = router({
    * syncCalls — Fetch recent calls from CloudTalk (last 24 hours, with recordings,
    * duration > 2 minutes) and process them through the existing analysis pipeline.
    * Deduplicates by cloudtalkCallId.
+   *
+   * Returns detailed stats:
+   *   totalFromApi   — total calls fetched from CloudTalk (all statuses)
+   *   answeredCalls  — how many were answered (client-side filter)
+   *   eligibleCalls  — how many had a recording AND duration > 120s
+   *   alreadyInDb    — how many were skipped because they're already in the DB
+   *   newSynced      — how many new calls were actually synced
+   *   skipped        — how many were skipped due to download/processing failures
+   *   errors         — error messages collected during the sync
    */
   syncCalls: protectedProcedure
     .mutation(async () => {
@@ -545,8 +554,9 @@ export const dashboardRouter = router({
 
       console.log(`[Dashboard Sync] Starting sync for ${dateFrom} to ${dateTo}`);
 
-      // Fetch call history from CloudTalk — paginate through all pages
-      let allCalls: any[] = [];
+      // Fetch ALL calls from CloudTalk (no status filter) — paginate through all pages.
+      // We track the raw total before any client-side filtering so we can report it.
+      let allCallsRaw: any[] = [];
       let page = 1;
       let pageCount = 1;
 
@@ -554,43 +564,53 @@ export const dashboardRouter = router({
         const result = await getCallHistory({
           dateFrom,
           dateTo,
-          status: "answered",
+          // No status filter here — we apply it client-side below so we can count both
           limit: 100,
           page,
         });
-        allCalls = allCalls.concat(result.calls);
+        // result.calls already has the client-side status filter applied if we passed one,
+        // but since we didn't pass status, it returns all calls.
+        allCallsRaw = allCallsRaw.concat(result.calls);
         pageCount = result.pageCount;
         page++;
       }
 
-      console.log(`[Dashboard Sync] Fetched ${allCalls.length} total calls from CloudTalk`);
+      const totalFromApi = allCallsRaw.length;
+      console.log(`[Dashboard Sync] Fetched ${totalFromApi} total calls from CloudTalk (all statuses)`);
+
+      // Client-side answered filter (mirrors what getCallHistory does internally when status="answered")
+      const answeredCallsList = allCallsRaw.filter((call) => call.status === "answered");
+      const answeredCalls = answeredCallsList.length;
+      console.log(`[Dashboard Sync] ${answeredCalls} answered calls`);
 
       // Filter: must have recording, duration > 120 seconds (2 minutes)
       // FIX: call.call_times.talking_time is now correctly populated from Cdr.talking_time
       // FIX: call.recorded is now correctly read from Cdr.recorded (was broken before)
       // FIX: also accept calls that have a recording_link even if recorded flag is missing
-      const eligibleCalls = allCalls.filter((call) => {
+      const eligibleCallsList = answeredCallsList.filter((call) => {
         const duration = call.call_times?.talking_time ?? 0;
         const hasRecording = call.recorded === true || !!call.recording_link;
         return hasRecording && duration > 120;
       });
 
-      console.log(`[Dashboard Sync] ${eligibleCalls.length} calls eligible (recorded + >2min)`);
+      const eligibleCalls = eligibleCallsList.length;
+      console.log(`[Dashboard Sync] ${eligibleCalls} calls eligible (recorded + >2min)`);
 
-      let synced = 0;
+      let newSynced = 0;
+      let alreadyInDb = 0;
       let skipped = 0;
-      let errors = 0;
+      const errorMessages: string[] = [];
 
-      for (const call of eligibleCalls) {
+      for (const call of eligibleCallsList) {
         const callId = String(call.cdr_id || call.uuid || "");
         if (!callId) {
           skipped++;
           continue;
         }
 
-        // Deduplicate
+        // Deduplicate — track separately from other skips
         if (await isCallAlreadyProcessed(callId)) {
-          skipped++;
+          alreadyInDb++;
           continue;
         }
 
@@ -740,21 +760,28 @@ export const dashboardRouter = router({
             console.error(`[Dashboard Sync] Analysis #${analysisId} failed:`, err);
           });
 
-          synced++;
+          newSynced++;
         } catch (err: any) {
-          console.error(`[Dashboard Sync] Error processing call ${callId}:`, err?.message ?? err);
-          errors++;
+          const errMsg = err?.message ?? String(err);
+          console.error(`[Dashboard Sync] Error processing call ${callId}:`, errMsg);
+          errorMessages.push(`Call ${callId}: ${errMsg}`);
         }
       }
 
-      console.log(`[Dashboard Sync] Done. Synced: ${synced}, Skipped: ${skipped}, Errors: ${errors}`);
+      console.log(
+        `[Dashboard Sync] Done. Total: ${totalFromApi}, Answered: ${answeredCalls}, ` +
+        `Eligible: ${eligibleCalls}, AlreadyInDb: ${alreadyInDb}, ` +
+        `NewSynced: ${newSynced}, Skipped: ${skipped}, Errors: ${errorMessages.length}`
+      );
 
       return {
-        totalFetched: allCalls.length,
-        eligible: eligibleCalls.length,
-        synced,
+        totalFromApi,
+        answeredCalls,
+        eligibleCalls,
+        alreadyInDb,
+        newSynced,
         skipped,
-        errors,
+        errors: errorMessages,
       };
     }),
 });
