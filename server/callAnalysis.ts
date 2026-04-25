@@ -89,6 +89,7 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     let totalAgentTime = 0;
     let totalSpeechTime = 0;
     let timeOffset = 0;
+    let firstChunkRepSpeaker = 0; // Will be set from the first chunk's first speaker
     for (let i = 0; i < chunks.length; i++) {
       console.log(`[Transcription] Processing chunk ${i + 1}/${chunks.length}`);
       const chunkOptions: any = { model: "nova-2", smart_format: true, punctuate: true, utterances: true, language: "en", mimetype: contentType, diarize: true };
@@ -101,16 +102,17 @@ export async function transcribeAudio(audioUrl: string): Promise<{
       ]) as any;
       const chunkDuration = chunkResponse?.metadata?.duration ?? 0;
       const utterances: any[] = chunkResponse?.results?.utterances ?? [];
-      // Detect rep speaker (most speech) in this chunk
+      // Detect rep speaker: for the first chunk, use the first speaker (agent initiates the call).
+      // For subsequent chunks, reuse the repSpeaker from the first chunk for consistency.
+      if (i === 0 && utterances.length > 0) {
+        firstChunkRepSpeaker = utterances[0].speaker ?? 0;
+      }
+      const repSpeaker = firstChunkRepSpeaker;
       const speakerTimes: Record<number, number> = {};
       for (const utt of utterances) {
         const uttDuration = (utt.end ?? 0) - (utt.start ?? 0);
         const spk = utt.speaker ?? 0;
         speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
-      }
-      let repSpeaker = 0;
-      if (Object.keys(speakerTimes).length > 0) {
-        repSpeaker = Number(Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a)[0]);
       }
       for (const utt of utterances) {
         const label: "Agent" | "Customer" = utt.speaker === repSpeaker ? "Agent" : "Customer";
@@ -249,22 +251,22 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     const utterances: any[] = result?.results?.utterances ?? [];
 
     if (allWords.length > 0) {
-      // Step 1: determine rep speaker = speaker with most total word duration
+      // Step 1: determine rep speaker = FIRST speaker in the call.
+      // In outbound sales calls the agent always speaks first ("Hello, it's X from LovelyLabs").
+      // The previous heuristic (most total speech time) was unreliable because customers
+      // sometimes talk more than the rep, causing labels to swap.
+      const firstSpeaker = allWords[0]?.speaker ?? 0;
+      const repSpeaker = firstSpeaker;
+
+      // Compute speech-time stats for repSpeechPct
       const speakerTimes: Record<number, number> = {};
       for (const w of allWords) {
         const spk = w.speaker ?? 0;
         const dur = (w.end ?? 0) - (w.start ?? 0);
         speakerTimes[spk] = (speakerTimes[spk] ?? 0) + dur;
       }
-      let repSpeaker = 0;
-      let repSpeechTime = 0;
-      let totalSpeechTime = 0;
-      if (Object.keys(speakerTimes).length > 0) {
-        const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
-        repSpeaker = Number(maxEntry[0]);
-        repSpeechTime = maxEntry[1];
-        totalSpeechTime = Object.values(speakerTimes).reduce((a, b) => a + b, 0);
-      }
+      const repSpeechTime = speakerTimes[repSpeaker] ?? 0;
+      const totalSpeechTime = Object.values(speakerTimes).reduce((a, b) => a + b, 0);
       repSpeechPct = totalSpeechTime > 0 ? Math.round((repSpeechTime / totalSpeechTime) * 100) : 50;
 
       // Step 2: group consecutive words by speaker into segments
@@ -300,6 +302,8 @@ export async function transcribeAudio(audioUrl: string): Promise<{
 
     } else {
       // Utterance fallback (no word-level data available)
+      // Use first speaker = Agent (outbound sales calls: agent speaks first)
+      const repSpeaker = utterances.length > 0 ? (utterances[0].speaker ?? 0) : 0;
       const speakerTimes: Record<number, number> = {};
       let totalSpeechTime = 0;
       for (const utt of utterances) {
@@ -308,13 +312,7 @@ export async function transcribeAudio(audioUrl: string): Promise<{
         const spk = utt.speaker ?? 0;
         speakerTimes[spk] = (speakerTimes[spk] ?? 0) + uttDuration;
       }
-      let repSpeaker = 0;
-      let repSpeechTime = 0;
-      if (Object.keys(speakerTimes).length > 0) {
-        const maxEntry = Object.entries(speakerTimes).reduce((a, b) => b[1] > a[1] ? b : a);
-        repSpeaker = Number(maxEntry[0]);
-        repSpeechTime = maxEntry[1];
-      }
+      const repSpeechTime = speakerTimes[repSpeaker] ?? 0;
       transcript = utterances.length > 0
         ? utterances.map((utt) => {
             const label = utt.speaker === repSpeaker ? "Agent" : "Customer";
@@ -1932,18 +1930,99 @@ export async function getMyCoachingDashboard(
     positives.push({ category: "Magic Wand Question", status: "green", title: "You're using the Magic Wand question every call", detail: `You asked the Magic Wand question in ${magicWandCount} of ${totalParsed} calls. Customers who answer this question are far more likely to close — keep it in every call.`, quote: null, callsAffected: magicWandCount, relevantCallIds: thisWeekDone.slice(0, 1).map(c => c.id) });
   }
 
+  // ── Categorise & enrich generic improvement cards ──────────────────────────
+  // Map keyword patterns in the coaching text to specific, descriptive categories
+  // and generate rich coaching detail text (not just repeating the title).
+  const CATEGORY_RULES: { test: (t: string) => boolean; category: string; coachingDetail: (key: string, count: number, total: number) => string }[] = [
+    {
+      test: (t) => /magic\s*wand/i.test(t) && /answer|loop|use|tie|follow/i.test(t),
+      category: "Magic Wand — Not Closing the Loop",
+      coachingDetail: (_k, count, total) =>
+        `You asked the question — great. But the customer told you exactly what she wanted and you moved on. Every answer she gives you is a door. When she says her concern — that's your cue to bring in the right product. Tie it back, every time. This happened in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /magic\s*wand/i.test(t),
+      category: "Magic Wand Question",
+      coachingDetail: (_k, count, total) =>
+        `The Magic Wand question is your most powerful tool. Customers who answer it are far more likely to close. You skipped it in ${count} of ${total} calls — make it non-negotiable on every call.`,
+    },
+    {
+      test: (t) => /clos(e|ing)|offer|ask(ed)?\s*(for|the)\s*(sale|close)|attempt/i.test(t) && !/loop/i.test(t),
+      category: "Closing — Not Asking for the Sale",
+      coachingDetail: (_k, count, total) =>
+        `You can't win a sale you don't ask for. You missed the close attempt in ${count} of ${total} calls. Every call needs a clear, confident close — even if you think they're not ready. Ask, then stay silent.`,
+    },
+    {
+      test: (t) => /rapport|personal|connect|name|warm/i.test(t),
+      category: "Rapport — Build the Connection",
+      coachingDetail: (_k, count, total) =>
+        `Ask personal questions, use her name, and respond to what she shares. Don't rush to the pitch. A customer who feels heard is 2× more likely to close. This showed up in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /tone|energy|enthusiasm|excit|flat|monotone|boring|pitch/i.test(t),
+      category: "Tone & Energy — Bring the Excitement",
+      coachingDetail: (_k, count, total) =>
+        `Replace technical language with vivid, sensory words: "feel", "imagine", "wake up with glowing skin". Make her want it before you mention the price. Your pitch fell flat in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /objection|push\s*back|think\s*about|hesitat|overcome|rebut/i.test(t),
+      category: "Objection Handling — Don't Give Up",
+      coachingDetail: (_k, count, total) =>
+        `When a customer says "I need to think about it", don't accept it — ask which concern it is: the product, or giving card details. Then address that specific concern. You gave up too quickly in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /authenti|script|repeat|robot|natural|filler|absolutely/i.test(t),
+      category: "Authenticity — You Sound Scripted",
+      coachingDetail: (_k, count, total) =>
+        `When you repeat the same word over and over, customers stop trusting you — it sounds like a script, not a real person. Replace filler words with nothing. Just say "yes", "exactly", or move straight to your next point. You'll sound 10× more real. Noticed in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /silence|pause|quiet|stop\s*talk/i.test(t),
+      category: "Silence After Close — Hold the Pause",
+      coachingDetail: (_k, count, total) =>
+        `After you ask for the close — stop talking. The next person who speaks loses. You filled the silence instead of holding it in ${count} of ${total} calls. Let the pause do the work.`,
+    },
+    {
+      test: (t) => /control|redirect|off.?topic|lead|steer|rambl/i.test(t),
+      category: "Call Control — Lead the Conversation",
+      coachingDetail: (_k, count, total) =>
+        `When a customer goes off-topic, gently redirect: "That's interesting — let me just finish this one point and we'll come back to that." You're following them instead of leading. This happened in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /subscri|t\s*&\s*c|terms|compliance|misrepresent/i.test(t),
+      category: "Compliance — Subscription Handling",
+      coachingDetail: (_k, count, total) =>
+        `Never deny or downplay the subscription. The correct response is: "You're in complete control — cancel anytime with one click or one email." Be proud of the subscription, not defensive. Flagged in ${count} of ${total} calls.`,
+    },
+    {
+      test: (t) => /product|benefit|feature|ingredient|result|proof|trustpilot|review/i.test(t),
+      category: "Product Knowledge — Sell the Benefits",
+      coachingDetail: (_k, count, total) =>
+        `Customers don't buy ingredients — they buy results. Paint the picture: "wake up with glowing skin", "feel the difference in 3 days". Use Trustpilot reviews and real results to build trust. Needed in ${count} of ${total} calls.`,
+    },
+  ];
+
+  function classifyImprovement(key: string, count: number, total: number): { category: string; detail: string; status: "red" | "orange" | "yellow" } {
+    const upper = key.toUpperCase();
+    const pct = total > 0 ? count / total : 0;
+    for (const rule of CATEGORY_RULES) {
+      if (rule.test(key)) {
+        let status: "red" | "orange" | "yellow" = pct >= 0.5 ? "red" : "orange";
+        if (upper.includes("AUTHENTI") || upper.includes("SCRIPTED")) status = "yellow";
+        return { category: rule.category, detail: rule.coachingDetail(key, count, total), status };
+      }
+    }
+    // Fallback: derive a readable category from the key itself
+    const fallbackCategory = key.length > 40 ? key.slice(0, 40).replace(/\s+\S*$/, "...") : key;
+    const fallbackDetail = `This came up in ${count} of ${total} calls. Focus on this area in your next calls — small changes here will make a big difference to your results.`;
+    return { category: fallbackCategory, detail: fallbackDetail, status: pct >= 0.5 ? "red" : "orange" };
+  }
+
   const improvements: CoachingFeedbackItem[] = Object.entries(improvementCounts)
     .sort((a, b) => b[1].count - a[1].count).slice(0, 4)
     .map(([key, val]) => {
-      const pct = totalParsed > 0 ? val.count / totalParsed : 0;
-      let status: "red" | "orange" | "yellow" = pct >= 0.5 ? "red" : "orange";
-      let category = "Improvement";
-      if (key.toUpperCase().includes("AUTHENTICITY") || key.toUpperCase().includes("SCRIPTED")) {
-        status = "yellow";
-        category = "AUTHENTICITY — YOU SOUND SCRIPTED";
-      }
-      // Use the keyMoment coaching text as the detail (it's specific), not generic text
-      return { category, status, title: key, detail: key, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 1) };
+      const { category, detail, status } = classifyImprovement(key, val.count, totalParsed);
+      return { category, status, title: key, detail, quote: val.quotes[0] ?? null, callsAffected: val.count, relevantCallIds: Array.from(new Set(val.ids)).slice(0, 1) };
     });
 
   if (totalParsed > 0 && magicWandCount / totalParsed < 0.5) {
