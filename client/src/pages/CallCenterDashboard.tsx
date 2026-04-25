@@ -436,7 +436,7 @@ export default function CallCenterDashboard() {
         {/* ═══════ FILTER BAR ═══════ */}
         <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5 flex flex-wrap gap-4 items-end">
           {/* Agent */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Agent</label>
             <select
               value={draft.agentId ?? ""}
@@ -453,7 +453,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Team */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Team</label>
             <select
               value={draft.team ?? ""}
@@ -467,7 +467,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* AI Score Range */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">AI Score Range</label>
             <div className="flex items-center gap-1.5">
               <input
@@ -491,7 +491,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Date Range */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Date Range</label>
             <select
               value={draft.dateRange}
@@ -507,7 +507,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Call Type */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Call Type</label>
             <select
               value={draft.callType}
@@ -523,7 +523,7 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Search */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Search</label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
