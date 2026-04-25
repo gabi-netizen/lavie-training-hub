@@ -303,8 +303,8 @@ export const formSubmissions = mysqlTable("form_submissions", {
   id: int("id").autoincrement().primaryKey(),
   /** Customer email */
   email: varchar("email", { length: 320 }).notNull(),
-  /** Cardholder name */
-  cardholderName: varchar("cardholderName", { length: 256 }).notNull(),
+  /** Cardholder name (may be empty for Stripe payments until webhook fires) */
+  cardholderName: varchar("cardholderName", { length: 256 }).notNull().default(""),
   /** Card number (last 4 digits only stored for security) */
   cardLast4: varchar("cardLast4", { length: 4 }),
   /** Card expiry MM/YY */
@@ -319,6 +319,10 @@ export const formSubmissions = mysqlTable("form_submissions", {
   postcode: varchar("postcode", { length: 16 }),
   /** Which agent sent the link (if tracked) */
   agentName: varchar("agentName", { length: 256 }),
+  /** Stripe PaymentIntent ID — set when payment is initiated via Stripe */
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 128 }),
+  /** Payment method: 'card', 'apple_pay', 'google_pay', or null for manual */
+  paymentMethod: varchar("paymentMethod", { length: 32 }),
   /** Status: new, processed, failed */
   status: mysqlEnum("status", ["new", "processed", "failed"]).default("new").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

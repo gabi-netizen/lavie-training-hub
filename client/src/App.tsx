@@ -15,7 +15,6 @@ import ProfileSettings from "./pages/ProfileSettings";
 import CallLog from "./pages/CallLog";
 import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
-import PaymentForm from "./pages/PaymentForm";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -94,9 +93,6 @@ function Router() {
 
         {/* Workspace — agent calling workspace */}
         <Route path={"/workspace"} component={Workspace} />
-
-        {/* Public payment form — sent to customers by agents */}
-        <Route path={"/pay"} component={PaymentForm} />
 
         {/* Profile settings — all authenticated users */}
         <Route path={"/profile"} component={ProfileSettings} />
