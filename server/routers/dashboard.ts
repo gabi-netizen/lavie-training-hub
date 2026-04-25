@@ -615,9 +615,10 @@ export const dashboardRouter = router({
         }
 
         try {
-          // FIX: Use recording_link directly from the CloudTalk API response (Cdr.recording_link)
-          // instead of making a separate /api/calls/recording/{id}.json request.
-          // The recording_link is a direct URL to the audio file.
+          // Recording download strategy:
+          // 1. Try recording_link WITHOUT auth (like webhook does — CloudTalk often provides direct URLs)
+          // 2. Try recording_link WITH auth
+          // 3. Fallback to /api/calls/recording/{id}.json with auth
           const directRecordingLink = call.recording_link ?? null;
           const fallbackRecordingUrl = `https://my.cloudtalk.io/api/calls/recording/${call.cdr_id}.json`;
 
@@ -626,72 +627,68 @@ export const dashboardRouter = router({
           if (!keyId || !keySecret) throw new Error("CloudTalk API credentials not configured");
           const authHeader = "Basic " + Buffer.from(`${keyId}:${keySecret}`).toString("base64");
 
-          let audioBuffer: Buffer;
-          let audioContentType: string;
+          let audioBuffer: Buffer | null = null;
+          let audioContentType: string = "audio/mpeg";
 
+          // Helper: try to fetch audio from a URL, return buffer or null
+          const tryFetchAudio = async (url: string, options?: RequestInit): Promise<{ buffer: Buffer; contentType: string } | null> => {
+            try {
+              console.log(`[Dashboard Sync] Trying to fetch recording from: ${url.substring(0, 80)}...`);
+              const res = await fetch(url, { ...options, signal: AbortSignal.timeout(30000) });
+              console.log(`[Dashboard Sync] Response: status=${res.status}, content-type=${res.headers.get("content-type")}`);
+              if (!res.ok) return null;
+              const ct = res.headers.get("content-type") ?? "";
+              if (ct.includes("audio") || ct.includes("wav") || ct.includes("mpeg") || ct.includes("octet-stream")) {
+                return { buffer: Buffer.from(await res.arrayBuffer()), contentType: ct };
+              }
+              // JSON response — try to extract redirect URL
+              const json = await res.json() as any;
+              const redirectUrl = json?.responseData?.url ?? json?.url ?? json?.recording_url ?? null;
+              if (redirectUrl) {
+                console.log(`[Dashboard Sync] Got redirect URL, following...`);
+                const audioRes = await fetch(redirectUrl, { signal: AbortSignal.timeout(30000) });
+                if (audioRes.ok) {
+                  return { buffer: Buffer.from(await audioRes.arrayBuffer()), contentType: audioRes.headers.get("content-type") ?? "audio/mpeg" };
+                }
+              }
+              return null;
+            } catch (e: any) {
+              console.warn(`[Dashboard Sync] Fetch error: ${e.message}`);
+              return null;
+            }
+          };
+
+          // Strategy 1: recording_link without auth (like webhook handler)
           if (directRecordingLink) {
-            // Try the direct recording link first (requires auth)
-            const recRes = await fetch(directRecordingLink, {
-              headers: { Authorization: authHeader },
-            });
-            if (!recRes.ok) {
-              console.warn(`[Dashboard Sync] Failed to fetch recording_link for call ${callId}: ${recRes.status}`);
-              skipped++;
-              continue;
+            const result = await tryFetchAudio(directRecordingLink);
+            if (result) {
+              audioBuffer = result.buffer;
+              audioContentType = result.contentType;
             }
-            const contentType = recRes.headers.get("content-type") ?? "";
-            if (contentType.includes("audio") || contentType.includes("wav") || contentType.includes("mpeg")) {
-              audioBuffer = Buffer.from(await recRes.arrayBuffer());
-              audioContentType = contentType;
-            } else {
-              // May be a redirect/JSON response — extract URL
-              const recJson = await recRes.json() as any;
-              const audioUrl = recJson?.responseData?.url ?? recJson?.url ?? null;
-              if (!audioUrl) {
-                console.warn(`[Dashboard Sync] No audio URL in recording_link response for call ${callId}`);
-                skipped++;
-                continue;
-              }
-              const audioRes = await fetch(audioUrl);
-              if (!audioRes.ok) {
-                console.warn(`[Dashboard Sync] Failed to download audio for call ${callId}`);
-                skipped++;
-                continue;
-              }
-              audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-              audioContentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
+          }
+
+          // Strategy 2: recording_link with auth
+          if (!audioBuffer && directRecordingLink) {
+            const result = await tryFetchAudio(directRecordingLink, { headers: { Authorization: authHeader } });
+            if (result) {
+              audioBuffer = result.buffer;
+              audioContentType = result.contentType;
             }
-          } else {
-            // Fallback: use the legacy /api/calls/recording/{id}.json endpoint
-            const recRes = await fetch(fallbackRecordingUrl, {
-              headers: { Authorization: authHeader },
-            });
-            if (!recRes.ok) {
-              console.warn(`[Dashboard Sync] Failed to get recording for call ${callId}: ${recRes.status}`);
-              skipped++;
-              continue;
+          }
+
+          // Strategy 3: legacy API endpoint with auth
+          if (!audioBuffer) {
+            const result = await tryFetchAudio(fallbackRecordingUrl, { headers: { Authorization: authHeader } });
+            if (result) {
+              audioBuffer = result.buffer;
+              audioContentType = result.contentType;
             }
-            const contentType = recRes.headers.get("content-type") ?? "";
-            if (contentType.includes("audio") || contentType.includes("wav") || contentType.includes("mpeg")) {
-              audioBuffer = Buffer.from(await recRes.arrayBuffer());
-              audioContentType = contentType;
-            } else {
-              const recJson = await recRes.json() as any;
-              const audioUrl = recJson?.responseData?.url ?? recJson?.url ?? null;
-              if (!audioUrl) {
-                console.warn(`[Dashboard Sync] No audio URL in recording response for call ${callId}`);
-                skipped++;
-                continue;
-              }
-              const audioRes = await fetch(audioUrl);
-              if (!audioRes.ok) {
-                console.warn(`[Dashboard Sync] Failed to download audio for call ${callId}`);
-                skipped++;
-                continue;
-              }
-              audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-              audioContentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
-            }
+          }
+
+          if (!audioBuffer) {
+            console.warn(`[Dashboard Sync] All recording download strategies failed for call ${callId}`);
+            skipped++;
+            continue;
           }
 
           // Upload to S3
