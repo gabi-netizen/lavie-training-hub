@@ -20,36 +20,43 @@
  *   4. Detail text (black, first sentence colored)
  *   5. Listen link (colored, play triangle)
  *
- * Section order: POSITIVES FIRST, then IMPROVEMENTS
+ * Section order: IMPROVEMENTS FIRST (🔥), then POSITIVES (💪)
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Mic, Play } from "lucide-react";
 
-type CardColor = "red" | "orange" | "green";
+type CardColor = "red" | "orange" | "green" | "yellow";
 
 // ── Color tokens ───────────────────────────────────────────────────────────────
 const C = {
   red: {
     border:    "border-l-[#dc2626]",
     label:     "text-[#dc2626]",
-    badge:     "bg-red-100 text-[#dc2626]",
-    highlight: "text-[#dc2626] font-semibold",
-    link:      "text-[#6d28d9] hover:text-[#5b21b6]",
+    badge:     "bg-red-50 text-[#dc2626]",
+    highlight: "text-[#dc2626] font-bold",
+    link:      "text-[#dc2626] hover:opacity-80",
   },
   orange: {
     border:    "border-l-[#d97706]",
     label:     "text-[#d97706]",
-    badge:     "bg-amber-100 text-[#b45309]",
-    highlight: "text-[#d97706] font-semibold",
-    link:      "text-[#6d28d9] hover:text-[#5b21b6]",
+    badge:     "bg-amber-50 text-[#b45309]",
+    highlight: "text-[#d97706] font-bold",
+    link:      "text-[#d97706] hover:opacity-80",
+  },
+  yellow: {
+    border:    "border-l-[#ca8a04]",
+    label:     "text-[#ca8a04]",
+    badge:     "bg-yellow-50 text-[#854d0e]",
+    highlight: "text-[#ca8a04] font-bold",
+    link:      "text-[#ca8a04] hover:opacity-80",
   },
   green: {
     border:    "border-l-[#16a34a]",
     label:     "text-[#16a34a]",
-    badge:     "bg-green-100 text-[#16a34a]",
-    highlight: "text-[#16a34a] font-semibold",
-    link:      "text-[#6d28d9] hover:text-[#5b21b6]",
+    badge:     "bg-green-50 text-[#16a34a]",
+    highlight: "text-[#16a34a] font-bold",
+    link:      "text-[#16a34a] hover:opacity-80",
   },
 } satisfies Record<CardColor, Record<string, string>>;
 
@@ -57,6 +64,7 @@ const C = {
 const LISTEN_LABEL: Record<CardColor, string> = {
   red:    "Listen to the call where this happened",
   orange: "Hear the moment you missed it",
+  yellow: "Hear how it sounds",
   green:  "Listen to this call",
 };
 
@@ -73,7 +81,7 @@ function StatCard({
   const changeColor =
     changeDir === "up"   ? "text-[#16a34a]" :
     changeDir === "down" ? "text-[#dc2626]" :
-                           "text-[#d97706]";
+    "text-[#d97706]";
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
       <div className="text-3xl flex-shrink-0">{icon}</div>
@@ -111,7 +119,7 @@ function FeedbackCard({
 }: {
   item: {
     category: string;
-    status: "green" | "orange" | "red";
+    status: "green" | "orange" | "red" | "yellow";
     title: string;
     detail: string;
     quote: string | null;
@@ -123,16 +131,19 @@ function FeedbackCard({
   const color: CardColor = item.status;
   const t = C[color];
 
-  // Badge text
+  // Badge text logic to match mockup
   const badge = (() => {
+    const cat = item.category.toUpperCase();
     if (color === "green") {
-      const cat = item.category.toLowerCase();
-      if (cat.includes("rapport"))  return "Consistent strength";
-      if (cat.includes("closing"))  return "Strong this week";
-      return `${item.callsAffected} calls`;
+      if (cat.includes("RAPPORT")) return "Consistent strength";
+      if (cat.includes("CLOSING")) return "Strong this week";
+      return "Consistent strength";
     }
     if (color === "red") {
-      return item.callsAffected === 1 ? "1 call affected" : `${item.callsAffected} calls affected`;
+      return `${item.callsAffected} calls affected`;
+    }
+    if (color === "yellow") {
+      return "Most calls";
     }
     // orange
     return `${item.callsAffected} of 19 calls`;
@@ -159,7 +170,7 @@ function FeedbackCard({
 
         {/* Row 3: quote */}
         {item.quote && (
-          <blockquote className="text-sm italic text-black bg-gray-50 border-l-2 border-gray-300 px-3 py-2 rounded-r-lg leading-relaxed">
+          <blockquote className="text-sm italic text-gray-600 bg-gray-50 border-l-2 border-gray-300 px-3 py-2 rounded-r-lg leading-relaxed">
             "{item.quote}"
           </blockquote>
         )}
@@ -186,17 +197,19 @@ function FeedbackCard({
 function ComplianceChecklist({
   items,
 }: {
-  items: { label: string; pct: number; status: "green" | "orange" | "red" }[];
+  items: { label: string; pct: number; status: "green" | "orange" | "red" | "yellow" }[];
 }) {
   const barColor: Record<string, string> = {
     green:  "bg-[#16a34a]",
     orange: "bg-[#d97706]",
     red:    "bg-[#dc2626]",
+    yellow: "bg-[#ca8a04]",
   };
   const pctColor: Record<string, string> = {
     green:  "text-[#16a34a]",
     orange: "text-[#d97706]",
     red:    "text-[#dc2626]",
+    yellow: "text-[#ca8a04]",
   };
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5">
@@ -333,7 +346,7 @@ export default function AgentCoachingDashboard({
             data.complianceRate == null ? undefined :
             data.complianceRate >= 85   ? "All good" :
             data.complianceRate >= 60   ? "Needs attention — see below" :
-                                          "T&Cs issue — see below"
+            "T&Cs issue — see below"
           }
           changeDir={complianceChangeDir}
         />
@@ -347,25 +360,25 @@ export default function AgentCoachingDashboard({
 
       {!noData && (
         <>
-          {/* POSITIVES FIRST (green) */}
-          {data.positives.length > 0 && (
+          {/* IMPROVEMENTS FIRST (red/orange/yellow) */}
+          {data.improvements.length > 0 && (
             <div>
-              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
+              <SectionLabel>🔥 What to work on — from your recent calls</SectionLabel>
               <div className="space-y-3">
-                {data.positives.map((item, i) => (
-                  <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
+                {data.improvements.map((item, i) => (
+                  <FeedbackCard key={i} item={item as any} onSelectCall={onSelectCall} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* IMPROVEMENTS SECOND */}
-          {data.improvements.length > 0 && (
+          {/* POSITIVES SECOND (green) */}
+          {data.positives.length > 0 && (
             <div>
-              <SectionLabel>🔧 What to work on — from your recent calls</SectionLabel>
+              <SectionLabel>💪 What you're doing well — keep it up</SectionLabel>
               <div className="space-y-3">
-                {data.improvements.map((item, i) => (
-                  <FeedbackCard key={i} item={item} onSelectCall={onSelectCall} />
+                {data.positives.map((item, i) => (
+                  <FeedbackCard key={i} item={item as any} onSelectCall={onSelectCall} />
                 ))}
               </div>
             </div>
