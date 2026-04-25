@@ -1,36 +1,21 @@
 /**
  * ManagerCoachingDashboard
  * ─────────────────────────
- * Admin view for the "My Calls" tab.
- * Shows a coaching queue: one row per agent, sorted by urgency.
- * Each row shows the agent's most critical issue this week (from analysisJson).
- * Traffic-light colors only: green / orange / red. Black text.
+ * Visual grid dashboard showing one card per agent.
+ * Each card: avatar, name, calls analyzed, avg AI score (color-coded),
+ * top issue, trend indicator. Clicking navigates to that agent's Agent View.
+ *
+ * Color rules:
+ *   Score > 70  → green
+ *   Score 40-70 → amber
+ *   Score < 40  → red
+ *
+ * Text: dark readable colors only (text-gray-800 / text-slate-800 primary,
+ * text-gray-600 secondary). NEVER text-gray-400 or lighter for readable text.
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Users, ChevronDown, ChevronUp, Play, ArrowRight } from "lucide-react";
-
-// ── Color helpers ──────────────────────────────────────────────────────────────
-const DOT: Record<"green" | "orange" | "red", string> = {
-  green: "bg-[#16a34a]",
-  orange: "bg-[#d97706]",
-  red: "bg-[#dc2626]",
-};
-const BORDER: Record<"green" | "orange" | "red", string> = {
-  green: "border-l-[#16a34a]",
-  orange: "border-l-[#d97706]",
-  red: "border-l-[#dc2626]",
-};
-const LABEL_COLOR: Record<"green" | "orange" | "red", string> = {
-  green: "text-[#16a34a]",
-  orange: "text-[#d97706]",
-  red: "text-[#dc2626]",
-};
-const BADGE_BG: Record<"green" | "orange" | "red", string> = {
-  green: "bg-green-50 text-[#16a34a]",
-  orange: "bg-amber-50 text-[#d97706]",
-  red: "bg-red-50 text-[#dc2626]",
-};
+import { Loader2, Users, TrendingUp, TrendingDown, Minus, AlertTriangle } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface IssueItem {
@@ -42,34 +27,10 @@ interface IssueItem {
   status: "green" | "orange" | "red";
 }
 
-interface AgentRow {
-  userId: number;
-  repName: string;
-  callsThisWeek: number;
-  avgScore: number | null;
-  closeRate: number;
-  trendIndicator: "improving" | "stable" | "declining";
-  urgency: "red" | "orange" | "green"; // overall urgency
-  topIssue: IssueItem | null;
-  allIssues: IssueItem[];
-  recentCalls: Array<{
-    id: number;
-    callDate: string | null;
-    customerName: string | null;
-    overallScore: number | null;
-    closeStatus: string | null;
-    status: string;
-  }>;
-}
-
 // ── Parse analysisJson to extract top issue ────────────────────────────────────
 function extractIssues(
   calls: Array<{ id: number; analysisJson?: string | null; status: string }>
 ): IssueItem[] {
-  const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(weekStart.getDate() - 7);
-
   const issueCounts: Record<string, { count: number; callId: number; quote: string | null; category: string }> = {};
 
   for (const call of calls) {
@@ -148,7 +109,6 @@ function extractIssues(
 
   return Object.entries(issueCounts)
     .sort((a, b) => {
-      // Compliance issues always come first
       const aIsCompliance = a[1].category === "Compliance";
       const bIsCompliance = b[1].category === "Compliance";
       if (aIsCompliance && !bIsCompliance) return -1;
@@ -174,166 +134,154 @@ function extractIssues(
     });
 }
 
-// ── Agent row component ────────────────────────────────────────────────────────
-function AgentCard({
+// ── Score color helpers (green >70, amber 40-70, red <40) ─────────────────────
+function getScoreColor(score: number | null): string {
+  if (score == null) return "text-gray-600";
+  if (score > 70) return "text-emerald-600";
+  if (score >= 40) return "text-amber-600";
+  return "text-red-600";
+}
+
+function getScoreBg(score: number | null): string {
+  if (score == null) return "bg-gray-100";
+  if (score > 70) return "bg-emerald-50";
+  if (score >= 40) return "bg-amber-50";
+  return "bg-red-50";
+}
+
+function getScoreBorder(score: number | null): string {
+  if (score == null) return "border-gray-200";
+  if (score > 70) return "border-emerald-200";
+  if (score >= 40) return "border-amber-200";
+  return "border-red-200";
+}
+
+// ── Deterministic avatar colors ───────────────────────────────────────────────
+const AVATAR_COLORS = [
+  "bg-indigo-600", "bg-violet-600", "bg-blue-600", "bg-teal-600",
+  "bg-emerald-600", "bg-rose-600", "bg-orange-600", "bg-cyan-600",
+  "bg-fuchsia-600", "bg-sky-600", "bg-purple-600", "bg-pink-600",
+  "bg-lime-700", "bg-amber-700",
+];
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+// ── Trend indicator component ─────────────────────────────────────────────────
+function TrendBadge({ trend }: { trend: "improving" | "stable" | "declining" }) {
+  if (trend === "improving") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+        <TrendingUp className="w-3 h-3" /> Improving
+      </span>
+    );
+  }
+  if (trend === "declining") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+        <TrendingDown className="w-3 h-3" /> Declining
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+      <Minus className="w-3 h-3" /> Stable
+    </span>
+  );
+}
+
+// ── Agent card component ──────────────────────────────────────────────────────
+function AgentGridCard({
   agent,
-  onSelectCall,
+  topIssue,
+  onClick,
 }: {
-  agent: AgentRow;
-  onSelectCall: (id: number) => void;
+  agent: {
+    userId: number;
+    repName: string;
+    totalCalls: number;
+    avgScore: number | null;
+    trendIndicator: "improving" | "stable" | "declining";
+    callsThisWeek: number;
+  };
+  topIssue: IssueItem | null;
+  onClick: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const s = agent.urgency;
-
-  const trendLabel =
-    agent.trendIndicator === "improving" ? "↑ Improving" :
-    agent.trendIndicator === "declining" ? "↓ Declining" : "→ Stable";
-  const trendColor =
-    agent.trendIndicator === "improving" ? "text-[#16a34a]" :
-    agent.trendIndicator === "declining" ? "text-[#dc2626]" : "text-gray-400";
-
   const initials = agent.repName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const avatarColor = getAvatarColor(agent.repName);
+  const scoreBg = getScoreBg(agent.avgScore);
+  const scoreBorder = getScoreBorder(agent.avgScore);
+  const scoreColor = getScoreColor(agent.avgScore);
+
+  const doneCalls = agent.totalCalls; // totalCalls from the dashboard already represents the filtered range
 
   return (
-    <div className={`bg-white rounded-2xl border border-gray-200 border-l-4 ${BORDER[s]} overflow-hidden`}>
-      {/* Header — always visible */}
-      <button
-        className="w-full text-left px-5 py-4 flex items-center gap-4"
-        onClick={() => setOpen(o => !o)}
-      >
-        {/* Avatar */}
-        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white text-sm font-black flex-shrink-0">
-          {initials}
-        </div>
-
-        {/* Name + top issue */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-black text-black text-sm">{agent.repName}</span>
-            <span className="text-xs text-gray-400">{agent.callsThisWeek} calls this week</span>
+    <button
+      onClick={onClick}
+      className={`w-full text-left bg-white rounded-2xl border ${scoreBorder} p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer group`}
+    >
+      {/* Top row: avatar + name + trend */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-11 h-11 rounded-full ${avatarColor} flex items-center justify-center text-white text-sm font-black flex-shrink-0 shadow-sm`}>
+            {initials}
           </div>
-          {agent.topIssue ? (
-            <div className="flex items-start gap-1.5 mt-0.5">
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${DOT[agent.topIssue.status]}`} />
-              <span className={`text-xs font-semibold leading-snug ${LABEL_COLOR[agent.topIssue.status]}`}>
-                {agent.topIssue.title}
-                {agent.topIssue.callsAffected > 1 && (
-                  <span className="text-gray-400 font-normal"> · {agent.topIssue.callsAffected} calls</span>
-                )}
-              </span>
+          <div>
+            <div className="text-sm font-bold text-gray-800 group-hover:text-indigo-700 transition-colors">
+              {agent.repName}
             </div>
-          ) : (
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className="w-2 h-2 rounded-full bg-[#16a34a]" />
-              <span className="text-xs text-[#16a34a] font-semibold">No issues this week</span>
+            <div className="text-xs text-gray-600 mt-0.5">
+              {doneCalls} {doneCalls === 1 ? "call" : "calls"} analyzed
             </div>
-          )}
-        </div>
-
-        {/* Stats */}
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <div className="text-center hidden sm:block">
-            <div className={`text-lg font-black ${
-              agent.avgScore == null ? "text-gray-300" :
-              agent.avgScore >= 75 ? "text-[#16a34a]" :
-              agent.avgScore >= 55 ? "text-[#d97706]" : "text-[#dc2626]"
-            }`}>
-              {agent.avgScore ?? "—"}
-            </div>
-            <div className="text-[10px] text-gray-400 font-semibold">Score</div>
           </div>
-          <div className="text-center hidden sm:block">
-            <div className="text-lg font-black text-black">{agent.closeRate}%</div>
-            <div className="text-[10px] text-gray-400 font-semibold">Close</div>
-          </div>
-          <div className={`text-xs font-bold hidden md:block ${trendColor}`}>{trendLabel}</div>
-          {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
         </div>
-      </button>
+      </div>
 
-      {/* Expanded: all issues + recent calls */}
-      {open && (
-        <div className="border-t border-gray-100 px-5 py-4 space-y-4 bg-gray-50/50">
-          {/* All issues */}
-          {agent.allIssues.length > 0 && (
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                Issues This Week
-              </div>
-              <div className="space-y-2">
-                {agent.allIssues.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${DOT[issue.status]}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-black uppercase tracking-wider ${LABEL_COLOR[issue.status]}`}>
-                          {issue.category}
-                        </span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${BADGE_BG[issue.status]}`}>
-                          {issue.callsAffected} {issue.callsAffected === 1 ? "call" : "calls"}
-                        </span>
-                      </div>
-                      <p className="text-sm font-semibold text-black mt-0.5">{issue.title}</p>
-                      {issue.quote && (
-                        <p className="text-xs italic text-gray-500 mt-0.5">"{issue.quote}"</p>
-                      )}
-                      {issue.callId && (
-                        <button
-                          onClick={() => onSelectCall(issue.callId!)}
-                          className="flex items-center gap-1 mt-1 text-xs font-bold text-black hover:underline"
-                        >
-                          <Play className="w-3 h-3" /> Listen to call
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Score + trend row */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className={`${scoreBg} rounded-xl px-3 py-2 flex items-center gap-2`}>
+          <span className="text-xs font-semibold text-gray-600">AI Score</span>
+          <span className={`text-xl font-black ${scoreColor}`}>
+            {agent.avgScore ?? "—"}
+          </span>
+        </div>
+        <TrendBadge trend={agent.trendIndicator} />
+      </div>
 
-          {/* Recent calls */}
-          {agent.recentCalls.length > 0 && (
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                Recent Calls
-              </div>
-              <div className="space-y-1">
-                {agent.recentCalls.slice(0, 5).map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => onSelectCall(c.id)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-gray-200 hover:border-gray-400 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-semibold text-black truncate">
-                        {c.customerName ?? "Unknown customer"}
-                      </span>
-                      {c.callDate && (
-                        <span className="text-xs text-gray-400">
-                          {new Date(c.callDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {c.overallScore != null && (
-                        <span className={`text-xs font-black ${
-                          c.overallScore >= 75 ? "text-[#16a34a]" :
-                          c.overallScore >= 55 ? "text-[#d97706]" : "text-[#dc2626]"
-                        }`}>{c.overallScore}</span>
-                      )}
-                      {c.closeStatus === "closed" && <span className="text-xs text-[#16a34a] font-bold">Closed</span>}
-                      {c.closeStatus === "not_closed" && <span className="text-xs text-[#dc2626] font-bold">Not closed</span>}
-                      {c.closeStatus === "follow_up" && <span className="text-xs text-[#d97706] font-bold">Follow-up</span>}
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-300" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Top issue */}
+      {topIssue ? (
+        <div className="flex items-start gap-2 mt-2">
+          <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${
+            topIssue.status === "red" ? "text-red-500" :
+            topIssue.status === "orange" ? "text-amber-500" : "text-emerald-500"
+          }`} />
+          <span className="text-xs text-gray-600 leading-snug line-clamp-2">
+            {topIssue.title}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+          <span className="text-xs text-emerald-600 font-semibold">No issues detected</span>
         </div>
       )}
+    </button>
+  );
+}
+
+// ── Team section header ───────────────────────────────────────────────────────
+function TeamSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-black uppercase tracking-widest text-gray-600 mb-3 px-0.5">
+        {title}
+      </div>
+      {children}
     </div>
   );
 }
@@ -351,20 +299,12 @@ export default function ManagerCoachingDashboard({
   const { data: allAnalyses } = trpc.callCoach.getAllAnalyses.useQuery(undefined, {
     refetchInterval: 10_000,
   });
+  const { data: agentList } = trpc.callCoach.getAgentList.useQuery();
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  if (!agents?.length) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
-        <p className="text-sm">No calls yet. Coaching queue will appear after agents upload calls.</p>
+        <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -376,38 +316,89 @@ export default function ManagerCoachingDashboard({
     callsByUserId[a.userId].push({ id: a.id, analysisJson: (a as any).analysisJson ?? null, status: a.status });
   }
 
-  // Build AgentRow objects
-  const rows: AgentRow[] = agents.map(agent => {
+  // Build agent data with issues
+  type AgentCardData = {
+    userId: number;
+    repName: string;
+    totalCalls: number;
+    avgScore: number | null;
+    trendIndicator: "improving" | "stable" | "declining";
+    callsThisWeek: number;
+    topIssue: IssueItem | null;
+    team: string | null;
+  };
+
+  const agentCards: AgentCardData[] = [];
+
+  // All known agents from agentList (includes agents with 0 calls)
+  const agentListMap = new Map((agentList ?? []).map(a => [a.id, a]));
+  const agentDashboardMap = new Map((agents ?? []).map(a => [a.userId, a]));
+
+  // Start with agents who have call data
+  const processedUserIds = new Set<number>();
+
+  for (const agent of agents ?? []) {
+    processedUserIds.add(agent.userId);
     const calls = callsByUserId[agent.userId] ?? [];
     const allIssues = extractIssues(calls);
     const topIssue = allIssues[0] ?? null;
-    const urgency: "red" | "orange" | "green" =
-      topIssue?.status === "red" ? "red" :
-      topIssue?.status === "orange" ? "orange" : "green";
 
-    return {
+    agentCards.push({
       userId: agent.userId,
       repName: agent.repName,
-      callsThisWeek: agent.callsThisWeek,
+      totalCalls: agent.totalCalls,
       avgScore: agent.avgScore,
-      closeRate: agent.closeRate,
       trendIndicator: agent.trendIndicator,
-      urgency,
+      callsThisWeek: agent.callsThisWeek,
       topIssue,
-      allIssues,
-      recentCalls: agent.recentCalls,
-    };
+      team: null, // will be resolved below
+    });
+  }
+
+  // Add agents from agentList who have no calls yet
+  for (const agent of agentList ?? []) {
+    if (!processedUserIds.has(agent.id)) {
+      agentCards.push({
+        userId: agent.id,
+        repName: agent.name ?? `Agent #${agent.id}`,
+        totalCalls: 0,
+        avgScore: null,
+        trendIndicator: "stable",
+        callsThisWeek: 0,
+        topIssue: null,
+        team: null,
+      });
+    }
+  }
+
+  // Sort: agents with issues first, then by score (lowest first for attention), then alphabetical
+  agentCards.sort((a, b) => {
+    // Agents with red issues first
+    const aUrgency = a.topIssue?.status === "red" ? 0 : a.topIssue?.status === "orange" ? 1 : 2;
+    const bUrgency = b.topIssue?.status === "red" ? 0 : b.topIssue?.status === "orange" ? 1 : 2;
+    if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+    // Then by score (lowest first for attention)
+    const aScore = a.avgScore ?? 999;
+    const bScore = b.avgScore ?? 999;
+    if (aScore !== bScore) return aScore - bScore;
+    // Then alphabetical
+    return a.repName.localeCompare(b.repName);
   });
 
-  // Sort: red first, then orange, then green
-  const urgencyOrder = { red: 0, orange: 1, green: 2 };
-  rows.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+  // Navigate to agent's coaching view
+  const goToAgentView = (userId: number) => {
+    window.location.href = `/ai-coach?tab=my-calls&agentId=${userId}`;
+  };
 
   // Summary stats
-  const totalCallsToday = agents.reduce((s, a) => s + a.callsToday, 0);
-  const totalThisWeek = agents.reduce((s, a) => s + a.callsThisWeek, 0);
-  const redCount = rows.filter(r => r.urgency === "red").length;
-  const orangeCount = rows.filter(r => r.urgency === "orange").length;
+  const totalAgents = agentCards.length;
+  const totalCalls = agentCards.reduce((s, a) => s + a.totalCalls, 0);
+  const agentsWithScores = agentCards.filter(a => a.avgScore != null);
+  const teamAvgScore = agentsWithScores.length > 0
+    ? Math.round(agentsWithScores.reduce((s, a) => s + (a.avgScore ?? 0), 0) / agentsWithScores.length)
+    : null;
+  const redCount = agentCards.filter(a => a.topIssue?.status === "red").length;
+  const decliningCount = agentCards.filter(a => a.trendIndicator === "declining").length;
 
   const TIME_LABELS: Record<typeof timeRange, string> = {
     today: "Today",
@@ -426,7 +417,7 @@ export default function ManagerCoachingDashboard({
             onClick={() => setTimeRange(r)}
             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
               timeRange === r
-                ? "bg-black text-white border-black"
+                ? "bg-gray-800 text-white border-gray-800"
                 : "bg-white text-gray-600 border-gray-300 hover:border-gray-500"
             }`}
           >
@@ -436,49 +427,66 @@ export default function ManagerCoachingDashboard({
       </div>
 
       {/* ── Summary strip ── */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: "👥", value: agents.length, label: "Agents" },
-          { icon: "📞", value: totalCallsToday, label: "Calls Today" },
-          { icon: "📅", value: totalThisWeek, label: "This Week" },
+          { icon: "👥", value: totalAgents, label: "Agents", color: "text-gray-800" },
+          { icon: "📞", value: totalCalls, label: "Calls Analyzed", color: "text-gray-800" },
+          {
+            icon: "⭐",
+            value: teamAvgScore ?? "—",
+            label: "Team Avg Score",
+            color: teamAvgScore != null ? getScoreColor(teamAvgScore) : "text-gray-600",
+          },
           {
             icon: "🚨",
             value: redCount,
             label: "Need Attention",
-            color: redCount > 0 ? "text-[#dc2626]" : "text-black",
+            color: redCount > 0 ? "text-red-600" : "text-emerald-600",
           },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
             <div className="text-2xl mb-1">{stat.icon}</div>
-            <div className={`text-2xl font-black ${(stat as any).color ?? "text-black"}`}>{stat.value}</div>
-            <div className="text-[10px] font-semibold text-gray-400 mt-0.5">{stat.label}</div>
+            <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
+            <div className="text-[10px] font-semibold text-gray-600 mt-0.5">{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Section label ── */}
+      {/* ── Status message ── */}
       {redCount > 0 && (
-        <div className="text-[10px] font-black uppercase tracking-widest text-[#dc2626] px-0.5">
-          🚨 Act Now — {redCount} {redCount === 1 ? "agent needs" : "agents need"} immediate attention
+        <div className="text-[10px] font-black uppercase tracking-widest text-red-600 px-0.5">
+          🚨 {redCount} {redCount === 1 ? "agent needs" : "agents need"} immediate attention
         </div>
       )}
-      {orangeCount > 0 && redCount === 0 && (
-        <div className="text-[10px] font-black uppercase tracking-widest text-[#d97706] px-0.5">
-          ⚠ Coach This Week — {orangeCount} {orangeCount === 1 ? "agent has" : "agents have"} issues to address
+      {decliningCount > 0 && redCount === 0 && (
+        <div className="text-[10px] font-black uppercase tracking-widest text-amber-600 px-0.5">
+          ⚠ {decliningCount} {decliningCount === 1 ? "agent is" : "agents are"} declining — review their calls
         </div>
       )}
-      {redCount === 0 && orangeCount === 0 && (
-        <div className="text-[10px] font-black uppercase tracking-widest text-[#16a34a] px-0.5">
-          ✅ All agents are on track this week
+      {redCount === 0 && decliningCount === 0 && agentCards.length > 0 && (
+        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-600 px-0.5">
+          ✅ All agents are on track
         </div>
       )}
 
-      {/* ── Coaching queue ── */}
-      <div className="space-y-2">
-        {rows.map(agent => (
-          <AgentCard key={agent.userId} agent={agent} onSelectCall={onSelectCall} />
-        ))}
-      </div>
+      {/* ── Agent grid ── */}
+      {agentCards.length === 0 ? (
+        <div className="text-center py-12 text-gray-600">
+          <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No agents found. Coaching cards will appear after agents are added.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {agentCards.map(agent => (
+            <AgentGridCard
+              key={agent.userId}
+              agent={agent}
+              topIssue={agent.topIssue}
+              onClick={() => goToAgentView(agent.userId)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
