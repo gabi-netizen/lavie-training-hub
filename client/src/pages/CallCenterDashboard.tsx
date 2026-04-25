@@ -663,13 +663,14 @@ export default function CallCenterDashboard() {
         {/* ═══════ CALL TABLE ═══════ */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           {/* Table head */}
-          <div className="grid grid-cols-[180px_200px_190px_140px_100px_100px_80px_50px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+          <div className="grid grid-cols-[180px_200px_190px_140px_100px_110px_100px_80px_50px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wide">
             <div>Type</div>
             <div>Contact</div>
             <div>Agent</div>
             <div>Date</div>
             <div>AI Score</div>
             <div>Status</div>
+            <div>Talk Ratio</div>
             <div></div>
             <div></div>
           </div>
@@ -698,7 +699,7 @@ export default function CallCenterDashboard() {
                   <div
                     key={call.id}
                     onClick={() => goToCall(call.id)}
-                    className="grid grid-cols-[180px_200px_190px_140px_100px_100px_80px_50px] px-5 py-3.5 items-center hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0"
+                    className="grid grid-cols-[180px_200px_190px_140px_100px_110px_100px_80px_50px] px-5 py-3.5 items-center hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0"
                   >
                     {/* Type */}
                     <div className="flex items-center gap-2.5">
@@ -748,6 +749,36 @@ export default function CallCenterDashboard() {
 
                     {/* Status */}
                     <div>{statusBadge(call.status)}</div>
+
+                    {/* Talk Ratio */}
+                    <div>
+                      {call.repSpeechPct != null ? (() => {
+                        const agentPct = call.repSpeechPct as number;
+                        const custPct = 100 - agentPct;
+                        const barColor = agentPct > 65 ? "bg-red-400" : agentPct < 30 ? "bg-amber-400" : "bg-emerald-400";
+                        const textColor = agentPct > 65 ? "text-red-700" : agentPct < 30 ? "text-amber-700" : "text-emerald-700";
+                        return (
+                          <div className="flex flex-col gap-0.5" title={`Agent: ${agentPct}% | Customer: ${custPct}%`}>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-gray-600 w-3">A</span>
+                              <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${agentPct}%` }} />
+                              </div>
+                              <span className={`text-[10px] font-semibold ${textColor}`}>{agentPct}%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-gray-600 w-3">C</span>
+                              <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-blue-300" style={{ width: `${custPct}%` }} />
+                              </div>
+                              <span className="text-[10px] font-semibold text-blue-700">{custPct}%</span>
+                            </div>
+                          </div>
+                        );
+                      })() : (
+                        <span className="text-xs text-gray-600">—</span>
+                      )}
+                    </div>
 
                     {/* Play / Pause */}
                     <div onClick={(e) => e.stopPropagation()}>

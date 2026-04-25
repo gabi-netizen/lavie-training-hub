@@ -340,6 +340,7 @@ export const dashboardRouter = router({
           contactId: callAnalyses.contactId,
           createdAt: callAnalyses.createdAt,
           source: callAnalyses.source,
+          repSpeechPct: callAnalyses.repSpeechPct,
           // User fields
           agentName: users.name,
           agentEmail: users.email,
@@ -395,6 +396,7 @@ export const dashboardRouter = router({
           agentName: r.agentName ?? r.repName,
           agentEmail: r.agentEmail,
           agentTeam: r.agentTeam,
+          repSpeechPct: r.repSpeechPct != null ? Math.round(r.repSpeechPct) : null,
         })),
         totalCount,
         page,

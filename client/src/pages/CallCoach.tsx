@@ -760,6 +760,43 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
               ))}
             </div>
 
+            {/* Speech Time Breakdown */}
+            {analysis.repSpeechPct != null && (() => {
+              const agentPct = Math.round(analysis.repSpeechPct as number);
+              const custPct = 100 - agentPct;
+              const agentColor = agentPct > 65 ? "bg-red-500" : agentPct < 30 ? "bg-amber-500" : "bg-emerald-500";
+              const agentTextColor = agentPct > 65 ? "text-red-700" : agentPct < 30 ? "text-amber-700" : "text-emerald-700";
+              const label = agentPct > 65 ? "Rep is talking too much — let the customer speak more" : agentPct < 30 ? "Rep is too passive — drive the conversation" : "Good talk ratio — keep it up";
+              return (
+                <Card className="bg-white border-gray-200">
+                  <CardContent className="p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-600 mb-3">🎙️ Speech Time Breakdown</p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xs font-semibold text-gray-800 w-16 text-right">Agent</span>
+                      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden flex">
+                        <div
+                          className={`h-full rounded-full transition-all ${agentColor}`}
+                          style={{ width: `${agentPct}%` }}
+                        />
+                      </div>
+                      <span className={`text-sm font-bold w-10 ${agentTextColor}`}>{agentPct}%</span>
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-xs font-semibold text-gray-800 w-16 text-right">Customer</span>
+                      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden flex">
+                        <div
+                          className="h-full rounded-full bg-blue-400 transition-all"
+                          style={{ width: `${custPct}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold w-10 text-blue-700">{custPct}%</span>
+                    </div>
+                    <p className={`text-xs font-medium ${agentTextColor}`}>{label}</p>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Compliance Issues Alert */}
             {report.complianceIssues && report.complianceIssues.length > 0 && (
               <Card className="bg-red-50 border-red-400 border-2">

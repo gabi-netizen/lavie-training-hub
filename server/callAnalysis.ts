@@ -1767,6 +1767,7 @@ export interface MyCoachingDashboard {
   complianceRate: number | null;
   complianceRateLastWeek: number | null;
   totalCallsThisWeek: number;
+  avgRepSpeechPct: number | null;
   positives: CoachingFeedbackItem[];
   improvements: CoachingFeedbackItem[];
   complianceChecklist: ComplianceCheckItem[];
@@ -2129,9 +2130,14 @@ export async function getMyCoachingDashboard(
     closeStatus: c.closeStatus ?? null, status: c.status, durationSeconds: c.durationSeconds ?? null, audioFileUrl: c.audioFileUrl,
   }));
 
+  const withSpeechPct = thisWeekDone.filter(c => c.repSpeechPct != null);
+  const avgRepSpeechPct = withSpeechPct.length > 0
+    ? Math.round(withSpeechPct.reduce((s, c) => s + (c.repSpeechPct as number), 0) / withSpeechPct.length)
+    : null;
   return {
     closesThisWeek, closesLastWeek, avgScoreThisWeek, avgScoreLastWeek,
     complianceRate, complianceRateLastWeek, totalCallsThisWeek: thisWeekCalls.length,
+    avgRepSpeechPct,
     positives: positives.slice(0, 3), improvements: improvements.slice(0, 4),
     complianceChecklist, recentCalls,
   };
