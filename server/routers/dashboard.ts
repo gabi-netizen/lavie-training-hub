@@ -566,9 +566,12 @@ export const dashboardRouter = router({
       console.log(`[Dashboard Sync] Fetched ${allCalls.length} total calls from CloudTalk`);
 
       // Filter: must have recording, duration > 120 seconds (2 minutes)
+      // FIX: call.call_times.talking_time is now correctly populated from Cdr.talking_time
+      // FIX: call.recorded is now correctly read from Cdr.recorded (was broken before)
+      // FIX: also accept calls that have a recording_link even if recorded flag is missing
       const eligibleCalls = allCalls.filter((call) => {
         const duration = call.call_times?.talking_time ?? 0;
-        const hasRecording = call.recorded === true;
+        const hasRecording = call.recorded === true || !!call.recording_link;
         return hasRecording && duration > 120;
       });
 
@@ -592,50 +595,83 @@ export const dashboardRouter = router({
         }
 
         try {
-          // Get recording URL from CloudTalk
-          const recordingUrl = `https://my.cloudtalk.io/api/calls/recording/${call.cdr_id}.json`;
+          // FIX: Use recording_link directly from the CloudTalk API response (Cdr.recording_link)
+          // instead of making a separate /api/calls/recording/{id}.json request.
+          // The recording_link is a direct URL to the audio file.
+          const directRecordingLink = call.recording_link ?? null;
+          const fallbackRecordingUrl = `https://my.cloudtalk.io/api/calls/recording/${call.cdr_id}.json`;
 
-          // Fetch the actual recording URL via the API
           const keyId = process.env.CLOUDTALK_API_KEY_ID;
           const keySecret = process.env.CLOUDTALK_API_KEY_SECRET;
           if (!keyId || !keySecret) throw new Error("CloudTalk API credentials not configured");
           const authHeader = "Basic " + Buffer.from(`${keyId}:${keySecret}`).toString("base64");
 
-          const recRes = await fetch(recordingUrl, {
-            headers: { Authorization: authHeader },
-          });
-
-          if (!recRes.ok) {
-            console.warn(`[Dashboard Sync] Failed to get recording for call ${callId}: ${recRes.status}`);
-            skipped++;
-            continue;
-          }
-
-          // Check content type — if it's audio, download directly; if JSON, extract URL
-          const contentType = recRes.headers.get("content-type") ?? "";
           let audioBuffer: Buffer;
           let audioContentType: string;
 
-          if (contentType.includes("audio") || contentType.includes("wav") || contentType.includes("mpeg")) {
-            audioBuffer = Buffer.from(await recRes.arrayBuffer());
-            audioContentType = contentType;
+          if (directRecordingLink) {
+            // Try the direct recording link first (requires auth)
+            const recRes = await fetch(directRecordingLink, {
+              headers: { Authorization: authHeader },
+            });
+            if (!recRes.ok) {
+              console.warn(`[Dashboard Sync] Failed to fetch recording_link for call ${callId}: ${recRes.status}`);
+              skipped++;
+              continue;
+            }
+            const contentType = recRes.headers.get("content-type") ?? "";
+            if (contentType.includes("audio") || contentType.includes("wav") || contentType.includes("mpeg")) {
+              audioBuffer = Buffer.from(await recRes.arrayBuffer());
+              audioContentType = contentType;
+            } else {
+              // May be a redirect/JSON response — extract URL
+              const recJson = await recRes.json() as any;
+              const audioUrl = recJson?.responseData?.url ?? recJson?.url ?? null;
+              if (!audioUrl) {
+                console.warn(`[Dashboard Sync] No audio URL in recording_link response for call ${callId}`);
+                skipped++;
+                continue;
+              }
+              const audioRes = await fetch(audioUrl);
+              if (!audioRes.ok) {
+                console.warn(`[Dashboard Sync] Failed to download audio for call ${callId}`);
+                skipped++;
+                continue;
+              }
+              audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+              audioContentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
+            }
           } else {
-            // JSON response with redirect URL
-            const recJson = await recRes.json() as any;
-            const audioUrl = recJson?.responseData?.url ?? recJson?.url ?? null;
-            if (!audioUrl) {
-              console.warn(`[Dashboard Sync] No audio URL in recording response for call ${callId}`);
+            // Fallback: use the legacy /api/calls/recording/{id}.json endpoint
+            const recRes = await fetch(fallbackRecordingUrl, {
+              headers: { Authorization: authHeader },
+            });
+            if (!recRes.ok) {
+              console.warn(`[Dashboard Sync] Failed to get recording for call ${callId}: ${recRes.status}`);
               skipped++;
               continue;
             }
-            const audioRes = await fetch(audioUrl);
-            if (!audioRes.ok) {
-              console.warn(`[Dashboard Sync] Failed to download audio for call ${callId}`);
-              skipped++;
-              continue;
+            const contentType = recRes.headers.get("content-type") ?? "";
+            if (contentType.includes("audio") || contentType.includes("wav") || contentType.includes("mpeg")) {
+              audioBuffer = Buffer.from(await recRes.arrayBuffer());
+              audioContentType = contentType;
+            } else {
+              const recJson = await recRes.json() as any;
+              const audioUrl = recJson?.responseData?.url ?? recJson?.url ?? null;
+              if (!audioUrl) {
+                console.warn(`[Dashboard Sync] No audio URL in recording response for call ${callId}`);
+                skipped++;
+                continue;
+              }
+              const audioRes = await fetch(audioUrl);
+              if (!audioRes.ok) {
+                console.warn(`[Dashboard Sync] Failed to download audio for call ${callId}`);
+                skipped++;
+                continue;
+              }
+              audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+              audioContentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
             }
-            audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-            audioContentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
           }
 
           // Upload to S3
@@ -666,6 +702,7 @@ export const dashboardRouter = router({
           }
 
           // Find contact by phone
+          // FIX: call.contact.number is now correctly populated from Contact.contact_numbers[0]
           const callerPhone = call.contact?.number ?? null;
           const contact = callerPhone ? await findContactByPhone(callerPhone) : null;
 

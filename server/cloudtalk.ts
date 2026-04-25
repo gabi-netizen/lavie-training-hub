@@ -3,6 +3,29 @@
  * Docs: https://developers.cloudtalk.io/
  *
  * Authentication: HTTP Basic Auth with API Key ID + Secret
+ *
+ * Real API response shape (calls/index.json):
+ * {
+ *   responseData: {
+ *     itemsCount, pageCount, pageNumber, limit,
+ *     data: [
+ *       {
+ *         Cdr: { id, billsec, type, public_external, public_internal, recorded,
+ *                talking_time, started_at, answered_at, ended_at, waiting_time,
+ *                wrapup_time, recording_link, ... },
+ *         Agent: { id, firstname, lastname, email, fullname, ... },
+ *         Contact: { id, name, contact_numbers: [...], contact_emails: [...], ... },
+ *         ...
+ *       }
+ *     ]
+ *   }
+ * }
+ *
+ * NOTE: There is NO "Call" key — the call data is under "Cdr".
+ * NOTE: There is NO "call_times" nested object — talking_time is a top-level field on Cdr.
+ * NOTE: The status filter (status=answered) does NOT work server-side; filter client-side.
+ * NOTE: Contact phone is in Contact.contact_numbers[] array, not Contact.number.
+ * NOTE: Recording URL is in Cdr.recording_link, not a separate API call.
  */
 
 const BASE_URL = "https://my.cloudtalk.io/api";
@@ -54,9 +77,12 @@ export interface CloudTalkCall {
   status: "answered" | "missed";
   type: string;
   recorded: boolean;
+  /** Recording URL — populated directly from Cdr.recording_link */
+  recording_link: string | null;
   contact: {
     id: number;
     name: string;
+    /** Primary phone number (first entry of contact_numbers[]) */
     number: string;
   } | null;
   internal_number: {
@@ -90,6 +116,9 @@ export interface CallHistoryResult {
 /**
  * Fetch call history from CloudTalk
  * Optionally filter by contact phone number or date range
+ *
+ * IMPORTANT: The CloudTalk API does NOT reliably filter by status server-side.
+ * Pass `status` here and it will be applied as a client-side filter after fetching.
  */
 export async function getCallHistory(params?: {
   phone?: string;
@@ -105,7 +134,8 @@ export async function getCallHistory(params?: {
   if (params?.dateTo) query.set("date_to", params.dateTo);
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.page) query.set("page", String(params.page));
-  if (params?.status) query.set("status", params.status);
+  // NOTE: status filter is intentionally omitted from the API query because
+  // the CloudTalk API ignores it — we filter client-side below instead.
 
   const url = `${BASE_URL}/calls/index.json?${query.toString()}`;
   const controller = new AbortController();
@@ -134,34 +164,79 @@ export async function getCallHistory(params?: {
   const rawCalls: any[] = rd?.data ?? [];
 
   const calls: CloudTalkCall[] = rawCalls.map((item: any) => {
-    const c = item.Call ?? item;
+    // FIX: The real API response uses "Cdr" as the key, NOT "Call".
+    // Old code: `const c = item.Call ?? item` — item.Call is always undefined,
+    // so c fell back to the whole wrapper object, breaking all field reads.
+    const c = item.Cdr ?? item.Call ?? item;
     const agent = item.Agent ?? null;
+    const contact = item.Contact ?? null;
+
+    // FIX: talking_time is a top-level field on Cdr (as a string), NOT nested
+    // under call_times. Build the call_times object from the flat Cdr fields.
+    const talkingTime = parseInt(c.talking_time ?? "0", 10);
+    const waitingTime = parseInt(c.waiting_time ?? "0", 10);
+    const wrapUpTime = parseInt(c.wrapup_time ?? c.wrap_up_time ?? "0", 10);
+    const billsec = parseInt(c.billsec ?? "0", 10);
+
+    // FIX: Contact phone is in contact_numbers[] array, not .number
+    const contactPhone: string | null =
+      contact?.contact_numbers?.[0] ??
+      contact?.number ??  // keep fallback for any future API changes
+      null;
+
+    // Determine call status from Cdr fields:
+    // answered_at being set (and non-empty) means the call was answered.
+    // The API doesn't return a "status" field directly in Cdr.
+    const isAnswered = !!(c.answered_at && c.answered_at !== "" && talkingTime > 0);
+    const callStatus: "answered" | "missed" = isAnswered ? "answered" : "missed";
+
     return {
-      cdr_id: parseInt(c.cdr_id ?? c.id ?? "0", 10),
+      cdr_id: parseInt(c.id ?? c.cdr_id ?? "0", 10),
       uuid: c.uuid ?? "",
-      date: c.date ?? c.start_date ?? "",
-      direction: c.direction ?? "outgoing",
-      status: c.status ?? "missed",
+      date: c.started_at ?? c.date ?? c.start_date ?? "",
+      direction: c.type ?? c.direction ?? "incoming",
+      status: callStatus,
       type: c.type ?? "regular",
-      recorded: c.recorded ?? false,
-      contact: c.contact ?? null,
+      // FIX: recorded is a boolean on Cdr directly
+      recorded: c.recorded === true || c.recorded === "1",
+      // FIX: recording_link is available directly on Cdr — use it instead of
+      // making a separate /api/calls/recording/{id}.json request
+      recording_link: c.recording_link ?? null,
+      contact: contact
+        ? {
+            id: parseInt(contact.id ?? "0", 10),
+            name: contact.name ?? "",
+            number: contactPhone ?? "",
+          }
+        : null,
       internal_number: c.internal_number ?? null,
-      call_times: c.call_times ?? {
-        talking_time: 0,
-        ringing_time: 0,
-        total_time: 0,
-        waiting_time: 0,
+      call_times: {
+        talking_time: talkingTime,
+        ringing_time: waitingTime, // waiting_time is the ring time before answer
+        total_time: billsec > 0 ? billsec : talkingTime,
+        waiting_time: waitingTime,
         holding_time: 0,
-        wrap_up_time: 0,
+        wrap_up_time: wrapUpTime,
       },
       notes: c.notes ?? [],
       call_rating: c.call_rating ?? null,
-      agent: agent ? { id: String(agent.id), name: `${agent.firstname ?? ""} ${agent.lastname ?? ""}`.trim(), email: agent.email ?? "" } : undefined,
+      agent: agent
+        ? {
+            id: String(agent.id),
+            name: agent.fullname ?? `${agent.firstname ?? ""} ${agent.lastname ?? ""}`.trim(),
+            email: agent.email ?? "",
+          }
+        : undefined,
     };
   });
 
+  // FIX: Apply status filter client-side since the API ignores it server-side
+  const filteredCalls = params?.status
+    ? calls.filter((c) => c.status === params.status)
+    : calls;
+
   return {
-    calls,
+    calls: filteredCalls,
     totalCount: rd.itemsCount ?? calls.length,
     pageCount: rd.pageCount ?? 1,
   };
