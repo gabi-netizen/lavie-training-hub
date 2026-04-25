@@ -329,3 +329,110 @@ export const formSubmissions = mysqlTable("form_submissions", {
 });
 export type FormSubmission = typeof formSubmissions.$inferSelect;
 export type InsertFormSubmission = typeof formSubmissions.$inferInsert;
+
+// ── Manager Command Centre: Lead Assignments ──
+/**
+ * Lead assignments table — tracks retention leads imported from Zoho Billing / CSV.
+ * Each row represents a customer subscription that needs retention work.
+ * This is a NEW table that does NOT modify any existing tables.
+ */
+export const leadAssignments = mysqlTable("lead_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Zoho Billing subscription ID — unique identifier for deduplication */
+  subscriptionId: varchar("subscriptionId", { length: 128 }).notNull().unique(),
+  /** Zoho customer ID */
+  customerId: varchar("customerId", { length: 128 }),
+  /** Customer full name */
+  customerName: varchar("customerName", { length: 256 }),
+  /** Customer email */
+  email: varchar("email", { length: 320 }),
+  /** Customer phone */
+  phone: varchar("phone", { length: 64 }),
+  /** Lead category: installment or subscription */
+  leadCategory: varchar("leadCategory", { length: 32 }).default("subscription"),
+  /** Classified lead type: pre_cycle_cancelled, live_sub_healthy, etc. */
+  leadType: varchar("leadType", { length: 64 }),
+  /** Subscription plan name from Zoho */
+  planName: varchar("planName", { length: 256 }),
+  /** Total billing cycles on the plan */
+  billingCycles: int("billingCycles").default(0),
+  /** Number of cycles the customer has completed */
+  cyclesCompleted: int("cyclesCompleted").default(0),
+  /** Total amount the customer has spent (in minor currency units or decimal) */
+  totalSpend: float("totalSpend").default(0),
+  /** Monthly subscription amount */
+  monthlyAmount: float("monthlyAmount").default(0),
+  /** Currency code e.g. GBP, USD */
+  currencyCode: varchar("currencyCode", { length: 8 }).default("GBP"),
+  /** Zoho billing status: cancelled, non_renewing, expired, unpaid, live */
+  billingStatus: varchar("billingStatus", { length: 32 }),
+  /** Retry attempts for failed payments */
+  retryAttempts: int("retryAttempts").default(0),
+  /** Urgency score 0-100 computed by lead engine */
+  urgencyScore: int("urgencyScore").default(0),
+  /** JSON string of urgency flags */
+  urgencyFlags: text("urgencyFlags"),
+  /** Event date — when the lead type changed (cancellation date, decline date, etc.) */
+  eventDate: varchar("eventDate", { length: 32 }),
+  /** Agent name assigned to this lead */
+  assignedAgent: varchar("assignedAgent", { length: 128 }),
+  /** Timestamp (ms) when the lead was assigned */
+  assignedAt: float("assignedAt"),
+  /** Work status: new, assigned, in_progress, retained, done_deal, etc. */
+  workStatus: varchar("workStatus", { length: 32 }).default("new"),
+  /** Timestamp (ms) when the work status was last changed */
+  statusChangedAt: float("statusChangedAt"),
+  /** Manager note */
+  managerNote: text("managerNote"),
+  /** Agent note */
+  agentNote: text("agentNote"),
+  /** Number of call attempts made */
+  attemptCount: int("attemptCount").default(0),
+  /** Number of consecutive no-answer attempts */
+  noAnswerCount: int("noAnswerCount").default(0),
+  /** Timestamp (ms) of the last call */
+  lastCallAt: float("lastCallAt"),
+  /** Result of the last call */
+  lastCallResult: varchar("lastCallResult", { length: 32 }),
+  /** Scheduled callback timestamp (ms) */
+  callbackAt: float("callbackAt"),
+  /** Follow-up timestamp (ms) */
+  followUpAt: float("followUpAt"),
+  /** Follow-up note */
+  followUpNote: text("followUpNote"),
+  /** Last transaction date from Zoho */
+  lastTransactionDate: varchar("lastTransactionDate", { length: 32 }),
+  /** Last shipment date from Zoho */
+  lastShipmentDate: varchar("lastShipmentDate", { length: 32 }),
+  /** Cancelled-at date from Zoho */
+  cancelledAt: varchar("cancelledAt", { length: 32 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LeadAssignment = typeof leadAssignments.$inferSelect;
+export type InsertLeadAssignment = typeof leadAssignments.$inferInsert;
+
+// ── Manager Command Centre: Call Attempts ──
+/**
+ * Call attempts table — logs each call attempt made by an agent on a lead.
+ */
+export const callAttempts = mysqlTable("call_attempts", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Reference to lead_assignments.subscriptionId */
+  subscriptionId: varchar("subscriptionId", { length: 128 }).notNull(),
+  /** Agent who made the call */
+  agentName: varchar("agentName", { length: 128 }),
+  /** Call result: retained, done_deal, no_answer, callback, etc. */
+  result: varchar("result", { length: 32 }),
+  /** Optional note about the call */
+  note: text("note"),
+  /** Scheduled callback timestamp (ms) */
+  callbackAt: float("callbackAt"),
+  /** Follow-up timestamp (ms) */
+  followUpAt: float("followUpAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CallAttempt = typeof callAttempts.$inferSelect;
+export type InsertCallAttempt = typeof callAttempts.$inferInsert;

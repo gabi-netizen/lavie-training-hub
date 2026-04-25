@@ -7,6 +7,7 @@ import { emailTemplatesRouter } from "./routers/emailTemplates";
 import { pitchRouter } from "./routers/pitch";
 import { paymentFormRouter } from "./routers/paymentForm";
 import { dashboardRouter } from "./routers/dashboard";
+import { managerRouter } from "./routers/manager";
 
 export const appRouter = router({
   system: systemRouter,
@@ -28,6 +29,7 @@ export const appRouter = router({
   pitch: pitchRouter,
   paymentForm: paymentFormRouter,
   dashboard: dashboardRouter,
+  manager: managerRouter,
 });
 
 export type AppRouter = typeof appRouter;

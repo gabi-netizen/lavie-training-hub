@@ -16,6 +16,7 @@ import CallLog from "./pages/CallLog";
 import CallCenterDashboard from "./pages/CallCenterDashboard";
 import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -85,6 +86,11 @@ function Router() {
         </Route>
         <Route path={"/leaderboard"}>
           {() => <TabRedirect tab="leaderboard" />}
+        </Route>
+
+        {/* Manager Command Centre — admin only */}
+        <Route path={"/command-centre"}>
+          {() => <AdminRoute component={ManagerDashboard} />}
         </Route>
 
         {/* Workspace — agent calling workspace */}
