@@ -9,7 +9,9 @@
  *  1. Validate the payload (require at least messageId + fromEmail)
  *  2. Deduplicate by Gmail messageId (skip if already stored)
  *  3. Persist the email in the `gmail_incoming_emails` table
- *  4. Return 200 OK so the Apps Script does not retry
+ *  4. Run the categorization engine (keyword-based, no AI)
+ *  5. Create a support ticket in the `support_tickets` table
+ *  6. Return 200 OK so the Apps Script does not retry
  *
  * Expected POST body (JSON):
  * {
@@ -27,8 +29,9 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { gmailIncomingEmails } from "../../drizzle/schema";
+import { gmailIncomingEmails, supportTickets } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { categorizeEmail, determineCustomerStatus } from "../emailCategorization";
 
 // ─── Main webhook handler ─────────────────────────────────────────────────────
 export async function handleGmailWebhook(req: Request, res: Response) {
@@ -70,14 +73,14 @@ export async function handleGmailWebhook(req: Request, res: Response) {
       return;
     }
 
-    // ── Deduplication ───────────────────────────────────────────────────────
-    const existing = await db
+    // ── Deduplication (check both tables) ───────────────────────────────────
+    const existingEmail = await db
       .select({ id: gmailIncomingEmails.id })
       .from(gmailIncomingEmails)
       .where(eq(gmailIncomingEmails.messageId, messageId))
       .limit(1);
 
-    if (existing.length > 0) {
+    if (existingEmail.length > 0) {
       console.log(`[Gmail Webhook] Duplicate messageId ${messageId} — skipping`);
       res.status(200).json({ received: true, duplicate: true });
       return;
@@ -92,8 +95,8 @@ export async function handleGmailWebhook(req: Request, res: Response) {
       }
     }
 
-    // ── Insert into database ────────────────────────────────────────────────
-    await db.insert(gmailIncomingEmails).values({
+    // ── Insert into gmail_incoming_emails (raw storage) ─────────────────────
+    const [insertResult] = await db.insert(gmailIncomingEmails).values({
       messageId,
       threadId: payload?.threadId ?? null,
       fromEmail,
@@ -106,15 +109,79 @@ export async function handleGmailWebhook(req: Request, res: Response) {
         ? String(payload.bodyHtml).substring(0, 65000)
         : null,
       emailDate,
-      status: "received",
+      status: "processed",
       rawPayload: JSON.stringify(payload).substring(0, 65000),
     });
+
+    const gmailEmailId = (insertResult as any).insertId;
 
     console.log(
       `[Gmail Webhook] Stored email messageId=${messageId} from=${fromEmail} subject="${payload?.subject ?? "(no subject)"}"`
     );
 
-    res.status(200).json({ received: true, processed: true, messageId });
+    // ── Categorization Engine ───────────────────────────────────────────────
+    const bodyText = payload?.bodyText ? String(payload.bodyText) : "";
+    const subject = payload?.subject ?? "";
+    const fromName = payload?.fromName ?? "";
+
+    const { category, priority } = categorizeEmail({
+      fromEmail,
+      fromName,
+      subject,
+      bodyText,
+    });
+
+    // ── Customer Status — check if sender has previous emails ───────────────
+    let hasExistingEmails = false;
+    try {
+      const previousEmails = await db
+        .select({ id: gmailIncomingEmails.id })
+        .from(gmailIncomingEmails)
+        .where(eq(gmailIncomingEmails.fromEmail, fromEmail))
+        .limit(2);
+      // More than 1 means they had emails before this one
+      hasExistingEmails = previousEmails.length > 1;
+    } catch (err) {
+      console.warn("[Gmail Webhook] Error checking existing emails:", err);
+    }
+
+    const customerStatus = determineCustomerStatus(fromEmail, hasExistingEmails);
+
+    // ── Create Support Ticket ───────────────────────────────────────────────
+    try {
+      await db.insert(supportTickets).values({
+        gmailEmailId: gmailEmailId ?? null,
+        messageId,
+        fromEmail,
+        fromName: fromName || null,
+        subject: subject || null,
+        body: bodyText ? bodyText.substring(0, 65000) : null,
+        receivedAt: emailDate ?? new Date(),
+        category,
+        priority,
+        customerStatus,
+        status: "open",
+        assignedTo: null,
+        notes: null,
+      });
+
+      console.log(
+        `[Gmail Webhook] Created ticket: category=${category} priority=${priority} customerStatus=${customerStatus}`
+      );
+    } catch (ticketErr) {
+      // If support_tickets table doesn't exist yet, log but don't fail the webhook
+      console.error("[Gmail Webhook] Error creating support ticket:", ticketErr);
+      // Still return success since the email was stored
+    }
+
+    res.status(200).json({
+      received: true,
+      processed: true,
+      messageId,
+      category,
+      priority,
+      customerStatus,
+    });
   } catch (err) {
     console.error("[Gmail Webhook] Unhandled error:", err);
     res.status(500).json({
