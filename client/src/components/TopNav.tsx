@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Upload,
   Sparkles,
+  Shield,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -55,6 +56,7 @@ const AI_COACH_ITEMS_ADMIN = [
 const DASHBOARD_ITEM = { path: "/call-center-dashboard", label: "Call Center Dashboard", icon: LayoutDashboard };
 const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDashboard };
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
+const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
 const MOBILE_NAV_ITEMS_AGENT = [
@@ -69,7 +71,7 @@ const MOBILE_NAV_ITEMS_ADMIN = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
-  { path: "/training", label: "Training", icon: BookOpen },
+  { path: "/command-centre", label: "Command", icon: Shield },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
 
@@ -230,6 +232,23 @@ export default function TopNav() {
               Training
             </button>
           </Link>
+
+          {/* Command Centre — admin only */}
+          {isAdmin && (
+            <Link href={COMMAND_CENTRE_ITEM.path}>
+              <button
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                  location === COMMAND_CENTRE_ITEM.path
+                    ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                    : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                )}
+              >
+                <Shield size={14} />
+                Command Centre
+              </button>
+            </Link>
+          )}
 
           {/* AI Coach dropdown */}
           <div className="relative" ref={aiCoachRef}>
