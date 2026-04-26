@@ -20,6 +20,7 @@ import {
   Upload,
   Sparkles,
   Shield,
+  Mail,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -57,6 +58,7 @@ const DASHBOARD_ITEM = { path: "/call-center-dashboard", label: "Call Center Das
 const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDashboard };
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
+const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
 const MOBILE_NAV_ITEMS_AGENT = [
@@ -246,6 +248,22 @@ export default function TopNav() {
               >
                 <Shield size={14} />
                 Command Centre
+              </button>
+            </Link>
+          )}
+          {/* Support Tickets — admin only */}
+          {isAdmin && (
+            <Link href={SUPPORT_TICKETS_ITEM.path}>
+              <button
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                  location === SUPPORT_TICKETS_ITEM.path
+                    ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                    : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                )}
+              >
+                <Mail size={14} />
+                Support Tickets
               </button>
             </Link>
           )}
