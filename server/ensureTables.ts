@@ -13,6 +13,34 @@ export async function ensureSupportTicketsTable() {
     return;
   }
 
+  // ── gmail_incoming_emails (migration 0028) ─────────────────────────────────
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS gmail_incoming_emails (
+        id int AUTO_INCREMENT NOT NULL,
+        messageId varchar(256) NOT NULL,
+        threadId varchar(256),
+        fromEmail varchar(320) NOT NULL,
+        fromName varchar(256),
+        subject varchar(512),
+        bodyText text,
+        bodyHtml text,
+        emailDate timestamp,
+        status enum('received','processed','error') NOT NULL DEFAULT 'received',
+        errorMessage text,
+        rawPayload text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT gmail_incoming_emails_id PRIMARY KEY(id),
+        CONSTRAINT gmail_incoming_emails_messageId_unique UNIQUE(messageId)
+      )
+    `);
+    console.log("[DB] gmail_incoming_emails table ensured");
+  } catch (err) {
+    console.error("[DB] Error creating gmail_incoming_emails table:", err);
+  }
+
+  // ── support_tickets (migration 0029) ───────────────────────────────────────
   try {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS support_tickets (
