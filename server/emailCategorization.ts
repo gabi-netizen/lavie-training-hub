@@ -95,6 +95,21 @@ const CATEGORY_RULES: CategoryRule[] = [
       "emailed before",
     ],
   },
+  // Address Update — check BEFORE shipping so "delivery address" matches here
+  {
+    category: "address_update",
+    priority: "MEDIUM",
+    keywords: [
+      "change my address",
+      "update my address",
+      "new address",
+      "current address",
+      "delivery address",
+      "wrong address",
+      "moved",
+      "postcode",
+    ],
+  },
   // Shipping/Delivery Issue
   {
     category: "shipping_delivery_issue",
@@ -137,22 +152,6 @@ const CATEGORY_RULES: CategoryRule[] = [
       "charged me",
       "took money",
       "unexpected charge",
-    ],
-  },
-  // Address Update
-  {
-    category: "address_update",
-    priority: "MEDIUM",
-    keywords: [
-      "address",
-      "moved",
-      "new address",
-      "current address",
-      "change my address",
-      "update my address",
-      "delivery address",
-      "wrong address",
-      "postcode",
     ],
   },
   // Subscription Question
