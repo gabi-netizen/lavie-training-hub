@@ -17,7 +17,8 @@ import CallCenterDashboard from "./pages/CallCenterDashboard";
 import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
 import ManagerDashboard from "./pages/ManagerDashboard";
-import SupportTickets from "./pages/SupportTickets";
+import SupportTickets from "@/pages/SupportTickets";
+import OpeningDashboard from "@/pages/OpeningDashboard";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -97,6 +98,11 @@ function Router() {
         {/* Support Tickets — admin only */}
         <Route path={"/support-tickets"}>
           {() => <AdminRoute component={SupportTickets} />}
+        </Route>
+
+        {/* Opening Dashboard — admin only */}
+        <Route path={"/opening-dashboard"}>
+          {() => <AdminRoute component={OpeningDashboard} />}
         </Route>
 
         {/* Workspace — agent calling workspace */}
