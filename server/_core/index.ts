@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
+import { handleGmailWebhook } from "../webhooks/gmail";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -71,6 +72,11 @@ async function startServer() {
   // CloudTalk sends POST requests here when a call ends.
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/webhooks/cloudtalk", handleCloudTalkWebhook);
+
+  // ─── Gmail Webhook ──────────────────────────────────────────────────────
+  // Google Apps Script sends POST requests here when a new email arrives
+  // at support@lavielabs.com. Must be registered BEFORE tRPC middleware.
+  app.post("/api/webhooks/gmail", handleGmailWebhook);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
   // Public endpoint — called by the payment page to initiate a Stripe payment.

@@ -436,3 +436,36 @@ export const callAttempts = mysqlTable("call_attempts", {
 
 export type CallAttempt = typeof callAttempts.$inferSelect;
 export type InsertCallAttempt = typeof callAttempts.$inferInsert;
+
+// ── Gmail Inbound Emails ──
+/**
+ * Inbound emails table — stores emails received at support@lavielabs.com
+ * via the Google Apps Script → webhook pipeline.
+ * Processing logic will be added later; for now we just persist and log.
+ */
+export const inboundEmails = mysqlTable("inbound_emails", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Gmail message ID — used for deduplication */
+  messageId: varchar("messageId", { length: 256 }).notNull().unique(),
+  /** Sender email address */
+  senderEmail: varchar("senderEmail", { length: 320 }).notNull(),
+  /** Sender display name */
+  senderName: varchar("senderName", { length: 256 }),
+  /** Email subject line */
+  subject: varchar("subject", { length: 512 }),
+  /** Plain text body of the email */
+  body: text("body"),
+  /** When the email was received (from Gmail) */
+  receivedAt: timestamp("receivedAt"),
+  /** Processing status: new → processing → done → error */
+  status: mysqlEnum("status", ["new", "processing", "done", "error"]).default("new").notNull(),
+  /** Error message if status=error */
+  errorMessage: text("errorMessage"),
+  /** JSON string for any additional metadata from the webhook payload */
+  rawPayload: text("rawPayload"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InboundEmail = typeof inboundEmails.$inferSelect;
+export type InsertInboundEmail = typeof inboundEmails.$inferInsert;

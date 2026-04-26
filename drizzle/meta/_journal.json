@@ -197,6 +197,13 @@
       "when": 1745571600000,
       "tag": "0027_manager_command_centre",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "5",
+      "when": 1745658000000,
+      "tag": "0028_gmail_inbound_emails",
+      "breakpoints": true
     }
   ]
 }
