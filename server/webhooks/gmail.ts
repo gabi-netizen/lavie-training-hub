@@ -7,11 +7,12 @@
  *
  * We:
  *  1. Validate the payload (require at least messageId + fromEmail)
- *  2. Deduplicate by Gmail messageId (skip if already stored)
- *  3. Persist the email in the `gmail_incoming_emails` table
- *  4. Run the categorization engine (keyword-based, no AI)
- *  5. Create a support ticket in the `support_tickets` table
- *  6. Return 200 OK so the Apps Script does not retry
+ *  2. Ensure required tables exist (auto-create if missing)
+ *  3. Deduplicate by Gmail messageId (skip if already stored)
+ *  4. Persist the email in the `gmail_incoming_emails` table
+ *  5. Run the categorization engine (keyword-based, no AI)
+ *  6. Create a support ticket in the `support_tickets` table
+ *  7. Return 200 OK so the Apps Script does not retry
  *
  * Expected POST body (JSON):
  * {
@@ -30,8 +31,67 @@
 import type { Request, Response } from "express";
 import { getDb } from "../db";
 import { gmailIncomingEmails, supportTickets } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { categorizeEmail, determineCustomerStatus } from "../emailCategorization";
+
+// ─── Table creation flag (only run once per server lifetime) ─────────────────
+let tablesEnsured = false;
+
+async function ensureTablesExist(db: any) {
+  if (tablesEnsured) return;
+
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS gmail_incoming_emails (
+        id int AUTO_INCREMENT NOT NULL,
+        messageId varchar(256) NOT NULL,
+        threadId varchar(256),
+        fromEmail varchar(320) NOT NULL,
+        fromName varchar(256),
+        subject varchar(512),
+        bodyText text,
+        bodyHtml text,
+        emailDate timestamp,
+        status enum('received','processed','error') NOT NULL DEFAULT 'received',
+        errorMessage text,
+        rawPayload text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT gmail_incoming_emails_id PRIMARY KEY(id),
+        CONSTRAINT gmail_incoming_emails_messageId_unique UNIQUE(messageId)
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id int AUTO_INCREMENT NOT NULL,
+        gmailEmailId int,
+        messageId varchar(256),
+        fromEmail varchar(320) NOT NULL,
+        fromName varchar(256),
+        subject varchar(512),
+        body text,
+        receivedAt timestamp,
+        category enum('cancellation_request','shipping_delivery_issue','payment_billing_dispute','address_update','product_feedback','agent_forwarded','system_automated','follow_up_unanswered','subscription_question','general_inquiry') NOT NULL DEFAULT 'general_inquiry',
+        priority enum('HIGH','MEDIUM','LOW') NOT NULL DEFAULT 'MEDIUM',
+        customerStatus enum('existing','new','internal','system') NOT NULL DEFAULT 'new',
+        ticketStatus enum('open','in_progress','resolved','closed') NOT NULL DEFAULT 'open',
+        assignedTo varchar(256),
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT support_tickets_id PRIMARY KEY(id),
+        CONSTRAINT support_tickets_messageId_unique UNIQUE(messageId)
+      )
+    `);
+
+    tablesEnsured = true;
+    console.log("[Gmail Webhook] Tables ensured (gmail_incoming_emails + support_tickets)");
+  } catch (err) {
+    console.error("[Gmail Webhook] Error ensuring tables:", err);
+    // Don't set tablesEnsured — retry next time
+  }
+}
 
 // ─── Main webhook handler ─────────────────────────────────────────────────────
 export async function handleGmailWebhook(req: Request, res: Response) {
@@ -72,6 +132,9 @@ export async function handleGmailWebhook(req: Request, res: Response) {
       res.status(503).json({ error: "Database unavailable" });
       return;
     }
+
+    // ── Ensure tables exist (only runs once per server lifetime) ────────────
+    await ensureTablesExist(db);
 
     // ── Deduplication (check both tables) ───────────────────────────────────
     const existingEmail = await db
