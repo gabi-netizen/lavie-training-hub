@@ -15,13 +15,11 @@ import {
   LayoutDashboard,
   Smartphone,
   Mic,
-  Target,
   TrendingUp,
   Upload,
   Sparkles,
   Shield,
   Mail,
-  PhoneOutgoing,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -39,13 +37,11 @@ const CALLS_ITEMS_ADMIN = [
 
 // Items inside the "AI Coach" dropdown
 const AI_COACH_ITEMS_AGENT = [
-  { tab: "opening", label: "Opening", icon: Target },
   { tab: "upload", label: "Upload Call", icon: Upload },
   { tab: "my-calls", label: "Agent View", icon: Users },
   { tab: "team", label: "Team", icon: Users },
 ];
 const AI_COACH_ITEMS_ADMIN = [
-  { tab: "opening", label: "Opening", icon: Target },
   { tab: "upload", label: "Upload Call", icon: Upload },
   { tab: "my-calls", label: "Agent View", icon: Users },
   { tab: "team", label: "Team", icon: Users },
@@ -60,7 +56,6 @@ const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDas
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
-const OPENING_DASHBOARD_ITEM = { path: "/opening-dashboard", label: "Opening Dashboard", icon: PhoneOutgoing };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
 const MOBILE_NAV_ITEMS_AGENT = [
@@ -75,7 +70,6 @@ const MOBILE_NAV_ITEMS_ADMIN = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/command-centre", label: "Command", icon: Shield },
-  { path: "/opening-dashboard", label: "Opening", icon: PhoneOutgoing },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
 
@@ -266,23 +260,6 @@ export default function TopNav() {
               >
                 <Mail size={14} />
                 Support Tickets
-              </button>
-            </Link>
-          )}
-
-          {/* Opening Dashboard — admin only */}
-          {isAdmin && (
-            <Link href={OPENING_DASHBOARD_ITEM.path}>
-              <button
-                className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
-                  location === OPENING_DASHBOARD_ITEM.path
-                    ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                    : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
-                )}
-              >
-                <PhoneOutgoing size={14} />
-                Opening
               </button>
             </Link>
           )}
