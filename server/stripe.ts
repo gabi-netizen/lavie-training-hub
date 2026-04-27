@@ -5,13 +5,14 @@
  *  - createPaymentIntent: creates a Stripe PaymentIntent for £4.95 and returns
  *    the client_secret to the frontend so Stripe Elements can confirm the payment.
  *  - handleStripeWebhook: processes Stripe webhook events (payment_intent.succeeded)
- *    to mark form_submissions as processed and notify the owner.
+ *    to mark form_submissions as processed, notify the owner, and save the
+ *    Stripe Customer ID to the matching CRM contact.
  */
 import Stripe from "stripe";
 import type { Request, Response } from "express";
 import { ENV } from "./_core/env";
 import { getDb } from "./db";
-import { formSubmissions } from "../drizzle/schema";
+import { formSubmissions, contacts } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
@@ -84,7 +85,10 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
  * POST /api/webhooks/stripe
  *
  * Stripe sends signed webhook events here.
- * We handle payment_intent.succeeded to mark the submission as processed.
+ * We handle payment_intent.succeeded to:
+ *  1. Mark the form_submission as processed with billing details
+ *  2. Save the Stripe Customer ID to the matching CRM contact (matched by email)
+ *  3. Notify the owner
  *
  * IMPORTANT: This route must receive the raw body (Buffer), not parsed JSON.
  * Register it BEFORE express.json() middleware.
@@ -126,6 +130,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
     let addressLine2: string | undefined;
     let city: string | undefined;
     let postcode: string | undefined;
+    let stripeCustomerId: string | undefined;
 
     try {
       const stripe = getStripe();
@@ -147,14 +152,25 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
             cardExpiry = `${String(expMonth).padStart(2, "0")}/${String(expYear).slice(-2)}`;
           }
         }
+        // Capture Stripe Customer ID from the charge
+        if (charge.customer) {
+          stripeCustomerId = typeof charge.customer === "string"
+            ? charge.customer
+            : charge.customer.id;
+        }
       }
     } catch (chargeErr) {
       console.warn("[Stripe] Could not fetch charge details:", chargeErr);
     }
 
+    // Also try to get customer ID directly from the PaymentIntent
+    if (!stripeCustomerId && pi.customer) {
+      stripeCustomerId = typeof pi.customer === "string" ? pi.customer : pi.customer.id;
+    }
+
     const db = await getDb();
     if (db) {
-      // Update the pre-created record
+      // ── 1. Update the pre-created form_submission record ──────────────────
       const updated = await db
         .update(formSubmissions)
         .set({
@@ -185,6 +201,43 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
           stripePaymentIntentId: pi.id,
         });
       }
+
+      // ── 2. Save Stripe Customer ID to the matching CRM contact ────────────
+      if (stripeCustomerId && email) {
+        try {
+          // Look up contact by email (case-insensitive match)
+          const matchingContacts = await db
+            .select({ id: contacts.id, name: contacts.name })
+            .from(contacts)
+            .where(eq(contacts.email, email))
+            .limit(1);
+
+          if (matchingContacts.length > 0) {
+            const contact = matchingContacts[0];
+            await db
+              .update(contacts)
+              .set({ stripeCustomerId })
+              .where(eq(contacts.id, contact.id));
+            console.log(
+              `[Stripe] ✅ Saved stripeCustomerId=${stripeCustomerId} to contact id=${contact.id} (${contact.name}, ${email})`
+            );
+          } else {
+            console.log(
+              `[Stripe] ℹ️ No CRM contact found for email=${email}. stripeCustomerId=${stripeCustomerId} not saved to contacts.`
+            );
+          }
+        } catch (contactErr) {
+          // Non-fatal — log but don't fail the webhook response
+          console.error("[Stripe] Failed to update contact with stripeCustomerId:", contactErr);
+        }
+      } else {
+        if (!stripeCustomerId) {
+          console.log(`[Stripe] No Stripe Customer ID found on PaymentIntent ${pi.id}. Skipping contact update.`);
+        }
+        if (!email) {
+          console.log(`[Stripe] No email found on PaymentIntent ${pi.id}. Skipping contact update.`);
+        }
+      }
     }
 
     await notifyOwner({
@@ -192,6 +245,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
       content: [
         `Customer: ${cardholderName || email}`,
         `Email: ${email}`,
+        `Stripe Customer ID: ${stripeCustomerId ?? "N/A"}`,
         `Card: **** **** **** ${cardLast4 ?? "N/A"} (exp ${cardExpiry ?? "N/A"})`,
         `Address: ${[addressLine1, addressLine2, city, postcode].filter(Boolean).join(", ") || "N/A"}`,
         `Agent: ${agentName || "N/A"}`,
