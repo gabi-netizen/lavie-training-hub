@@ -5,8 +5,8 @@
  * calls to sell Free Trials at £4.95).
  *
  * Data sources:
- *  - form_submissions DB → Free Trials per agent (matched by name → email)
- *  - CloudTalk API       → Working Days, Daily Openings (total calls, matched by email)
+ *  - form_submissions DB → Free Trials per agent
+ *  - CloudTalk API       → Working Days, Daily Openings (total calls)
  *  - Stripe API          → Cancelled Trials
  *
  * Admin-only page.
@@ -48,7 +48,6 @@ type SortKey =
 
 interface AgentRow {
   agentName: string;
-  agentEmail: string;
   dailyOpenings: number;
   aveDays: number;
   cancelledTrials: number;
@@ -98,7 +97,6 @@ function SortIcon({
 export default function OpeningDashboard() {
   // ── Filters ──
   const [timeline, setTimeline] = useState<Timeline>("last_month");
-  // agentFilter is either "all" or an agent's email address
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
@@ -124,18 +122,18 @@ export default function OpeningDashboard() {
 
   // ── Sort rows client-side ──
   const sortedRows = useMemo<AgentRow[]>(() => {
-    const rows: AgentRow[] = (data?.rows ?? []) as AgentRow[];
+    const rows: AgentRow[] = data?.rows ?? [];
     return [...rows].sort((a, b) => {
-      const va: number | string = a[sortKey];
-      const vb: number | string = b[sortKey];
+      let va: number | string = a[sortKey];
+      let vb: number | string = b[sortKey];
       if (typeof va === "string" && typeof vb === "string") {
         return sortDir === "asc"
           ? va.localeCompare(vb)
           : vb.localeCompare(va);
       }
-      const na = va as number;
-      const nb = vb as number;
-      return sortDir === "asc" ? na - nb : nb - na;
+      va = va as number;
+      vb = vb as number;
+      return sortDir === "asc" ? va - vb : vb - va;
     });
   }, [data?.rows, sortKey, sortDir]);
 
@@ -158,8 +156,7 @@ export default function OpeningDashboard() {
   }
 
   const totalTrials = data?.totalTrials ?? 0;
-  // allAgents is [{name, email}] — used for the agent filter dropdown
-  const allAgents: { name: string; email: string }[] = data?.allAgents ?? [];
+  const allAgents = data?.allAgents ?? [];
 
   // ── Render ──
   return (
@@ -209,7 +206,7 @@ export default function OpeningDashboard() {
               </select>
             </div>
 
-            {/* Agent — value is email, label is name */}
+            {/* Agent */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Agent
@@ -220,9 +217,9 @@ export default function OpeningDashboard() {
                 className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               >
                 <option value="all">All</option>
-                {allAgents.map((a) => (
-                  <option key={a.email} value={a.email}>
-                    {a.name}
+                {allAgents.map((agent: { name: string; email: string }) => (
+                  <option key={agent.email} value={agent.email}>
+                    {agent.name}
                   </option>
                 ))}
               </select>
@@ -449,7 +446,7 @@ export default function OpeningDashboard() {
                 <tbody className="divide-y divide-gray-100">
                   {sortedRows.map((row, idx) => (
                     <tr
-                      key={row.agentEmail || row.agentName}
+                      key={row.agentName}
                       className="hover:bg-indigo-50/40 transition-colors"
                     >
                       {/* Row number */}
@@ -486,17 +483,17 @@ export default function OpeningDashboard() {
                               : "text-gray-800"
                           }
                         >
-                          {row.cancelledTrials}
+                          {row.cancelledTrials.toFixed(2)}
                         </span>
                       </td>
                       {/* Working Days */}
                       <td className="px-4 py-3 text-gray-800 text-right">
-                        {row.workingDays}
+                        {row.workingDays.toFixed(2)}
                       </td>
                       {/* Free Trials */}
                       <td className="px-4 py-3 text-right">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                          {row.freeTrials}
+                          {row.freeTrials.toFixed(2)}
                         </span>
                       </td>
                       {/* Cancellation % */}
@@ -527,14 +524,14 @@ export default function OpeningDashboard() {
                         : "0.00"}
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-red-700">
-                      {sortedRows.reduce((s, r) => s + r.cancelledTrials, 0)}
+                      {sortedRows.reduce((s, r) => s + r.cancelledTrials, 0).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-gray-900">
-                      {sortedRows.reduce((s, r) => s + r.workingDays, 0)}
+                      {sortedRows.reduce((s, r) => s + r.workingDays, 0).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-200 text-green-900">
-                        {totalTrials}
+                        {totalTrials.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-bold">
@@ -566,7 +563,7 @@ export default function OpeningDashboard() {
 
         {/* ── Footer note ── */}
         <p className="text-xs text-gray-500 text-center pb-4">
-          Free Trials sourced from payment records · Working Days &amp; Calls from CloudTalk (matched by email) ·
+          Free Trials sourced from payment records · Working Days &amp; Calls from CloudTalk ·
           Cancellations from Stripe · Data cached for 5 minutes
         </p>
       </div>
