@@ -216,8 +216,17 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
   try {
     const payload = req.body;
 
-    // Log the raw payload for debugging
-    console.log("[CloudTalk Webhook] Received payload:", JSON.stringify(payload, null, 2).substring(0, 1000));
+    // Log the raw payload for debugging — FULL payload for agent matching diagnosis
+    console.log("[CloudTalk Webhook] FULL payload:", JSON.stringify(payload, null, 2));
+    // Log all agent-related fields specifically for diagnosis
+    const _call = payload?.Call ?? payload?.call ?? payload;
+    console.log("[CloudTalk Webhook] Agent field candidates:", JSON.stringify({
+      "payload.agent": payload?.agent,
+      "payload.agent_id": payload?.agent_id,
+      "call.Agent": _call?.Agent,
+      "call.agent_id": _call?.agent_id,
+      "call.agentId": _call?.agentId,
+    }, null, 2));
 
     // CloudTalk sends different event types — we only care about call_ended
     // The event type can be in different fields depending on CloudTalk version
