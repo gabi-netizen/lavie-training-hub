@@ -272,23 +272,12 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.agentId ||
       call?.Agent?.id;
 
-<<<<<<< Updated upstream
-    // Extract agent name — new format sends payload.agent_name (flat), old format used payload.agent.name (object)
-    const cloudtalkAgentName: string | null =
-      payload?.agent_name ||     // NEW format: flat field
-      payload?.agent?.name ||    // OLD format: nested agent object (fallback)
-      payload?.agent?.full_name ||
-      (payload?.agent?.firstname ? `${payload.agent.firstname} ${payload.agent.lastname ?? ""}`.trim() : null) ||
-      call?.Agent?.name ||
-      call?.Agent?.full_name ||
-      call?.agentName ||
-      call?.agent_name ||
-=======
     // Extract agent name — bulletproof handler for all CloudTalk payload formats:
     // CloudTalk workflow automations can send agent as:
     //   1. An object: { id, first_name, last_name, email, name, full_name, ... }
     //   2. A plain string: "John Smith" (when using {{ event.properties.agent.first_name }} {{ event.properties.agent.last_name }})
     //   3. A stringified object: "[object Object]" (misconfigured template — we strip this)
+    //   4. A flat string field: payload.agent_name (new CloudTalk format)
     const extractAgentName = (raw: unknown): string | null => {
       if (!raw) return null;
       // If it's an object, try all known name fields
@@ -310,13 +299,13 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
         return cleaned.length > 0 ? cleaned : null;
       }
       return null;
-    }
+    };
     const cloudtalkAgentName: string | null =
-      extractAgentName(payload?.agent) ||
+      (typeof payload?.agent_name === "string" ? payload.agent_name.trim() || null : null) || // flat field (new format)
+      extractAgentName(payload?.agent) ||   // nested object or string (old format)
       extractAgentName(call?.Agent) ||
       (typeof call?.agentName === "string" ? call.agentName.trim() || null : null) ||
       (typeof call?.agent_name === "string" ? call.agent_name.trim() || null : null) ||
->>>>>>> Stashed changes
       null;
 
     console.log(`[CloudTalk Webhook] Agent info received — agent_id: ${payload?.agent_id ?? "(none)"}, agent_name: ${payload?.agent_name ?? "(none)"}, resolved agentId: ${agentId}, resolved agentName: ${cloudtalkAgentName}`);
