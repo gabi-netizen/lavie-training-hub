@@ -725,7 +725,12 @@ export default function CallCenterDashboard() {
                         {getInitials(call.agentName)}
                       </div>
                       <div>
-                        <div className="text-[13px] font-medium text-gray-900 truncate">{call.agentName || "—"}</div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); goToCall(call.id); }}
+                          className="text-[13px] font-medium text-blue-600 hover:underline truncate text-left"
+                        >
+                          {call.agentName || "—"}
+                        </button>
                         <div className="text-[11px] text-gray-600 capitalize">{call.agentTeam || ""}</div>
                       </div>
                     </div>

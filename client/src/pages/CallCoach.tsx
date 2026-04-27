@@ -2438,7 +2438,16 @@ type TabId = typeof VALID_TABS[number];
 export default function CallCoach() {
   const { user, loading, isAuthenticated } = useAuth();
   const [location] = useLocation();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Read analysisId from URL query param (?analysisId=X) to auto-open a call
+  const getAnalysisIdFromUrl = (): number | null => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("analysisId");
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return !isNaN(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const [selectedId, setSelectedId] = useState<number | null>(getAnalysisIdFromUrl);
 
   // Read tab from URL query param (?tab=team etc.)
   const getTabFromUrl = (): TabId => {
@@ -2449,9 +2458,13 @@ export default function CallCoach() {
 
   const [activeTab, setActiveTab] = useState<TabId>(getTabFromUrl);
 
-  // Sync tab when URL changes (e.g. from TopNav dropdown)
+  // Sync tab and analysisId when URL changes (e.g. from TopNav dropdown or Call Center Dashboard link)
   useEffect(() => {
     setActiveTab(getTabFromUrl());
+    const idFromUrl = getAnalysisIdFromUrl();
+    if (idFromUrl !== null) {
+      setSelectedId(idFromUrl);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
