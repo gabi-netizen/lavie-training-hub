@@ -337,6 +337,7 @@ export const dashboardRouter = router({
           overallScore: callAnalyses.overallScore,
           callType: callAnalyses.callType,
           customerName: callAnalyses.customerName,
+          contactName: callAnalyses.contactName,
           contactId: callAnalyses.contactId,
           createdAt: callAnalyses.createdAt,
           source: callAnalyses.source,
@@ -357,6 +358,7 @@ export const dashboardRouter = router({
       let enrichedRows = rows.map((row) => ({
         ...row,
         contactPhone: null as string | null,
+        contactName: row.contactName ?? null,
       }));
 
       const contactIds = rows.filter((r) => r.contactId).map((r) => r.contactId!);
@@ -372,6 +374,7 @@ export const dashboardRouter = router({
             ...row,
             contactPhone: contact?.phone ?? null,
             customerName: row.customerName || contact?.name || null,
+            contactName: row.contactName ?? null,
           };
         });
       }
@@ -389,6 +392,7 @@ export const dashboardRouter = router({
           callType: r.callType,
           callTypeLabel: callTypeLabel(r.callType),
           customerName: r.customerName,
+          contactName: (r as any).contactName ?? null,
           contactId: r.contactId,
           contactPhone: r.contactPhone,
           createdAt: r.createdAt,

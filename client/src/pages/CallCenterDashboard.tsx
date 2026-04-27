@@ -710,11 +710,11 @@ export default function CallCenterDashboard() {
                       </div>
                     </div>
 
-                    {/* Contact */}
-                    <div>
-                      <div className="text-[13px] font-medium text-gray-900 truncate">{call.customerName || "—"}</div>
-                      <div className="text-xs text-gray-600 truncate">{call.contactPhone || ""}</div>
-                    </div>
+                     {/* Contact */}
+                     <div>
+                       <div className="text-[13px] font-medium text-gray-900 truncate">{call.contactName || call.customerName || "—"}</div>
+                       <div className="text-xs text-gray-600 truncate">{call.contactPhone || ""}</div>
+                     </div>
 
                     {/* Agent */}
                     <div className="flex items-center gap-2.5">

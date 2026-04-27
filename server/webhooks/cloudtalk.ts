@@ -300,9 +300,9 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.agentEmail ||
       null;
 
-    // Extract contact name from CloudTalk payload (new field)
+    // Extract contact name from CloudTalk payload (new field: "contact")
     const contactName: string | null =
-      payload?.contact_name ||
+      payload?.contact ||
       null;
 
     const callerPhone =
