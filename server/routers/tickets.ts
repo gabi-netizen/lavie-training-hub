@@ -136,7 +136,7 @@ export const ticketsRouter = router({
         status: z.string().optional(),
         customerStatus: z.string().optional(),
         search: z.string().optional(),
-        dateRange: z.enum(["today", "7days", "30days", "all"]).default("all"),
+        dateRange: z.enum(["today", "7days", "30days", "this_month", "all"]).default("this_month"),
         sortBy: z.enum(["newest", "oldest", "priority"]).default("newest"),
       })
     )
@@ -199,6 +199,11 @@ export const ticketsRouter = router({
             cutoff = todayStart.getTime();
           } else if (input.dateRange === "7days") {
             cutoff = now - 7 * 24 * 60 * 60 * 1000;
+          } else if (input.dateRange === "this_month") {
+            const monthStart = new Date();
+            monthStart.setDate(1);
+            monthStart.setHours(0, 0, 0, 0);
+            cutoff = monthStart.getTime();
           } else {
             cutoff = now - 30 * 24 * 60 * 60 * 1000;
           }

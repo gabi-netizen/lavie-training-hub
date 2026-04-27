@@ -138,7 +138,7 @@ export default function SupportTickets() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<"today" | "7days" | "30days" | "all">("all");
+  const [dateRange, setDateRange] = useState<"today" | "7days" | "30days" | "this_month" | "all">("this_month");
   const [search, setSearch] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -333,14 +333,15 @@ export default function SupportTickets() {
 
             {/* Date Range */}
             <Select value={dateRange} onValueChange={(v) => setDateRange(v as any)}>
-              <SelectTrigger className="h-9 w-[120px] text-sm">
+              <SelectTrigger className="h-9 w-[140px] text-sm">
                 <SelectValue placeholder="Date" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="this_month">Current Month</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="7days">Last 7 Days</SelectItem>
                 <SelectItem value="30days">Last 30 Days</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -391,11 +392,11 @@ export default function SupportTickets() {
               </SelectContent>
             </Select>
             <Select value={dateRange} onValueChange={(v) => setDateRange(v as any)}>
-              <SelectTrigger className="h-9 w-[110px] text-sm">
+              <SelectTrigger className="h-9 w-[130px] text-sm">
                 <SelectValue placeholder="Date" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="this_month">Current Month</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="7days">Last 7 Days</SelectItem>
                 <SelectItem value="30days">Last 30 Days</SelectItem>

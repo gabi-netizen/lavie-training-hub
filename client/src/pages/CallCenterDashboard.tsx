@@ -67,7 +67,7 @@ const DEFAULT_FILTERS = {
   team: undefined as "opening" | "retention" | undefined,
   scoreMin: 0,
   scoreMax: 100,
-  dateRange: "today",
+  dateRange: "this_month",
   callType: "all",
   search: "",
 };
