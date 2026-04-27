@@ -168,6 +168,7 @@ export const contactsRouter = router({
         trialKit: z.string().optional(),
         callNotes: z.string().optional(),
         address: z.string().optional(),
+        starterKit: z.string().nullable().optional(),
         // For email notifications
         notifyEmail: z.string().optional(),
         previousStatus: z.string().optional(),

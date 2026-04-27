@@ -454,6 +454,21 @@ export default function ContactCard() {
             )}
           </div>
 
+          {/* Starter Kit */}
+          <div className="p-5 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Starter Kit</p>
+            <select
+              value={contact.starterKit ?? ""}
+              onChange={(e) =>
+                updateMutation.mutate({ id: contact.id, starterKit: e.target.value || null })
+              }
+              className="w-full text-sm border-2 border-gray-900 rounded-lg px-3 py-2 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option value="">— Select kit —</option>
+              <option value="Matinika + Ashkara">Matinika + Ashkara</option>
+              <option value="Matinika + Oulala">Matinika + Oulala</option>
+            </select>
+          </div>
           {/* Stripe Customer ID */}
           {contact.stripeCustomerId && (
             <div className="p-5 border-b border-gray-100">

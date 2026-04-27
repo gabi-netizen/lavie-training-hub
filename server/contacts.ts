@@ -170,7 +170,7 @@ export async function getContact(id: number) {
 // ─── Update Contact ────────────────────────────────────────────────────────────
 export async function updateContact(
   id: number,
-  updates: Partial<Pick<Contact, "name" | "phone" | "email" | "status" | "agentName" | "agentEmail" | "leadType" | "callbackAt" | "importedNotes" | "skinType" | "concern" | "routine" | "trialKit" | "callNotes" | "address">>
+  updates: Partial<Pick<Contact, "name" | "phone" | "email" | "status" | "agentName" | "agentEmail" | "leadType" | "callbackAt" | "importedNotes" | "skinType" | "concern" | "routine" | "trialKit" | "callNotes" | "address" | "starterKit">>
 ) {
   const db = await getDb();
   if (!db) return null;

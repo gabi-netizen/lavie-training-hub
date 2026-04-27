@@ -178,6 +178,8 @@ export const contacts = mysqlTable("contacts", {
   address: text("address"),
   /** Stripe Customer ID — set automatically when a Stripe payment succeeds for this contact's email */
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  /** Starter kit selected for this contact (e.g. "Matinika + Ashkara") */
+  starterKit: varchar("starterKit", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
