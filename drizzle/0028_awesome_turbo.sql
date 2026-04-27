@@ -1,1 +1,0 @@
-ALTER TABLE `users` MODIFY COLUMN `openId` varchar(64) NOT NULL;

@@ -211,13 +211,6 @@
       "when": 1745744400000,
       "tag": "0029_support_tickets",
       "breakpoints": true
-    },
-    {
-      "idx": 30,
-      "version": "5",
-      "when": 1777308659482,
-      "tag": "0030_medical_strong_guy",
-      "breakpoints": true
     }
   ]
 }
