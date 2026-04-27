@@ -291,19 +291,7 @@ export default function OpeningDashboard() {
 
         {/* ── Summary Stats Cards ── */}
         {!isLoading && sortedRows.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {/* Total Calls */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <Phone className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {sortedRows.reduce((s, r) => s + r.dailyOpenings, 0).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-600 font-medium">Total Calls</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* Active Agents */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">

@@ -414,16 +414,30 @@ export const openingDashboardRouter = router({
       );
 
       // ── 1. Load Opening agents from users table ──────────────────────────
+      // Fallback list used if DB has no team='opening' rows yet
+      const FALLBACK_OPENING_AGENTS: { name: string; email: string }[] = [
+        { email: "debbie.f@lavielabs.com",  name: "Debbie Holmes" },
+        { email: "matthew.h@lavielabs.com", name: "Matt Holeman" },
+        { email: "ryan.s@lavielabs.com",    name: "Ryan Spence" },
+        { email: "shola.m@lavielabs.com",   name: "Shola Marie" },
+        { email: "alan.c@lavielabs.com",    name: "Alan Campbell" },
+        { email: "angel.b@lavielabs.com",   name: "Angel Breheny" },
+        { email: "nisha.g@lavielabs.com",   name: "Nisha Greenwood" },
+        { email: "darrell@lavielabs.com",   name: "Darrel Loynes" },
+        { email: "harrison.j@lavielabs.com",name: "Harrison Joslin" },
+        { email: "paige.t@lavielabs.com",   name: "Paige Taylor" },
+        { email: "ava.m@lavielabs.com",     name: "Ava Monroe" },
+        { email: "yasmeen@lavielabs.com",   name: "Yasmeen El-Mansoob" },
+        { email: "ashley.w@lavielabs.com",  name: "Ash Williams" },
+      ];
       const db = await getDb();
       let openingAgents: { name: string; email: string }[] = [];
-
       if (db) {
         try {
           const agentRows = await db
             .select({ name: users.name, email: users.email })
             .from(users)
             .where(eq(users.team, "opening"));
-
           openingAgents = agentRows
             .filter((r) => r.email)
             .map((r) => ({
@@ -433,6 +447,11 @@ export const openingDashboardRouter = router({
         } catch (err: any) {
           console.error("[OpeningDashboard] Users query error:", err?.message ?? err);
         }
+      }
+      // If DB has no opening agents yet, use the fallback hardcoded list
+      if (openingAgents.length === 0) {
+        console.warn("[OpeningDashboard] No opening agents in DB, using fallback list");
+        openingAgents = FALLBACK_OPENING_AGENTS;
       }
 
       // ── 2. Free Trials from form_submissions DB ──────────────────────────
