@@ -28,6 +28,104 @@ import {
   updateCallAnalysisStatus,
 } from "../callAnalysis";
 
+// ─── CloudTalk API credentials ────────────────────────────────────────────────
+const CLOUDTALK_API_ACCOUNT_ID = "FWK07WNVLBO@LVITAPZYLVI";
+const CLOUDTALK_API_KEY = "VSblM64so.Wort7niA8KMKRS7EHGO@fPVJ86Cs880HmJE";
+const CLOUDTALK_API_BASE = "https://my.cloudtalk.io/api";
+
+// ─── Fetch call details from CloudTalk API using call_uuid ───────────────────
+/**
+ * Falls back to the CloudTalk REST API when the webhook payload has a broken
+ * agent field (e.g., agent = "[object Object]" or agent.id is undefined).
+ * Returns { agentId, agentName, agentEmail } or null if the API call fails.
+ */
+async function fetchAgentFromCloudTalkApi(callUuid: string): Promise<{
+  agentId: string | null;
+  agentName: string | null;
+  agentEmail: string | null;
+} | null> {
+  const credentials = Buffer.from(`${CLOUDTALK_API_ACCOUNT_ID}:${CLOUDTALK_API_KEY}`).toString("base64");
+  const headers = {
+    Authorization: `Basic ${credentials}`,
+    "Content-Type": "application/json",
+  };
+
+  // Try the primary endpoint: GET /calls/{call_uuid}
+  const endpoints = [
+    `${CLOUDTALK_API_BASE}/calls/${callUuid}.json`,
+    `${CLOUDTALK_API_BASE}/calls/${callUuid}`,
+  ];
+
+  for (const url of endpoints) {
+    try {
+      console.log(`[CloudTalk Webhook] Fetching call details from API: ${url}`);
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        console.warn(`[CloudTalk Webhook] API responded ${res.status} for ${url}`);
+        continue;
+      }
+      const json = await res.json() as any;
+      console.log(`[CloudTalk Webhook] API response for call ${callUuid}:`, JSON.stringify(json, null, 2).substring(0, 800));
+
+      // CloudTalk API response structures vary — try multiple paths
+      const callData = json?.responseData ?? json?.data ?? json?.call ?? json;
+      const agentData =
+        callData?.agent ??
+        callData?.Agent ??
+        callData?.user ??
+        callData?.User ??
+        json?.agent ??
+        json?.Agent ??
+        null;
+
+      // If agentData is a string like "[object Object]", skip it
+      if (agentData && typeof agentData === "object") {
+        const agentId =
+          String(agentData.id ?? agentData.user_id ?? agentData.agentId ?? "").trim() || null;
+        const agentName =
+          (agentData.name ??
+            agentData.full_name ??
+            (agentData.firstname
+              ? `${agentData.firstname} ${agentData.lastname ?? ""}`.trim()
+              : null)) ?? null;
+        const agentEmail = agentData.email ?? null;
+
+        if (agentId || agentName) {
+          console.log(`[CloudTalk Webhook] Agent info from API fallback — id: ${agentId}, name: ${agentName}, email: ${agentEmail}`);
+          return {
+            agentId: agentId ? String(agentId) : null,
+            agentName: agentName ? String(agentName) : null,
+            agentEmail: agentEmail ? String(agentEmail) : null,
+          };
+        }
+      }
+
+      // Some API responses embed agent info at the top level of callData
+      const topLevelAgentId =
+        String(callData?.agent_id ?? callData?.agentId ?? "").trim() || null;
+      const topLevelAgentName =
+        callData?.agent_name ?? callData?.agentName ?? null;
+      const topLevelAgentEmail =
+        callData?.agent_email ?? callData?.agentEmail ?? null;
+
+      if (topLevelAgentId || topLevelAgentName) {
+        console.log(`[CloudTalk Webhook] Agent info from API fallback (top-level) — id: ${topLevelAgentId}, name: ${topLevelAgentName}`);
+        return {
+          agentId: topLevelAgentId,
+          agentName: topLevelAgentName ? String(topLevelAgentName) : null,
+          agentEmail: topLevelAgentEmail ? String(topLevelAgentEmail) : null,
+        };
+      }
+
+      console.warn(`[CloudTalk Webhook] API returned data but no agent info found for call ${callUuid}`);
+    } catch (err) {
+      console.warn(`[CloudTalk Webhook] API fetch failed for ${url}:`, err);
+    }
+  }
+
+  return null;
+}
+
 // ─── Normalize phone for matching ─────────────────────────────────────────────
 function normalizePhone(phone: string | number): string {
   return String(phone).replace(/[\s\-().+]/g, "");
@@ -211,6 +309,20 @@ async function addAutoCallNote(
   });
 }
 
+// ─── Helper: detect a broken agent field ─────────────────────────────────────
+/**
+ * Returns true when the agent value from the webhook payload is unusable:
+ *   - It is the literal string "[object Object]"
+ *   - It is a non-object (string/number) that cannot carry id/name sub-fields
+ *   - It is null / undefined
+ */
+function isAgentFieldBroken(agentRaw: unknown): boolean {
+  if (agentRaw === null || agentRaw === undefined) return true;
+  if (typeof agentRaw === "string") return true; // includes "[object Object]"
+  if (typeof agentRaw === "number") return true;
+  return false;
+}
+
 // ─── Main webhook handler ─────────────────────────────────────────────────────
 export async function handleCloudTalkWebhook(req: Request, res: Response) {
   try {
@@ -263,31 +375,85 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.recordingUrl ||
       call?.recording;
 
-    const agentId =
-      payload?.agent?.id ||     // CloudTalk v2: agent object
-      payload?.agent?.user_id ||
-      call?.agent_id ||
-      call?.agentId ||
-      call?.Agent?.id ||
-      payload?.agent_id;
+    // ── Agent extraction with broken-field detection ──────────────────────────
+    // CloudTalk sometimes serialises the agent object as the string "[object Object]"
+    // instead of a proper JSON object. Detect this early and fall back to the API.
+    const agentRaw = payload?.agent ?? call?.Agent ?? null;
+    const agentFieldBroken = isAgentFieldBroken(agentRaw);
 
-    // Extract agent name directly from CloudTalk payload
-    const cloudtalkAgentName: string | null =
-      payload?.agent?.name ||
-      payload?.agent?.full_name ||
-      (payload?.agent?.firstname ? `${payload.agent.firstname} ${payload.agent.lastname ?? ""}`.trim() : null) ||
-      call?.Agent?.name ||
-      call?.Agent?.full_name ||
-      call?.agentName ||
-      call?.agent_name ||
-      null;
+    let agentId: string | null = null;
+    let cloudtalkAgentName: string | null = null;
+    let cloudtalkAgentEmail: string | null = null;
+    let agentInfoSource: "payload" | "api_fallback" | "none" = "none";
 
-    // Extract agent email from CloudTalk payload
-    const cloudtalkAgentEmail: string | null =
-      payload?.agent?.email ||
-      call?.Agent?.email ||
-      call?.agentEmail ||
-      null;
+    if (!agentFieldBroken) {
+      // Happy path: payload contains a proper agent object
+      agentId =
+        String(
+          payload?.agent?.id ??
+          payload?.agent?.user_id ??
+          call?.agent_id ??
+          call?.agentId ??
+          call?.Agent?.id ??
+          payload?.agent_id ??
+          ""
+        ).trim() || null;
+
+      cloudtalkAgentName =
+        payload?.agent?.name ??
+        payload?.agent?.full_name ??
+        (payload?.agent?.firstname
+          ? `${payload.agent.firstname} ${payload.agent.lastname ?? ""}`.trim()
+          : null) ??
+        call?.Agent?.name ??
+        call?.Agent?.full_name ??
+        call?.agentName ??
+        call?.agent_name ??
+        null;
+
+      cloudtalkAgentEmail =
+        payload?.agent?.email ??
+        call?.Agent?.email ??
+        call?.agentEmail ??
+        null;
+
+      if (agentId || cloudtalkAgentName) {
+        agentInfoSource = "payload";
+        console.log(`[CloudTalk Webhook] Agent info from payload — id: ${agentId}, name: ${cloudtalkAgentName}, email: ${cloudtalkAgentEmail}`);
+      }
+    } else {
+      console.warn(
+        `[CloudTalk Webhook] Agent field is broken (value: ${JSON.stringify(agentRaw)}) — will fall back to CloudTalk API`
+      );
+    }
+
+    // Fall back to the CloudTalk API if agent info is missing or broken
+    if (agentInfoSource === "none" && callId) {
+      const apiAgent = await fetchAgentFromCloudTalkApi(String(callId));
+      if (apiAgent) {
+        agentId = apiAgent.agentId;
+        cloudtalkAgentName = apiAgent.agentName;
+        cloudtalkAgentEmail = apiAgent.agentEmail;
+        agentInfoSource = "api_fallback";
+        console.log(`[CloudTalk Webhook] Agent info source: API fallback — id: ${agentId}, name: ${cloudtalkAgentName}`);
+      } else {
+        console.warn(`[CloudTalk Webhook] CloudTalk API fallback returned no agent info for call ${callId}`);
+      }
+    }
+
+    // Also try fallback fields that don't depend on the agent object
+    if (!agentId) {
+      agentId =
+        String(
+          call?.agent_id ??
+          call?.agentId ??
+          payload?.agent_id ??
+          ""
+        ).trim() || null;
+    }
+
+    console.log(`[CloudTalk Webhook] Agent info source: ${agentInfoSource}`);
+    // ── End agent extraction ──────────────────────────────────────────────────
 
     const callerPhone =
       payload?.external_number ||  // CloudTalk v2 top-level
@@ -365,9 +531,9 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
     // Download recording and upload to S3
     console.log(`[CloudTalk Webhook] Downloading recording from ${recordingUrl}`);
     const { fileKey, fileUrl } = await downloadAndStoreRecording(recordingUrl, String(callId));
-    // Determine repName: prefer CloudTalk agent name from payload, fallback to user record name
+    // Determine repName: prefer CloudTalk agent name from payload/API, fallback to user record name
     const repName = cloudtalkAgentName || agent.name || null;
-    console.log(`[CloudTalk Webhook] Agent name resolved: "${repName}" (from payload: "${cloudtalkAgentName}", from user: "${agent.name}")`);
+    console.log(`[CloudTalk Webhook] Agent name resolved: "${repName}" (source: ${agentInfoSource}, from payload/API: "${cloudtalkAgentName}", from user record: "${agent.name}")`);
     // Determine initial callType based on agent team
     // Retention agents get 'other' as placeholder — AI will classify the exact type from transcript
     // Opening agents get 'cold_call' as default
