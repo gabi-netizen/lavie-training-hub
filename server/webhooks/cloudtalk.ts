@@ -293,6 +293,11 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.agentEmail ||
       null;
 
+    // Extract contact name from CloudTalk payload (new field)
+    const contactName: string | null =
+      payload?.contact_name ||
+      null;
+
     const callerPhone =
       payload?.external_number ||  // CloudTalk v2 top-level
       call?.caller_number ||
@@ -390,6 +395,8 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       contactId: contact?.id ?? null,
       callType: initialCallType,
       customerName: stripeCustomerName ?? undefined,
+      contactName: contactName ?? undefined,
+      externalNumber: callerPhone ? String(callerPhone) : undefined,
      } as any);
     console.log(`[CloudTalk Webhook] Created analysis record #${analysisId} for call ${callId}`);
 

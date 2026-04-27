@@ -1423,6 +1423,19 @@ function CallRow({
           )}
           <CallTypeBadge callType={a.callType} />
         </div>
+        {/* CONTACT: show contactName + externalNumber for webhook calls */}
+        {a.source === "webhook" && (a.contactName || a.externalNumber) && (
+          <div className="flex items-center gap-1 mt-0.5">
+            <span className="text-xs text-teal-700 font-medium">
+              {a.contactName
+                ? <>{a.contactName}{a.externalNumber && <span className="text-gray-400 font-normal"> · {a.externalNumber}</span>}</>
+                : a.externalNumber}
+            </span>
+          </div>
+        )}
+        {a.source === "webhook" && !a.contactName && !a.externalNumber && (
+          <div className="mt-0.5"><span className="text-xs text-gray-400">—</span></div>
+        )}
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           <span className="text-xs text-gray-500">{dateStr}</span>
           {/* Talk Ratio hidden until data is reliable */}
@@ -1767,6 +1780,17 @@ function ManagerDashboard({ onSelect }: { onSelect: (id: number) => void }) {
                             )}
                             <CallTypeBadge callType={a.callType} />
                           </div>
+                          {/* CONTACT: show contactName + externalNumber for webhook calls */}
+                          {(a as any).source === "webhook" && ((a as any).contactName || (a as any).externalNumber) && (
+                            <p className="text-xs text-teal-700 font-medium">
+                              {(a as any).contactName
+                                ? <>{(a as any).contactName}{(a as any).externalNumber && <span className="text-gray-400 font-normal"> · {(a as any).externalNumber}</span>}</>
+                                : (a as any).externalNumber}
+                            </p>
+                          )}
+                          {(a as any).source === "webhook" && !(a as any).contactName && !(a as any).externalNumber && (
+                            <p className="text-xs text-gray-400">—</p>
+                          )}
                           <p className="text-gray-800 text-xs">
                             {a.customerName && (a as any).source !== "webhook" && <span className="text-teal-600/80">👤 {a.customerName} · </span>}
                             {new Date(a.createdAt).toLocaleString()}

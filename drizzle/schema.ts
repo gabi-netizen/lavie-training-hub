@@ -62,6 +62,10 @@ export const callAnalyses = mysqlTable("call_analyses", {
   errorMessage: text("errorMessage"),
   /** Customer name extracted from the call transcript by AI, or manually set */
   customerName: varchar("customerName", { length: 256 }),
+  /** Contact name sent by CloudTalk webhook (payload.contact_name) */
+  contactName: varchar("contactName", { length: 256 }),
+  /** External (customer) phone number sent by CloudTalk webhook (payload.external_number) */
+  externalNumber: varchar("externalNumber", { length: 64 }),
   /** Call type — Opening team: cold_call, follow_up. Retention team: live_sub, pre_cycle_cancelled, pre_cycle_decline, end_of_instalment, from_cat, other. Legacy values kept for backward compatibility. */
   callType: mysqlEnum("callType", [
     "cold_call", "follow_up",
