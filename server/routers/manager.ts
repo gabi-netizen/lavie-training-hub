@@ -14,7 +14,7 @@ import { eq, like, or, and, desc, sql } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const AGENTS = ["Guy", "Rob", "Mitch", "Cat", "Wendy"] as const;
+export const AGENTS = ["Guy", "Rob"] as const;
 
 export const WORK_STATUSES = [
   "new",

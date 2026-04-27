@@ -12,7 +12,6 @@ import {
   getTeamDashboard,
   getAgentDashboard,
   getCallTypePerformance,
-  getOpeningDashboard,
   getBestPractices,
   getMyCoachingDashboard,
   submitFeedback,
@@ -80,19 +79,6 @@ export const callCoachRouter = router({
   getTeamDashboard: protectedProcedure.query(async () => {
     return getTeamDashboard();
   }),
-
-  /** Opening team dashboard — KPIs + per-agent stats with close rates by duration */
-  getOpeningDashboard: protectedProcedure
-    .input(z.object({
-      dateFrom: z.string().optional(), // ISO date string
-      dateTo: z.string().optional(),
-    }).optional())
-    .query(async ({ input }) => {
-      return getOpeningDashboard({
-        dateFrom: input?.dateFrom ? new Date(input.dateFrom) : undefined,
-        dateTo: input?.dateTo ? new Date(input.dateTo + "T23:59:59.999Z") : undefined,
-      });
-    }),
 
   /**
    * Called by the frontend after a successful file upload.

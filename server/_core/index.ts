@@ -10,6 +10,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
+import { handleGmailWebhook } from "../webhooks/gmail";
+import { ensureSupportTicketsTable } from "../ensureTables";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -71,6 +73,12 @@ async function startServer() {
   // CloudTalk sends POST requests here when a call ends.
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/webhooks/cloudtalk", handleCloudTalkWebhook);
+
+  // ─── Gmail Webhook ────────────────────────────────────────────────────────
+  // Google Apps Script sends POST requests here when a new email arrives
+  // in the support@lavielabs.com inbox.
+  // Must be registered BEFORE tRPC middleware.
+  app.post("/api/webhooks/gmail", handleGmailWebhook);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
   // Public endpoint — called by the payment page to initiate a Stripe payment.
@@ -156,6 +164,12 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Ensure support_tickets table exists
+    setTimeout(() => {
+      ensureSupportTicketsTable().catch((err) =>
+        console.error("[DB] Error ensuring support_tickets table:", err)
+      );
+    }, 3000);
     // Background: sync any contacts that missed CloudTalk sync during hibernation
     setTimeout(() => {
       syncUnsyncedContactsToCloudTalk().catch((err) =>

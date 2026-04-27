@@ -17,6 +17,7 @@ import CallCenterDashboard from "./pages/CallCenterDashboard";
 import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import SupportTickets from "@/pages/SupportTickets";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -26,13 +27,24 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (!loading && user && user.role !== "admin") {
+    if (loading) return;
+    // Not logged in at all — send to sign-in
+    if (!user) {
+      window.location.href = "/sign-in";
+      return;
+    }
+    // Logged in but not admin — send to training
+    if (user.role !== "admin") {
       navigate("/training");
     }
   }, [loading, user, navigate]);
 
-  // While loading auth, render nothing (avoids flash)
-  if (loading) return null;
+  // While loading auth, show a minimal loading indicator
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+    </div>
+  );
   // If not admin, render nothing (redirect happens via useEffect)
   if (!user || user.role !== "admin") return null;
 
@@ -91,6 +103,11 @@ function Router() {
         {/* Manager Command Centre — admin only */}
         <Route path={"/command-centre"}>
           {() => <AdminRoute component={ManagerDashboard} />}
+        </Route>
+
+        {/* Support Tickets — admin only */}
+        <Route path={"/support-tickets"}>
+          {() => <AdminRoute component={SupportTickets} />}
         </Route>
 
         {/* Workspace — agent calling workspace */}

@@ -436,3 +436,89 @@ export const callAttempts = mysqlTable("call_attempts", {
 
 export type CallAttempt = typeof callAttempts.$inferSelect;
 export type InsertCallAttempt = typeof callAttempts.$inferInsert;
+
+/**
+ * Incoming Gmail emails — stores emails received via the Google Apps Script webhook.
+ * Each row represents one email forwarded from the support@lavielabs.com inbox.
+ */
+export const gmailIncomingEmails = mysqlTable("gmail_incoming_emails", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Gmail message ID for deduplication */
+  messageId: varchar("messageId", { length: 256 }).notNull().unique(),
+  /** Gmail thread ID */
+  threadId: varchar("threadId", { length: 256 }),
+  /** Sender email address */
+  fromEmail: varchar("fromEmail", { length: 320 }).notNull(),
+  /** Sender display name */
+  fromName: varchar("fromName", { length: 256 }),
+  /** Email subject line */
+  subject: varchar("subject", { length: 512 }),
+  /** Plain-text body (truncated to 64KB) */
+  bodyText: text("bodyText"),
+  /** HTML body (truncated to 64KB) */
+  bodyHtml: text("bodyHtml"),
+  /** Original email date from Gmail */
+  emailDate: timestamp("emailDate"),
+  /** Processing status: received, processed, error */
+  status: mysqlEnum("status", ["received", "processed", "error"]).default("received").notNull(),
+  /** Error message if processing failed */
+  errorMessage: text("errorMessage"),
+  /** Raw JSON payload from the webhook for debugging */
+  rawPayload: text("rawPayload"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GmailIncomingEmail = typeof gmailIncomingEmails.$inferSelect;
+export type InsertGmailIncomingEmail = typeof gmailIncomingEmails.$inferInsert;
+
+/**
+ * Support Tickets — categorized emails from the Gmail webhook.
+ * Each ticket represents one incoming email that has been categorized
+ * by the rule-based engine and is tracked through the Command Centre.
+ */
+export const supportTickets = mysqlTable("support_tickets", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Reference to the gmail_incoming_emails row */
+  gmailEmailId: int("gmailEmailId"),
+  /** Gmail message ID for deduplication */
+  messageId: varchar("messageId", { length: 256 }).unique(),
+  /** Sender email address */
+  fromEmail: varchar("fromEmail", { length: 320 }).notNull(),
+  /** Sender display name */
+  fromName: varchar("fromName", { length: 256 }),
+  /** Email subject line */
+  subject: varchar("subject", { length: 512 }),
+  /** Plain-text email body */
+  body: text("body"),
+  /** When the email was originally received */
+  receivedAt: timestamp("receivedAt"),
+  /** Auto-detected category */
+  category: mysqlEnum("category", [
+    "cancellation_request",
+    "shipping_delivery_issue",
+    "payment_billing_dispute",
+    "address_update",
+    "product_feedback",
+    "agent_forwarded",
+    "system_automated",
+    "follow_up_unanswered",
+    "subscription_question",
+    "general_inquiry",
+  ]).default("general_inquiry").notNull(),
+  /** Priority based on category */
+  priority: mysqlEnum("priority", ["HIGH", "MEDIUM", "LOW"]).default("MEDIUM").notNull(),
+  /** Customer status: existing, new, internal, system */
+  customerStatus: mysqlEnum("customerStatus", ["existing", "new", "internal", "system"]).default("new").notNull(),
+  /** Ticket workflow status */
+  status: mysqlEnum("ticketStatus", ["open", "in_progress", "resolved", "closed"]).default("open").notNull(),
+  /** Agent assigned to handle this ticket */
+  assignedTo: varchar("assignedTo", { length: 256 }),
+  /** Internal notes about this ticket */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = typeof supportTickets.$inferInsert;

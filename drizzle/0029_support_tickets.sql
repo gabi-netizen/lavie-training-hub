@@ -1,0 +1,20 @@
+CREATE TABLE `support_tickets` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`gmailEmailId` int,
+	`messageId` varchar(256),
+	`fromEmail` varchar(320) NOT NULL,
+	`fromName` varchar(256),
+	`subject` varchar(512),
+	`body` text,
+	`receivedAt` timestamp,
+	`category` enum('cancellation_request','shipping_delivery_issue','payment_billing_dispute','address_update','product_feedback','agent_forwarded','system_automated','follow_up_unanswered','subscription_question','general_inquiry') NOT NULL DEFAULT 'general_inquiry',
+	`priority` enum('HIGH','MEDIUM','LOW') NOT NULL DEFAULT 'MEDIUM',
+	`customerStatus` enum('existing','new','internal','system') NOT NULL DEFAULT 'new',
+	`ticketStatus` enum('open','in_progress','resolved','closed') NOT NULL DEFAULT 'open',
+	`assignedTo` varchar(256),
+	`notes` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `support_tickets_id` PRIMARY KEY(`id`),
+	CONSTRAINT `support_tickets_messageId_unique` UNIQUE(`messageId`)
+);

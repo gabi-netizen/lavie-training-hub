@@ -17,15 +17,19 @@ import {
   Mail,
   ChevronDown,
   ChevronUp,
-  Flame,
-  Zap,
-  TrendingUp,
   FileText,
   CheckSquare,
   Square,
   X,
   SlidersHorizontal,
   Download,
+  Users,
+  AlertTriangle,
+  ShieldCheck,
+  Handshake,
+  Clock,
+  CalendarPlus,
+  Inbox,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,10 +112,10 @@ function formatCurrency(amount: number | null | undefined, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }
 
-const AGENTS = ["Guy", "Rob", "Mitch", "Cat", "Wendy"];
+const AGENTS = ["Guy", "Rob"];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Notes Cell — inline note editor
+// Notes Cell — inline note editor (for Agent Note column)
 // ─────────────────────────────────────────────────────────────────────────────
 function NotesCell({
   managerNote,
@@ -128,7 +132,7 @@ function NotesCell({
   const [editValue, setEditValue] = useState(managerNote || "");
   const [editing, setEditing] = useState(false);
 
-  const displayText = managerNote || agentNote || "";
+  const displayText = agentNote || "";
 
   return (
     <div className="relative">
@@ -141,10 +145,10 @@ function NotesCell({
           title={displayText || undefined}
           className="flex items-start gap-1 text-left w-full group"
         >
-          <span className="text-xs text-gray-600 truncate max-w-[180px] block leading-snug">
+          <span className="text-sm text-gray-800 truncate max-w-[200px] block leading-snug">
             {displayText || <span className="text-gray-400 italic">Add note...</span>}
           </span>
-          <FileText className="h-3 w-3 text-gray-400 group-hover:text-blue-400 shrink-0 mt-0.5" />
+          <FileText className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-400 shrink-0 mt-0.5" />
         </button>
       )}
 
@@ -156,7 +160,7 @@ function NotesCell({
           {editing ? (
             <div>
               <textarea
-                className="w-full text-xs border border-gray-200 rounded p-1.5 resize-none h-16 focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800"
+                className="w-full text-sm border border-gray-200 rounded p-1.5 resize-none h-16 focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 autoFocus
@@ -187,13 +191,13 @@ function NotesCell({
           ) : (
             <div>
               {agentNote && (
-                <div className="mb-2 p-2 bg-amber-50 rounded text-xs text-amber-800 border border-amber-100">
+                <div className="mb-2 p-2 bg-amber-50 rounded text-sm text-amber-800 border border-amber-100">
                   <p className="font-semibold text-amber-500 uppercase text-[10px] mb-0.5">Agent Note</p>
                   <p>{agentNote}</p>
                 </div>
               )}
               {managerNote && (
-                <div className="mb-2 p-2 bg-blue-50 rounded text-xs text-blue-800 border border-blue-100">
+                <div className="mb-2 p-2 bg-blue-50 rounded text-sm text-blue-800 border border-blue-100">
                   <p className="font-semibold text-blue-500 uppercase text-[10px] mb-0.5">Manager Note</p>
                   <p>{managerNote}</p>
                 </div>
@@ -366,6 +370,26 @@ export default function ManagerDashboard() {
     return { total, unassigned, urgent, retained, doneDeal, futureDeal, doneDealValue, futureDealValue, newToday };
   }, [leads, leadsData]);
 
+  // Compute agent workload cards data from leads
+  const agentCardData = useMemo(() => {
+    return AGENTS.map((agent) => {
+      const agentLeads = allLeads.filter((l: any) => l.assignedAgent === agent);
+      const closings = agentLeads.filter((l: any) =>
+        ["retained", "done_deal"].includes(l.workStatus)
+      );
+      const subClosings = closings.filter((l: any) => l.leadCategory !== "installment").length;
+      const instalmentClosings = closings.filter((l: any) => l.leadCategory === "installment").length;
+      const totalAmount = closings.reduce((sum: number, l: any) => sum + (l.monthlyAmount || 0), 0);
+      return {
+        agent,
+        closings: closings.length,
+        subClosings,
+        instalmentClosings,
+        totalAmount,
+      };
+    });
+  }, [allLeads]);
+
   // Export current filtered leads to CSV
   const exportToCSV = () => {
     if (!leads.length) {
@@ -374,7 +398,7 @@ export default function ManagerDashboard() {
     }
     const headers = [
       "Name", "Email", "Phone", "Agent", "Work Status", "Lead Type",
-      "Date", "Total Spend", "Currency", "Cycles", "Manager Note", "Agent Note",
+      "Date", "Total Spend", "Currency", "Cycles", "Customer Note", "Agent Note",
     ];
     const rows = leads.map((l: any) => [
       l.customerName ?? "",
@@ -406,10 +430,10 @@ export default function ManagerDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-sm sm:text-base font-bold text-gray-900 truncate">
+          <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
             Manager Command Centre
           </h1>
-          <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden sm:block">
+          <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">
             Retention Lead Management &middot; Zoho Billing
           </p>
         </div>
@@ -419,9 +443,9 @@ export default function ManagerDashboard() {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="gap-1 text-xs h-8 px-2"
+            className="gap-1 text-sm h-9 px-3"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">{isFetching ? "Loading..." : "Refresh"}</span>
           </Button>
           <Button
@@ -429,91 +453,146 @@ export default function ManagerDashboard() {
             size="sm"
             onClick={exportToCSV}
             disabled={!leads.length}
-            className="gap-1 text-xs h-8 px-2"
+            className="gap-1 text-sm h-9 px-3"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="bg-white border-b border-gray-100 px-3 sm:px-6 py-2 overflow-x-auto">
-        <div className="flex items-center gap-3 sm:gap-6 text-xs min-w-max">
-          <span className="text-gray-600">
-            <span className="font-bold text-gray-800">{stats.total}</span> total
-          </span>
-          <span className="text-orange-600">
-            <span className="font-bold">{stats.unassigned}</span> unassigned
-          </span>
-          <span className="text-red-600">
-            <span className="font-bold">{stats.urgent}</span> urgent
-          </span>
-          <span className="text-green-600">
-            <span className="font-bold">{stats.retained}</span> retained
-          </span>
-          <span className="text-emerald-700">
-            <span className="font-bold">{stats.doneDeal}</span> done deal
-          </span>
-          {stats.futureDeal > 0 && (
-            <span className="text-indigo-700">
-              <span className="font-bold">{stats.futureDeal}</span> future deal
-            </span>
-          )}
-          {/* New Today badge */}
+      {/* Stats Cards */}
+      <div className="px-3 sm:px-6 py-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {/* Total */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xs text-gray-500 font-medium">Total</p>
+            </div>
+          </div>
+          {/* Unassigned */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+              <Inbox className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.unassigned}</p>
+              <p className="text-xs text-gray-500 font-medium">Unassigned</p>
+            </div>
+          </div>
+          {/* Urgent */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.urgent}</p>
+              <p className="text-xs text-gray-500 font-medium">Urgent</p>
+            </div>
+          </div>
+          {/* Retained */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+              <ShieldCheck className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.retained}</p>
+              <p className="text-xs text-gray-500 font-medium">Retained</p>
+            </div>
+          </div>
+          {/* Done Deal */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+              <Handshake className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.doneDeal}</p>
+              <p className="text-xs text-gray-500 font-medium">Done Deal</p>
+            </div>
+          </div>
+          {/* Future Deal */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+              <Clock className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.futureDeal}</p>
+              <p className="text-xs text-gray-500 font-medium">Future Deal</p>
+            </div>
+          </div>
+          {/* New Today */}
           <button
             onClick={() => {
               setDateRangeFilter("today");
               setLeadStatusFilter("new");
             }}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all border ${
-              stats.newToday > 0
-                ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 cursor-pointer"
-                : "bg-gray-50 text-gray-500 border-gray-200 cursor-default"
-            }`}
+            className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 hover:border-blue-300 transition-colors text-left"
             title="Click to show only today's new unassigned leads"
           >
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-            <span className="font-bold">{stats.newToday}</span> new today
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 relative">
+              <CalendarPlus className="h-5 w-5 text-blue-600" />
+              {stats.newToday > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+              )}
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats.newToday}</p>
+              <p className="text-xs text-gray-500 font-medium">New Today</p>
+            </div>
           </button>
-          {/* Agent workload */}
-          <div className="hidden sm:flex items-center gap-3 ml-2 border-l border-gray-200 pl-3">
-            {(workloadData?.workload || []).map((w: any) => (
-              <span key={w.agent} className="text-[11px] text-gray-600">
-                <span className="font-bold text-gray-800">{w.agent}</span>
-                <span className="text-gray-500 ml-1">{w.active} active</span>
-                {w.retained > 0 && (
-                  <span className="text-green-600 ml-1">{w.retained} retained</span>
-                )}
-                {w.doneDeal > 0 && (
-                  <span className="text-emerald-700 ml-1">{w.doneDeal} done</span>
-                )}
-              </span>
-            ))}
-          </div>
+        </div>
+      </div>
+
+      {/* Agent Workload Cards — Today */}
+      <div className="px-3 sm:px-6 pb-4">
+        <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+          Agent Workload <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Today</span>
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 max-w-lg">
+          {agentCardData.map((card) => (
+            <div
+              key={card.agent}
+              className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center"
+            >
+              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full mb-2">Today</span>
+              <p className="text-lg font-bold text-gray-900 mb-1">{card.agent}</p>
+              <p className="text-3xl font-bold text-gray-900">{card.closings}</p>
+              <p className="text-xs text-gray-500 font-medium mt-0.5">closings</p>
+              <p className="text-xs text-gray-600 mt-2">
+                {card.subClosings} sub / {card.instalmentClosings} instalment
+              </p>
+              <p className="text-xl font-bold text-green-600 mt-2">
+                {formatCurrency(card.totalAmount)}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-2">
-        <div className="flex items-center gap-2">
-          <div className="relative w-48 shrink-0">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500" />
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-52 shrink-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <Input
               placeholder="Search..."
               value={search}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-              className="pl-7 h-7 text-xs w-full"
+              className="pl-8 h-9 text-sm w-full"
             />
           </div>
           {/* Mobile filter toggle */}
           <Button
             variant="outline"
             size="sm"
-            className="sm:hidden h-9 px-3 gap-1.5 text-xs shrink-0"
+            className="sm:hidden h-9 px-3 gap-1.5 text-sm shrink-0"
             onClick={() => setShowMobileFilters(!showMobileFilters)}
           >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <SlidersHorizontal className="h-4 w-4" />
             Filters
             {[agentFilter, leadTypeFilter, statusFilter, leadStatusFilter].filter(
               (v) => v !== "all"
@@ -528,9 +607,9 @@ export default function ManagerDashboard() {
             )}
           </Button>
           {/* Desktop: all filters inline */}
-          <div className="hidden sm:flex items-center gap-2 flex-wrap">
+          <div className="hidden sm:flex items-center gap-2.5 flex-wrap">
             <Select value={agentFilter} onValueChange={setAgentFilter}>
-              <SelectTrigger className="h-7 w-28 text-xs">
+              <SelectTrigger className="h-9 w-32 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="All Agents" />
               </SelectTrigger>
               <SelectContent>
@@ -543,7 +622,7 @@ export default function ManagerDashboard() {
               </SelectContent>
             </Select>
             <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
-              <SelectTrigger className="h-7 w-32 text-xs">
+              <SelectTrigger className="h-9 w-36 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="Lead Status" />
               </SelectTrigger>
               <SelectContent>
@@ -553,7 +632,7 @@ export default function ManagerDashboard() {
               </SelectContent>
             </Select>
             <Select value={leadTypeFilter} onValueChange={setLeadTypeFilter}>
-              <SelectTrigger className="h-7 w-44 text-xs">
+              <SelectTrigger className="h-9 w-48 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="All Lead Types" />
               </SelectTrigger>
               <SelectContent>
@@ -566,7 +645,7 @@ export default function ManagerDashboard() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-7 w-36 text-xs">
+              <SelectTrigger className="h-9 w-40 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="Work Status" />
               </SelectTrigger>
               <SelectContent>
@@ -582,7 +661,7 @@ export default function ManagerDashboard() {
               value={dateRangeFilter}
               onValueChange={(v) => setDateRangeFilter(v as any)}
             >
-              <SelectTrigger className="h-7 w-32 text-xs">
+              <SelectTrigger className="h-9 w-36 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="This Month" />
               </SelectTrigger>
               <SelectContent>
@@ -590,7 +669,7 @@ export default function ManagerDashboard() {
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="yesterday">Yesterday</SelectItem>
                 <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="custom">Custom Range...</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
                 <SelectItem value="all">All Time</SelectItem>
               </SelectContent>
             </Select>
@@ -600,19 +679,19 @@ export default function ManagerDashboard() {
                   type="date"
                   value={customDateFrom}
                   onChange={(e) => setCustomDateFrom(e.target.value)}
-                  className="h-7 px-2 text-xs border border-gray-200 rounded-md bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="h-9 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
-                <span className="text-xs text-gray-500">&rarr;</span>
+                <span className="text-sm text-gray-500">&rarr;</span>
                 <input
                   type="date"
                   value={customDateTo}
                   onChange={(e) => setCustomDateTo(e.target.value)}
-                  className="h-7 px-2 text-xs border border-gray-200 rounded-md bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="h-9 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
               </>
             )}
           </div>
-          <span className="text-xs text-gray-500 ml-auto hidden sm:block">
+          <span className="text-sm text-gray-800 font-medium ml-auto hidden sm:block">
             {isLoading ? "Loading..." : `${leads.length} leads`}
           </span>
         </div>
@@ -622,7 +701,7 @@ export default function ManagerDashboard() {
           <div className="sm:hidden mt-2 flex flex-col gap-2 pb-1">
             <div className="grid grid-cols-2 gap-2">
               <Select value={agentFilter} onValueChange={setAgentFilter}>
-                <SelectTrigger className="h-10 text-sm">
+                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="All Agents" />
                 </SelectTrigger>
                 <SelectContent>
@@ -635,7 +714,7 @@ export default function ManagerDashboard() {
                 </SelectContent>
               </Select>
               <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
-                <SelectTrigger className="h-10 text-sm">
+                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="Lead Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -645,7 +724,7 @@ export default function ManagerDashboard() {
                 </SelectContent>
               </Select>
               <Select value={leadTypeFilter} onValueChange={setLeadTypeFilter}>
-                <SelectTrigger className="h-10 text-sm">
+                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="Lead Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -658,7 +737,7 @@ export default function ManagerDashboard() {
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 text-sm">
+                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="Work Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -675,7 +754,7 @@ export default function ManagerDashboard() {
               value={dateRangeFilter}
               onValueChange={(v) => setDateRangeFilter(v as any)}
             >
-              <SelectTrigger className="h-10 text-sm">
+              <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="This Month" />
               </SelectTrigger>
               <SelectContent>
@@ -683,7 +762,7 @@ export default function ManagerDashboard() {
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="yesterday">Yesterday</SelectItem>
                 <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="custom">Custom Range...</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
                 <SelectItem value="all">All Time</SelectItem>
               </SelectContent>
             </Select>
@@ -693,17 +772,17 @@ export default function ManagerDashboard() {
                   type="date"
                   value={customDateFrom}
                   onChange={(e) => setCustomDateFrom(e.target.value)}
-                  className="h-10 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
                 <input
                   type="date"
                   value={customDateTo}
                   onChange={(e) => setCustomDateTo(e.target.value)}
-                  className="h-10 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
               </div>
             )}
-            <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+            <div className="flex items-center justify-between text-sm text-gray-800 pt-1">
               <span>{isLoading ? "Loading..." : `${leads.length} leads`}</span>
               <button
                 onClick={() => {
@@ -730,9 +809,9 @@ export default function ManagerDashboard() {
             {selectedIds.size} lead{selectedIds.size > 1 ? "s" : ""} selected
           </span>
           <div className="flex items-center gap-2 ml-4">
-            <span className="text-blue-200 text-xs">Assign to:</span>
+            <span className="text-blue-200 text-sm">Assign to:</span>
             <Select value={bulkAgent} onValueChange={setBulkAgent}>
-              <SelectTrigger className="h-7 w-28 text-xs bg-blue-500 border-blue-400 text-white">
+              <SelectTrigger className="h-8 w-32 text-sm bg-blue-500 border-blue-400 text-white">
                 <SelectValue placeholder="Choose agent..." />
               </SelectTrigger>
               <SelectContent>
@@ -750,7 +829,7 @@ export default function ManagerDashboard() {
             </Select>
             <Button
               size="sm"
-              className="h-7 px-3 text-xs bg-white text-blue-700 hover:bg-blue-50 font-semibold"
+              className="h-8 px-3 text-sm bg-white text-blue-700 hover:bg-blue-50 font-semibold"
               disabled={!bulkAgent || bulkAssign.isPending}
               onClick={handleBulkAssign}
             >
@@ -829,13 +908,13 @@ export default function ManagerDashboard() {
                           >
                             {badge.label}
                           </span>
-                          <span className="text-[10px] text-gray-500">{formatDate(leadDate)}</span>
+                          <span className="text-[10px] text-gray-800">{formatDate(leadDate)}</span>
                         </div>
                       </div>
                       {lead.email && (
                         <a
                           href={`mailto:${lead.email}`}
-                          className="flex items-center gap-1 text-xs text-gray-600 mt-1.5 truncate"
+                          className="flex items-center gap-1 text-xs text-gray-800 mt-1.5 truncate"
                         >
                           <Mail className="h-3 w-3 shrink-0" />
                           {lead.email}
@@ -913,7 +992,7 @@ export default function ManagerDashboard() {
                         onClick={() =>
                           setExpandedRow(isExpanded ? null : lead.subscriptionId)
                         }
-                        className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 active:bg-gray-100"
+                        className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-800 active:bg-gray-100"
                       >
                         {isExpanded ? (
                           <ChevronUp className="h-4 w-4" />
@@ -925,7 +1004,7 @@ export default function ManagerDashboard() {
                     {/* Notes preview */}
                     {(lead.managerNote || lead.agentNote) && (
                       <div className="px-4 pb-2">
-                        <p className="text-xs text-gray-600 line-clamp-2">
+                        <p className="text-sm text-gray-800 line-clamp-2">
                           {lead.managerNote || lead.agentNote}
                         </p>
                       </div>
@@ -933,21 +1012,21 @@ export default function ManagerDashboard() {
                     {/* Expanded detail */}
                     {isExpanded && (
                       <div className="border-t border-blue-100 bg-blue-50/60 px-4 py-3">
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
-                            <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                               Plan
                             </p>
                             <p className="text-gray-800">{lead.planName || "\u2014"}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                               Cycles
                             </p>
                             <p className="text-gray-800">{lead.cyclesCompleted ?? "\u2014"}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                               Monthly
                             </p>
                             <p className="text-gray-800">
@@ -955,7 +1034,7 @@ export default function ManagerDashboard() {
                             </p>
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                               Total Spend
                             </p>
                             <p className="text-gray-800 font-semibold">
@@ -963,7 +1042,7 @@ export default function ManagerDashboard() {
                             </p>
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                               Last Call
                             </p>
                             <p className="text-gray-800">
@@ -971,15 +1050,9 @@ export default function ManagerDashboard() {
                                 ? new Date(lead.lastCallAt).toLocaleDateString("en-GB")
                                 : "\u2014"}
                               {lead.lastCallResult && (
-                                <span className="ml-1 text-gray-600">({lead.lastCallResult})</span>
+                                <span className="ml-1 text-gray-800">({lead.lastCallResult})</span>
                               )}
                             </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
-                              Priority
-                            </p>
-                            <p className="text-gray-800">{lead.urgencyScore}</p>
                           </div>
                         </div>
                         <div className="mt-2">
@@ -1006,50 +1079,50 @@ export default function ManagerDashboard() {
             <div className="hidden sm:block bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="bg-[#f8f9fa] border-b border-gray-200 text-xs">
-                    <th className="px-2 py-2 w-7">
+                  <tr className="bg-[#f8f9fa] border-b border-gray-200 text-sm">
+                    <th className="px-2 py-2.5 w-8">
                       <button
                         onClick={() => toggleSelectAll(leads)}
-                        className="text-gray-500 hover:text-blue-600"
+                        className="text-gray-800 hover:text-blue-600"
                       >
                         {selectedIds.size === leads.length && leads.length > 0 ? (
-                          <CheckSquare className="h-3.5 w-3.5 text-blue-600" />
+                          <CheckSquare className="h-4 w-4 text-blue-600" />
                         ) : (
-                          <Square className="h-3.5 w-3.5" />
+                          <Square className="h-4 w-4" />
                         )}
                       </button>
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-36">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-36">
                       Name
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-44">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-36">
                       Email
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-20">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-24">
                       Agent
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-20">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-20">
                       Status
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-32">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
                       Work Status
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-20">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-20">
                       Date
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-32">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
                       Lead Type
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-16">
-                      Pri.
-                    </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide w-20">
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-20">
                       Spend
                     </th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-600 uppercase tracking-wide">
-                      Notes
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[160px]">
+                      Customer Note
                     </th>
-                    <th className="w-4"></th>
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[160px]">
+                      Agent Note
+                    </th>
+                    <th className="w-5"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1063,50 +1136,50 @@ export default function ManagerDashboard() {
                     return (
                       <React.Fragment key={lead.subscriptionId}>
                         <tr
-                          className={`border-b border-gray-100 hover:brightness-95 transition-all ${
+                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all ${
                             badge.rowTint
                           } ${isSelected ? "ring-2 ring-inset ring-blue-400" : ""}`}
                         >
                           {/* Checkbox */}
-                          <td className="px-2 py-1.5">
+                          <td className="px-2 py-2">
                             <button
                               onClick={() => toggleSelect(lead.subscriptionId)}
-                              className="text-gray-400 hover:text-blue-600"
+                              className="text-gray-800 hover:text-blue-600"
                             >
                               {isSelected ? (
-                                <CheckSquare className="h-3.5 w-3.5 text-blue-600" />
+                                <CheckSquare className="h-4 w-4 text-blue-600" />
                               ) : (
-                                <Square className="h-3.5 w-3.5" />
+                                <Square className="h-4 w-4" />
                               )}
                             </button>
                           </td>
                           {/* Name + Phone */}
-                          <td className="px-2 py-1.5">
-                            <div className="font-medium text-gray-900 text-xs leading-tight truncate max-w-[130px]">
+                          <td className="px-2 py-2">
+                            <div className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px]">
                               {lead.customerName}
                             </div>
                             {lead.phone && (
                               <a
                                 href={`tel:${lead.phone}`}
-                                className="flex items-center gap-1 text-[11px] text-blue-500 hover:underline mt-0.5"
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:underline mt-0.5"
                               >
-                                <Phone className="h-2.5 w-2.5" />
+                                <Phone className="h-3 w-3" />
                                 {lead.phone}
                               </a>
                             )}
                           </td>
-                          {/* Email */}
-                          <td className="px-2 py-1.5">
+                          {/* Email — compact, smaller font, truncate */}
+                          <td className="px-2 py-2">
                             <a
                               href={`mailto:${lead.email}`}
                               title={lead.email}
-                              className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-700 hover:underline truncate max-w-[160px]"
+                              className="flex items-center gap-1 text-xs text-gray-800 hover:text-blue-700 hover:underline truncate max-w-[130px]"
                             >
-                              <Mail className="h-2.5 w-2.5 shrink-0" />
-                              {lead.email}
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{lead.email}</span>
                             </a>
                           </td>
-                          {/* Agent */}
+                          {/* Agent — prominent dropdown with visible border */}
                           <td className="px-2 py-2">
                             <Select
                               value={lead.assignedAgent || "unassigned"}
@@ -1119,9 +1192,9 @@ export default function ManagerDashboard() {
                               }
                             >
                               <SelectTrigger
-                                className={`h-6 w-24 text-[11px] border-0 shadow-none px-1.5 font-medium ${
+                                className={`h-8 w-[90px] text-sm border border-gray-300 rounded-lg px-2 font-medium ${
                                   lead.assignedAgent
-                                    ? "text-gray-800"
+                                    ? "text-gray-900"
                                     : "text-gray-500 italic"
                                 }`}
                               >
@@ -1140,19 +1213,19 @@ export default function ManagerDashboard() {
                             </Select>
                           </td>
                           {/* Lead Status */}
-                          <td className="px-2 py-1.5">
+                          <td className="px-2 py-2">
                             {(() => {
                               const ls = getLeadStatus(lead.assignedAgent);
                               return (
                                 <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${ls.bg} ${ls.text}`}
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${ls.bg} ${ls.text}`}
                                 >
                                   {ls.label}
                                 </span>
                               );
                             })()}
                           </td>
-                          {/* Work Status */}
+                          {/* Work Status — prominent dropdown with visible border, slightly smaller badge */}
                           <td className="px-2 py-2">
                             <Select
                               value={
@@ -1170,7 +1243,7 @@ export default function ManagerDashboard() {
                               }
                             >
                               <SelectTrigger
-                                className={`h-6 w-36 text-[11px] border-0 shadow-none px-1.5 rounded-full font-medium ${
+                                className={`h-8 w-[130px] text-xs border border-gray-300 rounded-lg px-2 font-medium ${
                                   lead.workStatus &&
                                   lead.workStatus !== "new" &&
                                   lead.workStatus !== "assigned"
@@ -1184,7 +1257,7 @@ export default function ManagerDashboard() {
                                 {STATUS_OPTIONS.map((s) => (
                                   <SelectItem key={s.value} value={s.value}>
                                     <span
-                                      className={`px-1.5 py-0.5 rounded-full text-[11px] ${s.bg} ${s.text}`}
+                                      className={`px-1.5 py-0.5 rounded-full text-xs ${s.bg} ${s.text}`}
                                     >
                                       {s.label}
                                     </span>
@@ -1194,54 +1267,32 @@ export default function ManagerDashboard() {
                             </Select>
                           </td>
                           {/* Date */}
-                          <td className="px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap">
+                          <td className="px-2 py-2 text-sm text-gray-800 whitespace-nowrap">
                             {formatDate(leadDate)}
                           </td>
                           {/* Lead Type */}
-                          <td className="px-2 py-1.5">
+                          <td className="px-2 py-2">
                             <span
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
                             >
                               {badge.label}
                             </span>
                           </td>
-                          {/* Priority */}
-                          <td className="px-2 py-1.5">
-                            <div className="flex items-center gap-1">
-                              {lead.urgencyScore >= 80 ? (
-                                <Flame className="h-3 w-3 text-red-500 shrink-0" />
-                              ) : lead.urgencyScore >= 60 ? (
-                                <Zap className="h-3 w-3 text-orange-400 shrink-0" />
-                              ) : lead.urgencyScore >= 40 ? (
-                                <TrendingUp className="h-3 w-3 text-yellow-500 shrink-0" />
-                              ) : null}
-                              <div>
-                                <div className="w-12 bg-gray-200 rounded-full h-1.5 mb-0.5">
-                                  <div
-                                    className={`h-1.5 rounded-full ${
-                                      lead.urgencyScore >= 70
-                                        ? "bg-red-500"
-                                        : lead.urgencyScore >= 40
-                                        ? "bg-orange-400"
-                                        : "bg-green-400"
-                                    }`}
-                                    style={{
-                                      width: `${Math.min(lead.urgencyScore, 100)}%`,
-                                    }}
-                                  />
-                                </div>
-                                <span className="text-[10px] font-mono text-gray-500">
-                                  {lead.urgencyScore}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
                           {/* Total Spend */}
-                          <td className="px-2 py-1.5 text-xs font-semibold text-gray-800 whitespace-nowrap">
+                          <td className="px-2 py-2 text-sm font-semibold text-gray-900 whitespace-nowrap">
                             {formatCurrency(lead.totalSpend, lead.currencyCode)}
                           </td>
-                          {/* Notes */}
-                          <td className="px-2 py-1.5 max-w-[180px]">
+                          {/* Customer Note — the customer's ticket message (managerNote used as customer note) */}
+                          <td className="px-2 py-2 max-w-[200px]">
+                            <p
+                              className="text-sm text-gray-800 truncate leading-snug"
+                              title={lead.managerNote || ""}
+                            >
+                              {lead.managerNote || <span className="text-gray-400 italic text-xs">—</span>}
+                            </p>
+                          </td>
+                          {/* Agent Note */}
+                          <td className="px-2 py-2 max-w-[200px]">
                             <NotesCell
                               managerNote={lead.managerNote}
                               agentNote={lead.agentNote}
@@ -1262,12 +1313,12 @@ export default function ManagerDashboard() {
                                   isExpanded ? null : lead.subscriptionId
                                 )
                               }
-                              className="text-gray-400 hover:text-gray-600"
+                              className="text-gray-800 hover:text-gray-600"
                             >
                               {isExpanded ? (
-                                <ChevronUp className="h-3.5 w-3.5" />
+                                <ChevronUp className="h-4 w-4" />
                               ) : (
-                                <ChevronDown className="h-3.5 w-3.5" />
+                                <ChevronDown className="h-4 w-4" />
                               )}
                             </button>
                           </td>
@@ -1280,21 +1331,21 @@ export default function ManagerDashboard() {
                             className="bg-blue-50/60 border-b border-blue-100"
                           >
                             <td colSpan={12} className="px-6 py-3">
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Plan
                                   </p>
                                   <p className="text-gray-800">{lead.planName || "\u2014"}</p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Cycles Completed
                                   </p>
                                   <p className="text-gray-800">{lead.cyclesCompleted ?? "\u2014"}</p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Monthly Amount
                                   </p>
                                   <p className="text-gray-800">
@@ -1302,25 +1353,25 @@ export default function ManagerDashboard() {
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Retry Attempts
                                   </p>
                                   <p className="text-gray-800">{lead.retryAttempts ?? 0}</p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Call Purpose
                                   </p>
                                   <p className="text-gray-800">{lead.callPurpose || "\u2014"}</p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Next Billing
                                   </p>
                                   <p className="text-gray-800">{formatDate(lead.nextBillingAt)}</p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Last Call
                                   </p>
                                   <p className="text-gray-800">
@@ -1328,14 +1379,14 @@ export default function ManagerDashboard() {
                                       ? new Date(lead.lastCallAt).toLocaleDateString("en-GB")
                                       : "\u2014"}
                                     {lead.lastCallResult && (
-                                      <span className="ml-1 text-gray-600">
+                                      <span className="ml-1 text-gray-800">
                                         ({lead.lastCallResult})
                                       </span>
                                     )}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-500 uppercase text-[10px] mb-0.5">
+                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Urgency Flags
                                   </p>
                                   <div className="flex flex-wrap gap-1">
@@ -1349,7 +1400,7 @@ export default function ManagerDashboard() {
                                         </span>
                                       ))
                                     ) : (
-                                      <span className="text-gray-500">None</span>
+                                      <span className="text-gray-800">None</span>
                                     )}
                                   </div>
                                 </div>
