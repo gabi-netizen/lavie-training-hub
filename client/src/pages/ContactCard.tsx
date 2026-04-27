@@ -454,6 +454,13 @@ export default function ContactCard() {
             )}
           </div>
 
+          {/* Stripe Customer ID */}
+          {contact.stripeCustomerId && (
+            <div className="p-5 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Stripe Customer ID</p>
+              <p className="text-sm font-mono text-indigo-600 break-all">{contact.stripeCustomerId}</p>
+            </div>
+          )}
           {/* Call stats */}
           {contact.callNotes.length > 0 && (
             <div className="p-5 grid grid-cols-2 md:grid-cols-2 gap-3">
