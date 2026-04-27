@@ -354,54 +354,44 @@ export const dashboardRouter = router({
         .limit(limit)
         .offset(offset);
 
-      // Enrich with contact phone numbers
-      let enrichedRows = rows.map((row) => ({
-        ...row,
-        contactPhone: null as string | null,
-        contactName: row.contactName ?? null,
-      }));
-
+      // Enrich with contact phone numbers and build final output in one pass
+      // contactMap is populated only when there are linked contacts
+      let contactMap = new Map<number, { phone: string | null; name: string | null }>();
       const contactIds = rows.filter((r) => r.contactId).map((r) => r.contactId!);
       if (contactIds.length > 0) {
         const contactRows = await db
           .select({ id: contacts.id, phone: contacts.phone, name: contacts.name })
           .from(contacts)
           .where(inArray(contacts.id, contactIds));
-        const contactMap = new Map(contactRows.map((c) => [c.id, c]));
-        enrichedRows = rows.map((row) => {
-          const contact = row.contactId ? contactMap.get(row.contactId) : null;
-          return {
-            ...row,
-            contactPhone: contact?.phone ?? null,
-            customerName: row.customerName || contact?.name || null,
-            contactName: row.contactName ?? null,
-          };
-        });
+        contactMap = new Map(contactRows.map((c) => [c.id, c]));
       }
 
       return {
-        calls: enrichedRows.map((r) => ({
-          id: r.id,
-          userId: r.userId,
-          repName: r.repName,
-          audioFileUrl: r.audioFileUrl,
-          fileName: r.fileName,
-          durationSeconds: r.durationSeconds,
-          status: r.status,
-          overallScore: r.overallScore != null ? Math.round(r.overallScore) : null,
-          callType: r.callType,
-          callTypeLabel: callTypeLabel(r.callType),
-          customerName: r.customerName,
-          contactName: (r as any).contactName ?? null,
-          contactId: r.contactId,
-          contactPhone: r.contactPhone,
-          createdAt: r.createdAt,
-          source: r.source,
-          agentName: r.agentName ?? null,
-          agentEmail: r.agentEmail,
-          agentTeam: r.agentTeam,
-          repSpeechPct: r.repSpeechPct != null ? Math.round(r.repSpeechPct) : null,
-        })),
+        calls: rows.map((row) => {
+          const contact = row.contactId ? contactMap.get(row.contactId) : null;
+          return {
+            id: row.id,
+            userId: row.userId,
+            repName: row.repName,
+            audioFileUrl: row.audioFileUrl,
+            fileName: row.fileName,
+            durationSeconds: row.durationSeconds,
+            status: row.status,
+            overallScore: row.overallScore != null ? Math.round(row.overallScore) : null,
+            callType: row.callType,
+            callTypeLabel: callTypeLabel(row.callType),
+            customerName: row.customerName || contact?.name || null,
+            contactName: row.contactName ?? null,
+            contactId: row.contactId,
+            contactPhone: contact?.phone ?? null,
+            createdAt: row.createdAt,
+            source: row.source,
+            agentName: row.agentName ?? null,
+            agentEmail: row.agentEmail,
+            agentTeam: row.agentTeam,
+            repSpeechPct: row.repSpeechPct != null ? Math.round(row.repSpeechPct) : null,
+          };
+        }),
         totalCount,
         page,
         limit,
