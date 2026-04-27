@@ -96,7 +96,7 @@ function SortIcon({
 
 export default function OpeningDashboard() {
   // ── Filters ──
-  const [timeline, setTimeline] = useState<Timeline>("last_month");
+  const [timeline, setTimeline] = useState<Timeline>("this_month");
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
@@ -147,7 +147,7 @@ export default function OpeningDashboard() {
   }
 
   function handleReset() {
-    setTimeline("last_month");
+    setTimeline("this_month");
     setAgentFilter("all");
     setCustomFrom("");
     setCustomTo("");
