@@ -263,17 +263,19 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.recordingUrl ||
       call?.recording;
 
+    // Extract agent ID — new format sends payload.agent_id (flat), old format used payload.agent.id (object)
     const agentId =
-      payload?.agent?.id ||     // CloudTalk v2: agent object
+      payload?.agent_id ||       // NEW format: flat field
+      payload?.agent?.id ||      // OLD format: nested agent object (fallback)
       payload?.agent?.user_id ||
       call?.agent_id ||
       call?.agentId ||
-      call?.Agent?.id ||
-      payload?.agent_id;
+      call?.Agent?.id;
 
-    // Extract agent name directly from CloudTalk payload
+    // Extract agent name — new format sends payload.agent_name (flat), old format used payload.agent.name (object)
     const cloudtalkAgentName: string | null =
-      payload?.agent?.name ||
+      payload?.agent_name ||     // NEW format: flat field
+      payload?.agent?.name ||    // OLD format: nested agent object (fallback)
       payload?.agent?.full_name ||
       (payload?.agent?.firstname ? `${payload.agent.firstname} ${payload.agent.lastname ?? ""}`.trim() : null) ||
       call?.Agent?.name ||
@@ -281,6 +283,8 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.agentName ||
       call?.agent_name ||
       null;
+
+    console.log(`[CloudTalk Webhook] Agent info received — agent_id: ${payload?.agent_id ?? "(none)"}, agent_name: ${payload?.agent_name ?? "(none)"}, resolved agentId: ${agentId}, resolved agentName: ${cloudtalkAgentName}`);
 
     // Extract agent email from CloudTalk payload
     const cloudtalkAgentEmail: string | null =
