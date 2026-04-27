@@ -341,8 +341,8 @@ export const dashboardRouter = router({
           createdAt: callAnalyses.createdAt,
           source: callAnalyses.source,
           repSpeechPct: callAnalyses.repSpeechPct,
-          // User fields
-          agentName: users.name,
+          // User fields — use repName from call_analyses (set by webhook) as the authoritative agent name
+          agentName: callAnalyses.repName,
           agentEmail: users.email,
           agentTeam: users.team,
         })
@@ -393,7 +393,7 @@ export const dashboardRouter = router({
           contactPhone: r.contactPhone,
           createdAt: r.createdAt,
           source: r.source,
-          agentName: r.agentName ?? r.repName,
+          agentName: r.agentName ?? null,
           agentEmail: r.agentEmail,
           agentTeam: r.agentTeam,
           repSpeechPct: r.repSpeechPct != null ? Math.round(r.repSpeechPct) : null,
