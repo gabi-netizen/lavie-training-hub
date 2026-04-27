@@ -11,7 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { handleGmailWebhook } from "../webhooks/gmail";
-import { ensureSupportTicketsTable } from "../ensureTables";
+import { ensureSupportTicketsTable, fixAgentTeamAssignments } from "../ensureTables";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -170,6 +170,12 @@ async function startServer() {
         console.error("[DB] Error ensuring support_tickets table:", err)
       );
     }, 3000);
+    // Fix agent team assignments (Rob=retention, Guy=null)
+    setTimeout(() => {
+      fixAgentTeamAssignments().catch((err) =>
+        console.error("[DB] Error fixing agent team assignments:", err)
+      );
+    }, 4000);
     // Background: sync any contacts that missed CloudTalk sync during hibernation
     setTimeout(() => {
       syncUnsyncedContactsToCloudTalk().catch((err) =>
