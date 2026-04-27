@@ -62,12 +62,14 @@ const CALL_TYPE_OPTIONS = [
 ];
 
 // ─── Default filter state ────────────────────────────────────────────────────
+// Default to "this_month" so the dashboard shows data immediately on load
+// (1st of the current month through today)
 const DEFAULT_FILTERS = {
   agentId: undefined as number | undefined,
   team: undefined as "opening" | "retention" | undefined,
   scoreMin: 0,
   scoreMax: 100,
-  dateRange: "today",
+  dateRange: "this_month",
   callType: "all",
   search: "",
 };
