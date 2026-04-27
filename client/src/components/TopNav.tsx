@@ -73,9 +73,9 @@ const MOBILE_NAV_ITEMS_AGENT = [
 const MOBILE_NAV_ITEMS_ADMIN = [
   { path: "/call-center-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/dialler", label: "Dialler", icon: Phone },
-  { path: "/contacts", label: "Contacts", icon: ContactRound },
   { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
   { path: "/command-centre", label: "Command", icon: Shield },
+  { path: "/opening-dashboard", label: "Opening", icon: PhoneOutgoing },
   { path: "/ai-coach", label: "AI Coach", icon: BarChart3 },
 ];
 
