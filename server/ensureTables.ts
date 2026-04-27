@@ -6,6 +6,32 @@
 import { getDb } from "./db";
 import { sql } from "drizzle-orm";
 
+/**
+ * One-time data fix: correct team assignments for Rob and Guy.
+ * Rob (rob.c@lavielabs.com) is Retention, not Opening.
+ * Guy (guy@lavielabs.com) is Customer Care — no team assignment.
+ * Safe to run repeatedly (idempotent).
+ */
+export async function fixAgentTeamAssignments() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      UPDATE users
+      SET team = 'retention'
+      WHERE email = 'rob.c@lavielabs.com' AND (team = 'opening' OR team IS NULL)
+    `);
+    await db.execute(sql`
+      UPDATE users
+      SET team = NULL
+      WHERE email = 'guy@lavielabs.com'
+    `);
+    console.log("[DB] Agent team assignments corrected (Rob=retention, Guy=null)");
+  } catch (err) {
+    console.error("[DB] Error fixing agent team assignments:", err);
+  }
+}
+
 export async function ensureSupportTicketsTable() {
   const db = await getDb();
   if (!db) {
