@@ -272,12 +272,19 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.agentId ||
       call?.Agent?.id;
 
-    // Extract agent name — new format sends payload.agent_name (flat), old format used payload.agent.name (object)
+    // Extract agent name — handles all CloudTalk payload formats:
+    //   payload.agent = "Ava Monroe"  (plain string — current format)
+    //   payload.agent_name = "Ava Monroe"  (flat field)
+    //   payload.agent = { name, full_name, firstname, lastname, ... }  (object)
+    const rawAgent = payload?.agent;
     const cloudtalkAgentName: string | null =
-      payload?.agent_name ||     // NEW format: flat field
-      payload?.agent?.name ||    // OLD format: nested agent object (fallback)
-      payload?.agent?.full_name ||
-      (payload?.agent?.firstname ? `${payload.agent.firstname} ${payload.agent.lastname ?? ""}`.trim() : null) ||
+      (typeof rawAgent === "string" && rawAgent.trim() ? rawAgent.trim() : null) ||  // plain string (current format)
+      payload?.agent_name ||                                                          // flat field
+      (typeof rawAgent === "object" && rawAgent !== null ? (
+        (rawAgent as any).first_name || (rawAgent as any).lastname
+          ? `${(rawAgent as any).first_name ?? (rawAgent as any).firstname ?? ""} ${(rawAgent as any).last_name ?? (rawAgent as any).lastname ?? ""}`.trim()
+          : (rawAgent as any).name || (rawAgent as any).full_name || null
+      ) : null) ||
       call?.Agent?.name ||
       call?.Agent?.full_name ||
       call?.agentName ||
