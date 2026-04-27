@@ -353,12 +353,40 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       ? await findOrCreateAgentUser(agentId, cloudtalkAgentName, cloudtalkAgentEmail)
       : null;
 
+    if (!agent && cloudtalkAgentName) {
+      // No agentId in payload, but we have a name — look up user by name (case-insensitive)
+      const db = await getDb();
+      if (db) {
+        const nameMatches = await db.select().from(users)
+          .where(like(users.name, cloudtalkAgentName.trim()))
+          .limit(1);
+        if (nameMatches.length > 0) {
+          agent = nameMatches[0];
+          console.log(`[CloudTalk Webhook] Matched agent by name "${cloudtalkAgentName}" to user #${agent.id}`);
+        } else {
+          // Auto-create a user record for this agent name so calls are grouped correctly
+          const openId = `cloudtalk-name-${cloudtalkAgentName.toLowerCase().replace(/\s+/g, "-")}`;
+          const [inserted] = await db.insert(users).values({
+            name: cloudtalkAgentName.trim(),
+            email: cloudtalkAgentEmail ?? null,
+            openId,
+            role: "user",
+          });
+          const newId = (inserted as any).insertId ?? (inserted as any).lastInsertRowid;
+          const created = await db.select().from(users).where(eq(users.id, Number(newId))).limit(1);
+          agent = created[0] ?? null;
+          console.log(`[CloudTalk Webhook] Auto-created user #${newId} for agent name "${cloudtalkAgentName}"`);
+        }
+      }
+    }
+
     if (!agent) {
-      // Last resort: fallback to first admin (should rarely happen — no agentId in payload)
+      // Last resort: fallback to first admin (should rarely happen — no agentId AND no name in payload)
       const db = await getDb();
       if (db) {
         const admins = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
         agent = admins[0] ?? null;
+        console.warn(`[CloudTalk Webhook] No agent found by ID or name — falling back to admin user`);
       }
     }
 
