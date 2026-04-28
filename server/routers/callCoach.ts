@@ -5,7 +5,6 @@ import { users } from "../../drizzle/schema";
 import {
   createCallAnalysisRecord,
   getCallAnalysisById,
-  listCallAnalysesByUser,
   listAllCallAnalyses,
   processCallAnalysis,
   getLeaderboard,
@@ -39,22 +38,17 @@ export const callCoachRouter = router({
       return getMyCoachingDashboard(input.agentId, input.timeRange);
     }),
 
-  getMyAnalyses: protectedProcedure.query(async ({ ctx }) => {
-    // Admins see all agents' calls; regular agents see only their own
-    if (ctx.user.role === "admin") {
-      return listAllCallAnalyses();
-    }
-    return listCallAnalysesByUser(ctx.user.id);
+  getMyAnalyses: protectedProcedure.query(async () => {
+    // All authenticated users can see all agents' calls
+    return listAllCallAnalyses();
   }),
 
   getAnalysis: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       const analysis = await getCallAnalysisById(input.id);
       if (!analysis) return null;
-      if (ctx.user.role !== "admin" && analysis.userId !== ctx.user.id) {
-        return null;
-      }
+      // All authenticated users can view any call's analysis
       return analysis;
     }),
 
