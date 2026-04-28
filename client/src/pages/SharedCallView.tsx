@@ -54,6 +54,18 @@ interface CallAnalysisReport {
   upsellSucceeded?: boolean | null;
   cancelReason?: string | null;
   customerName?: string | null;
+  // Retention Manager Review (only for retention calls > 5 min)
+  customerDifficultyScore?: number | null;
+  customerDifficultyDescription?: string | null;
+  callScore?: number | null;
+  callScoreDescription?: string | null;
+  customerProfile?: string | null;
+  managerReview?: {
+    timestamp: string;
+    quote: string;
+    feedback: string;
+    suggestion: string;
+  }[] | null;
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -157,6 +169,10 @@ export default function SharedCallView() {
   };
   const dealStatus = analysis.closeStatus ? dealStatusMap[analysis.closeStatus] : null;
 
+  // Retention long call detection
+  const RETENTION_TYPES_SET = new Set(["pre_cycle_cancelled", "pre_cycle_decline", "live_sub", "from_cat", "other", "retention_win_back"]);
+  const isRetentionLongCall = report != null && RETENTION_TYPES_SET.has(analysis.callType ?? "") && (analysis.durationSeconds ?? 0) > 300;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Branded Header ── */}
@@ -177,6 +193,254 @@ export default function SharedCallView() {
 
       {/* ── Main Content ── */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* ── CONDITIONAL LAYOUT ── */}
+        {isRetentionLongCall && report ? (
+          <div className="space-y-5">
+            {/* ── 1. HEADER: Customer name + call type badge + agent info ── */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-xl font-bold text-gray-800">
+                  {report.customerName ?? analysis.customerName ?? "Customer"}
+                </h2>
+                <CallTypeBadge callType={analysis.callType} />
+              </div>
+              <div className="flex items-center gap-3 flex-wrap mt-2 text-sm text-gray-600">
+                {analysis.repName && <span className="font-medium text-gray-800">{analysis.repName}</span>}
+                {analysis.callDate && <span>{new Date(analysis.callDate).toLocaleDateString()}</span>}
+                {analysis.durationSeconds && (
+                  <span>{Math.floor((analysis.durationSeconds ?? 0) / 60)}m {Math.round((analysis.durationSeconds ?? 0) % 60)}s</span>
+                )}
+                {dealStatus && (
+                  <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${dealStatus.bg} ${dealStatus.border} ${dealStatus.color}`}>
+                    {dealStatus.label}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* ── 2. CALL SCORE ── */}
+            {report.callScore != null && (
+              <Card className="bg-sky-50 border-sky-200 rounded-xl shadow-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-7xl font-bold text-blue-600">{report.callScore.toFixed(1)}</span>
+                    <span className="text-2xl font-semibold text-blue-400">/10</span>
+                  </div>
+                  <p className="text-sm font-bold uppercase tracking-widest text-gray-800 mt-3">CALL SCORE</p>
+                  {report.callScoreDescription && (
+                    <p className="text-sm text-gray-600 mt-1">{report.callScoreDescription}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 3. CUSTOMER DIFFICULTY ── */}
+            {report.customerDifficultyScore != null && (
+              <Card className="bg-gray-50 border-gray-200 rounded-xl shadow-sm">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-5xl font-bold text-gray-800">{report.customerDifficultyScore}</span>
+                    <span className="text-xl font-semibold text-gray-400">/10</span>
+                  </div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mt-2">CUSTOMER DIFFICULTY</p>
+                  {report.customerDifficultyDescription && (
+                    <p className="text-sm text-gray-600 mt-1">{report.customerDifficultyDescription}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 4. CUSTOMER PROFILE ── */}
+            {report.customerProfile && (
+              <Card className="bg-white border-gray-200 rounded-xl shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-gray-800 flex items-center gap-2">
+                    <span className="text-lg">{"\uD83D\uDC64"}</span> Customer Profile
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 leading-relaxed">{report.customerProfile}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 5. MANAGER REVIEW ── */}
+            {report.managerReview && report.managerReview.length > 0 && (
+              <Card className="bg-white border-gray-200 rounded-xl shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-gray-800 flex items-center gap-2">
+                    <span className="text-lg">{"\uD83D\uDCCB"}</span> Manager Review
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {report.managerReview.map((item, i) => (
+                    <div key={i} className="border-l-4 border-blue-400 pl-4 py-2 space-y-2">
+                      <span className="inline-block text-xs font-semibold text-gray-800 bg-gray-100 rounded px-2 py-0.5">
+                        {"\u23F1"} At {item.timestamp}
+                      </span>
+                      <p className="text-sm text-gray-800 italic">&ldquo;{item.quote}&rdquo;</p>
+                      <p className="text-sm text-gray-600">{item.feedback}</p>
+                      <p className="text-sm text-emerald-700 font-medium">{"\u2705"} {item.suggestion}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 6. CALL RECORDING ── */}
+            {analysis.audioFileUrl && (
+              <div className="rounded-xl border border-gray-200 bg-white px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Call Recording</p>
+                <audio
+                  ref={audioRef}
+                  controls
+                  src={analysis.audioFileUrl}
+                  className="w-full h-10"
+                  style={{ accentColor: "#0d9488" }}
+                  onTimeUpdate={() => setAudioCurrentTime(audioRef.current?.currentTime ?? 0)}
+                />
+                {analysis.wordTimestamps && (
+                  <p className="text-[10px] text-teal-600 mt-1">Click any word in the transcript below to jump to that moment</p>
+                )}
+              </div>
+            )}
+
+            {/* ── 7. KEY MOMENTS ── */}
+            {report.keyMoments?.length > 0 && (
+              <Card className="bg-white border-gray-200 rounded-xl">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-gray-800 uppercase tracking-wider">Key Moments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {report.keyMoments.map((km, i) => (
+                    <div key={i} className={`rounded-lg p-3 border ${
+                      km.type === "positive" ? "bg-emerald-50 border-emerald-500/30" :
+                      km.type === "critical" ? "bg-red-50 border-red-500/30" :
+                      "bg-amber-50 border-amber-500/30"
+                    }`}>
+                      <p className="text-gray-800 text-sm italic">&ldquo;{km.moment}&rdquo;</p>
+                      <p className="text-gray-600 text-xs mt-2">{km.coaching}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 8. RETENTION INDICATORS ── */}
+            <div className="flex flex-wrap gap-2">
+              <Badge className={report.saved ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                {report.saved ? "\u2713 Saved" : "\u2717 Not saved"}
+              </Badge>
+              <Badge className={report.upsellAttempted ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                {report.upsellAttempted ? "\u2713 Upsell attempted" : "\u2717 Upsell not attempted"}
+              </Badge>
+              <Badge className={report.upsellSucceeded ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                {report.upsellSucceeded ? "\u2713 Upsell succeeded" : "\u2717 Upsell not succeeded"}
+              </Badge>
+            </div>
+
+            {/* ── 9. FULL TRANSCRIPT ── */}
+            {analysis.transcript && (() => {
+              type WordTs = { word: string; start: number; end: number; speaker: "Agent" | "Customer" };
+              const wordTs: WordTs[] = analysis.wordTimestamps ? (() => { try { return JSON.parse(analysis.wordTimestamps); } catch { return []; } })() : [];
+              const hasWordTs = wordTs.length > 0;
+              const seekTo = (time: number) => {
+                if (audioRef.current) { audioRef.current.currentTime = time; audioRef.current.play(); }
+              };
+              return (
+                <Card className="bg-white border-gray-200 rounded-xl">
+                  <CardHeader className="pb-2 cursor-pointer" onClick={() => setShowTranscript(!showTranscript)}>
+                    <CardTitle className="text-sm text-gray-800 uppercase tracking-wider flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span>Full Transcript</span>
+                        {hasWordTs && (
+                          <span className="text-[10px] font-normal text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                            Interactive
+                          </span>
+                        )}
+                      </div>
+                      {showTranscript ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </CardTitle>
+                  </CardHeader>
+                  {showTranscript && (
+                    <CardContent>
+                      {hasWordTs ? (
+                        <div className="max-h-[500px] overflow-y-auto pr-1 space-y-1">
+                          {(() => {
+                            type Block = { speaker: "Agent" | "Customer"; words: WordTs[] };
+                            const blocks: Block[] = [];
+                            for (const w of wordTs) {
+                              if (blocks.length === 0 || blocks[blocks.length - 1].speaker !== w.speaker) {
+                                blocks.push({ speaker: w.speaker, words: [w] });
+                              } else {
+                                blocks[blocks.length - 1].words.push(w);
+                              }
+                            }
+                            return blocks.map((block, bi) => (
+                              <div key={bi} className="flex gap-2">
+                                <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide mt-0.5 w-14 text-right ${
+                                  block.speaker === "Agent" ? "text-blue-600" : "text-emerald-600"
+                                }`}>
+                                  {block.speaker === "Agent" ? "Agent" : "Cust."}
+                                </span>
+                                <p className="text-sm leading-relaxed flex-1 flex flex-wrap gap-x-0.5">
+                                  {block.words.map((w, wi) => {
+                                    const isActive = audioCurrentTime >= w.start && audioCurrentTime < w.end;
+                                    return (
+                                      <span
+                                        key={wi}
+                                        onClick={() => seekTo(w.start)}
+                                        title={`${Math.floor(w.start / 60)}:${String(Math.floor(w.start % 60)).padStart(2, '0')}`}
+                                        className={`cursor-pointer rounded px-0.5 transition-colors ${
+                                          isActive
+                                            ? block.speaker === "Agent"
+                                              ? "bg-blue-200 text-blue-900 font-semibold"
+                                              : "bg-emerald-200 text-emerald-900 font-semibold"
+                                            : block.speaker === "Agent"
+                                              ? "text-blue-700 hover:bg-blue-100"
+                                              : "text-emerald-700 hover:bg-emerald-100"
+                                        }`}
+                                      >
+                                        {w.word}
+                                      </span>
+                                    );
+                                  })}
+                                </p>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="max-h-[500px] overflow-y-auto">
+                          <p className="text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                            {analysis.transcript}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })()}
+
+            {/* ── 10. OLD SCORES (muted, smaller) ── */}
+            <div className="grid grid-cols-3 gap-3 opacity-60">
+              {[
+                { label: "Overall Score", value: report.overallScore },
+                { label: "Script Compliance", value: report.scriptComplianceScore },
+                { label: "Tone & Confidence", value: report.toneScore },
+              ].map(({ label, value }) => (
+                <Card key={label} className={`bg-gray-50 border ${scoreBg(value)} rounded-lg`}>
+                  <CardContent className="p-3 text-center">
+                    <div className={`text-xl font-bold ${scoreColor(value)}`}>{Math.round(value)}</div>
+                    <div className="text-[10px] text-gray-600 mt-0.5">{label}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Call Info Header */}
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="flex flex-col sm:flex-row gap-0 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60">
@@ -660,6 +924,8 @@ export default function SharedCallView() {
               );
             })()}
           </div>
+        )}
+        </>
         )}
       </main>
 

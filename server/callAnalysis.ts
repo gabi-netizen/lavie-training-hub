@@ -773,6 +773,18 @@ export interface CallAnalysisReport {
   authenticityQuote?: string | null;      // most scripted or authentic moment
   objectionHandlingScore?: number | null; // 0-100: how well objections were handled
   objectionHandlingQuote?: string | null; // the objection and rep's response
+  // ─── RETENTION MANAGER REVIEW (only for retention calls > 5 min) ───
+  customerDifficultyScore?: number | null;        // 1-10: 1=hardest customer, 10=easiest
+  customerDifficultyDescription?: string | null;  // Brief 5-10 word description
+  callScore?: number | null;                       // 1.0-10.0 with one decimal
+  callScoreDescription?: string | null;           // Brief 5-10 word description
+  customerProfile?: string | null;                // 2-3 sentence customer description
+  managerReview?: {
+    timestamp: string;     // e.g. "2:56"
+    quote: string;         // Direct quote from transcript
+    feedback: string;      // What was wrong
+    suggestion: string;    // What they should have done - exact words
+  }[] | null;
 }
 
 // ─── CALL TYPE CONTEXT BUILDERS ───────────────────────────────────────────────
@@ -947,6 +959,7 @@ export async function analyseCallWithAI(
   // Retention call types are EXEMPT from all compliance checks.
   const RETENTION_CALL_TYPES = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "retention_cancel_trial", "retention_win_back", "instalment_decline"]);
   const isRetentionCall = RETENTION_CALL_TYPES.has(callType);
+  const isRetentionLongCall = isRetentionCall && durationMinutes > 5;
 
   const { context: callTypeContext, stages, extraFields } = getCallTypeContext(callType);
   const stagesJson = stages.map(s =>
@@ -1027,7 +1040,22 @@ ${stagesJson}
   "objectionHandlingScore": <number 0-100 — if there was an objection, how well did the rep handle it? Did they use the script? Did they give up too quickly? If no objection occurred, return 100.>,
   "objectionHandlingQuote": "<the objection and the rep's response, or null if no objection>",
 ${complianceFields}${extraFields}
-}
+${isRetentionLongCall ? `
+  "customerDifficultyScore": <number 1-10. 1 = hardest customer (hostile, refusing, threatening, wants to cancel immediately). 10 = easiest customer (agrees immediately, friendly, no objections). Rate based on the customer's tone, resistance level, and objections throughout the call.>,
+  "customerDifficultyDescription": "<brief 5-10 word description of the customer difficulty e.g. 'Cooperative — friendly tone, budget objections only'>",
+  "callScore": <number 1.0-10.0 with one decimal. This is the MAIN performance score. Score based on how well the rep achieved the PRIMARY GOAL for this call type. Consider: Did they save/retain? Did they attempt upsell? Did they handle objections well? Did they use proper techniques?>,
+  "callScoreDescription": "<brief 5-10 word summary e.g. 'Strong retention, great rapport, minor over-talking'>",
+  "customerProfile": "<2-3 sentences describing who this customer is: their situation, relationship with the brand, financial constraints, emotional state, and what they wanted from this call>",
+  "managerReview": [
+    {
+      "timestamp": "<MM:SS — exact moment from the call>",
+      "quote": "<direct quote of what the rep said — copy verbatim from transcript>",
+      "feedback": "<2-3 sentences: what was wrong, what the customer's state was at that moment, why the rep's approach didn't fit>",
+      "suggestion": "<exact alternative words: 'You should have said: [specific phrase]'>"
+    }
+  ],
+  IMPORTANT: managerReview must have exactly 2-3 items. Each must reference a SPECIFIC timestamp, include a DIRECT QUOTE from the transcript, explain WHY it was suboptimal given the customer's state at that moment, and suggest EXACT alternative words the rep should have used. Be precise like a real call center manager reviewing the recording.
+` : ''}}
 ${dealTypeBlock}${complianceRules}
 
 IMPORTANT: For customerName, look for the customer's first name — the rep usually addresses them by name during the call (e.g. "Hi Sarah", "So [Name], what I'd love to do..."). Return just the first name as a string, or null if not found.
