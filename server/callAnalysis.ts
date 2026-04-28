@@ -173,115 +173,191 @@ export interface WordTimestamp {
   speaker: "Agent" | "Customer";
 }
 
-// ─── IVR / VOICEMAIL POST-PROCESSING ──────────────────────────────────────────
+
+// ─── SINGLE-SPEAKER POST-PROCESSING ───────────────────────────────────────────
 /**
  * Fixes speaker diarization when Deepgram returns all words as a single speaker
- * but the call actually contains an electronic secretary/voicemail/IVR.
+ * but the call actually contains two speakers (IVR/voicemail OR a real customer
+ * who gives short responses that Deepgram fails to diarize).
+ *
+ * Algorithm:
+ * 1. Confirm all words share the same speaker label (single-speaker transcript).
+ * 2. Check for IVR/voicemail phrases OR agent-specific patterns + customer signals.
+ * 3. Gap-split words into utterance chunks (≥0.3 s silence = likely speaker change).
+ * 4. Label each chunk by priority:
+ *    a. Contains AGENT_PATTERNS → Agent
+ *    b. Contains CUSTOMER_PHRASE_PATTERNS (incl. IVR phrases) → Customer
+ *    c. 1-2 words that are all short responses ("yes", "hi", "bye" …) → Customer
+ *    d. Short chunk (≤4 words) that is NOT the first chunk → Customer
+ *    e. First chunk / default → Agent
+ * 5. Rebuild wordTimestamps, repSpeechPct, and transcript.
  */
-function applyIvrSplitFix(wordTimestamps: WordTimestamp[]): { wordTimestamps: WordTimestamp[], repSpeechPct: number, transcript: string } | null {
-  // Check if it's a single-speaker transcript (all words have the same speaker)
+function applySingleSpeakerSplitFix(wordTimestamps: WordTimestamp[]): { wordTimestamps: WordTimestamp[], repSpeechPct: number, transcript: string } | null {
+  // ── Guard: must be a single-speaker transcript ──────────────────────────────
   if (wordTimestamps.length === 0) return null;
-  
   const firstSpeaker = wordTimestamps[0].speaker;
-  const isSingleSpeaker = wordTimestamps.every(w => w.speaker === firstSpeaker);
-  
-  if (!isSingleSpeaker) return null; // No fix needed if already multiple speakers
-  
-  // Combine all words to check for IVR phrases
+  if (!wordTimestamps.every(w => w.speaker === firstSpeaker)) return null;
+
+  // ── Full-text for phrase detection ───────────────────────────────────────────
   const fullText = wordTimestamps.map(w => w.word).join(" ").toLowerCase();
-  
-  // IVR/Voicemail phrases to detect
-  const ivrPhrases = [
-    "leave a message",
-    "not available",
-    "after the tone",
-    "record your name",
-    "please stay on the line",
-    "this person is not available",
-    "reply after the tone",
-    "voicemail",
-    "please leave your message"
-  ];
-  
-  const hasIvr = ivrPhrases.some(phrase => fullText.includes(phrase));
-  if (!hasIvr) return null; // Not an IVR call
-  
-  console.log("[Transcription] Detected single-speaker IVR/Voicemail call. Applying split fix.");
-  
-  // Reuse AGENT_PATTERNS to identify agent words
+
+  // ── Agent-specific patterns (Lavie Labs context) ──────────────────────────────
   const AGENT_PATTERNS = [
-    // Self-introduction / company name
-    /\bla\s*vie\b/i,
-    /\blavie\b/i,
-    /\bla\s*vie\s*labs\b/i,
-    /\blovely\s*labs\b/i,
-    // Product names
-    /\bmatinika\b/i,
-    /\boulala\b/i,
-    /\bashkara\b/i,
-    /\bcollagen\b/i,
-    // Pricing / offer language unique to agent
-    /\b4\.95\b/,
-    /\b£\s*4\.95\b/,
+    // Company / brand
+    /\bla\s*vie\b/i, /\blavie\b/i, /\bla\s*vie\s*labs\b/i,
+    /\blovely\s*labs\b/i, /\blavi\s*labs\b/i,
+    // Products
+    /\bmatinika\b/i, /\boulala\b/i, /\bashkara\b/i, /\bcollagen\b/i,
+    // Pricing / offer
+    /\b4\.95\b/, /\b£\s*4\.95\b/,
     /\b21[\s-]day\s*(free\s*)?trial\b/i,
-    /\b44\.90\b/,
-    /\b£\s*44\.90\b/,
-    /\bhyaluronic\s*acid\b/i,
-    /\bretinol\b/i,
-    /\btrustpilot\b/i,
-    // Classic agent opening phrases
+    /\b44\.90\b/, /\b£\s*44\.90\b/,
+    /\bhyaluronic\s*acid\b/i, /\bretinol\b/i, /\btrustpilot\b/i,
+    // Agent speech acts
     /\bthis\s+is\s+\w+\s+from\b/i,
-    /\bmy\s+name\s+is\s+\w+\s+(?:from|calling\s+from)\b/i,
-    /\bcalling\s+(?:from|on\s+behalf\s+of)\b/i,
-    /\bfree\s+trial\b/i,
-    /\bmagic\s+wand\b/i,
-    /\bcancel\s+any\s*time\b/i,
-    /\bpostage\b/i,
-    /\bdelivery\s+address\b/i,
-    /\blong\s+number\b/i,   // asking for card number
-    /\bsort\s+code\b/i,
-    /\bexpiry\b/i,
+    /\bmy\s+name\s+is\b/i,
+    /\bcalling\s+from\b/i,
+    /\bcalling\s+on\s+behalf\s+of\b/i,
+    /\bfree\s+trial\b/i, /\bmagic\s+wand\b/i, /\bcancel\s+any\s*time\b/i,
+    /\bpostage\b/i, /\bdelivery\s+address\b/i, /\blong\s+number\b/i,
+    /\bsort\s+code\b/i, /\bexpiry\b/i,
+    /\bskin\s*care\b/i, /\bmedical\s*grade\b/i,
   ];
-  
-  // Re-label words
+
+  // ── Customer-specific phrase patterns (incl. IVR) ─────────────────────────────
+  const CUSTOMER_PHRASE_PATTERNS = [
+    // Real customer objections / responses
+    /\bnot\s+at\s+the\s+moment\b/i,
+    /\bi'?m\s+away\b/i,
+    /\bi'?m\s+not\s+interested\b/i,
+    /\bno\s+thank\s+you\b/i,
+    /\bcall\s+(?:me\s+)?back\s+later\b/i,
+    /\bwho\s+is\s+this\b/i,
+    /\bthat'?s\s+fine\b/i,
+    /\bi'?m\s+busy\b/i,
+    /\bnot\s+interested\b/i,
+    /\bdo\s+not\s+call\b/i,
+    /\bremove\s+me\b/i,
+    /\btake\s+me\s+off\b/i,
+    // IVR / voicemail
+    /\bleave\s+a\s+message\b/i,
+    /\bnot\s+available\b/i,
+    /\bafter\s+the\s+tone\b/i,
+    /\brecord\s+your\s+name\b/i,
+    /\bplease\s+stay\s+on\s+the\s+line\b/i,
+    /\bthis\s+person\s+is\s+not\s+available\b/i,
+    /\bvoicemail\b/i,
+    /\bplease\s+leave\s+your\s+message\b/i,
+    /\breply\s+after\s+the\s+tone\b/i,
+  ];
+
+  // Short standalone responses that are clearly the customer
+  const CUSTOMER_SHORT_RESPONSES = new Set([
+    "yes", "yeah", "yep", "yup", "no", "nope", "okay", "ok",
+    "bye", "goodbye", "hello", "hi", "hey", "sure", "fine",
+    "alright", "right", "speaking",
+  ]);
+
+  // ── Decide whether to apply the fix ──────────────────────────────────────────
+  const hasIvr = CUSTOMER_PHRASE_PATTERNS.some(p => p.test(fullText));
+  const hasAgentPatterns = AGENT_PATTERNS.some(p => p.test(fullText));
+  const hasShortResponses = wordTimestamps.some(
+    w => CUSTOMER_SHORT_RESPONSES.has(w.word.toLowerCase().replace(/[^a-z]/g, ''))
+  );
+
+  if (!hasIvr && !hasAgentPatterns) {
+    return null; // Not a Lavie call — don't touch it
+  }
+  if (!hasIvr && !hasShortResponses) {
+    return null; // Agent patterns present but no customer signals — likely already correct
+  }
+
+  console.log(
+    `[Transcription] Single-speaker ${hasIvr ? 'IVR/voicemail' : 'conversation'} detected. Applying split fix.`
+  );
+
+  // ── Step 1: Gap-split words into utterance chunks ─────────────────────────────
+  // A silence gap ≥ 0.3 s between consecutive words is treated as a potential
+  // speaker-change boundary. This is the most reliable signal we have when
+  // Deepgram fails to diarize.
+  const GAP_THRESHOLD = 0.3; // seconds
+  type Chunk = { words: WordTimestamp[]; start: number; end: number };
+  const chunks: Chunk[] = [];
+  let curChunk: Chunk = { words: [wordTimestamps[0]], start: wordTimestamps[0].start, end: wordTimestamps[0].end };
+  for (let i = 1; i < wordTimestamps.length; i++) {
+    const gap = wordTimestamps[i].start - wordTimestamps[i - 1].end;
+    if (gap >= GAP_THRESHOLD) {
+      chunks.push(curChunk);
+      curChunk = { words: [wordTimestamps[i]], start: wordTimestamps[i].start, end: wordTimestamps[i].end };
+    } else {
+      curChunk.words.push(wordTimestamps[i]);
+      curChunk.end = wordTimestamps[i].end;
+    }
+  }
+  chunks.push(curChunk);
+
+  // ── Step 2: Label each chunk ──────────────────────────────────────────────────
+  const chunkLabels: ("Agent" | "Customer")[] = chunks.map((chunk, chunkIndex) => {
+    const chunkText = chunk.words.map(w => w.word).join(" ");
+    const chunkLower = chunkText.toLowerCase();
+    const cleanWords = chunkLower.replace(/[^a-z\s]/g, '').trim().split(/\s+/);
+
+    // Priority 1: Agent-specific patterns → always Agent
+    if (AGENT_PATTERNS.some(p => p.test(chunkLower))) return "Agent";
+
+    // Priority 2: Customer-specific phrases (incl. IVR) → always Customer
+    if (CUSTOMER_PHRASE_PATTERNS.some(p => p.test(chunkLower))) return "Customer";
+
+    // Priority 3: 1-2 words that are all short responses → Customer
+    if (cleanWords.length <= 2 && cleanWords.every(w => CUSTOMER_SHORT_RESPONSES.has(w))) {
+      return "Customer";
+    }
+
+    // Priority 4: Short chunk (≤4 words) that is NOT the first chunk → Customer
+    // These are customer interjections ("Yes", "Okay", "Hi") between agent blocks.
+    if (chunk.words.length <= 4 && chunkIndex > 0) return "Customer";
+
+    // Priority 5: First chunk → Agent (agent always opens the outbound call)
+    if (chunkIndex === 0) return "Agent";
+
+    // Default → Agent
+    return "Agent";
+  });
+
+  // ── Step 3: Propagate chunk labels back to individual words ───────────────────
   let agentTime = 0;
   let totalTime = 0;
-  
-  const newWordTimestamps = wordTimestamps.map(w => {
-    const wordText = w.word.toLowerCase();
-    const dur = w.end - w.start;
-    totalTime += dur;
-    
-    // Check if word matches any agent pattern
-    const isAgentWord = AGENT_PATTERNS.some(pattern => pattern.test(wordText));
-    
-    if (isAgentWord) {
-      agentTime += dur;
-      return { ...w, speaker: "Agent" as const };
-    } else {
-      return { ...w, speaker: "Customer" as const }; // IVR is labeled as Customer
+  let wordIdx = 0;
+  const newWordTimestamps: WordTimestamp[] = [];
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const label = chunkLabels[ci];
+    for (const w of chunks[ci].words) {
+      const dur = w.end - w.start;
+      totalTime += dur;
+      if (label === "Agent") agentTime += dur;
+      newWordTimestamps.push({ ...w, speaker: label });
+      wordIdx++;
     }
-  });
-  
-  // Recalculate repSpeechPct
+  }
+
+  // ── Step 4: Recalculate repSpeechPct ─────────────────────────────────────────
   const repSpeechPct = totalTime > 0 ? Math.round((agentTime / totalTime) * 100) : 50;
-  
-  // Rebuild transcript
+
+  // ── Step 5: Rebuild transcript ────────────────────────────────────────────────
   type Segment = { label: "Agent" | "Customer"; words: string[]; start: number; end: number };
   const segments: Segment[] = [];
   for (const w of newWordTimestamps) {
-    const label = w.speaker;
     const wordText = w.word.trim();
     if (!wordText) continue;
-    if (segments.length === 0 || segments[segments.length - 1].label !== label) {
-      segments.push({ label, words: [wordText], start: w.start, end: w.end });
+    if (segments.length === 0 || segments[segments.length - 1].label !== w.speaker) {
+      segments.push({ label: w.speaker, words: [wordText], start: w.start, end: w.end });
     } else {
       segments[segments.length - 1].words.push(wordText);
       segments[segments.length - 1].end = w.end;
     }
   }
   const transcript = segments.map(s => `${s.label}: ${s.words.join(" ")}`).join("\n");
-  
+
   return { wordTimestamps: newWordTimestamps, repSpeechPct, transcript };
 }
 
@@ -526,7 +602,7 @@ export async function transcribeAudio(audioUrl: string): Promise<{
       let finalWordTimestamps = monoWordTimestamps;
       
       // Apply IVR split fix if needed
-      const ivrFix = applyIvrSplitFix(monoWordTimestamps);
+      const ivrFix = applySingleSpeakerSplitFix(monoWordTimestamps);
       if (ivrFix) {
         finalTranscript = ivrFix.transcript;
         finalRepSpeechPct = ivrFix.repSpeechPct;
@@ -568,7 +644,7 @@ export async function transcribeAudio(audioUrl: string): Promise<{
       let finalWordTimestamps = monoWordTimestamps;
       
       // Apply IVR split fix if needed
-      const ivrFix = applyIvrSplitFix(monoWordTimestamps);
+      const ivrFix = applySingleSpeakerSplitFix(monoWordTimestamps);
       if (ivrFix) {
         finalTranscript = ivrFix.transcript;
         finalRepSpeechPct = ivrFix.repSpeechPct;
