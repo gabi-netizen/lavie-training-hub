@@ -318,8 +318,8 @@ export default function SharedCallView() {
                       <span className="inline-block text-xs font-semibold text-gray-800 bg-gray-100 rounded px-2 py-0.5">
                         ⏱ At {item.timestamp}
                       </span>
-                      <p className="text-sm text-gray-800 italic">&ldquo;{item.quote}&rdquo;</p>
                       <p className="text-sm text-gray-600">{item.feedback}</p>
+                      <p className="text-sm text-gray-800 italic">&ldquo;{item.quote}&rdquo;</p>
                       <p className="text-sm text-emerald-700 font-medium">✅ {item.suggestion}</p>
                     </div>
                   ))}
