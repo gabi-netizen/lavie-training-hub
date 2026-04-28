@@ -96,6 +96,8 @@ export const callAnalyses = mysqlTable("call_analyses", {
   cancelReason: varchar("cancelReason", { length: 128 }),
   /** JSON array of word-level timestamps from Deepgram: [{word, start, end, speaker}] (mediumtext — supports up to 16 MB for long calls) */
   wordTimestamps: mediumtext("wordTimestamps"),
+  /** Unique share token for public sharing — generated on first share click */
+  shareToken: varchar("shareToken", { length: 64 }).unique(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

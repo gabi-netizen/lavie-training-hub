@@ -1,10 +1,12 @@
 import { z } from "zod";
-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
 import {
   createCallAnalysisRecord,
   getCallAnalysisById,
+  getCallAnalysisByShareToken,
+  generateShareToken,
   listAllCallAnalyses,
   processCallAnalysis,
   getLeaderboard,
@@ -218,6 +220,27 @@ export const callCoachRouter = router({
       .orderBy(users.name);
     return rows.filter(r => r.name && r.role !== "admin");
   }),
+
+  /** Generate a share token for a call analysis (authenticated) */
+  generateShareToken: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const analysis = await getCallAnalysisById(input.id);
+      if (!analysis) throw new Error("Not found");
+      const token = await generateShareToken(input.id);
+      return { shareToken: token };
+    }),
+
+  /** Public: get a call analysis by share token (NO auth required) */
+  getSharedAnalysis: publicProcedure
+    .input(z.object({ shareToken: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const analysis = await getCallAnalysisByShareToken(input.shareToken);
+      if (!analysis) return null;
+      // Only return completed analyses
+      if (analysis.status !== "done") return null;
+      return analysis;
+    }),
 
   /**
    * AI Best Practice Extraction — analyses top-scoring Opening calls and

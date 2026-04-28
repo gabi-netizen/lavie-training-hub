@@ -1091,6 +1091,26 @@ export async function getCallAnalysisById(id: number) {
   return results[0] ?? null;
 }
 
+export async function getCallAnalysisByShareToken(token: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const results = await db.select().from(callAnalyses).where(eq(callAnalyses.shareToken, token)).limit(1);
+  return results[0] ?? null;
+}
+
+export async function generateShareToken(analysisId: number): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Check if already has a token
+  const existing = await db.select({ shareToken: callAnalyses.shareToken }).from(callAnalyses).where(eq(callAnalyses.id, analysisId)).limit(1);
+  if (existing[0]?.shareToken) return existing[0].shareToken;
+  // Generate a new token
+  const { nanoid } = await import("nanoid");
+  const token = nanoid(21);
+  await db.update(callAnalyses).set({ shareToken: token }).where(eq(callAnalyses.id, analysisId));
+  return token;
+}
+
 export async function listCallAnalysesByUser(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

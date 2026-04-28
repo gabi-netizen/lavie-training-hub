@@ -12,6 +12,7 @@ import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { handleGmailWebhook } from "../webhooks/gmail";
 import { ensureSupportTicketsTable } from "../ensureTables";
+import { ensureShareTokenColumn } from "../ensureShareToken";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -170,6 +171,12 @@ async function startServer() {
         console.error("[DB] Error ensuring support_tickets table:", err)
       );
     }, 3000);
+    // Ensure shareToken column exists on call_analyses
+    setTimeout(() => {
+      ensureShareTokenColumn().catch((err) =>
+        console.error("[DB] Error ensuring shareToken column:", err)
+      );
+    }, 4000);
     // Background: sync any contacts that missed CloudTalk sync during hibernation
     setTimeout(() => {
       syncUnsyncedContactsToCloudTalk().catch((err) =>

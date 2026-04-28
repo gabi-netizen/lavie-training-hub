@@ -28,6 +28,8 @@ import {
   Sparkles,
   Play,
   Pause,
+  Share2,
+  Link,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +45,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CallTypePerformance from "@/components/CallTypePerformance";
+import { toast } from "sonner";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface CallAnalysisReport {
@@ -507,6 +510,19 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
       if (onDeleted) onDeleted(); else onBack();
     },
   });
+  const shareTokenMutation = trpc.callCoach.generateShareToken.useMutation({
+    onSuccess: (data) => {
+      const url = `${window.location.origin}/shared/call/${data.shareToken}`;
+      navigator.clipboard.writeText(url).then(() => {
+        toast.success("Link copied!", { description: "Anyone with this link can view the analysis." });
+      }).catch(() => {
+        toast.info("Share link generated", { description: url });
+      });
+    },
+    onError: () => {
+      toast.error("Failed to generate share link");
+    },
+  });
   const { data: analysis, isLoading } = trpc.callCoach.getAnalysis.useQuery(
     { id: analysisId },
     { refetchInterval: (query) => {
@@ -559,6 +575,16 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
         <div className="px-4 pt-3 pb-0 flex items-center justify-between flex-wrap gap-2">
           <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-700 hover:text-gray-900 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => shareTokenMutation.mutate({ id: analysisId })}
+            disabled={shareTokenMutation.isPending}
+            className="text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-xs gap-1"
+          >
+            {shareTokenMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+            Share
           </Button>
           {(bestCallId || worstCallId) && onNavigateCall && (
             <div className="flex items-center gap-2">

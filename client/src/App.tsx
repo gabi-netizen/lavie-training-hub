@@ -18,6 +18,7 @@ import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import SupportTickets from "@/pages/SupportTickets";
+import SharedCallView from "./pages/SharedCallView";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 
@@ -160,7 +161,12 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <Switch>
+            {/* Public shared call view — NO auth, NO app shell */}
+            <Route path="/shared/call/:shareToken" component={SharedCallView} />
+            {/* Everything else goes through the authenticated app layout */}
+            <Route>{() => <Router />}</Route>
+          </Switch>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
