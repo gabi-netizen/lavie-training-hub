@@ -1049,19 +1049,52 @@ ${isRetentionLongCall ? `
   "customerProfile": "<2-3 sentences describing who this customer is: their situation, relationship with the brand, financial constraints, emotional state, and what they wanted from this call>",
   "managerReview": [
     {
-      "title": "<short descriptive title of the issue, e.g. 'Missed Opportunity to Explore Needs Before Pitching', 'Over-talking After the Close', 'Failed to Address Budget Concern'>",
-      "timestamp": "<MM:SS — exact moment from the call>",
-      "quote": "<LONG direct quote of what the rep said — copy 2-4 full sentences verbatim from the transcript. Include enough context so a manager reading this understands exactly what happened. If the customer responded, include their response too in parentheses.>",
-      "feedback": "<3-4 sentences explaining WHY this was suboptimal. Be specific: describe what the customer's emotional state was at that moment, what the customer had just said or done, why the rep's approach didn't fit that moment, and what opportunity was missed. Write as if you're a senior call center manager explaining to the rep face-to-face.>",
-      "suggestion": "<Start with 'You should have' then explain the technique, followed by the EXACT words in quotes. Example: 'You should have used the Magic Wand question here to build value: \"I'm so glad you love the Matanika cream. If you had a magic wand, what other area of your skin would you want to improve?\" Then, tailor the free serum offer to her specific answer.'>"
+      "title": "<descriptive title — see EXAMPLES below>",
+      "timestamp": "<MM:SS>",
+      "quote": "<see EXAMPLES below for required length and detail>",
+      "feedback": "<see EXAMPLES below for required depth>",
+      "suggestion": "<see EXAMPLES below for required format>"
     }
   ],
-  IMPORTANT: managerReview must have exactly 2-3 items. Each item must be DEEPLY detailed:
-  - title: A clear, descriptive name for the coaching point
-  - quote: At least 2-4 full sentences copied verbatim from the transcript — not just a short snippet
-  - feedback: 3-4 sentences with full context about the customer's state, what was happening in the conversation, and why the rep's approach was wrong
-  - suggestion: A specific technique name + the EXACT words the rep should have said in quotes, plus explanation of why this would work better
-  Think like a senior call center manager who listened to the entire recording and is giving detailed, actionable coaching feedback.
+
+  *** MANAGER REVIEW — QUALITY STANDARD ***
+  You MUST match the EXACT level of detail shown in these two examples. If your output is shorter or more generic than these examples, it is WRONG.
+
+  EXAMPLE 1 (PERFECT quality):
+  {
+    "title": "Missed Opportunity to Explore Needs Before Pitching",
+    "timestamp": "2:56",
+    "quote": "Do you know what? Look. And, again, if you don't if you don't want to do it or you can't do it, it's totally fine. But at least I've told you about it... By the way, I'll treat you to a serum. You can if you hear me out, if you like what you hear on the price, tell me what serum you want.",
+    "feedback": "Beverly had just clarified that she liked the Matanika cream (the white jar). Instead of asking her WHY she liked it or what other skin concerns she had, you immediately jumped into a long pitch offering a free serum and a 12-month supply. She was engaged, but you didn't build the value of the new serum before offering it.",
+    "suggestion": "You should have used the 'Magic Wand' question here to build value: 'I'm so glad you love the Matanika cream. If you had a magic wand, what other area of your skin would you want to improve?' Then, tailor the free serum offer to her specific answer."
+  }
+
+  EXAMPLE 2 (PERFECT quality):
+  {
+    "title": "Over-talking After the Close",
+    "timestamp": "4:18",
+    "quote": "Are you happy with that? Because I've given you about 50% off, but I want you to go away with a big smile. (Beverly replies: 'Brilliant because I'm kinda glad I'm at the end of that moisturizer now because it's really good. Oh, thank you.') Then at 4:31, you immediately launched into a 50-second monologue: 'And I'm not being look. I'm not being funny with your skin... Skincare is a tricky thing... you're getting medical grade.'",
+    "feedback": "Beverly had just agreed to the deal and expressed gratitude. She was already sold. By continuing to talk and justify the medical-grade quality for almost a minute, you risked talking past the sale and potentially introducing new doubts or confusing her.",
+    "suggestion": "Embrace the silence and move straight to confirmation. You should have simply said: 'I'm so glad to hear that, Beverly. Let's get that sorted for you right now. Can I confirm your shipping address?'"
+  }
+
+  EXAMPLE 3 (PERFECT quality — for a different scenario):
+  {
+    "title": "Anchoring with a Random Low Number",
+    "timestamp": "3:41",
+    "quote": "No. I know. Take if you have to take a second to just think about it. I mean, listen. I'm not talk. Is it I don't know. I'm just throwing a number out. 20 pounds?",
+    "feedback": "The customer had just said she didn't know what her budget was because you put her on the spot. By immediately throwing out '20 pounds,' you anchored the negotiation extremely low. When you later pitched a package that was £25.35 a month, it felt more expensive than the £20 you had just suggested.",
+    "suggestion": "Give her space to answer, or anchor high to make the discount look better. You should have said: 'That's completely fair. Most of our premium packages are around £80, but if I could build a custom routine for you closer to £30 or £40, would that be in the right ballpark?'"
+  }
+
+  RULES for managerReview (MUST follow):
+  - Exactly 2-3 items per call
+  - title: Clear coaching point name (5-10 words) — specific to what happened, not generic
+  - quote: MUST be 2-4 FULL sentences copied VERBATIM from the transcript. Include customer responses in parentheses where relevant. If the rep continued talking after the customer responded, include that too. NEVER use short snippets of less than 2 sentences.
+  - feedback: MUST be 3-4 sentences. Structure: (1) What the customer had just said/done and their emotional state, (2) What the rep did instead, (3) Why this was the wrong approach, (4) What opportunity was missed or what risk was created
+  - suggestion: MUST start with 'You should have', name the specific technique if applicable (e.g. 'Magic Wand question', 'Silence after close', 'High anchor'), then give the EXACT alternative words in quotes that the rep should have said, then briefly explain why this works better
+  - Write as a senior call center manager who has listened to this recording 3 times and is giving detailed, face-to-face coaching
+  - Be 100% specific to THIS call — reference the customer by name, reference specific products/prices mentioned, reference the exact moment in the conversation. NEVER give generic advice that could apply to any call.
 ` : ''}}
 ${dealTypeBlock}${complianceRules}
 
