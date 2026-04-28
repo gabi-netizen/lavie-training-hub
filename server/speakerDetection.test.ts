@@ -5,21 +5,36 @@
  * indirectly by replicating the exact same logic here and verifying all three
  * detection strategies:
  *   1. Content-based pattern matching (company name, product names, pricing)
- *   2. Speech-time heuristic (agent speaks more in outbound calls)
+ *   2. Speech-time heuristic (agent speaks more in outbound/sales calls)
  *   3. First-speaker fallback
+ *
+ * Test scenarios covered:
+ * - Outbound call: agent speaks first (original behaviour)
+ * - Incoming call: customer speaks first, agent identified by content
+ * - Incoming call: no content match, agent identified by talk time
+ * - Incoming call: no content match, no talk-time difference -> fallback
+ * - Word-level items (mono diarization path)
+ * - Bug report scenario: customer mentions 45, agent mentions 4.95
+ * - New patterns: collagen, Oulala, Ashkara, Retinol, sort code, expiry
+ * - SCAN_LIMIT=150: agent patterns found beyond old limit of 60 are now detected
  */
 import { describe, it, expect } from "vitest";
 
-// ─── Replicate detectAgentSpeaker locally for unit testing ────────────────────
-// (Mirrors the implementation in callAnalysis.ts exactly)
+// --- Replicate detectAgentSpeaker locally for unit testing ---
+// IMPORTANT: This MUST mirror the implementation in callAnalysis.ts exactly.
+// When callAnalysis.ts is updated, update this copy too.
 const AGENT_PATTERNS = [
+  // Self-introduction / company name
   /\bla\s*vie\b/i,
   /\blavie\b/i,
   /\bla\s*vie\s*labs\b/i,
   /\blovely\s*labs\b/i,
+  // Product names
   /\bmatinika\b/i,
   /\boulala\b/i,
   /\bashkara\b/i,
+  /\bcollagen\b/i,
+  // Pricing / offer language unique to agent
   /\b4\.95\b/,
   /\b£\s*4\.95\b/,
   /\b21[\s-]day\s*(free\s*)?trial\b/i,
@@ -28,6 +43,7 @@ const AGENT_PATTERNS = [
   /\bhyaluronic\s*acid\b/i,
   /\bretinol\b/i,
   /\btrustpilot\b/i,
+  // Classic agent opening phrases
   /\bthis\s+is\s+\w+\s+from\b/i,
   /\bmy\s+name\s+is\s+\w+\s+(?:from|calling\s+from)\b/i,
   /\bcalling\s+(?:from|on\s+behalf\s+of)\b/i,
@@ -53,7 +69,7 @@ type Item = {
 function detectAgentSpeaker(items: Item[], firstSpeaker: number): number {
   const speakerTexts: Record<number, string> = {};
   const speakerTimes: Record<number, number> = {};
-  const SCAN_LIMIT = 60;
+  const SCAN_LIMIT = 150;
 
   for (let i = 0; i < Math.min(items.length, SCAN_LIMIT); i++) {
     const item = items[i];
@@ -94,7 +110,7 @@ function detectAgentSpeaker(items: Item[], firstSpeaker: number): number {
   return firstSpeaker;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ---
 function makeUtterances(
   lines: Array<{ speaker: number; text: string; start?: number; end?: number }>
 ): Item[] {
@@ -106,11 +122,12 @@ function makeUtterances(
   }));
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+// --- Tests ---
 describe("detectAgentSpeaker", () => {
-  // ── Content-based detection ──────────────────────────────────────────────────
 
-  it("identifies agent by company name 'La Vie' in first utterance (outbound)", () => {
+  // Layer 1: Content-based detection
+
+  it("identifies agent by company name 'La Vie' in first utterance (outbound call)", () => {
     const utterances = makeUtterances([
       { speaker: 0, text: "Hi, this is Sarah from La Vie Labs, how are you today?" },
       { speaker: 1, text: "Oh hello, I'm fine thanks." },
@@ -120,14 +137,12 @@ describe("detectAgentSpeaker", () => {
   });
 
   it("identifies agent by company name even when customer speaks first (incoming call)", () => {
-    // Customer (speaker_0) speaks first — agent is speaker_1
     const utterances = makeUtterances([
       { speaker: 0, text: "Hello?" },
       { speaker: 1, text: "Hi there, this is James from La Vie Labs." },
       { speaker: 0, text: "Oh yes, I was expecting your call." },
       { speaker: 1, text: "Great! I wanted to talk to you about Matinika." },
     ]);
-    // First speaker is 0 (customer), but agent is speaker_1
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 
@@ -147,10 +162,34 @@ describe("detectAgentSpeaker", () => {
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 
-  it("identifies agent by '£4.95' pricing mention", () => {
+  it("identifies agent by product name 'Oulala'", () => {
     const utterances = makeUtterances([
-      { speaker: 0, text: "What does it cost?" },
-      { speaker: 1, text: "It's just £4.95 for postage to get you started." },
+      { speaker: 0, text: "What products do you have?" },
+      { speaker: 1, text: "We have Oulala retinol serum, it's amazing for fine lines." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("identifies agent by product name 'Ashkara'", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "Tell me more." },
+      { speaker: 1, text: "The Ashkara eye serum is our bestseller for dark circles." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("identifies agent by 'collagen' mention", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "What does it do?" },
+      { speaker: 1, text: "It boosts collagen production and firms the skin." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("identifies agent by '4.95' pricing mention (without pound symbol)", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "How much is it?" },
+      { speaker: 1, text: "Just 4.95 for postage, that's all." },
     ]);
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
@@ -159,6 +198,14 @@ describe("detectAgentSpeaker", () => {
     const utterances = makeUtterances([
       { speaker: 0, text: "I'm not sure about this." },
       { speaker: 1, text: "You get a full 21-day free trial, no commitment." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("identifies agent by '21 day trial' mention (space variant)", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "How long do I have to try it?" },
+      { speaker: 1, text: "You have a full 21 day trial period." },
     ]);
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
@@ -195,6 +242,14 @@ describe("detectAgentSpeaker", () => {
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 
+  it("identifies agent by 'retinol' mention", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "What ingredients does it have?" },
+      { speaker: 1, text: "It has retinol which is clinically proven to reduce wrinkles." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
   it("identifies agent by 'delivery address' phrase (card-taking stage)", () => {
     const utterances = makeUtterances([
       { speaker: 0, text: "Okay, I'm happy to go ahead." },
@@ -203,29 +258,57 @@ describe("detectAgentSpeaker", () => {
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 
-  it("correctly scores agent higher when both speakers have some matching words", () => {
-    // Agent (speaker_1) mentions multiple patterns; customer (speaker_0) mentions none
+  it("identifies agent by 'sort code' mention (payment stage)", () => {
     const utterances = makeUtterances([
-      { speaker: 0, text: "I'm not sure about my skin." },
-      { speaker: 1, text: "Hi, this is Emma from La Vie Labs. We have Matinika with hyaluronic acid." },
-      { speaker: 0, text: "Oh interesting." },
-      { speaker: 1, text: "It's only £4.95 for a 21-day free trial." },
+      { speaker: 0, text: "Yes, go ahead." },
+      { speaker: 1, text: "Great, can I take your sort code please?" },
     ]);
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 
-  // ── Speech-time heuristic fallback ───────────────────────────────────────────
+  it("identifies agent by 'expiry' mention (card details stage)", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "It's 1234 5678 9012 3456." },
+      { speaker: 1, text: "Thank you, and the expiry date?" },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("identifies agent by 'postage' mention", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "Is there a cost?" },
+      { speaker: 1, text: "Just a small postage fee of 4.95 to cover delivery." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("identifies agent by 'free trial' phrase", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "I'm not sure." },
+      { speaker: 1, text: "We offer a completely free trial for 21 days." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("correctly scores agent higher when both speakers have some matching words", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "I'm not sure about my skin." },
+      { speaker: 1, text: "Hi, this is Emma from La Vie Labs. We have Matinika with hyaluronic acid." },
+      { speaker: 0, text: "Oh interesting." },
+      { speaker: 1, text: "It's only 4.95 for a 21-day free trial." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  // Layer 2: Speech-time heuristic fallback
 
   it("falls back to speech-time heuristic when no content patterns match", () => {
-    // No agent-identifying patterns in either speaker's text.
-    // Agent (speaker_1) speaks much more than customer (speaker_0).
     const utterances: Item[] = [
       { speaker: 0, transcript: "Hello?", start: 0, end: 1 },
       { speaker: 1, transcript: "Hi there, how are you doing today, I wanted to reach out to you about something really exciting that we have been working on for a while now.", start: 1, end: 15 },
       { speaker: 0, transcript: "Okay.", start: 15, end: 16 },
       { speaker: 1, transcript: "We have been developing a new product that I think you will absolutely love and I would love to tell you more about it if you have a moment.", start: 16, end: 30 },
     ];
-    // speaker_1 has much more speech time → identified as agent
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 
@@ -237,7 +320,17 @@ describe("detectAgentSpeaker", () => {
     expect(detectAgentSpeaker(utterances, 0)).toBe(0);
   });
 
-  // ── First-speaker fallback ───────────────────────────────────────────────────
+  it("speech-time heuristic: incoming call where agent (speaker_1) talks significantly more", () => {
+    const utterances: Item[] = [
+      { speaker: 0, transcript: "Hello, yes I'm calling about my order.", start: 0, end: 4 },
+      { speaker: 1, transcript: "Thank you for calling, let me help you with that right away. I can see your account here and I want to make sure we get this sorted for you today.", start: 4, end: 20 },
+      { speaker: 0, transcript: "Okay.", start: 20, end: 21 },
+      { speaker: 1, transcript: "So what I can do is look into this and make sure everything is processed correctly. We value your business and want to make sure you are completely happy.", start: 21, end: 38 },
+    ];
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  // Layer 3: First-speaker fallback
 
   it("falls back to first speaker when only one speaker present", () => {
     const utterances: Item[] = [
@@ -251,7 +344,15 @@ describe("detectAgentSpeaker", () => {
     expect(detectAgentSpeaker([], 0)).toBe(0);
   });
 
-  // ── Word-level items (mono diarization path) ─────────────────────────────────
+  it("falls back to first speaker when both speakers have equal talk time and no content match", () => {
+    const utterances: Item[] = [
+      { speaker: 0, transcript: "Hello.", start: 0, end: 5 },
+      { speaker: 1, transcript: "Hello there.", start: 5, end: 10 },
+    ];
+    expect(detectAgentSpeaker(utterances, 0)).toBe(0);
+  });
+
+  // Word-level items (mono diarization path)
 
   it("works with word-level items (punctuated_word field)", () => {
     const words: Item[] = [
@@ -273,16 +374,64 @@ describe("detectAgentSpeaker", () => {
     expect(detectAgentSpeaker(words, 0)).toBe(1);
   });
 
-  // ── Specific scenario from the bug report ───────────────────────────────────
+  it("works with word-level items for collagen pattern", () => {
+    const words: Item[] = [
+      { speaker: 0, word: "hello", start: 0, end: 0.5 },
+      { speaker: 1, word: "collagen", start: 0.5, end: 1.2 },
+      { speaker: 1, word: "boost", start: 1.2, end: 1.5 },
+    ];
+    expect(detectAgentSpeaker(words, 0)).toBe(1);
+  });
 
-  it("bug report scenario: customer says 'So if I don't like it, I'll just let you know' — agent is speaker_1", () => {
-    // The customer (speaker_0) speaks first with a subscription-related comment.
-    // The agent (speaker_1) mentions £4.95 — should be identified as agent.
+  // Specific scenarios from the bug report
+
+  it("bug report scenario: customer speaks first with price concern, agent identified by 4.95", () => {
     const utterances = makeUtterances([
-      { speaker: 0, text: "So if I don't like it, I'll just let you know, and then they won't take the £45 out of my account." },
-      { speaker: 1, text: "£4.95 just so it will clear, that's all we need from you." },
+      { speaker: 0, text: "So if I don't like it, I'll just let you know, and then they won't take the 45 out of my account." },
+      { speaker: 1, text: "4.95 just so it will clear, that's all we need from you." },
       { speaker: 0, text: "Okay, that sounds fine." },
     ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("incoming call scenario: customer speaks first, agent identified by La Vie mention later", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "Hello?" },
+      { speaker: 0, text: "Yes, speaking." },
+      { speaker: 1, text: "Hi there, I'm calling from La Vie Labs, is this a good time?" },
+      { speaker: 0, text: "Sure, what's this about?" },
+      { speaker: 1, text: "We have an amazing skincare product called Matinika." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("outbound call scenario: agent speaks first and introduces themselves", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "Hello, my name is Sophie calling from La Vie Labs." },
+      { speaker: 1, text: "Oh yes, hello." },
+      { speaker: 0, text: "I wanted to tell you about our Matinika cream." },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(0);
+  });
+
+  it("retention call scenario: agent (speaker_1) uses cancel anytime phrase", () => {
+    const utterances = makeUtterances([
+      { speaker: 0, text: "I want to cancel my order." },
+      { speaker: 1, text: "I understand, let me help you with that. You can cancel anytime with one click." },
+      { speaker: 0, text: "I just don't need it anymore." },
+      { speaker: 1, text: "I completely understand. Before we do that, can I ask what your main skin concern was?" },
+    ]);
+    expect(detectAgentSpeaker(utterances, 0)).toBe(1);
+  });
+
+  it("scan limit: agent patterns found beyond old limit of 60 items are now detected (SCAN_LIMIT=150)", () => {
+    const utterances: Item[] = [];
+    for (let i = 0; i < 70; i++) {
+      utterances.push({ speaker: 0, transcript: `Customer filler line ${i}.`, start: i * 2, end: i * 2 + 1.5 });
+    }
+    // Agent speaks at position 70 (beyond old SCAN_LIMIT of 60, within new limit of 150)
+    utterances.push({ speaker: 1, transcript: "This is Sophie from La Vie Labs.", start: 140, end: 143 });
+    utterances.push({ speaker: 0, transcript: "Oh okay.", start: 143, end: 144 });
     expect(detectAgentSpeaker(utterances, 0)).toBe(1);
   });
 });
