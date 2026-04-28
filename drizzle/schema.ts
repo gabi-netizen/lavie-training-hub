@@ -1,4 +1,4 @@
-import { boolean, float, int, json, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
+import { boolean, float, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -50,16 +50,16 @@ export const callAnalyses = mysqlTable("call_analyses", {
   durationSeconds: float("durationSeconds"),
   /** Status: pending → transcribing → analyzing → done → error */
   status: mysqlEnum("status", ["pending", "transcribing", "analyzing", "done", "error"]).default("pending").notNull(),
-  /** Full transcript from Deepgram */
-  transcript: text("transcript"),
+  /** Full transcript from Deepgram (mediumtext — supports up to 16 MB for long calls) */
+  transcript: mediumtext("transcript"),
   /** Rep speech percentage (0-100) */
   repSpeechPct: float("repSpeechPct"),
   /** Overall score (0-100) */
   overallScore: float("overallScore"),
-  /** JSON string of the full analysis report */
-  analysisJson: text("analysisJson"),
-  /** Error message if status=error */
-  errorMessage: text("errorMessage"),
+  /** JSON string of the full analysis report (mediumtext — supports up to 16 MB) */
+  analysisJson: mediumtext("analysisJson"),
+  /** Error message if status=error (mediumtext — supports up to 16 MB) */
+  errorMessage: mediumtext("errorMessage"),
   /** Customer name extracted from the call transcript by AI, or manually set */
   customerName: varchar("customerName", { length: 256 }),
   /** Contact name sent by CloudTalk webhook (payload.contact_name) */
@@ -93,8 +93,8 @@ export const callAnalyses = mysqlTable("call_analyses", {
   upsellSucceeded: boolean("upsellSucceeded"),
   /** Retention: reason the customer wanted to cancel */
   cancelReason: varchar("cancelReason", { length: 128 }),
-  /** JSON array of word-level timestamps from Deepgram: [{word, start, end, speaker}] */
-  wordTimestamps: text("wordTimestamps"),
+  /** JSON array of word-level timestamps from Deepgram: [{word, start, end, speaker}] (mediumtext — supports up to 16 MB for long calls) */
+  wordTimestamps: mediumtext("wordTimestamps"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
