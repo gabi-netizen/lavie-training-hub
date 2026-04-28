@@ -30,6 +30,7 @@ import {
   Pause,
   Share2,
   Link,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -522,6 +523,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
       if (onDeleted) onDeleted(); else onBack();
     },
   });
+  const { user: currentUser } = useAuth();
   const shareTokenMutation = trpc.callCoach.generateShareToken.useMutation({
     onSuccess: (data) => {
       const url = `${window.location.origin}/shared/call/${data.shareToken}`;
@@ -533,6 +535,14 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
     },
     onError: () => {
       toast.error("Failed to generate share link");
+    },
+  });
+  const reAnalyzeMutation = trpc.callCoach.reAnalyze.useMutation({
+    onSuccess: () => {
+      toast.success("Re-analysis started", { description: "Refresh the page in 1-2 minutes." });
+    },
+    onError: (err) => {
+      toast.error("Re-analysis failed", { description: err.message });
     },
   });
   const { data: analysis, isLoading } = trpc.callCoach.getAnalysis.useQuery(
@@ -801,18 +811,68 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                       {dealStatus.label}
                     </span>
                   )}
+                  {currentUser?.role === "admin" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => reAnalyzeMutation.mutate({ id: analysisId })}
+                      disabled={reAnalyzeMutation.isPending}
+                      className="text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs gap-1 ml-auto"
+                    >
+                      {reAnalyzeMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      Re-analyze
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => shareTokenMutation.mutate({ id: analysisId })}
                     disabled={shareTokenMutation.isPending}
-                    className="text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-xs gap-1 ml-auto"
+                    className={`text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-xs gap-1 ${currentUser?.role !== "admin" ? "ml-auto" : ""}`}
                   >
                     {shareTokenMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
                     Share
                   </Button>
                 </div>
               </div>
+
+              {/* ── 1b. DEAL RESULT / DEAL TYPE / LEAD TYPE BANNER ── */}
+              {(() => {
+                const isClosed = report.saved === true || report.upsellSucceeded === true;
+                const ct = analysis.callType ?? "";
+                let dealType = "No Deal";
+                if (report.saved === true && report.upsellSucceeded === true) dealType = "Saved + Upsell";
+                else if (report.saved === true && ct === "instalment_decline") dealType = "Card Recovered";
+                else if (report.saved === true) dealType = "Saved Sub";
+                else if (report.upsellSucceeded === true) dealType = "Upsell Only";
+                const callTypeMap: Record<string, string> = {
+                  live_sub: "Live Sub", pre_cycle_cancelled: "Pre-Cycle Cancelled",
+                  pre_cycle_decline: "Pre-Cycle Decline", end_of_instalment: "End of Instalment",
+                  from_cat: "From Cat", other: "Other", retention_cancel_trial: "Cancel Trial",
+                  retention_win_back: "Win Back", instalment_decline: "Instalment Decline",
+                };
+                const leadLabel = callTypeMap[ct] ?? ct;
+                return (
+                  <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                    <div className="grid grid-cols-3">
+                      <div className={`p-4 text-center ${isClosed ? "bg-emerald-100" : "bg-red-100"}`}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Deal Result</p>
+                        <p className={`text-lg font-bold ${isClosed ? "text-emerald-800" : "text-red-800"}`}>
+                          {isClosed ? "CLOSED" : "NOT CLOSED"}
+                        </p>
+                      </div>
+                      <div className="p-4 text-center bg-gray-50">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Deal Type</p>
+                        <p className="text-lg font-bold text-gray-800">{dealType}</p>
+                      </div>
+                      <div className="p-4 text-center bg-gray-50">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Lead Type</p>
+                        <p className="text-lg font-bold text-gray-800">{leadLabel}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ── 2. CALL SCORE ── */}
               {report.callScore != null && (

@@ -221,6 +221,21 @@ export const callCoachRouter = router({
     return rows.filter(r => r.name && r.role !== "admin");
   }),
 
+  /** Admin-only: re-run the full analysis pipeline for a call */
+  reAnalyze: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "admin") throw new Error("Admin only");
+      const analysis = await getCallAnalysisById(input.id);
+      if (!analysis) throw new Error("Not found");
+      if (!analysis.audioFileUrl) throw new Error("No audio URL");
+      // Re-run the full analysis pipeline
+      processCallAnalysis(input.id, analysis.audioFileUrl, analysis.audioFileKey ?? undefined).catch(err =>
+        console.error("[callCoach] reAnalyze error:", err)
+      );
+      return { success: true };
+    }),
+
   /** Generate a share token for a call analysis (authenticated) */
   generateShareToken: protectedProcedure
     .input(z.object({ id: z.number() }))

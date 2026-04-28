@@ -218,6 +218,44 @@ export default function SharedCallView() {
               </div>
             </div>
 
+            {/* ── 1b. DEAL RESULT / DEAL TYPE / LEAD TYPE BANNER ── */}
+            {(() => {
+              const isClosed = report.saved === true || report.upsellSucceeded === true;
+              const ct = analysis.callType ?? "";
+              let dealType = "No Deal";
+              if (report.saved === true && report.upsellSucceeded === true) dealType = "Saved + Upsell";
+              else if (report.saved === true && ct === "instalment_decline") dealType = "Card Recovered";
+              else if (report.saved === true) dealType = "Saved Sub";
+              else if (report.upsellSucceeded === true) dealType = "Upsell Only";
+              const callTypeMap: Record<string, string> = {
+                live_sub: "Live Sub", pre_cycle_cancelled: "Pre-Cycle Cancelled",
+                pre_cycle_decline: "Pre-Cycle Decline", end_of_instalment: "End of Instalment",
+                from_cat: "From Cat", other: "Other", retention_cancel_trial: "Cancel Trial",
+                retention_win_back: "Win Back", instalment_decline: "Instalment Decline",
+              };
+              const leadLabel = callTypeMap[ct] ?? ct;
+              return (
+                <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-3">
+                    <div className={`p-4 text-center ${isClosed ? "bg-emerald-100" : "bg-red-100"}`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Deal Result</p>
+                      <p className={`text-lg font-bold ${isClosed ? "text-emerald-800" : "text-red-800"}`}>
+                        {isClosed ? "CLOSED" : "NOT CLOSED"}
+                      </p>
+                    </div>
+                    <div className="p-4 text-center bg-gray-50">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Deal Type</p>
+                      <p className="text-lg font-bold text-gray-800">{dealType}</p>
+                    </div>
+                    <div className="p-4 text-center bg-gray-50">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Lead Type</p>
+                      <p className="text-lg font-bold text-gray-800">{leadLabel}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── 2. CALL SCORE ── */}
             {report.callScore != null && (
               <Card className="bg-sky-50 border-sky-200 rounded-xl shadow-sm">
