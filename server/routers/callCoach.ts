@@ -87,7 +87,7 @@ export const callCoachRouter = router({
         repName: z.string().optional(),
         callDate: z.string().optional(), // ISO date string
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
-        callType: z.enum(["cold_call", "follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "opening", "retention_cancel_trial", "retention_win_back"]).optional(),
+        callType: z.enum(["cold_call", "follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "opening", "retention_cancel_trial", "retention_win_back", "instalment_decline"]).optional(),
         contactId: z.number().optional(),
       })
     )
@@ -123,7 +123,7 @@ export const callCoachRouter = router({
         callDate: z.string().optional(),
         closeStatus: z.enum(["closed", "not_closed", "follow_up"]).optional(),
         customerName: z.string().optional(),
-        callType: z.enum(["cold_call", "follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "opening", "retention_cancel_trial", "retention_win_back"]).optional(),
+        callType: z.enum(["cold_call", "follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "opening", "retention_cancel_trial", "retention_win_back", "instalment_decline"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

@@ -17,6 +17,7 @@ const CALL_TYPE_LABELS: Record<string, string> = {
   opening: "Opening (Legacy)",
   retention_cancel_trial: "Cancel Trial (Legacy)",
   retention_win_back: "Winback (Legacy)",
+  instalment_decline: "Instalment Decline",
 };
 
 const TEAM_LABELS: Record<string, string> = {

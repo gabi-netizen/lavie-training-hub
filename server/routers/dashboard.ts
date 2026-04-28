@@ -59,7 +59,7 @@ function getDateRange(range: string): { from: Date; to: Date } {
 
 // ─── Call type grouping for "Retention" tab filter ───────────────────────────
 const OPENING_CALL_TYPES = ["cold_call", "follow_up"];
-const RETENTION_CALL_TYPES = ["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "retention_win_back"];
+const RETENTION_CALL_TYPES = ["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "retention_win_back", "instalment_decline"];
 
 // ─── Map callType to display label ──────────────────────────────────────────
 function callTypeLabel(ct: string | null): string {
@@ -72,6 +72,7 @@ function callTypeLabel(ct: string | null): string {
     case "end_of_instalment": return "Retention";
     case "from_cat": return "Retention";
     case "retention_win_back": return "Retention";
+    case "instalment_decline": return "Instalment Decline";
     case "other": return "Other";
     case "opening": return "Opening";
     default: return ct ?? "Unknown";

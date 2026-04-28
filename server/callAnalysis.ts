@@ -838,6 +838,25 @@ Score LOW for: failing to resolve.
     };
   }
 
+  if (callType === "instalment_decline") {
+    return {
+      context: `
+CALL TYPE: Instalment Plan Decline (Card Recovery)
+This customer is on an instalment plan and their card payment has been declined. The rep's ONLY goal is to recover the card details (get new/updated payment information).
+This is a simple, focused call — no upsell is needed.
+Score 100 if the rep successfully recovers the card details.
+Score LOW only if the rep fails to recover the card or handles the call poorly.
+Do NOT penalise for missing "Magic Wand Question" or upsell — this is a card recovery call.
+`,
+      stages: ["Opening & Rapport", "Explain Payment Issue", "Collect New Card Details", "Confirm & Close"],
+      extraFields: `
+  "saved": <bool — did the rep successfully recover the card details?>,
+  "upsellAttempted": null,
+  "upsellSucceeded": null,
+  "cancelReason": null,`,
+    };
+  }
+
   // "other" call type = Retention team (EXEMPT from compliance)
   if (callType === "other") {
     return {
@@ -896,7 +915,7 @@ export async function analyseCallWithAI(
 ): Promise<CallAnalysisReport> {
   // ─── RETENTION EXEMPTION ─────────────────────────────────────────────────────
   // Retention call types are EXEMPT from all compliance checks.
-  const RETENTION_CALL_TYPES = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "retention_cancel_trial", "retention_win_back"]);
+  const RETENTION_CALL_TYPES = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "retention_cancel_trial", "retention_win_back", "instalment_decline"]);
   const isRetentionCall = RETENTION_CALL_TYPES.has(callType);
 
   const { context: callTypeContext, stages, extraFields } = getCallTypeContext(callType);
@@ -1008,7 +1027,7 @@ export async function createCallAnalysisRecord(data: {
   fileName: string;
   callDate?: Date | null;
   closeStatus?: "closed" | "not_closed" | "follow_up" | null;
-  callType?: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_cancel_trial" | "retention_win_back" | null;
+  callType?: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_cancel_trial" | "retention_win_back" | "instalment_decline" | null;
   source?: "manual" | "webhook";
   cloudtalkCallId?: string | null;
   contactId?: number | null;
@@ -1056,7 +1075,7 @@ export async function updateCallAnalysisStatus(
     upsellSucceeded: boolean;
     cancelReason: string;
     wordTimestamps: string;
-    callType: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_win_back";
+    callType: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_win_back" | "instalment_decline";
   }>
 )
 {

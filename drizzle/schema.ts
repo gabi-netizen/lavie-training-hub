@@ -71,7 +71,8 @@ export const callAnalyses = mysqlTable("call_analyses", {
     "cold_call", "follow_up",
     "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat",
     "other",
-    "opening", "retention_win_back"
+    "opening", "retention_win_back",
+    "instalment_decline"
   ]).default("cold_call"),
   /** User ID of the person who last edited the call details (repName/callDate/closeStatus) */
   lastEditedByUserId: int("lastEditedByUserId"),

@@ -155,7 +155,7 @@ function callTypeIcon(callType: string | null, score: number | null) {
       </div>
     );
   }
-  if (callType === "follow_up" || callType === "live_sub" || callType === "pre_cycle_cancelled" || callType === "pre_cycle_decline" || callType === "end_of_instalment" || callType === "from_cat" || callType === "retention_win_back") {
+  if (callType === "follow_up" || callType === "live_sub" || callType === "pre_cycle_cancelled" || callType === "pre_cycle_decline" || callType === "end_of_instalment" || callType === "from_cat" || callType === "retention_win_back" || callType === "instalment_decline") {
     return (
       <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
         <ArrowDownLeft size={16} strokeWidth={2.5} />

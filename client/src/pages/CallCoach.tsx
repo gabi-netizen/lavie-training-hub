@@ -98,6 +98,7 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
     opening:             { label: "📞 Opening",             cls: "bg-blue-50 text-blue-700 border-blue-200" },
     retention_cancel_trial: { label: "🔄 Cancel Trial",    cls: "bg-amber-50 text-amber-700 border-amber-200" },
     retention_win_back:  { label: "💎 Win Back",            cls: "bg-purple-50 text-purple-700 border-purple-200" },
+    instalment_decline:  { label: "💳 Instalment Decline",  cls: "bg-amber-50 text-amber-700 border-amber-200" },
   };
   const info = map[callType];
   if (!info) return null;
@@ -454,6 +455,7 @@ function EditDetailsModal({
                     <option value="pre_cycle_cancelled">🚫 Pre-Cycle Cancelled</option>
                     <option value="pre_cycle_decline">💳 Pre-Cycle Decline</option>
                     <option value="end_of_instalment">💎 End of Instalment</option>
+                    <option value="instalment_decline">💳 Instalment Decline</option>
                     <option value="from_cat">🔀 From Cat</option>
                     <option value="other">❓ Other</option>
                   </optgroup>
@@ -821,29 +823,104 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
               </Card>
             )}
 
-            {/* Badges */}
+            {/* Badges — call-type-aware indicators */}
             <div className="flex flex-wrap gap-2">
-              <Badge className={report.closingAttempted ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}>
-                {report.closingAttempted ? "✓ Close attempted" : "✗ No close attempt"}
-              </Badge>
-              <Badge className={report.magicWandUsed ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}>
-                {report.magicWandUsed ? "✓ Magic Wand used" : "✗ Magic Wand missed"}
-              </Badge>
-              {report.subscriptionDisclosed != null && (
-                <Badge className={report.subscriptionDisclosed ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}>
-                  {report.subscriptionDisclosed ? "✓ Subscription disclosed" : "✗ Subscription NOT disclosed"}
-                </Badge>
-              )}
-              {report.tcRead != null && (
-                <Badge className={report.tcRead ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}>
-                  {report.tcRead ? "✓ T&C read" : "✗ T&C not read"}
-                </Badge>
-              )}
-              {report.subscriptionMisrepresented && (
-                <Badge className="bg-red-100 text-red-800 border-red-400 font-bold animate-pulse">
-                  🚨 CRITICAL: Subscription denied
-                </Badge>
-              )}
+              {(() => {
+                const ct = analysis.callType ?? "cold_call";
+                const OPENING_TYPES = new Set(["cold_call", "follow_up", "opening"]);
+                const RETENTION_TYPES = new Set(["pre_cycle_cancelled", "pre_cycle_decline", "live_sub", "from_cat", "other", "retention_win_back"]);
+
+                if (OPENING_TYPES.has(ct)) {
+                  // Opening calls: Close attempted, Magic Wand, Subscription disclosed
+                  return (
+                    <>
+                      <Badge className={report.closingAttempted ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.closingAttempted ? "✓ Close attempted" : "✗ No close attempt"}
+                      </Badge>
+                      <Badge className={report.magicWandUsed ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.magicWandUsed ? "✓ Magic Wand used" : "✗ Magic Wand missed"}
+                      </Badge>
+                      {report.subscriptionDisclosed != null && (
+                        <Badge className={report.subscriptionDisclosed ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                          {report.subscriptionDisclosed ? "✓ Subscription disclosed" : "✗ Subscription not disclosed"}
+                        </Badge>
+                      )}
+                    </>
+                  );
+                }
+
+                if (RETENTION_TYPES.has(ct)) {
+                  // Retention calls: Saved, Upsell attempted, Upsell succeeded
+                  return (
+                    <>
+                      <Badge className={report.saved ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.saved ? "✓ Saved" : "✗ Not saved"}
+                      </Badge>
+                      <Badge className={report.upsellAttempted ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.upsellAttempted ? "✓ Upsell attempted" : "✗ Upsell not attempted"}
+                      </Badge>
+                      <Badge className={report.upsellSucceeded ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.upsellSucceeded ? "✓ Upsell succeeded" : "✗ Upsell not succeeded"}
+                      </Badge>
+                    </>
+                  );
+                }
+
+                if (ct === "end_of_instalment") {
+                  // End of Instalment: Upsell attempted, Upsell succeeded
+                  return (
+                    <>
+                      <Badge className={report.upsellAttempted ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.upsellAttempted ? "✓ Upsell attempted" : "✗ Upsell not attempted"}
+                      </Badge>
+                      <Badge className={report.upsellSucceeded ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                        {report.upsellSucceeded ? "✓ Upsell succeeded" : "✗ Upsell not succeeded"}
+                      </Badge>
+                    </>
+                  );
+                }
+
+                if (ct === "instalment_decline") {
+                  // Instalment Decline: Card recovered only
+                  return (
+                    <Badge className={report.saved ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                      {report.saved ? "✓ Card recovered" : "✗ Card not recovered"}
+                    </Badge>
+                  );
+                }
+
+                // Fallback: show opening-style badges
+                return (
+                  <>
+                    <Badge className={report.closingAttempted ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                      {report.closingAttempted ? "✓ Close attempted" : "✗ No close attempt"}
+                    </Badge>
+                    <Badge className={report.magicWandUsed ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-red-50 text-slate-800 border-red-200"}>
+                      {report.magicWandUsed ? "✓ Magic Wand used" : "✗ Magic Wand missed"}
+                    </Badge>
+                  </>
+                );
+              })()}
+              {/* Compliance badges — only for Opening calls */}
+              {(() => {
+                const ct = analysis.callType ?? "cold_call";
+                const OPENING_TYPES = new Set(["cold_call", "follow_up", "opening"]);
+                if (!OPENING_TYPES.has(ct)) return null;
+                return (
+                  <>
+                    {report.tcRead != null && (
+                      <Badge className={report.tcRead ? "bg-emerald-50 text-slate-800 border-emerald-200" : "bg-amber-50 text-slate-800 border-amber-200"}>
+                        {report.tcRead ? "✓ T&C read" : "✗ T&C not read"}
+                      </Badge>
+                    )}
+                    {report.subscriptionMisrepresented && (
+                      <Badge className="bg-red-100 text-red-800 border-red-400 font-bold animate-pulse">
+                        🚨 CRITICAL: Subscription denied
+                      </Badge>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Summary */}
@@ -1112,10 +1189,31 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                     <div class="score-card"><div class="score-num">${analysis.repSpeechPct ?? 0}%</div><div class="score-label">Rep Speech</div></div>
                   </div>
                   <div style="margin:12px 0">
-                    <span class="badge ${r.closingAttempted ? 'green' : 'red'}">${r.closingAttempted ? '✓ Close attempted' : '✗ No close attempt'}</span>
-                    <span class="badge ${r.magicWandUsed ? 'green' : 'amber'}">${r.magicWandUsed ? '✓ Magic Wand used' : '✗ Magic Wand missed'}</span>
-                    ${r.subscriptionDisclosed != null ? `<span class="badge ${r.subscriptionDisclosed ? 'green' : 'red'}">${r.subscriptionDisclosed ? '✓ Subscription disclosed' : '✗ Subscription NOT disclosed'}</span>` : ''}
-                    ${r.tcRead != null ? `<span class="badge ${r.tcRead ? 'green' : 'amber'}">${r.tcRead ? '✓ T&C read' : '✗ T&C not read'}</span>` : ''}
+                    ${(() => {
+                      const ct = analysis.callType ?? 'cold_call';
+                      const OPENING = ['cold_call', 'follow_up', 'opening'];
+                      const RETENTION = ['pre_cycle_cancelled', 'pre_cycle_decline', 'live_sub', 'from_cat', 'other', 'retention_win_back'];
+                      if (OPENING.includes(ct)) {
+                        return `<span class="badge ${r.closingAttempted ? 'green' : 'red'}">${r.closingAttempted ? '✓ Close attempted' : '✗ No close attempt'}</span>
+                          <span class="badge ${r.magicWandUsed ? 'green' : 'red'}">${r.magicWandUsed ? '✓ Magic Wand used' : '✗ Magic Wand missed'}</span>
+                          ${r.subscriptionDisclosed != null ? `<span class="badge ${r.subscriptionDisclosed ? 'green' : 'red'}">${r.subscriptionDisclosed ? '✓ Subscription disclosed' : '✗ Subscription not disclosed'}</span>` : ''}
+                          ${r.tcRead != null ? `<span class="badge ${r.tcRead ? 'green' : 'amber'}">${r.tcRead ? '✓ T&C read' : '✗ T&C not read'}</span>` : ''}`;
+                      }
+                      if (RETENTION.includes(ct)) {
+                        return `<span class="badge ${r.saved ? 'green' : 'red'}">${r.saved ? '✓ Saved' : '✗ Not saved'}</span>
+                          <span class="badge ${r.upsellAttempted ? 'green' : 'red'}">${r.upsellAttempted ? '✓ Upsell attempted' : '✗ Upsell not attempted'}</span>
+                          <span class="badge ${r.upsellSucceeded ? 'green' : 'red'}">${r.upsellSucceeded ? '✓ Upsell succeeded' : '✗ Upsell not succeeded'}</span>`;
+                      }
+                      if (ct === 'end_of_instalment') {
+                        return `<span class="badge ${r.upsellAttempted ? 'green' : 'red'}">${r.upsellAttempted ? '✓ Upsell attempted' : '✗ Upsell not attempted'}</span>
+                          <span class="badge ${r.upsellSucceeded ? 'green' : 'red'}">${r.upsellSucceeded ? '✓ Upsell succeeded' : '✗ Upsell not succeeded'}</span>`;
+                      }
+                      if (ct === 'instalment_decline') {
+                        return `<span class="badge ${r.saved ? 'green' : 'red'}">${r.saved ? '✓ Card recovered' : '✗ Card not recovered'}</span>`;
+                      }
+                      return `<span class="badge ${r.closingAttempted ? 'green' : 'red'}">${r.closingAttempted ? '✓ Close attempted' : '✗ No close attempt'}</span>
+                        <span class="badge ${r.magicWandUsed ? 'green' : 'red'}">${r.magicWandUsed ? '✓ Magic Wand used' : '✗ Magic Wand missed'}</span>`;
+                    })()}
                   </div>
                   ${complianceIssuesHtml}
                   <h2>Summary</h2><p>${r.summary}</p>
@@ -1287,6 +1385,7 @@ function UploadZone({ onUploaded }: { onUploaded: (id: number) => void }) {
                   <option value="pre_cycle_cancelled">🚫 Pre-Cycle Cancelled</option>
                   <option value="pre_cycle_decline">💳 Pre-Cycle Decline</option>
                   <option value="end_of_instalment">💎 End of Instalment</option>
+                  <option value="instalment_decline">💳 Instalment Decline</option>
                   <option value="from_cat">🔀 From Cat</option>
                   <option value="other">❓ Other</option>
                 </optgroup>
