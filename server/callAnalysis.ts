@@ -286,7 +286,9 @@ function applySingleSpeakerSplitFix(wordTimestamps: WordTimestamp[]): { wordTime
     /\bi\s+don'?t\s+need\s+it\b/i,
     /\bno\s+thanks\b/i,
     /\bwrong\s+number\b/i,
-    /\bspeaking\b/i,
+    // "[name] speaking" or "yes speaking" or standalone "speaking" — but NOT "you are speaking with" or "speaking to"
+    /\b\w+\s+speaking\s*$/i,
+    /^speaking\s*$/i,
   ];
 
   // Short standalone responses that are clearly the customer
@@ -335,7 +337,10 @@ function applySingleSpeakerSplitFix(wordTimestamps: WordTimestamp[]): { wordTime
   chunks.push(curChunk);
 
   // ── Step 2: Label each chunk ──────────────────────────────────────────────────
-  const chunkLabels: ("Agent" | "Customer")[] = chunks.map((chunk, chunkIndex) => {
+  // First pass: assign labels where patterns give a definitive answer.
+  // Unresolved chunks are marked null and filled in a second pass using
+  // an alternating-speaker heuristic.
+  const resolvedLabels: ("Agent" | "Customer" | null)[] = chunks.map((chunk, chunkIndex) => {
     const chunkText = chunk.words.map(w => w.word).join(" ");
     const chunkLower = chunkText.toLowerCase();
     const cleanWords = chunkLower.replace(/[^a-z\s]/g, '').trim().split(/\s+/);
@@ -355,11 +360,36 @@ function applySingleSpeakerSplitFix(wordTimestamps: WordTimestamp[]): { wordTime
     // These are customer interjections ("Yes", "Okay", "Hi") between agent blocks.
     if (chunk.words.length <= 4 && chunkIndex > 0) return "Customer";
 
-    // Priority 5: First chunk → Agent (agent always opens the outbound call)
-    if (chunkIndex === 0) return "Agent";
+    // No definitive match — defer to second pass
+    return null;
+  });
 
-    // Default → Agent
-    return "Agent";
+  // Second pass: fill null labels using alternating-speaker logic.
+  // In a cold call the customer answers first, so the first unresolved chunk
+  // defaults to Customer.  After each definitively-labelled chunk the expected
+  // next speaker flips.  When in doubt, prefer Customer over Agent.
+  let lastKnownLabel: "Agent" | "Customer" = "Customer"; // cold-call default: customer answers
+  // Seed lastKnownLabel from the first definitively-resolved chunk, if any.
+  for (const lbl of resolvedLabels) {
+    if (lbl !== null) { lastKnownLabel = lbl; break; }
+  }
+
+  const chunkLabels: ("Agent" | "Customer")[] = resolvedLabels.map((lbl, chunkIndex) => {
+    if (lbl !== null) {
+      lastKnownLabel = lbl;
+      return lbl;
+    }
+    // Unresolved: alternate from the last known speaker.
+    // If the last known speaker was Agent, the next unknown is Customer, and vice versa.
+    const alternated: "Agent" | "Customer" = lastKnownLabel === "Agent" ? "Customer" : "Agent";
+    // Special case: the very first chunk in a cold call is almost always the customer
+    // answering the phone, unless an agent pattern already resolved it above.
+    if (chunkIndex === 0) {
+      lastKnownLabel = "Customer";
+      return "Customer";
+    }
+    lastKnownLabel = alternated;
+    return alternated;
   });
 
   // ── Step 3: Propagate chunk labels back to individual words ───────────────────
