@@ -663,9 +663,10 @@ export default function CallCenterDashboard() {
         {/* ═══════ CALL TABLE ═══════ */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           {/* Table head */}
-          <div className="grid grid-cols-[180px_200px_190px_140px_100px_110px_100px_80px_50px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+          <div className="grid grid-cols-[180px_200px_150px_190px_140px_100px_110px_100px_80px_50px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wide">
             <div>Type</div>
             <div>Contact</div>
+            <div>Phone</div>
             <div>Agent</div>
             <div>Date</div>
             <div>AI Score</div>
@@ -699,7 +700,7 @@ export default function CallCenterDashboard() {
                   <div
                     key={call.id}
                     onClick={() => goToCall(call.id)}
-                    className="grid grid-cols-[180px_200px_190px_140px_100px_110px_100px_80px_50px] px-5 py-3.5 items-center hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0"
+                    className="grid grid-cols-[180px_200px_150px_190px_140px_100px_110px_100px_80px_50px] px-5 py-3.5 items-center hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0"
                   >
                     {/* Type */}
                     <div className="flex items-center gap-2.5">
@@ -713,8 +714,12 @@ export default function CallCenterDashboard() {
                      {/* Contact */}
                      <div>
                        <div className="text-[13px] font-medium text-gray-900 truncate">{call.contactName || call.customerName || "—"}</div>
-                       <div className="text-xs text-gray-600 truncate">{call.contactPhone || ""}</div>
                      </div>
+
+                    {/* Phone */}
+                    <div>
+                      <div className="text-[13px] text-gray-900 truncate">{(call as any).externalNumber || call.contactPhone || "—"}</div>
+                    </div>
 
                     {/* Agent */}
                     <div className="flex items-center gap-2.5">

@@ -342,6 +342,7 @@ export const dashboardRouter = router({
           createdAt: callAnalyses.createdAt,
           source: callAnalyses.source,
           repSpeechPct: callAnalyses.repSpeechPct,
+          externalNumber: callAnalyses.externalNumber,
           // User fields — use repName from call_analyses (set by webhook) as the authoritative agent name
           agentName: callAnalyses.repName,
           agentEmail: users.email,
@@ -383,7 +384,8 @@ export const dashboardRouter = router({
             customerName: row.customerName || contact?.name || null,
             contactName: row.contactName ?? null,
             contactId: row.contactId,
-            contactPhone: contact?.phone ?? null,
+            contactPhone: contact?.phone ?? row.externalNumber ?? null,
+            externalNumber: row.externalNumber ?? null,
             createdAt: row.createdAt,
             source: row.source,
             agentName: row.agentName ?? null,
