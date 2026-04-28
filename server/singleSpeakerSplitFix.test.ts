@@ -50,6 +50,21 @@ const CUSTOMER_PHRASE_PATTERNS = [
   /\bvoicemail\b/i,
   /\bplease\s+leave\s+your\s+message\b/i,
   /\breply\s+after\s+the\s+tone\b/i,
+  // Additional IVR / automated system phrases
+  /\bif\s+you\s+would\s+like\s+to\s+leave\b/i,
+  /\bleave\s+an\s+additional\s+message\b/i,
+  /\bplease\s+leave\s+your\s+name\b/i,
+  /\bi'?ll\s+see\s+if\s+this\s+person\s+is\s+available\b/i,
+  /\bplease\s+hold\b/i,
+  /\bplease\s+wait\b/i,
+  /\byour\s+call\s+(?:is\s+)?(?:being\s+)?(?:recorded|monitored)\b/i,
+  /\bpress\s+\d+\s+(?:to|for)\b/i,
+  /\bfor\s+(?:more\s+)?(?:options|information)\b/i,
+  /\bto\s+leave\s+a\s+(?:voice\s*)?message\b/i,
+  /\bthe\s+(?:person|number)\s+you\s+(?:are|have)\s+(?:called|dialed|trying)\b/i,
+  /\bsorry\s+(?:i|we)\s+(?:am|are|can't|cannot)\s+(?:take|answer)\b/i,
+  /\bplease\s+try\s+(?:again|your\s+call)\s+later\b/i,
+  /\bthank\s+you\s+for\s+(?:calling|your\s+(?:call|patience))\b/i,
 ];
 
 const CUSTOMER_SHORT_RESPONSES = new Set([
