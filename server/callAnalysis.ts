@@ -173,6 +173,118 @@ export interface WordTimestamp {
   speaker: "Agent" | "Customer";
 }
 
+// ─── IVR / VOICEMAIL POST-PROCESSING ──────────────────────────────────────────
+/**
+ * Fixes speaker diarization when Deepgram returns all words as a single speaker
+ * but the call actually contains an electronic secretary/voicemail/IVR.
+ */
+function applyIvrSplitFix(wordTimestamps: WordTimestamp[]): { wordTimestamps: WordTimestamp[], repSpeechPct: number, transcript: string } | null {
+  // Check if it's a single-speaker transcript (all words have the same speaker)
+  if (wordTimestamps.length === 0) return null;
+  
+  const firstSpeaker = wordTimestamps[0].speaker;
+  const isSingleSpeaker = wordTimestamps.every(w => w.speaker === firstSpeaker);
+  
+  if (!isSingleSpeaker) return null; // No fix needed if already multiple speakers
+  
+  // Combine all words to check for IVR phrases
+  const fullText = wordTimestamps.map(w => w.word).join(" ").toLowerCase();
+  
+  // IVR/Voicemail phrases to detect
+  const ivrPhrases = [
+    "leave a message",
+    "not available",
+    "after the tone",
+    "record your name",
+    "please stay on the line",
+    "this person is not available",
+    "reply after the tone",
+    "voicemail",
+    "please leave your message"
+  ];
+  
+  const hasIvr = ivrPhrases.some(phrase => fullText.includes(phrase));
+  if (!hasIvr) return null; // Not an IVR call
+  
+  console.log("[Transcription] Detected single-speaker IVR/Voicemail call. Applying split fix.");
+  
+  // Reuse AGENT_PATTERNS to identify agent words
+  const AGENT_PATTERNS = [
+    // Self-introduction / company name
+    /\bla\s*vie\b/i,
+    /\blavie\b/i,
+    /\bla\s*vie\s*labs\b/i,
+    /\blovely\s*labs\b/i,
+    // Product names
+    /\bmatinika\b/i,
+    /\boulala\b/i,
+    /\bashkara\b/i,
+    /\bcollagen\b/i,
+    // Pricing / offer language unique to agent
+    /\b4\.95\b/,
+    /\b£\s*4\.95\b/,
+    /\b21[\s-]day\s*(free\s*)?trial\b/i,
+    /\b44\.90\b/,
+    /\b£\s*44\.90\b/,
+    /\bhyaluronic\s*acid\b/i,
+    /\bretinol\b/i,
+    /\btrustpilot\b/i,
+    // Classic agent opening phrases
+    /\bthis\s+is\s+\w+\s+from\b/i,
+    /\bmy\s+name\s+is\s+\w+\s+(?:from|calling\s+from)\b/i,
+    /\bcalling\s+(?:from|on\s+behalf\s+of)\b/i,
+    /\bfree\s+trial\b/i,
+    /\bmagic\s+wand\b/i,
+    /\bcancel\s+any\s*time\b/i,
+    /\bpostage\b/i,
+    /\bdelivery\s+address\b/i,
+    /\blong\s+number\b/i,   // asking for card number
+    /\bsort\s+code\b/i,
+    /\bexpiry\b/i,
+  ];
+  
+  // Re-label words
+  let agentTime = 0;
+  let totalTime = 0;
+  
+  const newWordTimestamps = wordTimestamps.map(w => {
+    const wordText = w.word.toLowerCase();
+    const dur = w.end - w.start;
+    totalTime += dur;
+    
+    // Check if word matches any agent pattern
+    const isAgentWord = AGENT_PATTERNS.some(pattern => pattern.test(wordText));
+    
+    if (isAgentWord) {
+      agentTime += dur;
+      return { ...w, speaker: "Agent" as const };
+    } else {
+      return { ...w, speaker: "Customer" as const }; // IVR is labeled as Customer
+    }
+  });
+  
+  // Recalculate repSpeechPct
+  const repSpeechPct = totalTime > 0 ? Math.round((agentTime / totalTime) * 100) : 50;
+  
+  // Rebuild transcript
+  type Segment = { label: "Agent" | "Customer"; words: string[]; start: number; end: number };
+  const segments: Segment[] = [];
+  for (const w of newWordTimestamps) {
+    const label = w.speaker;
+    const wordText = w.word.trim();
+    if (!wordText) continue;
+    if (segments.length === 0 || segments[segments.length - 1].label !== label) {
+      segments.push({ label, words: [wordText], start: w.start, end: w.end });
+    } else {
+      segments[segments.length - 1].words.push(wordText);
+      segments[segments.length - 1].end = w.end;
+    }
+  }
+  const transcript = segments.map(s => `${s.label}: ${s.words.join(" ")}`).join("\n");
+  
+  return { wordTimestamps: newWordTimestamps, repSpeechPct, transcript };
+}
+
 export async function transcribeAudio(audioUrl: string): Promise<{
   transcript: string;
   repSpeechPct: number;
@@ -409,7 +521,19 @@ export async function transcribeAudio(audioUrl: string): Promise<{
         speaker: w.speaker === repSpeaker ? "Agent" as const : "Customer" as const,
       }));
 
-      return { transcript, repSpeechPct, durationSeconds: duration, wordTimestamps: monoWordTimestamps };
+      let finalTranscript = transcript;
+      let finalRepSpeechPct = repSpeechPct;
+      let finalWordTimestamps = monoWordTimestamps;
+      
+      // Apply IVR split fix if needed
+      const ivrFix = applyIvrSplitFix(monoWordTimestamps);
+      if (ivrFix) {
+        finalTranscript = ivrFix.transcript;
+        finalRepSpeechPct = ivrFix.repSpeechPct;
+        finalWordTimestamps = ivrFix.wordTimestamps;
+      }
+
+      return { transcript: finalTranscript, repSpeechPct: finalRepSpeechPct, durationSeconds: duration, wordTimestamps: finalWordTimestamps };
 
     } else {
       // Utterance fallback (no word-level data available)
@@ -439,7 +563,19 @@ export async function transcribeAudio(audioUrl: string): Promise<{
           monoWordTimestamps.push({ word: w.punctuated_word ?? w.word ?? "", start: w.start ?? 0, end: w.end ?? 0, speaker: label });
         }
       }
-      return { transcript, repSpeechPct, durationSeconds: duration, wordTimestamps: monoWordTimestamps };
+      let finalTranscript = transcript;
+      let finalRepSpeechPct = repSpeechPct;
+      let finalWordTimestamps = monoWordTimestamps;
+      
+      // Apply IVR split fix if needed
+      const ivrFix = applyIvrSplitFix(monoWordTimestamps);
+      if (ivrFix) {
+        finalTranscript = ivrFix.transcript;
+        finalRepSpeechPct = ivrFix.repSpeechPct;
+        finalWordTimestamps = ivrFix.wordTimestamps;
+      }
+      
+      return { transcript: finalTranscript, repSpeechPct: finalRepSpeechPct, durationSeconds: duration, wordTimestamps: finalWordTimestamps };
     }
   }
 }
