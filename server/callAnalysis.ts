@@ -780,10 +780,11 @@ export interface CallAnalysisReport {
   callScoreDescription?: string | null;           // Brief 5-10 word description
   customerProfile?: string | null;                // 2-3 sentence customer description
   managerReview?: {
+    title: string;         // e.g. "Missed Opportunity to Explore Needs Before Pitching"
     timestamp: string;     // e.g. "2:56"
-    quote: string;         // Direct quote from transcript
-    feedback: string;      // What was wrong
-    suggestion: string;    // What they should have done - exact words
+    quote: string;         // Long direct quote (2-4 sentences) from transcript
+    feedback: string;      // 3-4 sentences: customer state, what happened, why rep's approach was wrong
+    suggestion: string;    // "You should have..." + technique name + exact words in quotes
   }[] | null;
 }
 
@@ -1048,13 +1049,19 @@ ${isRetentionLongCall ? `
   "customerProfile": "<2-3 sentences describing who this customer is: their situation, relationship with the brand, financial constraints, emotional state, and what they wanted from this call>",
   "managerReview": [
     {
+      "title": "<short descriptive title of the issue, e.g. 'Missed Opportunity to Explore Needs Before Pitching', 'Over-talking After the Close', 'Failed to Address Budget Concern'>",
       "timestamp": "<MM:SS — exact moment from the call>",
-      "quote": "<direct quote of what the rep said — copy verbatim from transcript>",
-      "feedback": "<2-3 sentences: what was wrong, what the customer's state was at that moment, why the rep's approach didn't fit>",
-      "suggestion": "<exact alternative words: 'You should have said: [specific phrase]'>"
+      "quote": "<LONG direct quote of what the rep said — copy 2-4 full sentences verbatim from the transcript. Include enough context so a manager reading this understands exactly what happened. If the customer responded, include their response too in parentheses.>",
+      "feedback": "<3-4 sentences explaining WHY this was suboptimal. Be specific: describe what the customer's emotional state was at that moment, what the customer had just said or done, why the rep's approach didn't fit that moment, and what opportunity was missed. Write as if you're a senior call center manager explaining to the rep face-to-face.>",
+      "suggestion": "<Start with 'You should have' then explain the technique, followed by the EXACT words in quotes. Example: 'You should have used the Magic Wand question here to build value: \"I'm so glad you love the Matanika cream. If you had a magic wand, what other area of your skin would you want to improve?\" Then, tailor the free serum offer to her specific answer.'>"
     }
   ],
-  IMPORTANT: managerReview must have exactly 2-3 items. Each must reference a SPECIFIC timestamp, include a DIRECT QUOTE from the transcript, explain WHY it was suboptimal given the customer's state at that moment, and suggest EXACT alternative words the rep should have used. Be precise like a real call center manager reviewing the recording.
+  IMPORTANT: managerReview must have exactly 2-3 items. Each item must be DEEPLY detailed:
+  - title: A clear, descriptive name for the coaching point
+  - quote: At least 2-4 full sentences copied verbatim from the transcript — not just a short snippet
+  - feedback: 3-4 sentences with full context about the customer's state, what was happening in the conversation, and why the rep's approach was wrong
+  - suggestion: A specific technique name + the EXACT words the rep should have said in quotes, plus explanation of why this would work better
+  Think like a senior call center manager who listened to the entire recording and is giving detailed, actionable coaching feedback.
 ` : ''}}
 ${dealTypeBlock}${complianceRules}
 

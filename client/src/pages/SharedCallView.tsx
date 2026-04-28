@@ -61,6 +61,7 @@ interface CallAnalysisReport {
   callScoreDescription?: string | null;
   customerProfile?: string | null;
   managerReview?: {
+    title: string;
     timestamp: string;
     quote: string;
     feedback: string;
@@ -313,12 +314,13 @@ export default function SharedCallView() {
                 <CardContent className="space-y-4">
                   {report.managerReview.map((item, i) => (
                     <div key={i} className="border-l-4 border-blue-400 pl-4 py-2 space-y-2">
+                      <p className="text-sm font-bold text-gray-800">{item.title}</p>
                       <span className="inline-block text-xs font-semibold text-gray-800 bg-gray-100 rounded px-2 py-0.5">
-                        {"\u23F1"} At {item.timestamp}
+                        ⏱ At {item.timestamp}
                       </span>
                       <p className="text-sm text-gray-800 italic">&ldquo;{item.quote}&rdquo;</p>
                       <p className="text-sm text-gray-600">{item.feedback}</p>
-                      <p className="text-sm text-emerald-700 font-medium">{"\u2705"} {item.suggestion}</p>
+                      <p className="text-sm text-emerald-700 font-medium">✅ {item.suggestion}</p>
                     </div>
                   ))}
                 </CardContent>
