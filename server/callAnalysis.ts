@@ -72,7 +72,7 @@ function detectAgentSpeaker(
 ): number {
   // ── 1. Content-based detection ──────────────────────────────────────────────
   // Patterns that strongly indicate the speaker is the Lavie Labs sales agent.
-  // We check the first 60 items so we don't scan the entire (potentially huge) array.
+  // We check the first 150 items so we don't scan the entire (potentially huge) array.
   const AGENT_PATTERNS = [
     // Self-introduction / company name
     /\bla\s*vie\b/i,
@@ -83,6 +83,7 @@ function detectAgentSpeaker(
     /\bmatinika\b/i,
     /\boulala\b/i,
     /\bashkara\b/i,
+    /\bcollagen\b/i,
     // Pricing / offer language unique to agent
     /\b4\.95\b/,
     /\b£\s*4\.95\b/,
@@ -106,10 +107,10 @@ function detectAgentSpeaker(
     /\bexpiry\b/i,
   ];
 
-  // Collect text per speaker from the first 60 items
+  // Collect text per speaker from the first 150 items
   const speakerTexts: Record<number, string> = {};
   const speakerTimes: Record<number, number> = {};
-  const SCAN_LIMIT = 60;
+  const SCAN_LIMIT = 150;
 
   for (let i = 0; i < Math.min(items.length, SCAN_LIMIT); i++) {
     const item = items[i];
