@@ -102,6 +102,8 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
     opening:             { label: "Opening",                cls: "bg-blue-50 text-blue-700 border-blue-200" },
     retention_win_back:  { label: "Win Back",               cls: "bg-purple-50 text-purple-700 border-purple-200" },
     instalment_decline:  { label: "Instalment Decline",     cls: "bg-amber-50 text-amber-700 border-amber-200" },
+    cancel_live_sub:     { label: "🚫 Cancel Live Sub",     cls: "bg-red-50 text-red-700 border-red-200" },
+    cancel_live_sub_2plus: { label: "🚫 Cancel Live Sub 2+", cls: "bg-rose-50 text-rose-700 border-rose-200" },
   };
   const info = map[callType];
   if (!info) return null;
@@ -171,7 +173,7 @@ export default function SharedCallView() {
   const dealStatus = analysis.closeStatus ? dealStatusMap[analysis.closeStatus] : null;
 
   // Retention long call detection
-  const RETENTION_TYPES_SET = new Set(["pre_cycle_cancelled", "pre_cycle_decline", "live_sub", "from_cat", "other", "retention_win_back"]);
+  const RETENTION_TYPES_SET = new Set(["pre_cycle_cancelled", "pre_cycle_decline", "live_sub", "cancel_live_sub", "cancel_live_sub_2plus", "from_cat", "other", "retention_win_back", "end_of_instalment", "instalment_decline"]);
   const isRetentionLongCall = report != null && RETENTION_TYPES_SET.has(analysis.callType ?? "") && (analysis.durationSeconds ?? 0) > 300;
 
   return (
@@ -199,13 +201,66 @@ export default function SharedCallView() {
           <div className="space-y-5">
             {/* ── 1. HEADER: Customer name + call type + deal result + deal type ── */}
             {(() => {
-              const isClosed = report.saved === true || report.upsellSucceeded === true;
               const ct = analysis.callType ?? "";
-              let dealType = "No Deal";
-              if (report.saved === true && report.upsellSucceeded === true) dealType = "Saved + Upsell";
-              else if (report.saved === true && ct === "instalment_decline") dealType = "Card Recovered";
-              else if (report.saved === true) dealType = "Saved Sub";
-              else if (report.upsellSucceeded === true) dealType = "Upsell Only";
+              // Determine Deal Result label and color per call type
+              let dealResultLabel = "";
+              let dealResultPositive = false;
+              let dealType = "";
+
+              if (ct === "live_sub") {
+                // live_sub: Upsell Closed / No Upsell / Sub Cancelled
+                if (report.upsellSucceeded === true) {
+                  dealResultLabel = "✓ Upsell Closed";
+                  dealResultPositive = true;
+                  dealType = "Upsell Only";
+                } else if ((report as any).customerCancelled === true) {
+                  dealResultLabel = "✗ Sub Cancelled";
+                  dealResultPositive = false;
+                  dealType = "Sub Lost";
+                } else {
+                  dealResultLabel = "— No Upsell";
+                  dealResultPositive = false;
+                  dealType = report.upsellAttempted ? "Attempted" : "Not Attempted";
+                }
+              } else if (ct === "end_of_instalment") {
+                // end_of_instalment: Upsell Closed / No Upsell
+                if (report.upsellSucceeded === true) {
+                  dealResultLabel = "✓ Upsell Closed";
+                  dealResultPositive = true;
+                  dealType = "Upsell Only";
+                } else {
+                  dealResultLabel = "✗ No Upsell";
+                  dealResultPositive = false;
+                  dealType = report.upsellAttempted ? "Attempted" : "Not Attempted";
+                }
+              } else if (ct === "instalment_decline") {
+                // instalment_decline: Card Recovered / Card Lost
+                if (report.saved === true) {
+                  dealResultLabel = "✓ Card Recovered";
+                  dealResultPositive = true;
+                  dealType = "Card Recovered";
+                } else {
+                  dealResultLabel = "✗ Card Lost";
+                  dealResultPositive = false;
+                  dealType = "Not Recovered";
+                }
+              } else {
+                // cancel_live_sub, cancel_live_sub_2plus, pre_cycle_cancelled, pre_cycle_decline, from_cat, retention_win_back, other
+                // Sub Saved / Sub Lost
+                if (report.saved === true && report.upsellSucceeded === true) {
+                  dealResultLabel = "✓ Sub Saved";
+                  dealResultPositive = true;
+                  dealType = "Saved + Upsell";
+                } else if (report.saved === true) {
+                  dealResultLabel = "✓ Sub Saved";
+                  dealResultPositive = true;
+                  dealType = "Saved Sub";
+                } else {
+                  dealResultLabel = "✗ Sub Lost";
+                  dealResultPositive = false;
+                  dealType = "Not Saved";
+                }
+              }
               return (
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <div className="flex items-center gap-3 flex-wrap">
@@ -213,8 +268,8 @@ export default function SharedCallView() {
                   {report.customerName ?? analysis.customerName ?? "Customer"}
                 </h2>
                 <CallTypeBadge callType={analysis.callType} />
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${isClosed ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-800 border border-red-300"}`}>
-                  {isClosed ? "\u2713 Deal Closed" : "\u2717 Not Closed"}
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${dealResultPositive ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-800 border border-red-300"}`}>
+                  {dealResultLabel}
                 </span>
                 <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-300 text-xs font-semibold">
                   {dealType}
@@ -623,7 +678,7 @@ export default function SharedCallView() {
               {(() => {
                 const ct = analysis.callType ?? "cold_call";
                 const OPENING_TYPES = new Set(["cold_call", "follow_up", "opening"]);
-                const RETENTION_TYPES = new Set(["pre_cycle_cancelled", "pre_cycle_decline", "live_sub", "from_cat", "other", "retention_win_back"]);
+                const RETENTION_TYPES = new Set(["pre_cycle_cancelled", "pre_cycle_decline", "live_sub", "cancel_live_sub", "cancel_live_sub_2plus", "from_cat", "other", "retention_win_back"]);
 
                 if (OPENING_TYPES.has(ct)) {
                   return (
