@@ -21,6 +21,18 @@ import {
   deleteFailedAnalysis,
 } from "../callAnalysis";
 
+// ─── Credit Card Masking ─────────────────────────────────────────────────────
+// Matches 13-19 digit sequences (with optional spaces/dashes) that look like card numbers
+function maskCreditCards(text: string): string {
+  // Match sequences of 13-19 digits, optionally separated by spaces or dashes
+  return text.replace(/\b(\d[ -]?){12,18}\d\b/g, (match) => {
+    const digitsOnly = match.replace(/[ -]/g, "");
+    if (digitsOnly.length < 13 || digitsOnly.length > 19) return match;
+    const lastFour = digitsOnly.slice(-4);
+    return `XXXX XXXX XXXX ${lastFour}`;
+  });
+}
+
 export const callCoachRouter = router({
   /** Agent personal coaching dashboard — stats, strengths, improvements, compliance for selected time range */
   getMyCoachingDashboard: protectedProcedure
@@ -47,10 +59,13 @@ export const callCoachRouter = router({
 
   getAnalysis: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const analysis = await getCallAnalysisById(input.id);
       if (!analysis) return null;
-      // All authenticated users can view any call's analysis
+      // Mask credit card numbers for non-admin users
+      if (ctx.user.role !== "admin" && analysis.transcript) {
+        return { ...analysis, transcript: maskCreditCards(analysis.transcript) };
+      }
       return analysis;
     }),
 
@@ -254,6 +269,10 @@ export const callCoachRouter = router({
       if (!analysis) return null;
       // Only return completed analyses
       if (analysis.status !== "done") return null;
+      // Always mask credit cards on public shared links
+      if (analysis.transcript) {
+        return { ...analysis, transcript: maskCreditCards(analysis.transcript) };
+      }
       return analysis;
     }),
 
