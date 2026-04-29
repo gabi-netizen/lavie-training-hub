@@ -793,24 +793,34 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
         if (isRetentionLongCall) {
           return (
             <div className="space-y-5">
-              {/* ── 1. HEADER: Customer name + call type badge + agent info ── */}
+              {/* ── 1. HEADER: Customer name + call type + deal result + deal type ── */}
+              {(() => {
+                const isClosed = report.saved === true || report.upsellSucceeded === true;
+                const ct = analysis.callType ?? "";
+                let dealType = "No Deal";
+                if (report.saved === true && report.upsellSucceeded === true) dealType = "Saved + Upsell";
+                else if (report.saved === true && ct === "instalment_decline") dealType = "Card Recovered";
+                else if (report.saved === true) dealType = "Saved Sub";
+                else if (report.upsellSucceeded === true) dealType = "Upsell Only";
+                return (
               <div className="rounded-xl border border-gray-200 bg-white p-5">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h2 className="text-xl font-bold text-gray-800">
                     {report.customerName ?? analysis.customerName ?? "Customer"}
                   </h2>
                   <CallTypeBadge callType={analysis.callType} />
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${isClosed ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-800 border border-red-300"}`}>
+                    {isClosed ? "\u2713 Deal Closed" : "\u2717 Not Closed"}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-300 text-xs font-semibold">
+                    {dealType}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap mt-2 text-sm text-gray-600">
                   {analysis.repName && <span className="font-medium text-gray-800">{analysis.repName}</span>}
                   {analysis.callDate && <span>{new Date(analysis.callDate).toLocaleDateString()}</span>}
                   {analysis.durationSeconds && (
                     <span>{Math.floor((analysis.durationSeconds ?? 0) / 60)}m {Math.round((analysis.durationSeconds ?? 0) % 60)}s</span>
-                  )}
-                  {dealStatus && (
-                    <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${dealStatus.bg} ${dealStatus.border} ${dealStatus.color}`}>
-                      {dealStatus.label}
-                    </span>
                   )}
                   {currentUser?.role === "admin" && (
                     <Button
@@ -836,42 +846,6 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                   </Button>
                 </div>
               </div>
-
-              {/* ── 1b. DEAL RESULT / DEAL TYPE / LEAD TYPE BANNER ── */}
-              {(() => {
-                const isClosed = report.saved === true || report.upsellSucceeded === true;
-                const ct = analysis.callType ?? "";
-                let dealType = "No Deal";
-                if (report.saved === true && report.upsellSucceeded === true) dealType = "Saved + Upsell";
-                else if (report.saved === true && ct === "instalment_decline") dealType = "Card Recovered";
-                else if (report.saved === true) dealType = "Saved Sub";
-                else if (report.upsellSucceeded === true) dealType = "Upsell Only";
-                const callTypeMap: Record<string, string> = {
-                  live_sub: "Live Sub", pre_cycle_cancelled: "Pre-Cycle Cancelled",
-                  pre_cycle_decline: "Pre-Cycle Decline", end_of_instalment: "End of Instalment",
-                  from_cat: "From Cat", other: "Other", retention_cancel_trial: "Cancel Trial",
-                  retention_win_back: "Win Back", instalment_decline: "Instalment Decline",
-                };
-                const leadLabel = callTypeMap[ct] ?? ct;
-                return (
-                  <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <div className="grid grid-cols-3">
-                      <div className={`p-4 text-center ${isClosed ? "bg-emerald-100" : "bg-red-100"}`}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Deal Result</p>
-                        <p className={`text-lg font-bold ${isClosed ? "text-emerald-800" : "text-red-800"}`}>
-                          {isClosed ? "CLOSED" : "NOT CLOSED"}
-                        </p>
-                      </div>
-                      <div className="p-4 text-center bg-gray-50">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Deal Type</p>
-                        <p className="text-lg font-bold text-gray-800">{dealType}</p>
-                      </div>
-                      <div className="p-4 text-center bg-gray-50">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">Lead Type</p>
-                        <p className="text-lg font-bold text-gray-800">{leadLabel}</p>
-                      </div>
-                    </div>
-                  </div>
                 );
               })()}
 
