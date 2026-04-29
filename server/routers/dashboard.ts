@@ -243,13 +243,15 @@ export const dashboardRouter = router({
         dateRange: z.string().optional(),
         callType: z.string().optional(),
         search: z.string().optional(),
+        durationMin: z.number().min(0).optional(),
+        durationMax: z.number().min(0).optional(),
       })
     )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const { page, limit, tab, agentId, team, scoreMin, scoreMax, dateRange, callType, search } = input;
+      const { page, limit, tab, agentId, team, scoreMin, scoreMax, dateRange, callType, search, durationMin, durationMax } = input;
       const offset = (page - 1) * limit;
 
       // Build WHERE conditions
@@ -303,6 +305,14 @@ export const dashboardRouter = router({
         } else {
           conditions.push(eq(callAnalyses.callType, callType as any));
         }
+      }
+
+      // Duration filter (in minutes → convert to seconds)
+      if (durationMin !== undefined && durationMin > 0) {
+        conditions.push(gte(callAnalyses.durationSeconds, durationMin * 60));
+      }
+      if (durationMax !== undefined && durationMax > 0) {
+        conditions.push(lte(callAnalyses.durationSeconds, durationMax * 60));
       }
 
       // Search by customer name or contact phone

@@ -70,6 +70,8 @@ const DEFAULT_FILTERS = {
   dateRange: "today",
   callType: "all",
   search: "",
+  durationMin: undefined as number | undefined,
+  durationMax: undefined as number | undefined,
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -333,6 +335,8 @@ export default function CallCenterDashboard() {
     dateRange: filters.dateRange,
     callType: filters.callType !== "all" ? filters.callType : undefined,
     search: filters.search || undefined,
+    durationMin: filters.durationMin,
+    durationMax: filters.durationMax,
   });
 
   const { data: stats } = trpc.dashboard.getDashboardStats.useQuery({ tab: activeTab });
@@ -520,6 +524,30 @@ export default function CallCenterDashboard() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Duration (minutes) */}
+          <div className="flex flex-col items-center gap-1.5">
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Duration (min)</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={0}
+                placeholder="0"
+                value={draft.durationMin ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, durationMin: e.target.value ? Number(e.target.value) : undefined }))}
+                className="w-[60px] h-[38px] px-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+              />
+              <span className="text-gray-600 text-xs">–</span>
+              <input
+                type="number"
+                min={0}
+                placeholder="∞"
+                value={draft.durationMax ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, durationMax: e.target.value ? Number(e.target.value) : undefined }))}
+                className="w-[60px] h-[38px] px-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+              />
+            </div>
           </div>
 
           {/* Search */}
