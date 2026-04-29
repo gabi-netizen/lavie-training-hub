@@ -453,6 +453,19 @@ export default function ContactCard() {
               <p className="text-sm text-gray-800 italic">Not scheduled</p>
             )}
           </div>
+          {/* Starter Kit */}
+          <div className="p-5 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Starter Kit</p>
+            <select
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+              value={contact.trialKit || ""}
+              onChange={(e) => updateMutation.mutate({ id: contactId, trialKit: e.target.value || undefined })}
+            >
+              <option value="">Select kit...</option>
+              <option value="Starter Kit Ashkara">Starter Kit Ashkara</option>
+              <option value="Starter Kit Oulala">Starter Kit Oulala</option>
+            </select>
+          </div>
 
           {/* Call stats */}
           {contact.callNotes.length > 0 && (
