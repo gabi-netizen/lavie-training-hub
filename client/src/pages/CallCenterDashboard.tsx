@@ -526,28 +526,29 @@ export default function CallCenterDashboard() {
             </select>
           </div>
 
-          {/* Duration (minutes) */}
+          {/* Duration */}
           <div className="flex flex-col items-center gap-1.5">
-            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Duration (min)</label>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min={0}
-                placeholder="0"
-                value={draft.durationMin ?? ""}
-                onChange={(e) => setDraft((d) => ({ ...d, durationMin: e.target.value ? Number(e.target.value) : undefined }))}
-                className="w-[60px] h-[38px] px-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
-              />
-              <span className="text-gray-600 text-xs">–</span>
-              <input
-                type="number"
-                min={0}
-                placeholder="∞"
-                value={draft.durationMax ?? ""}
-                onChange={(e) => setDraft((d) => ({ ...d, durationMax: e.target.value ? Number(e.target.value) : undefined }))}
-                className="w-[60px] h-[38px] px-2 border border-gray-200 rounded-lg text-sm text-center text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
-              />
-            </div>
+            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Duration</label>
+            <select
+              value={draft.durationMin === undefined && draft.durationMax === undefined ? "all" : `${draft.durationMin ?? 0}-${draft.durationMax ?? 999}`}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "all") {
+                  setDraft((d) => ({ ...d, durationMin: undefined, durationMax: undefined }));
+                } else {
+                  const [min, max] = v.split("-").map(Number);
+                  setDraft((d) => ({ ...d, durationMin: min || undefined, durationMax: max === 999 ? undefined : max }));
+                }
+              }}
+              className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[130px] transition-colors"
+            >
+              <option value="all">All Durations</option>
+              <option value="0-1">Under 1 min</option>
+              <option value="1-5">1–5 min</option>
+              <option value="5-15">5–15 min</option>
+              <option value="15-30">15–30 min</option>
+              <option value="30-999">Over 30 min</option>
+            </select>
           </div>
 
           {/* Search */}
