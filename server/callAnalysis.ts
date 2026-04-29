@@ -759,7 +759,9 @@ export interface CallAnalysisReport {
   upsellSucceeded?: boolean | null;
   cancelReason?: string | null;
   /** AI-classified retention call type (only returned when initial callType is 'other'/retention placeholder) */
-  retentionCallType?: "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "retention_win_back" | "other" | null;
+  retentionCallType?: "live_sub" | "cancel_live_sub" | "cancel_live_sub_2plus" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "retention_win_back" | "other" | null;
+  /** Did the customer cancel their subscription as a result of this call? (live_sub only - worst outcome) */
+  customerCancelled?: boolean | null;
   // ─── 8-DIMENSION COACHING FIELDS ───
   rapportScore?: number | null;           // 0-100: personal connection with customer
   rapportQuote?: string | null;           // direct quote from the call
@@ -797,7 +799,9 @@ CALL TYPE: Live Sub (Premium Upsell Lead)
 This customer is an ACTIVE subscriber who has NOT requested to cancel. This is a premium upsell opportunity.
 The rep's PRIMARY goal is to introduce and close an additional product (Oulala retinol serum or Ashkara eye serum).
 Score HIGH if the rep identified an upsell opportunity and closed it.
+Score MEDIUM if the rep attempted upsell but did not close.
 Score LOW if the rep missed the upsell opportunity entirely.
+Score CRITICALLY LOW (1-2) if the customer CANCELLED their subscription as a result of this call — this is the WORST possible outcome. The rep turned an active subscriber into a lost customer.
 Do NOT penalise for missing "Magic Wand Question" — this is not a cold call script.
 `,
       stages: ["Warm Rapport Building", "Needs Discovery", "Upsell Product Pitch", "Upsell Close", "Confirmation"],
@@ -805,7 +809,44 @@ Do NOT penalise for missing "Magic Wand Question" — this is not a cold call sc
   "saved": null,
   "upsellAttempted": <bool — did the rep introduce an additional product?>,
   "upsellSucceeded": <bool — did the customer agree to the upsell?>,
+  "customerCancelled": <bool — did the customer cancel their subscription during or as a result of this call? This is the WORST outcome>,
   "cancelReason": null,`,
+    };
+  }
+  if (callType === "cancel_live_sub") {
+    return {
+      context: `
+CALL TYPE: Cancel Live Sub (Save + Upsell — First Cycle)
+This customer is in their FIRST billing cycle and has requested to cancel their subscription.
+The rep must first SAVE the subscription (prevent cancellation), then attempt an upsell.
+Score HIGH for: understanding the cancellation reason, offering a tailored solution, saving the sub, AND attempting upsell.
+Score MEDIUM for: saving without upsell attempt.
+Score LOW for: failing to save the customer.
+`,
+      stages: ["Opening & Rapport", "Understand Cancel Reason", "Tailored Save Offer", "Save Close", "Upsell Attempt"],
+      extraFields: `
+  "saved": <bool — did the rep successfully retain the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell after saving?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": "<Can't afford | Skin reaction | No results | Too many products | Didn't understand subscription | Other>",`,
+    };
+  }
+  if (callType === "cancel_live_sub_2plus") {
+    return {
+      context: `
+CALL TYPE: Cancel Live Sub 2+ (Save + Upsell — Loyal Customer)
+This customer has been subscribed for 2 or more billing cycles and has now requested to cancel.
+This is a LOYAL customer — saving them is high priority. The rep must first SAVE the subscription, then attempt an upsell.
+Score HIGH for: understanding the cancellation reason, leveraging their loyalty/history, saving the sub, AND attempting upsell.
+Score MEDIUM for: saving without upsell attempt.
+Score LOW for: failing to save a loyal customer.
+`,
+      stages: ["Opening & Rapport", "Acknowledge Loyalty", "Understand Cancel Reason", "Tailored Save Offer", "Save Close", "Upsell Attempt"],
+      extraFields: `
+  "saved": <bool — did the rep successfully retain the customer?>,
+  "upsellAttempted": <bool — did the rep attempt an upsell after saving?>,
+  "upsellSucceeded": <bool — did the upsell succeed?>,
+  "cancelReason": "<Can't afford | Skin reaction | No results | Too many products | Didn't understand subscription | Other>",`,
     };
   }
 
@@ -925,7 +966,7 @@ Score on rapport, problem-solving, and customer satisfaction.
   "upsellAttempted": <bool — did the rep attempt an upsell?>,
   "upsellSucceeded": <bool — did the upsell succeed?>,
   "cancelReason": "<Can't afford | Skin reaction | No results | Too many products | Didn't understand subscription | Other | null>",
-  "retentionCallType": "<live_sub | pre_cycle_cancelled | pre_cycle_decline | end_of_instalment | from_cat | retention_win_back | other>",`,
+  "retentionCallType": "<live_sub | cancel_live_sub | cancel_live_sub_2plus | pre_cycle_cancelled | pre_cycle_decline | end_of_instalment | from_cat | retention_win_back | other>",`,
     };
   }
   // Opening: cold_call, follow_up, or legacy "opening"
@@ -958,7 +999,7 @@ export async function analyseCallWithAI(
 ): Promise<CallAnalysisReport> {
   // ─── RETENTION EXEMPTION ─────────────────────────────────────────────────────
   // Retention call types are EXEMPT from all compliance checks.
-  const RETENTION_CALL_TYPES = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "retention_cancel_trial", "retention_win_back", "instalment_decline"]);
+  const RETENTION_CALL_TYPES = new Set(["live_sub", "cancel_live_sub", "cancel_live_sub_2plus", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "other", "retention_cancel_trial", "retention_win_back", "instalment_decline"]);
   const isRetentionCall = RETENTION_CALL_TYPES.has(callType);
   const isRetentionLongCall = isRetentionCall && durationMinutes > 5;
 
