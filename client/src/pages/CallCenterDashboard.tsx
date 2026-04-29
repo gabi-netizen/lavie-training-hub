@@ -796,9 +796,12 @@ export default function CallCenterDashboard() {
                         if (call.closeStatus === null && call.saved === null && call.upsellSucceeded === null) {
                           return <span className="text-xs text-gray-400">—</span>;
                         }
+                        if (!isClosed) {
+                          return <span className="text-xs text-gray-400">—</span>;
+                        }
                         return (
-                          <span className={`text-sm font-bold ${isClosed ? "text-emerald-600" : "text-red-500"}`}>
-                            {isClosed ? "✓ Yes" : "✗ No"}
+                          <span className="text-sm font-bold text-emerald-600">
+                            ✓ Yes
                           </span>
                         );
                       })()}

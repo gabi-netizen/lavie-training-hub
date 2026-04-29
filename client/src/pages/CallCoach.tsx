@@ -529,7 +529,17 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
   const { user: currentUser } = useAuth();
   const shareTokenMutation = trpc.callCoach.generateShareToken.useMutation({
     onSuccess: (data) => {
-      const url = `${window.location.origin}/shared/call/${data.shareToken}`;
+      // Build readable slug: callType-customerName-repName-date
+      const parts: string[] = [];
+      if (analysis?.callType) parts.push(analysis.callType.replace(/_/g, "-"));
+      if (analysis?.customerName) parts.push(analysis.customerName.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, ""));
+      if (analysis?.repName) parts.push(analysis.repName.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, ""));
+      if (analysis?.createdAt) {
+        const d = new Date(analysis.createdAt);
+        parts.push(`${d.getDate()}-${d.toLocaleString("en", { month: "short" })}-${d.getFullYear()}`);
+      }
+      const slug = parts.filter(Boolean).join("-");
+      const url = `${window.location.origin}/shared/call/${data.shareToken}${slug ? "/" + slug : ""}`;
       navigator.clipboard.writeText(url).then(() => {
         toast.success("Link copied!", { description: "Anyone with this link can view the analysis." });
       }).catch(() => {
