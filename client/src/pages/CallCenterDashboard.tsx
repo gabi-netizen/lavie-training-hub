@@ -700,7 +700,7 @@ export default function CallCenterDashboard() {
             <div>Date</div>
             <div>AI Score</div>
             <div>Status</div>
-            <div>Agent Talk</div>
+            <div>Deal</div>
             <div></div>
             <div></div>
           </div>
@@ -789,23 +789,19 @@ export default function CallCenterDashboard() {
                     {/* Status */}
                     <div>{statusBadge(call.status)}</div>
 
-                    {/* Agent Talk Time */}
+                    {/* Deal Closed */}
                     <div>
-                      {call.repSpeechPct != null ? (() => {
-                        const agentPct = call.repSpeechPct as number;
-                        const barColor = agentPct > 65 ? "bg-red-400" : agentPct < 30 ? "bg-amber-400" : "bg-emerald-400";
-                        const textColor = agentPct > 65 ? "text-red-700" : agentPct < 30 ? "text-amber-700" : "text-emerald-700";
+                      {(() => {
+                        const isClosed = call.closeStatus === "closed" || call.saved === true || call.upsellSucceeded === true;
+                        if (call.closeStatus === null && call.saved === null && call.upsellSucceeded === null) {
+                          return <span className="text-xs text-gray-400">—</span>;
+                        }
                         return (
-                          <div className="flex items-center gap-1.5" title={`Agent spoke ${agentPct}% of the call`}>
-                            <div className="w-14 h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${agentPct}%` }} />
-                            </div>
-                            <span className={`text-[12px] font-semibold ${textColor}`}>{agentPct}%</span>
-                          </div>
+                          <span className={`text-sm font-bold ${isClosed ? "text-emerald-600" : "text-red-500"}`}>
+                            {isClosed ? "✓ Yes" : "✗ No"}
+                          </span>
                         );
-                      })() : (
-                        <span className="text-xs text-gray-600">—</span>
-                      )}
+                      })()}
                     </div>
 
                     {/* Play / Pause */}

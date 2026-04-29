@@ -354,6 +354,9 @@ export const dashboardRouter = router({
           source: callAnalyses.source,
           repSpeechPct: callAnalyses.repSpeechPct,
           externalNumber: callAnalyses.externalNumber,
+          closeStatus: callAnalyses.closeStatus,
+          saved: callAnalyses.saved,
+          upsellSucceeded: callAnalyses.upsellSucceeded,
           // User fields — use repName from call_analyses (set by webhook) as the authoritative agent name
           agentName: callAnalyses.repName,
           agentEmail: users.email,
@@ -403,6 +406,9 @@ export const dashboardRouter = router({
             agentEmail: row.agentEmail,
             agentTeam: row.agentTeam,
             repSpeechPct: row.repSpeechPct != null ? Math.round(row.repSpeechPct) : null,
+            closeStatus: row.closeStatus ?? null,
+            saved: row.saved ?? null,
+            upsellSucceeded: row.upsellSucceeded ?? null,
           };
         }),
         totalCount,
