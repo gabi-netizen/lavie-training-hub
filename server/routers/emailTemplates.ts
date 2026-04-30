@@ -187,6 +187,7 @@ export const emailTemplatesRouter = router({
         // common aliases
         name: firstName,
         firstName,
+        fullName: contact.name || "",
         agentOwner: ownerName,
       };
 
