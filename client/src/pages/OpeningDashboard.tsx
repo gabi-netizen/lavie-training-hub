@@ -261,6 +261,19 @@ const APRIL_2026_DATA: AgentDetail[] = [
     workingDays: 0, // Not found in Hubstaff - needs manual entry
   },
   {
+    agentName: "Darrel",
+    trials: 8,
+    stillInTrial: 0,
+    matured: 8,
+    live: 8,
+    saved: 0,
+    cancelledAfterPayment: 0,
+    cancelledBeforePayment: 0,
+    dunning: 0,
+    futureDeal: 0,
+    workingDays: 6.82, // Hubstaff April 2026 (Darrell Loynes)
+  },
+  {
     agentName: "Yasmeen",
     trials: 1,
     stillInTrial: 0,
