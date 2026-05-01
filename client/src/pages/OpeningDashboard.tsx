@@ -578,7 +578,7 @@ export default function OpeningDashboard() {
                     <th
                       key={key}
                       onClick={() => handleSort(key)}
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 cursor-pointer hover:text-indigo-700 select-none whitespace-nowrap"
+                      className={`px-4 py-3 text-xs font-semibold text-gray-700 cursor-pointer hover:text-indigo-700 select-none whitespace-nowrap ${key === "agentName" ? "text-left" : "text-right"}`}
                     >
                       {label}
                       <SortIcon column={key} sortKey={sortKey} sortDir={sortDir} />
