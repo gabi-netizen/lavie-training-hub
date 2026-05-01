@@ -559,10 +559,10 @@ export default function OpeningDashboard() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="w-8 px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                  <th className="w-[4%] px-4 py-3 text-left text-xs font-semibold text-gray-700">
                     #
                   </th>
                   {(
@@ -578,7 +578,7 @@ export default function OpeningDashboard() {
                     <th
                       key={key}
                       onClick={() => handleSort(key)}
-                      className={`px-4 py-3 text-xs font-semibold text-gray-700 cursor-pointer hover:text-indigo-700 select-none whitespace-nowrap ${key === "agentName" ? "text-left" : "text-right"}`}
+                      className={`px-4 py-3 text-xs font-semibold text-gray-700 cursor-pointer hover:text-indigo-700 select-none whitespace-nowrap ${key === "agentName" ? "text-left w-[28%]" : "text-right w-[13%]"}`}
                     >
                       {label}
                       <SortIcon column={key} sortKey={sortKey} sortDir={sortDir} />
