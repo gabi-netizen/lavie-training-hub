@@ -189,6 +189,95 @@ function CustomerDetailModal({
   );
 }
 
+// ─── Summary Card Modal ──────────────────────────────────────────────────────
+
+function SummaryCardModal({
+  classification,
+  classificationLabel,
+  month,
+  onClose,
+}: {
+  classification: string;
+  classificationLabel: string;
+  month: string;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = trpc.openingDashboard.getCustomersByClassification.useQuery({
+    month,
+    classification,
+  });
+
+  // Group customers by agent name
+  const grouped = useMemo(() => {
+    if (!data?.customers?.length) return [];
+    const map = new Map<string, typeof data.customers>();
+    for (const c of data.customers) {
+      const agent = c.agentName || "Unknown Agent";
+      if (!map.has(agent)) map.set(agent, []);
+      map.get(agent)!.push(c);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [data]);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-gray-900">{classificationLabel}</h3>
+            <p className="text-xs text-gray-600">All Agents · {formatMonth(month)}</p>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="overflow-y-auto max-h-[60vh] p-5">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+              <span className="ml-2 text-sm text-gray-600">Loading customers...</span>
+            </div>
+          ) : !grouped.length ? (
+            <p className="text-sm text-gray-500 text-center py-8">No customers found.</p>
+          ) : (
+            <div className="space-y-5">
+              {grouped.map(([agentName, customers]) => (
+                <div key={agentName}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-indigo-700">{agentName.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700">{agentName}</p>
+                    <span className="text-xs text-gray-400">({customers.length})</span>
+                  </div>
+                  <div className="space-y-2 pl-2">
+                    {customers.map((c, i) => (
+                      <div key={c.subscriptionId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-indigo-700">{i + 1}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {c.customerName || "Unknown Customer"}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{c.subscriptionId}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function OpeningDashboard() {
   // ── Month selection ──
@@ -204,6 +293,12 @@ export default function OpeningDashboard() {
   // ── Customer detail modal ──
   const [customerModal, setCustomerModal] = useState<{
     agentName: string;
+    classification: string;
+    classificationLabel: string;
+  } | null>(null);
+
+  // ── Summary card modal ──
+  const [summaryCardModal, setSummaryCardModal] = useState<{
     classification: string;
     classificationLabel: string;
   } | null>(null);
@@ -376,7 +471,10 @@ export default function OpeningDashboard() {
             {/* ── Summary Cards ── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {/* Retention Help */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
+                onClick={() => setSummaryCardModal({ classification: "saved_by_retention", classificationLabel: "Saved by Retention" })}
+              >
                 <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                   <Gift className="h-5 w-5 text-blue-600" />
                 </div>
@@ -386,7 +484,10 @@ export default function OpeningDashboard() {
                 </div>
               </div>
               {/* Still in Trial */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
+                onClick={() => setSummaryCardModal({ classification: "still_in_trial", classificationLabel: "Still in Trial" })}
+              >
                 <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center shrink-0">
                   <CalendarDays className="h-5 w-5 text-yellow-600" />
                 </div>
@@ -396,7 +497,10 @@ export default function OpeningDashboard() {
                 </div>
               </div>
               {/* Matured */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
+                onClick={() => setSummaryCardModal({ classification: "matured_all", classificationLabel: "Matured" })}
+              >
                 <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                 </div>
@@ -406,7 +510,10 @@ export default function OpeningDashboard() {
                 </div>
               </div>
               {/* Conversion Rate % */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
+                onClick={() => setSummaryCardModal({ classification: "converted_all", classificationLabel: "Converted" })}
+              >
                 <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
                   <BarChart3 className="h-5 w-5 text-green-600" />
                 </div>
@@ -432,7 +539,10 @@ export default function OpeningDashboard() {
                 </div>
               </div>
               {/* Cancelled After Payment */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all"
+                onClick={() => setSummaryCardModal({ classification: "cancelled_after_payment", classificationLabel: "Cancelled After Payment" })}
+              >
                 <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
                   <TrendingDown className="h-5 w-5 text-red-600" />
                 </div>
@@ -654,6 +764,16 @@ export default function OpeningDashboard() {
           classificationLabel={customerModal.classificationLabel}
           month={selectedMonth}
           onClose={() => setCustomerModal(null)}
+        />
+      )}
+
+      {/* ── Summary Card Modal ── */}
+      {summaryCardModal && (
+        <SummaryCardModal
+          classification={summaryCardModal.classification}
+          classificationLabel={summaryCardModal.classificationLabel}
+          month={selectedMonth}
+          onClose={() => setSummaryCardModal(null)}
         />
       )}
     </div>

@@ -159,6 +159,65 @@ export const openingDashboardRouter = router({
     }),
 
   /**
+   * Get all customers for a specific month and classification across all agents.
+   * Used for the summary cards at the top of the dashboard.
+   */
+  getCustomersByClassification: adminProcedure
+    .input(z.object({
+      month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
+      classification: z.string().min(1),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        return { customers: [] as (CustomerDetail & { agentName: string | null })[] };
+      }
+
+      let condition;
+      if (input.classification === "matured_all") {
+        condition = and(
+          eq(openingTrials.month, input.month),
+          sql`${openingTrials.classification} != 'still_in_trial'`
+        );
+      } else if (input.classification === "converted_all") {
+        condition = and(
+          eq(openingTrials.month, input.month),
+          sql`${openingTrials.classification} IN ('live', 'saved_by_retention', 'cancelled_after_payment')`
+        );
+      } else {
+        condition = and(
+          eq(openingTrials.month, input.month),
+          eq(openingTrials.classification, input.classification)
+        );
+      }
+
+      const rows = await db
+        .select({
+          subscriptionId: openingTrials.subscriptionId,
+          customerName: openingTrials.customerName,
+          planName: openingTrials.planName,
+          createdDate: openingTrials.createdDate,
+          status: openingTrials.status,
+          classification: openingTrials.classification,
+          agentName: openingTrials.agentName,
+        })
+        .from(openingTrials)
+        .where(condition);
+
+      const customers = rows.map((r) => ({
+        subscriptionId: r.subscriptionId,
+        customerName: r.customerName,
+        planName: r.planName,
+        createdDate: String(r.createdDate),
+        status: r.status,
+        classification: r.classification,
+        agentName: r.agentName,
+      }));
+
+      return { customers };
+    }),
+
+  /**
    * Get individual customer details for a specific agent, month, and classification.
    * Used when clicking on a category count (e.g., "Live Sub: 10") to see the customer list.
    */
