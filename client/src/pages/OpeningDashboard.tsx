@@ -263,9 +263,9 @@ const APRIL_2026_DATA: AgentDetail[] = [
   {
     agentName: "Darrel",
     trials: 8,
-    stillInTrial: 0,
-    matured: 8,
-    live: 8,
+    stillInTrial: 8,
+    matured: 0,
+    live: 0,
     saved: 0,
     cancelledAfterPayment: 0,
     cancelledBeforePayment: 0,
