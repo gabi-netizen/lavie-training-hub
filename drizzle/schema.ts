@@ -1,4 +1,4 @@
-import { boolean, float, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, float, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -529,3 +529,61 @@ export const supportTickets = mysqlTable("support_tickets", {
 
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = typeof supportTickets.$inferInsert;
+
+// ─── Opening Dashboard Tables ─────────────────────────────────────────────────
+
+/**
+ * Opening trials — individual trial records per agent per month.
+ * Each row represents one trial subscription opened by an agent.
+ */
+export const openingTrials = mysqlTable("opening_trials", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: varchar("subscription_id", { length: 50 }).notNull().unique(),
+  customerName: varchar("customer_name", { length: 255 }),
+  agentName: varchar("agent_name", { length: 100 }).notNull(),
+  planName: varchar("plan_name", { length: 255 }),
+  createdDate: date("created_date").notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  classification: varchar("classification", { length: 50 }).notNull(),
+  month: varchar("month", { length: 7 }).notNull(),
+  termStart: date("term_start"),
+  termEnd: date("term_end"),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type OpeningTrial = typeof openingTrials.$inferSelect;
+export type InsertOpeningTrial = typeof openingTrials.$inferInsert;
+
+/**
+ * Agent working days — Hubstaff hours tracking per agent per date.
+ * Used to calculate working days for the Opening Dashboard.
+ */
+export const agentWorkingDays = mysqlTable("agent_working_days", {
+  id: int("id").autoincrement().primaryKey(),
+  agentName: varchar("agent_name", { length: 100 }).notNull(),
+  workDate: date("work_date").notNull(),
+  hours: decimal("hours", { precision: 5, scale: 2 }).notNull().default("0"),
+  isManualOverride: boolean("is_manual_override").default(false),
+  month: varchar("month", { length: 7 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type AgentWorkingDay = typeof agentWorkingDays.$inferSelect;
+export type InsertAgentWorkingDay = typeof agentWorkingDays.$inferInsert;
+
+/**
+ * Manual overrides log — audit trail for manual hour changes.
+ * Used to trigger email alerts when hours are manually adjusted.
+ */
+export const manualOverridesLog = mysqlTable("manual_overrides_log", {
+  id: int("id").autoincrement().primaryKey(),
+  agentName: varchar("agent_name", { length: 100 }).notNull(),
+  workDate: date("work_date").notNull(),
+  oldHours: decimal("old_hours", { precision: 5, scale: 2 }),
+  newHours: decimal("new_hours", { precision: 5, scale: 2 }).notNull(),
+  changedBy: varchar("changed_by", { length: 100 }).notNull(),
+  reason: varchar("reason", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type ManualOverrideLog = typeof manualOverridesLog.$inferSelect;
+export type InsertManualOverrideLog = typeof manualOverridesLog.$inferInsert;
