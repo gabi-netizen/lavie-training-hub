@@ -307,12 +307,14 @@ function calculateMetrics(agent: AgentDetail): AgentRow {
     agent.matured > 0 ? (converted / agent.matured) * 100 : 0;
   const lost =
     agent.cancelledBeforePayment + agent.dunning;
+  const avePerDay = agent.workingDays > 0 ? agent.trials / agent.workingDays : 0;
 
   return {
     ...agent,
     converted,
     conversionRate,
     lost,
+    avePerDay,
   };
 }
 
