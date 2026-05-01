@@ -47,7 +47,9 @@ type SortKey =
   | "matured"
   | "converted"
   | "conversionRate"
-  | "lost";
+  | "lost"
+  | "workingDays"
+  | "avePerDay";
 
 interface AgentDetail {
   agentName: string;
@@ -60,12 +62,14 @@ interface AgentDetail {
   cancelledBeforePayment: number;
   dunning: number;
   futureDeal: number;
+  workingDays: number; // Hubstaff: 7h+ = 1.0 day, <7h = hours/8
 }
 
 interface AgentRow extends AgentDetail {
   converted: number;
   conversionRate: number;
   lost: number;
+  avePerDay: number; // trials / workingDays
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -123,6 +127,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 11,
     dunning: 1,
     futureDeal: 0,
+    workingDays: 16.51, // Hubstaff April 2026 (Debbie Forbes)
   },
   {
     agentName: "Ava",
@@ -135,6 +140,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 3,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 15.0, // Hubstaff April 2026 (Ava Monroe)
   },
   {
     agentName: "Ashley",
@@ -147,6 +153,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 5,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 13.54, // Hubstaff April 2026 (Ashleigh Walker)
   },
   {
     agentName: "Paige",
@@ -159,6 +166,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 5,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 10.88, // Hubstaff April 2026 (Paige Taylor)
   },
   {
     agentName: "Ryan",
@@ -171,6 +179,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 1,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 0, // Not found in Hubstaff - needs manual entry
   },
   {
     agentName: "harrison",
@@ -183,6 +192,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 2,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 13.29, // Hubstaff April 2026 (Harrison Joslin)
   },
   {
     agentName: "Angel",
@@ -195,6 +205,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 1,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 0, // Hubstaff not tracked - needs manual entry
   },
   {
     agentName: "Matt",
@@ -207,6 +218,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 3,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 19.0, // Hubstaff April 2026 (Matthew Holman)
   },
   {
     agentName: "Nisha",
@@ -219,6 +231,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 0,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 0, // Not found in Hubstaff - needs manual entry
   },
   {
     agentName: "Shola",
@@ -231,6 +244,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 0,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 7.62, // Hubstaff April 2026 (Shola Marie)
   },
   {
     agentName: "Ashleigh",
@@ -243,6 +257,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 0,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 13.54, // Hubstaff April 2026 (Ashleigh Walker)
   },
   {
     agentName: "Sara",
@@ -255,6 +270,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 0,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 0, // Not found in Hubstaff - needs manual entry
   },
   {
     agentName: "Yasmeen",
@@ -267,6 +283,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 1,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 0, // Not found in Hubstaff - needs manual entry
   },
   {
     agentName: "gabi@lavielabs.com",
@@ -279,6 +296,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     cancelledBeforePayment: 0,
     dunning: 0,
     futureDeal: 0,
+    workingDays: 0, // Owner account
   },
 ];
 
@@ -560,10 +578,16 @@ export default function OpeningDashboard() {
           {/* Table - CSS Grid layout (same approach as Call Center Dashboard) */}
           <div>
             {/* Header row */}
-            <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
+            <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
               <div>#</div>
               <div className="cursor-pointer hover:text-indigo-700" onClick={() => handleSort("agentName")}>
                 Agent <SortIcon column="agentName" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("workingDays")}>
+                W.Days <SortIcon column="workingDays" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("avePerDay")}>
+                Ave/Day <SortIcon column="avePerDay" sortKey={sortKey} sortDir={sortDir} />
               </div>
               <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("trials")}>
                 Trials <SortIcon column="trials" sortKey={sortKey} sortDir={sortDir} />
@@ -596,7 +620,7 @@ export default function OpeningDashboard() {
                   <div key={row.agentName}>
                     {/* Main row */}
                     <div
-                      className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                      className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
                       onClick={() =>
                         setExpandedAgent(
                           expandedAgent === row.agentName ? null : row.agentName
@@ -620,6 +644,8 @@ export default function OpeningDashboard() {
                           {row.agentName}
                         </span>
                       </div>
+                      <div className="text-right text-sm text-gray-800 font-medium">{row.workingDays > 0 ? row.workingDays.toFixed(1) : "—"}</div>
+                      <div className="text-right text-sm text-gray-800 font-semibold">{row.avePerDay > 0 ? row.avePerDay.toFixed(1) : "—"}</div>
                       <div className="text-right text-sm text-gray-800 font-medium">{row.trials}</div>
                       <div className="text-right text-sm text-gray-800">{row.matured}</div>
                       <div className="text-right">
@@ -674,9 +700,11 @@ export default function OpeningDashboard() {
               </div>
             )}
             {/* Totals row */}
-            <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-t-2 border-gray-300 text-sm">
+            <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-t-2 border-gray-300 text-sm">
               <div></div>
               <div className="text-xs font-bold text-gray-800 uppercase tracking-wide">Totals</div>
+              <div className="text-right font-bold text-gray-900">{AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0).toFixed(1)}</div>
+              <div className="text-right font-bold text-gray-900">{(totalTrials / Math.max(AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0), 1)).toFixed(1)}</div>
               <div className="text-right font-bold text-gray-900">{totalTrials}</div>
               <div className="text-right font-bold text-gray-900">{matured}</div>
               <div className="text-right">
