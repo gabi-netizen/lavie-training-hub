@@ -144,8 +144,8 @@ const APRIL_2026_DATA: AgentDetail[] = [
   },
   {
     agentName: "Ashley",
-    trials: 21,
-    stillInTrial: 16,
+    trials: 23,
+    stillInTrial: 18,
     matured: 5,
     live: 0,
     saved: 0,
@@ -246,19 +246,7 @@ const APRIL_2026_DATA: AgentDetail[] = [
     futureDeal: 0,
     workingDays: 7.62, // Hubstaff April 2026 (Shola Marie)
   },
-  {
-    agentName: "Ashleigh",
-    trials: 2,
-    stillInTrial: 2,
-    matured: 0,
-    live: 0,
-    saved: 0,
-    cancelledAfterPayment: 0,
-    cancelledBeforePayment: 0,
-    dunning: 0,
-    futureDeal: 0,
-    workingDays: 13.54, // Hubstaff April 2026 (Ashleigh Walker)
-  },
+
   {
     agentName: "Sara",
     trials: 1,
