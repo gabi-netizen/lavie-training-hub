@@ -557,210 +557,142 @@ export default function OpeningDashboard() {
             </p>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col style={{width: "5%"}} />
-                <col style={{width: "25%"}} />
-                <col style={{width: "14%"}} />
-                <col style={{width: "14%"}} />
-                <col style={{width: "14%"}} />
-                <col style={{width: "14%"}} />
-                <col style={{width: "14%"}} />
-              </colgroup>
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
-                    #
-                  </th>
-                  {(
-                    [
-                      { key: "agentName", label: "Agent" },
-                      { key: "trials", label: "Trials" },
-                      { key: "matured", label: "Matured" },
-                      { key: "converted", label: "Converted" },
-                      { key: "conversionRate", label: "Conv%" },
-                      { key: "lost", label: "Lost" },
-                    ] as { key: SortKey; label: string }[]
-                  ).map(({ key, label }) => (
-                    <th
-                      key={key}
-                      onClick={() => handleSort(key)}
-                      className={`px-4 py-3 text-xs font-semibold text-gray-700 cursor-pointer hover:text-indigo-700 select-none whitespace-nowrap ${key === "agentName" ? "text-left" : "text-right"}`}
+          {/* Table - CSS Grid layout (same approach as Call Center Dashboard) */}
+          <div>
+            {/* Header row */}
+            <div className="grid grid-cols-[40px_1fr_90px_90px_100px_90px_70px] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
+              <div>#</div>
+              <div className="cursor-pointer hover:text-indigo-700" onClick={() => handleSort("agentName")}>
+                Agent <SortIcon column="agentName" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("trials")}>
+                Trials <SortIcon column="trials" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("matured")}>
+                Matured <SortIcon column="matured" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("converted")}>
+                Converted <SortIcon column="converted" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("conversionRate")}>
+                Conv% <SortIcon column="conversionRate" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+              <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("lost")}>
+                Lost <SortIcon column="lost" sortKey={sortKey} sortDir={sortDir} />
+              </div>
+            </div>
+            {/* Data rows */}
+            {sortedRows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Users size={32} className="text-gray-300 mb-3" />
+                <p className="text-gray-700 font-medium">No data yet</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  No agents found for the selected period.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {sortedRows.map((row, idx) => (
+                  <div key={row.agentName}>
+                    {/* Main row */}
+                    <div
+                      className="grid grid-cols-[40px_1fr_90px_90px_100px_90px_70px] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                      onClick={() =>
+                        setExpandedAgent(
+                          expandedAgent === row.agentName ? null : row.agentName
+                        )
+                      }
                     >
-                      {label}
-                      <SortIcon column={key} sortKey={sortKey} sortDir={sortDir} />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {sortedRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center">
-                      <Users size={32} className="text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-700 font-medium">No data yet</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        No agents found for the selected period.
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  sortedRows.map((row, idx) => (
-                    <tbody key={row.agentName}>
-                      {/* Main row */}
-                      <tr
-                        className="hover:bg-indigo-50/40 transition-colors cursor-pointer"
-                        onClick={() =>
-                          setExpandedAgent(
-                            expandedAgent === row.agentName ? null : row.agentName
-                          )
-                        }
-                      >
-                        <td className="px-4 py-3 text-xs font-medium text-gray-500">
-                          {idx + 1}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <ChevronRight
-                              size={16}
-                              className={`text-gray-400 transition-transform ${
-                                expandedAgent === row.agentName
-                                  ? "rotate-90"
-                                  : ""
-                              }`}
-                            />
-                            <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                              <span className="text-xs font-bold text-indigo-700">
-                                {row.agentName.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <span className="font-semibold text-gray-900">
-                              {row.agentName}
-                            </span>
+                      <div className="text-xs font-medium text-gray-500">{idx + 1}</div>
+                      <div className="flex items-center gap-2">
+                        <ChevronRight
+                          size={16}
+                          className={`text-gray-400 transition-transform ${
+                            expandedAgent === row.agentName ? "rotate-90" : ""
+                          }`}
+                        />
+                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-indigo-700">
+                            {row.agentName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-gray-900 text-sm">
+                          {row.agentName}
+                        </span>
+                      </div>
+                      <div className="text-right text-sm text-gray-800 font-medium">{row.trials}</div>
+                      <div className="text-right text-sm text-gray-800">{row.matured}</div>
+                      <div className="text-right">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                          {row.converted}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className={getConversionColor(row.conversionRate)}>
+                          {row.conversionRate.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className={row.lost > 0 ? "text-red-700 font-semibold" : "text-gray-800"}>
+                          {row.lost}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Expanded detail */}
+                    {expandedAgent === row.agentName && (
+                      <div className="bg-indigo-50/20 border-t border-indigo-100 px-5 py-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-600 font-medium">Live Sub</p>
+                            <p className="text-lg font-bold text-gray-900">{row.live}</p>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-800 font-medium text-right">
-                          {row.trials}
-                        </td>
-                        <td className="px-4 py-3 text-gray-800 text-right">
-                          {row.matured}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                            {row.converted}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={getConversionColor(row.conversionRate)}>
-                            {row.conversionRate.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span
-                            className={
-                              row.lost > 0
-                                ? "text-red-700 font-semibold"
-                                : "text-gray-800"
-                            }
-                          >
-                            {row.lost}
-                          </span>
-                        </td>
-                      </tr>
-
-                      {/* Expanded detail row */}
-                      {expandedAgent === row.agentName && (
-                        <tr className="bg-indigo-50/20 border-t border-indigo-100">
-                          <td colSpan={7} className="px-4 py-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                <p className="text-xs text-gray-600 font-medium">
-                                  Live Sub
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {row.live}
-                                </p>
-                              </div>
-                              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                <p className="text-xs text-gray-600 font-medium">
-                                  Saved by Retention
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {row.saved}
-                                </p>
-                              </div>
-                              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                <p className="text-xs text-gray-600 font-medium">
-                                  Cancelled After Payment
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {row.cancelledAfterPayment}
-                                </p>
-                              </div>
-                              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                <p className="text-xs text-gray-600 font-medium">
-                                  Cancelled Before Payment
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {row.cancelledBeforePayment}
-                                </p>
-                              </div>
-                              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                <p className="text-xs text-gray-600 font-medium">
-                                  Dunning
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {row.dunning}
-                                </p>
-                              </div>
-                              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                                <p className="text-xs text-gray-600 font-medium">
-                                  Future Deal
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  {row.futureDeal}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  ))
-                )}
-              </tbody>
-
-              {/* Totals row */}
-              <tfoot>
-                <tr className="bg-gray-50 border-t-2 border-gray-300">
-                  <td className="px-4 py-3" />
-                  <td className="px-4 py-3 text-xs font-bold text-gray-800 uppercase tracking-wide">
-                    Totals
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-gray-900">
-                    {totalTrials}
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-gray-900">
-                    {matured}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-200 text-green-900">
-                      {totalConverted}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold">
-                    <span className={getConversionColor(overallConversionRate)}>
-                      {overallConversionRate.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-red-700">
-                    {AGENT_ROWS.reduce((s, r) => s + r.lost, 0)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-600 font-medium">Saved by Retention</p>
+                            <p className="text-lg font-bold text-gray-900">{row.saved}</p>
+                          </div>
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-600 font-medium">Cancelled After Payment</p>
+                            <p className="text-lg font-bold text-gray-900">{row.cancelledAfterPayment}</p>
+                          </div>
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-600 font-medium">Cancelled Before Payment</p>
+                            <p className="text-lg font-bold text-gray-900">{row.cancelledBeforePayment}</p>
+                          </div>
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-600 font-medium">Dunning</p>
+                            <p className="text-lg font-bold text-gray-900">{row.dunning}</p>
+                          </div>
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-600 font-medium">Future Deal</p>
+                            <p className="text-lg font-bold text-gray-900">{row.futureDeal}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Totals row */}
+            <div className="grid grid-cols-[40px_1fr_90px_90px_100px_90px_70px] px-5 py-3 bg-gray-50 border-t-2 border-gray-300 text-sm">
+              <div></div>
+              <div className="text-xs font-bold text-gray-800 uppercase tracking-wide">Totals</div>
+              <div className="text-right font-bold text-gray-900">{totalTrials}</div>
+              <div className="text-right font-bold text-gray-900">{matured}</div>
+              <div className="text-right">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-200 text-green-900">
+                  {totalConverted}
+                </span>
+              </div>
+              <div className="text-right font-bold">
+                <span className={getConversionColor(overallConversionRate)}>
+                  {overallConversionRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="text-right font-bold text-red-700">
+                {AGENT_ROWS.reduce((s, r) => s + r.lost, 0)}
+              </div>
+            </div>
           </div>
         </div>
 
