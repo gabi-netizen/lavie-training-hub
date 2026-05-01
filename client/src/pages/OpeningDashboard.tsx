@@ -559,15 +559,15 @@ export default function OpeningDashboard() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <colgroup>
-                <col className="w-[5%]" />
-                <col className="w-[25%]" />
-                <col className="w-[14%]" />
-                <col className="w-[14%]" />
-                <col className="w-[14%]" />
-                <col className="w-[14%]" />
-                <col className="w-[14%]" />
+                <col style={{width: "5%"}} />
+                <col style={{width: "25%"}} />
+                <col style={{width: "14%"}} />
+                <col style={{width: "14%"}} />
+                <col style={{width: "14%"}} />
+                <col style={{width: "14%"}} />
+                <col style={{width: "14%"}} />
               </colgroup>
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
