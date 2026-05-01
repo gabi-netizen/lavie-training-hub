@@ -318,12 +318,16 @@ export default function OpeningDashboard() {
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   // ── Sorting ──
-  const [sortKey, setSortKey] = useState<SortKey>("trials");
+  const [sortKey, setSortKey] = useState<SortKey>("avePerDay");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   // ── Sort rows client-side ──
   const sortedRows = useMemo<AgentRow[]>(() => {
     return [...AGENT_ROWS].sort((a, b) => {
+      // Agents without working days always go to the bottom
+      if (a.workingDays === 0 && b.workingDays > 0) return 1;
+      if (b.workingDays === 0 && a.workingDays > 0) return -1;
+      if (a.workingDays === 0 && b.workingDays === 0) return b.trials - a.trials;
       const va: number | string = a[sortKey];
       const vb: number | string = b[sortKey];
       if (typeof va === "string" && typeof vb === "string") {
@@ -350,7 +354,7 @@ export default function OpeningDashboard() {
     setTimeline("last_month");
     setCustomFrom("");
     setCustomTo("");
-    setSortKey("trials");
+    setSortKey("avePerDay");
     setSortDir("desc");
   }
 
