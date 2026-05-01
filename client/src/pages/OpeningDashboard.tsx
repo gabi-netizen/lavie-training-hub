@@ -560,7 +560,7 @@ export default function OpeningDashboard() {
           {/* Table - CSS Grid layout (same approach as Call Center Dashboard) */}
           <div>
             {/* Header row */}
-            <div className="grid grid-cols-[40px_180px_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
+            <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
               <div>#</div>
               <div className="cursor-pointer hover:text-indigo-700" onClick={() => handleSort("agentName")}>
                 Agent <SortIcon column="agentName" sortKey={sortKey} sortDir={sortDir} />
@@ -596,7 +596,7 @@ export default function OpeningDashboard() {
                   <div key={row.agentName}>
                     {/* Main row */}
                     <div
-                      className="grid grid-cols-[40px_180px_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                      className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
                       onClick={() =>
                         setExpandedAgent(
                           expandedAgent === row.agentName ? null : row.agentName
@@ -674,7 +674,7 @@ export default function OpeningDashboard() {
               </div>
             )}
             {/* Totals row */}
-            <div className="grid grid-cols-[40px_180px_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-t-2 border-gray-300 text-sm">
+            <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-t-2 border-gray-300 text-sm">
               <div></div>
               <div className="text-xs font-bold text-gray-800 uppercase tracking-wide">Totals</div>
               <div className="text-right font-bold text-gray-900">{totalTrials}</div>
