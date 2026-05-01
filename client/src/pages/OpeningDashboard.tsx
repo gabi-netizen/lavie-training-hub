@@ -376,6 +376,8 @@ export default function OpeningDashboard() {
   const stillInTrial = AGENT_ROWS.reduce((s, r) => s + r.stillInTrial, 0);
   const matured = AGENT_ROWS.reduce((s, r) => s + r.matured, 0);
   const totalConverted = AGENT_ROWS.reduce((s, r) => s + r.converted, 0);
+  const totalSaved = AGENT_ROWS.reduce((s, r) => s + r.saved, 0);
+  const retentionPct = matured > 0 ? (totalSaved / matured) * 100 : 0;
   const overallConversionRate =
     matured > 0 ? (totalConverted / matured) * 100 : 0;
 
@@ -498,14 +500,14 @@ export default function OpeningDashboard() {
 
         {/* ── Summary Stats Cards ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {/* Total Trials */}
+          {/* Retention Help */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
               <Gift className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{totalTrials}</p>
-              <p className="text-xs text-gray-600 font-medium">Total Trials</p>
+              <p className="text-2xl font-bold text-gray-900">{retentionPct.toFixed(1)}%</p>
+              <p className="text-xs text-gray-600 font-medium">Retention Help</p>
             </div>
           </div>
 
