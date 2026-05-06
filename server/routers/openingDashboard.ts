@@ -20,7 +20,7 @@
  * - Falls back to agent_working_days table if no daily data exists for the agent/period.
  */
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { openingTrials, agentWorkingDays, agentDailyHours } from "../../drizzle/schema";
 import { eq, and, gte, lte, sql, like } from "drizzle-orm";
@@ -513,5 +513,113 @@ export const openingDashboardRouter = router({
         .orderBy(openingTrials.month);
 
       return { months: rows.map((r) => r.month) };
+    }),
+
+  // ─── Admin: Agent Daily Hours CRUD ──────────────────────────────────────────
+
+  /**
+   * Get all daily hours entries for an agent in a given month.
+   * Admin-only. Uses the Hubstaff full name (from agent_daily_hours table).
+   */
+  getAgentDailyHours: adminProcedure
+    .input(z.object({
+      agentName: z.string().min(1),
+      month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        return { days: [] as { id: number; date: string; hoursTracked: number; workingDayValue: number }[] };
+      }
+
+      // Get the Hubstaff name(s) for this agent
+      const hubstaffNames = getHubstaffNamesForTrialsAgent(input.agentName);
+
+      const [year, monthNum] = input.month.split("-").map(Number);
+      const monthStart = new Date(year, monthNum - 1, 1);
+      const monthEnd = new Date(year, monthNum, 0); // last day of month
+
+      // Query all daily hours for matching agent names in the month
+      const rows = await db
+        .select({
+          id: agentDailyHours.id,
+          agentName: agentDailyHours.agentName,
+          date: agentDailyHours.date,
+          hoursTracked: agentDailyHours.hoursTracked,
+          workingDayValue: agentDailyHours.workingDayValue,
+        })
+        .from(agentDailyHours)
+        .where(and(
+          sql`${agentDailyHours.agentName} IN (${sql.join(hubstaffNames.map(n => sql`${n}`), sql`, `)})`,
+          gte(agentDailyHours.date, monthStart),
+          lte(agentDailyHours.date, monthEnd),
+        ))
+        .orderBy(agentDailyHours.date);
+
+      const days = rows.map(r => ({
+        id: r.id,
+        agentName: r.agentName,
+        date: String(r.date),
+        hoursTracked: parseFloat(String(r.hoursTracked)),
+        workingDayValue: parseFloat(String(r.workingDayValue)),
+      }));
+
+      // Also return the Hubstaff name for use in upsert operations
+      const hubstaffName = hubstaffNames[0] || input.agentName;
+
+      return { days, hubstaffName };
+    }),
+
+  /**
+   * Add or update a day's hours for an agent.
+   * Admin-only. Auto-calculates working_day_value.
+   * Uses Hubstaff full name (agent_daily_hours.agent_name).
+   */
+  upsertAgentDailyHours: adminProcedure
+    .input(z.object({
+      agentName: z.string().min(1),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+      hoursTracked: z.number().min(0).max(24),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      // Calculate working_day_value
+      const workingDayValue = input.hoursTracked >= 7
+        ? 1.00
+        : Math.round((input.hoursTracked / 8) * 100) / 100;
+
+      // Upsert using ON DUPLICATE KEY UPDATE
+      await db.execute(sql`
+        INSERT INTO agent_daily_hours (agent_name, date, hours_tracked, working_day_value)
+        VALUES (${input.agentName}, ${input.date}, ${input.hoursTracked.toFixed(2)}, ${workingDayValue.toFixed(2)})
+        ON DUPLICATE KEY UPDATE
+          hours_tracked = VALUES(hours_tracked),
+          working_day_value = VALUES(working_day_value)
+      `);
+
+      return { success: true, workingDayValue };
+    }),
+
+  /**
+   * Delete a specific day entry from agent_daily_hours.
+   * Admin-only.
+   */
+  deleteAgentDailyHours: adminProcedure
+    .input(z.object({
+      id: z.number().int().positive(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      await db.delete(agentDailyHours).where(eq(agentDailyHours.id, input.id));
+
+      return { success: true };
     }),
 });

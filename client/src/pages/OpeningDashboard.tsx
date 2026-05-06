@@ -30,8 +30,11 @@ import {
   CalendarDays,
   Loader2,
   X,
+  Pencil,
 } from "lucide-react";
 import { trpc } from "../lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import EditWorkingHoursModal from "../components/EditWorkingHoursModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SortKey =
@@ -338,7 +341,13 @@ export default function OpeningDashboard() {
     classification: string;
     classificationLabel: string;
   } | null>(null);
+  // ── Edit working hours modal (admin only) ──
+  const [editHoursAgent, setEditHoursAgent] = useState<string | null>(null);
+  // ── Admin check ──
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
+  const utils = trpc.useUtils();
   // ── Fetch data from API ──
   const { data: agentData, isLoading, isError } = trpc.openingDashboard.getAgentData.useQuery(
     { month: selectedMonth, dateRange },
@@ -723,7 +732,21 @@ export default function OpeningDashboard() {
                               {row.agentName}
                             </span>
                           </div>
-                          <div className="text-right text-sm text-gray-800 font-medium">{row.workingDays > 0 ? row.workingDays.toFixed(1) : "\u2014"}</div>
+                          <div className="text-right text-sm text-gray-800 font-medium flex items-center justify-end gap-1">
+                            <span>{row.workingDays > 0 ? row.workingDays.toFixed(1) : "\u2014"}</span>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditHoursAgent(row.agentName);
+                                }}
+                                className="p-0.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                title="Edit working hours"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            )}
+                          </div>
                           <div className="text-right text-sm text-gray-800 font-semibold">{row.avePerDay > 0 ? row.avePerDay.toFixed(1) : "\u2014"}</div>
                           <div className="text-right text-sm text-gray-800 font-medium">{row.trials}</div>
                           <div className="text-right text-sm text-gray-800">{row.matured}</div>
@@ -869,6 +892,18 @@ export default function OpeningDashboard() {
           month={selectedMonth}
           dateRange={dateRange}
           onClose={() => setSummaryCardModal(null)}
+        />
+      )}
+      {/* ── Edit Working Hours Modal (Admin only) ── */}
+      {editHoursAgent && isAdmin && (
+        <EditWorkingHoursModal
+          agentName={editHoursAgent}
+          month={selectedMonth}
+          onClose={() => setEditHoursAgent(null)}
+          onSaved={() => {
+            utils.openingDashboard.getAgentData.invalidate();
+            setEditHoursAgent(null);
+          }}
         />
       )}
     </div>
