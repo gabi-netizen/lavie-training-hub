@@ -8,7 +8,7 @@
  * Reads from: opening_trials, agent_working_days tables.
  */
 import { z } from "zod";
-import { adminProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { openingTrials, agentWorkingDays } from "../../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
@@ -57,7 +57,7 @@ export const openingDashboardRouter = router({
    * Groups opening_trials by agent_name and counts each classification.
    * Joins with agent_working_days to get total hours.
    */
-  getAgentData: adminProcedure
+  getAgentData: protectedProcedure
     .input(z.object({
       month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
     }))
@@ -162,7 +162,7 @@ export const openingDashboardRouter = router({
    * Get all customers for a specific month and classification across all agents.
    * Used for the summary cards at the top of the dashboard.
    */
-  getCustomersByClassification: adminProcedure
+  getCustomersByClassification: protectedProcedure
     .input(z.object({
       month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
       classification: z.string().min(1),
@@ -221,7 +221,7 @@ export const openingDashboardRouter = router({
    * Get individual customer details for a specific agent, month, and classification.
    * Used when clicking on a category count (e.g., "Live Sub: 10") to see the customer list.
    */
-  getCustomerDetails: adminProcedure
+  getCustomerDetails: protectedProcedure
     .input(z.object({
       month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
       agentName: z.string().min(1),
@@ -267,7 +267,7 @@ export const openingDashboardRouter = router({
    * Get available months that have data in the opening_trials table.
    * Used to populate the timeline dropdown.
    */
-  getAvailableMonths: adminProcedure
+  getAvailableMonths: protectedProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) {

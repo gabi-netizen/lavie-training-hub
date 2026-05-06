@@ -112,10 +112,8 @@ function Router() {
           {() => <AdminRoute component={SupportTickets} />}
         </Route>
 
-        {/* Opening Agents Dashboard — admin only */}
-        <Route path={"/opening-dashboard"}>
-          {() => <AdminRoute component={OpeningDashboard} />}
-        </Route>
+        {/* Opening Agents Dashboard — all authenticated users */}
+        <Route path={"/opening-dashboard"} component={OpeningDashboard} />
 
         {/* Workspace — agent calling workspace */}
         <Route path={"/workspace"} component={Workspace} />
