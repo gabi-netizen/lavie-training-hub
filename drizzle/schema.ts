@@ -587,3 +587,24 @@ export const manualOverridesLog = mysqlTable("manual_overrides_log", {
 });
 export type ManualOverrideLog = typeof manualOverridesLog.$inferSelect;
 export type InsertManualOverrideLog = typeof manualOverridesLog.$inferInsert;
+
+/**
+ * Agent daily hours — daily Hubstaff activity data per agent.
+ * Stores hours tracked each day and a pre-calculated working_day_value:
+ *   hours_tracked >= 7 → 1.00
+ *   hours_tracked < 7 → hours_tracked / 8 (rounded to 2 decimals)
+ * Used to calculate date-range-aware Working Days for the Opening Dashboard.
+ */
+export const agentDailyHours = mysqlTable("agent_daily_hours", {
+  id: int("id").autoincrement().primaryKey(),
+  agentName: varchar("agent_name", { length: 100 }).notNull(),
+  date: date("date").notNull(),
+  hoursTracked: decimal("hours_tracked", { precision: 5, scale: 2 }).notNull().default("0"),
+  workingDayValue: decimal("working_day_value", { precision: 3, scale: 2 }).notNull().default("0"),
+  hubstaffUserId: int("hubstaff_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_agent_date").on(table.agentName, table.date),
+]);
+export type AgentDailyHour = typeof agentDailyHours.$inferSelect;
+export type InsertAgentDailyHour = typeof agentDailyHours.$inferInsert;

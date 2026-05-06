@@ -7,17 +7,23 @@
  * 3. getCustomerDetails — Returns individual customer names for a specific agent/classification
  * 4. getAvailableMonths — Returns months that have data in the opening_trials table
  *
- * Reads from: opening_trials, agent_working_days tables.
+ * Reads from: opening_trials, agent_working_days, agent_daily_hours tables.
  *
  * Date range filter: filters by the `created_date` column (when the trial was created in Zoho).
  * Supported values: "all" | "today" | "yesterday" | "last_7_days" | "this_month" | "last_month"
  * The date range filter works in conjunction with the month filter (AND logic).
+ *
+ * Working Days calculation (updated):
+ * - When dateRange is active and agent_daily_hours has data for the period, sum working_day_value
+ *   from agent_daily_hours for the matching date range.
+ * - When dateRange is "all", sum all working_day_values for the selected month.
+ * - Falls back to agent_working_days table if no daily data exists for the agent/period.
  */
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { openingTrials, agentWorkingDays } from "../../drizzle/schema";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { openingTrials, agentWorkingDays, agentDailyHours } from "../../drizzle/schema";
+import { eq, and, gte, lte, sql, like } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,15 +111,68 @@ function getDateRange(range: DateRangeOption): { from: Date; to: Date } | null {
   }
 }
 
-// ─── Working Days Calculation ─────────────────────────────────────────────────
+// ─── Working Days Calculation (Legacy fallback) ──────────────────────────────
 // Logic: For the summary row approach (one row per agent per month with total hours),
 // we simply divide total hours by 8 to get working days.
-// For future daily rows: 7+ hours = 1.0 day, <7 hours = hours/8
 
 function calculateWorkingDaysFromHours(totalHours: number): number {
-  // For the current migration data, we store total hours = workingDays * 8
-  // So dividing by 8 gives back the original working days value
   return totalHours / 8;
+}
+
+// ─── Agent Name Mapping ──────────────────────────────────────────────────────
+// Maps opening_trials agent names (first name / short) to agent_daily_hours full names.
+// This mapping is used to look up daily hours data for each agent.
+// Case-insensitive matching with first-name fallback.
+
+const HUBSTAFF_TO_TRIALS_MAP: Record<string, string> = {
+  "Alan Churchman": "Alan",
+  "Ana Alipat": "Ana",
+  "Angel Breheny": "Angel",
+  "Ashleigh Walker": "Ashleigh",
+  "Ava Monroe": "Ava",
+  "Carl Bennett": "Carl",
+  "Daniel Parker": "Daniel",
+  "Darrell Loynes": "Darrel",
+  "Debbie Forbes": "Debbie",
+  "Dee Richards": "Dee",
+  "Harrison Joslin": "Harrison",
+  "Julie Ann Relox": "Julie Ann",
+  "Matthew Holman": "Matt",
+  "Muhammad Usama Waheed": "Muhammad",
+  "Paige Taylor": "Paige",
+  "Rob Chidzik": "Rob",
+  "Shola Marie": "Shola",
+  "Wendy Calderon": "Wendy",
+};
+
+// Reverse map: opening_trials name → agent_daily_hours name(s)
+// Built dynamically for flexible lookup
+function buildTrialsToHubstaffMap(): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const [hubstaffName, trialsName] of Object.entries(HUBSTAFF_TO_TRIALS_MAP)) {
+    const key = trialsName.toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, []);
+    }
+    map.get(key)!.push(hubstaffName);
+  }
+  return map;
+}
+
+const TRIALS_TO_HUBSTAFF_MAP = buildTrialsToHubstaffMap();
+
+/**
+ * Given an agent name from opening_trials, find the matching agent_daily_hours name(s).
+ * Uses the explicit mapping first, then falls back to case-insensitive first-name matching.
+ */
+function getHubstaffNamesForTrialsAgent(trialsAgentName: string): string[] {
+  // Try explicit mapping first
+  const mapped = TRIALS_TO_HUBSTAFF_MAP.get(trialsAgentName.toLowerCase());
+  if (mapped && mapped.length > 0) {
+    return mapped;
+  }
+  // Fallback: return the name as-is (might match directly)
+  return [trialsAgentName];
 }
 
 // ─── Shared Input Schema ──────────────────────────────────────────────────────
@@ -129,10 +188,13 @@ export const openingDashboardRouter = router({
   /**
    * Get aggregated agent performance data for a given month.
    * Groups opening_trials by agent_name and counts each classification.
-   * Joins with agent_working_days to get total hours.
+   * Joins with agent_daily_hours (preferred) or agent_working_days (fallback)
+   * to get working days.
    *
    * Optional dateRange filter narrows results to trials created within the
    * specified date window (AND-ed with the month filter).
+   * When a dateRange is active, working days are also filtered to that date range
+   * using agent_daily_hours.
    */
   getAgentData: protectedProcedure
     .input(z.object({
@@ -145,7 +207,7 @@ export const openingDashboardRouter = router({
         return { agents: [] as AgentDetail[], month: input.month };
       }
 
-      // Build WHERE conditions
+      // Build WHERE conditions for trials
       const conditions = [eq(openingTrials.month, input.month)];
 
       const dateWindow = getDateRange(input.dateRange);
@@ -165,8 +227,48 @@ export const openingDashboardRouter = router({
         .where(and(...conditions))
         .groupBy(openingTrials.agentName, openingTrials.classification);
 
-      // Query 2: Get working hours per agent for the month
-      // Note: working days are always fetched for the full month regardless of date range
+      // Query 2: Get working days from agent_daily_hours
+      // Build date conditions for the daily hours query
+      const monthYear = input.month; // e.g. "2026-05"
+      const [year, monthNum] = monthYear.split("-").map(Number);
+      const monthStart = new Date(year, monthNum - 1, 1);
+      const monthEnd = new Date(year, monthNum, 0); // last day of month
+
+      // Determine the date range for daily hours query
+      let dailyHoursFrom: Date;
+      let dailyHoursTo: Date;
+
+      if (dateWindow) {
+        // Use the date range filter for working days too
+        dailyHoursFrom = dateWindow.from;
+        dailyHoursTo = dateWindow.to;
+      } else {
+        // "all" — use the full month
+        dailyHoursFrom = monthStart;
+        dailyHoursTo = monthEnd;
+      }
+
+      // Query agent_daily_hours for the date range
+      const dailyHoursRows = await db
+        .select({
+          agentName: agentDailyHours.agentName,
+          totalWorkingDays: sql<string>`SUM(${agentDailyHours.workingDayValue})`.as("totalWorkingDays"),
+        })
+        .from(agentDailyHours)
+        .where(and(
+          gte(agentDailyHours.date, dailyHoursFrom),
+          lte(agentDailyHours.date, dailyHoursTo),
+        ))
+        .groupBy(agentDailyHours.agentName);
+
+      // Build a map of hubstaff agent name -> working days from daily table
+      const dailyHoursMap = new Map<string, number>();
+      for (const row of dailyHoursRows) {
+        dailyHoursMap.set(row.agentName, parseFloat(row.totalWorkingDays || "0"));
+      }
+
+      // Query 3 (fallback): Get working hours per agent for the month from legacy table
+      // Only used if agent_daily_hours has no data for an agent
       const workRows = await db
         .select({
           agentName: agentWorkingDays.agentName,
@@ -176,10 +278,10 @@ export const openingDashboardRouter = router({
         .where(eq(agentWorkingDays.month, input.month))
         .groupBy(agentWorkingDays.agentName);
 
-      // Build a map of agent -> hours
-      const hoursMap = new Map<string, number>();
+      // Build a map of agent -> hours (legacy fallback)
+      const legacyHoursMap = new Map<string, number>();
       for (const row of workRows) {
-        hoursMap.set(row.agentName, parseFloat(row.totalHours || "0"));
+        legacyHoursMap.set(row.agentName, parseFloat(row.totalHours || "0"));
       }
 
       // Build agent data from trial rows
@@ -236,9 +338,28 @@ export const openingDashboardRouter = router({
         // Matured = all trials that are NOT still_in_trial
         agent.matured = agent.trials - agent.stillInTrial;
 
-        // Working days from Hubstaff hours (always full-month)
-        const totalHours = hoursMap.get(name) || 0;
-        agent.workingDays = calculateWorkingDaysFromHours(totalHours);
+        // Try to get working days from agent_daily_hours first
+        const hubstaffNames = getHubstaffNamesForTrialsAgent(name);
+        let dailyWorkingDays = 0;
+        let foundInDailyTable = false;
+
+        for (const hubstaffName of hubstaffNames) {
+          const days = dailyHoursMap.get(hubstaffName);
+          if (days !== undefined) {
+            dailyWorkingDays += days;
+            foundInDailyTable = true;
+          }
+        }
+
+        if (foundInDailyTable) {
+          // Use the daily hours table (date-range aware)
+          agent.workingDays = Math.round(dailyWorkingDays * 100) / 100;
+        } else {
+          // Fallback to legacy agent_working_days table (always full-month)
+          // Try matching by the trials agent name directly (legacy table uses same short names)
+          const legacyHours = legacyHoursMap.get(name) || 0;
+          agent.workingDays = calculateWorkingDaysFromHours(legacyHours);
+        }
       });
 
       const agents = Array.from(agentMap.values());
