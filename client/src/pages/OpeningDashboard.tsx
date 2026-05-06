@@ -15,7 +15,7 @@
  *
  * Admin-only page.
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Phone,
   Users,
@@ -121,10 +121,9 @@ function calculateMetrics(agent: AgentDetail): AgentRow {
   };
 }
 
-/** Get previous month in YYYY-MM format */
-function getPreviousMonth(): string {
+/** Get the current month in YYYY-MM format */
+function getCurrentMonth(): string {
   const now = new Date();
-  now.setMonth(now.getMonth() - 1);
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -315,7 +314,7 @@ function SummaryCardModal({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function OpeningDashboard() {
   // ── Month selection ──
-  const [selectedMonth, setSelectedMonth] = useState<string>(getPreviousMonth());
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
 
   // ── Date range filter ──
   const [dateRange, setDateRange] = useState<DateRangeOption>("all");
@@ -346,6 +345,19 @@ export default function OpeningDashboard() {
     { placeholderData: (prev) => prev }
   );
   const { data: monthsData } = trpc.openingDashboard.getAvailableMonths.useQuery();
+
+  // ── Sync default month with available months list ──
+  // Once the available months load, ensure the selected month exists in the list.
+  // If the current month isn't available yet, fall back to the most recent month.
+  useEffect(() => {
+    if (!monthsData?.months?.length) return;
+    const current = getCurrentMonth();
+    if (!monthsData.months.includes(current)) {
+      // Fall back to the most recent available month (list is ordered ascending)
+      const mostRecent = monthsData.months[monthsData.months.length - 1];
+      setSelectedMonth(mostRecent);
+    }
+  }, [monthsData]);
 
   // ── Calculate metrics from fetched data ──
   const AGENT_ROWS: AgentRow[] = useMemo(() => {
@@ -383,7 +395,10 @@ export default function OpeningDashboard() {
   }
 
   function handleReset() {
-    setSelectedMonth(getPreviousMonth());
+    // Reset to current month, or most recent available if current isn't in the list
+    const current = getCurrentMonth();
+    const months = monthsData?.months ?? [];
+    setSelectedMonth(months.includes(current) ? current : (months[months.length - 1] ?? current));
     setDateRange("all");
     setSortKey("avePerDay");
     setSortDir("desc");
