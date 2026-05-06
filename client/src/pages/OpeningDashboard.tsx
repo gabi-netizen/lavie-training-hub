@@ -232,7 +232,7 @@ function SummaryCardModal({
   dateRange: DateRangeOption;
   onClose: () => void;
 }) {
-  const { data, isLoading } = trpc.openingDashboard.getCustomersByClassification.useQuery({
+  const { data, isLoading, isError, error } = trpc.openingDashboard.getCustomersByClassification.useQuery({
     month,
     classification,
     dateRange,
@@ -276,8 +276,13 @@ function SummaryCardModal({
               <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
               <span className="ml-2 text-sm text-gray-600">Loading customers...</span>
             </div>
+          ) : isError ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-red-600 font-medium">Failed to load customers</p>
+              <p className="text-xs text-red-500 mt-1">{error?.message || "Please try again"}</p>
+            </div>
           ) : !grouped.length ? (
-            <p className="text-sm text-gray-500 text-center py-8">No customers found.</p>
+            <p className="text-sm text-gray-500 text-center py-8">No customers found for this period.</p>
           ) : (
             <div className="space-y-5">
               {grouped.map(([agentName, customers]) => (

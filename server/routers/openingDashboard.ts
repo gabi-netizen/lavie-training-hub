@@ -23,7 +23,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { openingTrials, agentWorkingDays, agentDailyHours } from "../../drizzle/schema";
-import { eq, and, gte, lte, sql, like } from "drizzle-orm";
+import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -249,17 +249,25 @@ export const openingDashboardRouter = router({
       }
 
       // Query agent_daily_hours for the date range
-      const dailyHoursRows = await db
-        .select({
-          agentName: agentDailyHours.agentName,
-          totalWorkingDays: sql<string>`SUM(${agentDailyHours.workingDayValue})`.as("totalWorkingDays"),
-        })
-        .from(agentDailyHours)
-        .where(and(
-          gte(agentDailyHours.date, dailyHoursFrom),
-          lte(agentDailyHours.date, dailyHoursTo),
-        ))
-        .groupBy(agentDailyHours.agentName);
+      // Wrapped in try-catch to gracefully handle cases where the table may not
+      // exist yet in the deployed database (falls back to legacy table).
+      let dailyHoursRows: { agentName: string; totalWorkingDays: string }[] = [];
+      try {
+        dailyHoursRows = await db
+          .select({
+            agentName: agentDailyHours.agentName,
+            totalWorkingDays: sql<string>`SUM(${agentDailyHours.workingDayValue})`.as("totalWorkingDays"),
+          })
+          .from(agentDailyHours)
+          .where(and(
+            gte(agentDailyHours.date, dailyHoursFrom),
+            lte(agentDailyHours.date, dailyHoursTo),
+          ))
+          .groupBy(agentDailyHours.agentName);
+      } catch (err) {
+        // Table may not exist in this environment; fall back to legacy table
+        console.warn("[openingDashboard] agent_daily_hours query failed, using legacy fallback:", err);
+      }
 
       // Build a map of hubstaff agent name -> working days from daily table
       const dailyHoursMap = new Map<string, number>();
