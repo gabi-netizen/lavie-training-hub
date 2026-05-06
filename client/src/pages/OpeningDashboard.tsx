@@ -44,6 +44,8 @@ type SortKey =
   | "workingDays"
   | "avePerDay";
 
+type DateRangeOption = "all" | "today" | "yesterday" | "last_7_days" | "this_month" | "last_month";
+
 interface AgentDetail {
   agentName: string;
   trials: number;
@@ -64,6 +66,17 @@ interface AgentRow extends AgentDetail {
   lost: number;
   avePerDay: number;
 }
+
+// ─── Date Range Options ───────────────────────────────────────────────────────
+
+const DATE_RANGE_OPTIONS: { value: DateRangeOption; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "last_7_days", label: "Last 7 Days" },
+  { value: "this_month", label: "This Month" },
+  { value: "last_month", label: "Last Month" },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -122,6 +135,11 @@ function formatMonth(month: string): string {
   return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
+/** Get a human-readable label for the active date range filter */
+function getDateRangeLabel(range: DateRangeOption): string {
+  return DATE_RANGE_OPTIONS.find((o) => o.value === range)?.label ?? range;
+}
+
 // ─── Customer Detail Modal ────────────────────────────────────────────────────
 
 function CustomerDetailModal({
@@ -129,18 +147,21 @@ function CustomerDetailModal({
   classification,
   classificationLabel,
   month,
+  dateRange,
   onClose,
 }: {
   agentName: string;
   classification: string;
   classificationLabel: string;
   month: string;
+  dateRange: DateRangeOption;
   onClose: () => void;
 }) {
   const { data, isLoading } = trpc.openingDashboard.getCustomerDetails.useQuery({
     month,
     agentName,
     classification,
+    dateRange,
   });
 
   return (
@@ -152,7 +173,12 @@ function CustomerDetailModal({
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-gray-900">{classificationLabel}</h3>
-            <p className="text-xs text-gray-600">{agentName} · {formatMonth(month)}</p>
+            <p className="text-xs text-gray-600">
+              {agentName} · {formatMonth(month)}
+              {dateRange !== "all" && (
+                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange)}</span>
+              )}
+            </p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
             <X size={20} className="text-gray-500" />
@@ -195,16 +221,19 @@ function SummaryCardModal({
   classification,
   classificationLabel,
   month,
+  dateRange,
   onClose,
 }: {
   classification: string;
   classificationLabel: string;
   month: string;
+  dateRange: DateRangeOption;
   onClose: () => void;
 }) {
   const { data, isLoading } = trpc.openingDashboard.getCustomersByClassification.useQuery({
     month,
     classification,
+    dateRange,
   });
 
   // Group customers by agent name
@@ -228,7 +257,12 @@ function SummaryCardModal({
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-gray-900">{classificationLabel}</h3>
-            <p className="text-xs text-gray-600">All Agents · {formatMonth(month)}</p>
+            <p className="text-xs text-gray-600">
+              All Agents · {formatMonth(month)}
+              {dateRange !== "all" && (
+                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange)}</span>
+              )}
+            </p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
             <X size={20} className="text-gray-500" />
@@ -283,6 +317,9 @@ export default function OpeningDashboard() {
   // ── Month selection ──
   const [selectedMonth, setSelectedMonth] = useState<string>(getPreviousMonth());
 
+  // ── Date range filter ──
+  const [dateRange, setDateRange] = useState<DateRangeOption>("all");
+
   // ── Filters ──
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
@@ -305,7 +342,7 @@ export default function OpeningDashboard() {
 
   // ── Fetch data from API ──
   const { data: agentData, isLoading, isError } = trpc.openingDashboard.getAgentData.useQuery(
-    { month: selectedMonth },
+    { month: selectedMonth, dateRange },
     { placeholderData: (prev) => prev }
   );
   const { data: monthsData } = trpc.openingDashboard.getAvailableMonths.useQuery();
@@ -347,6 +384,7 @@ export default function OpeningDashboard() {
 
   function handleReset() {
     setSelectedMonth(getPreviousMonth());
+    setDateRange("all");
     setSortKey("avePerDay");
     setSortDir("desc");
   }
@@ -384,6 +422,9 @@ export default function OpeningDashboard() {
             <h1 className="text-xl font-bold text-gray-900">Opening Dashboard</h1>
             <p className="text-sm text-gray-600">
               Trial conversion performance — {formatMonth(selectedMonth)}
+              {dateRange !== "all" && (
+                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange)}</span>
+              )}
             </p>
           </div>
         </div>
@@ -426,6 +467,39 @@ export default function OpeningDashboard() {
                 <option value="all">All</option>
               </select>
             </div>
+            {/* Date range filter */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Date Range
+              </label>
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value as DateRangeOption)}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                {DATE_RANGE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Active filter badge — shown when a non-default date range is selected */}
+            {dateRange !== "all" && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+                <CalendarDays size={13} className="text-indigo-600 shrink-0" />
+                <span className="text-xs font-medium text-indigo-700">
+                  {getDateRangeLabel(dateRange)}
+                </span>
+                <button
+                  onClick={() => setDateRange("all")}
+                  className="ml-0.5 text-indigo-400 hover:text-indigo-700 transition-colors"
+                  aria-label="Clear date range filter"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
             {/* Reset */}
             <button
               onClick={handleReset}
@@ -464,7 +538,9 @@ export default function OpeningDashboard() {
                 {totalTrials}
               </p>
               <p className="text-indigo-300 text-xs mt-3">
-                Trials opened in {formatMonth(selectedMonth)}
+                {dateRange === "all"
+                  ? `Trials opened in ${formatMonth(selectedMonth)}`
+                  : `Trials opened in ${formatMonth(selectedMonth)} · ${getDateRangeLabel(dateRange)}`}
               </p>
             </div>
 
@@ -724,7 +800,7 @@ export default function OpeningDashboard() {
                   </div>
                 )}
                 {/* Totals row */}
-                <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-t-2 border-gray-300 text-sm">
+                <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 bg-gray-50 border-t border-gray-200 text-sm">
                   <div></div>
                   <div className="text-xs font-bold text-gray-800 uppercase tracking-wide">Totals</div>
                   <div className="text-right font-bold text-gray-900">{AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0).toFixed(1)}</div>
@@ -750,7 +826,9 @@ export default function OpeningDashboard() {
 
             {/* ── Footer note ── */}
             <p className="text-xs text-gray-500 text-center pb-4">
-              Opening Agents Dashboard · {formatMonth(selectedMonth)} · Excludes Retention agents (Rob, Guy)
+              Opening Agents Dashboard · {formatMonth(selectedMonth)}
+              {dateRange !== "all" && ` · ${getDateRangeLabel(dateRange)}`}
+              {" "}· Excludes Retention agents (Rob, Guy)
             </p>
           </>
         )}
@@ -763,6 +841,7 @@ export default function OpeningDashboard() {
           classification={customerModal.classification}
           classificationLabel={customerModal.classificationLabel}
           month={selectedMonth}
+          dateRange={dateRange}
           onClose={() => setCustomerModal(null)}
         />
       )}
@@ -773,6 +852,7 @@ export default function OpeningDashboard() {
           classification={summaryCardModal.classification}
           classificationLabel={summaryCardModal.classificationLabel}
           month={selectedMonth}
+          dateRange={dateRange}
           onClose={() => setSummaryCardModal(null)}
         />
       )}
