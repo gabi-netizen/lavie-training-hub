@@ -39,6 +39,7 @@ import EditWorkingHoursModal from "../components/EditWorkingHoursModal";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SortKey =
   | "agentName"
+  | "dailyOpenings"
   | "trials"
   | "matured"
   | "converted"
@@ -61,6 +62,7 @@ interface AgentDetail {
   dunning: number;
   futureDeal: number;
   workingDays: number;
+  dailyOpenings: number;
 }
 
 interface AgentRow extends AgentDetail {
@@ -671,10 +673,13 @@ export default function OpeningDashboard() {
               {/* Table - CSS Grid layout (same approach as Call Center Dashboard) */}
               <div>
                 {/* Header row */}
-                <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
+                <div className="grid grid-cols-[36px_1fr_80px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">
                   <div>#</div>
                   <div className="cursor-pointer hover:text-indigo-700" onClick={() => handleSort("agentName")}>
                     Agent <SortIcon column="agentName" sortKey={sortKey} sortDir={sortDir} />
+                  </div>
+                  <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("dailyOpenings")}>
+                    Daily Openings <SortIcon column="dailyOpenings" sortKey={sortKey} sortDir={sortDir} />
                   </div>
                   <div className="text-right cursor-pointer hover:text-indigo-700" onClick={() => handleSort("workingDays")}>
                     W.Days <SortIcon column="workingDays" sortKey={sortKey} sortDir={sortDir} />
@@ -713,7 +718,7 @@ export default function OpeningDashboard() {
                       <div key={row.agentName}>
                         {/* Main row */}
                         <div
-                          className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                          className="grid grid-cols-[36px_1fr_80px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 items-center hover:bg-indigo-50/40 transition-colors cursor-pointer"
                           onClick={() =>
                             setExpandedAgent(
                               expandedAgent === row.agentName ? null : row.agentName
@@ -736,6 +741,18 @@ export default function OpeningDashboard() {
                             <span className="font-semibold text-gray-900 text-sm">
                               {row.agentName}
                             </span>
+                          </div>
+                          <div className="text-right text-sm font-semibold">
+                            {(() => {
+                              const val = dateRange === "all" ? row.dailyOpenings : row.trials;
+                              return val > 0 ? (
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold">
+                                  {val}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">0</span>
+                              );
+                            })()}
                           </div>
                           <div className="text-right text-sm text-gray-800 font-medium flex items-center justify-end gap-1">
                             <span>{row.workingDays > 0 ? row.workingDays.toFixed(1) : "\u2014"}</span>
@@ -843,9 +860,19 @@ export default function OpeningDashboard() {
                   </div>
                 )}
                 {/* Totals row */}
-                <div className="grid grid-cols-[36px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 bg-gray-50 border-t border-gray-200 text-sm">
+                <div className="grid grid-cols-[36px_1fr_80px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] px-5 py-3.5 bg-gray-50 border-t border-gray-200 text-sm">
                   <div></div>
                   <div className="text-xs font-bold text-gray-800 uppercase tracking-wide">Totals</div>
+                  <div className="text-right font-bold text-gray-900">
+                    {(() => {
+                      const total = AGENT_ROWS.reduce((s, r) => s + (dateRange === "all" ? r.dailyOpenings : r.trials), 0);
+                      return total > 0 ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold">
+                          {total}
+                        </span>
+                      ) : <span className="text-gray-400">0</span>;
+                    })()}
+                  </div>
                   <div className="text-right font-bold text-gray-900">{AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0).toFixed(1)}</div>
                   <div className="text-right font-bold text-gray-900">{(totalTrials / Math.max(AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0), 1)).toFixed(1)}</div>
                   <div className="text-right font-bold text-gray-900">{totalTrials}</div>

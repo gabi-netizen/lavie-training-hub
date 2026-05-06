@@ -39,6 +39,7 @@ interface AgentDetail {
   dunning: number;
   futureDeal: number;
   workingDays: number;
+  dailyOpenings: number;
 }
 
 interface CustomerDetail {
@@ -292,9 +293,33 @@ export const openingDashboardRouter = router({
         legacyHoursMap.set(row.agentName, parseFloat(row.totalHours || "0"));
       }
 
+      // Query 4: Get today's trial count per agent (for Daily Openings column)
+      // Always uses today's date regardless of the month/dateRange filter.
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const todayRows = await db
+        .select({
+          agentName: openingTrials.agentName,
+          count: sql<number>`COUNT(*)`.as("count"),
+        })
+        .from(openingTrials)
+        .where(and(
+          gte(openingTrials.createdDate, todayStart),
+          lte(openingTrials.createdDate, todayEnd),
+        ))
+        .groupBy(openingTrials.agentName);
+
+      // Build a map of agent -> today's trial count
+      const todayCountMap = new Map<string, number>();
+      for (const row of todayRows) {
+        todayCountMap.set(row.agentName, Number(row.count));
+      }
+
       // Build agent data from trial rows
       const agentMap = new Map<string, AgentDetail>();
-
       for (const row of trialRows) {
         if (!agentMap.has(row.agentName)) {
           agentMap.set(row.agentName, {
@@ -309,10 +334,10 @@ export const openingDashboardRouter = router({
             dunning: 0,
             futureDeal: 0,
             workingDays: 0,
+            dailyOpenings: 0,
           });
         }
-
-        const agent = agentMap.get(row.agentName)!;
+        const agent = agentMap.get(row.agentName)!;;
         const count = Number(row.count);
         agent.trials += count;
 
@@ -341,10 +366,12 @@ export const openingDashboardRouter = router({
         }
       }
 
-      // Calculate matured and working days for each agent
+      // Calculate matured, working days, and daily openings for each agent
       Array.from(agentMap.entries()).forEach(([name, agent]) => {
         // Matured = all trials that are NOT still_in_trial
         agent.matured = agent.trials - agent.stillInTrial;
+        // Daily Openings = trials opened today (from todayCountMap)
+        agent.dailyOpenings = todayCountMap.get(name) || 0;
 
         // Try to get working days from agent_daily_hours first
         const hubstaffNames = getHubstaffNamesForTrialsAgent(name);
