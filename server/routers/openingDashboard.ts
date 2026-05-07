@@ -143,7 +143,7 @@ const HUBSTAFF_TO_TRIALS_MAP: Record<string, string> = {
   "Alan Churchman": "Alan",
   "Ana Alipat": "Ana",
   "Angel Breheny": "Angel",
-  "Ashleigh Walker": "Ashleigh",
+  "Ashleigh Walker": "Ashley",
   "Ava Monroe": "Ava",
   "Carl Bennett": "Carl",
   "Daniel Parker": "Daniel",
@@ -335,13 +335,25 @@ export const openingDashboardRouter = router({
       // Build agent data — seed from agent_daily_hours first so that agents
       // who worked (have hours) but opened 0 trials in the filtered period
       // still appear in the table with Trials=0.
-      const agentMap = new Map<string, AgentDetail>();
+      //
+      // The map is keyed by LOWERCASE name to prevent duplicates when the same
+      // agent appears with different capitalisation in different data sources
+      // (e.g. "Harrison" from Hubstaff vs "harrison" from opening_trials).
+      // The stored agentName uses the first-seen capitalisation; if a later
+      // source provides a better-capitalised version it will be preferred.
+      const agentMap = new Map<string, AgentDetail>(); // key = name.toLowerCase()
 
-      // Helper to ensure an agent entry exists
+      // Helper: normalise a display name to Title Case (capitalise each word)
+      function toTitleCase(name: string): string {
+        return name.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+      }
+
+      // Helper to ensure an agent entry exists (case-insensitive deduplication)
       function ensureAgent(name: string): AgentDetail {
-        if (!agentMap.has(name)) {
-          agentMap.set(name, {
-            agentName: name,
+        const key = name.toLowerCase();
+        if (!agentMap.has(key)) {
+          agentMap.set(key, {
+            agentName: toTitleCase(name), // normalised display name
             trials: 0,
             stillInTrial: 0,
             matured: 0,
@@ -355,7 +367,7 @@ export const openingDashboardRouter = router({
             dailyOpenings: 0,
           });
         }
-        return agentMap.get(name)!;
+        return agentMap.get(key)!;
       }
 
       // Seed from agent_daily_hours: any agent who has hours in the filtered
