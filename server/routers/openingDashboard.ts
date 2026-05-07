@@ -318,12 +318,16 @@ export const openingDashboardRouter = router({
         todayCountMap.set(row.agentName, Number(row.count));
       }
 
-      // Build agent data from trial rows
+      // Build agent data — seed from agent_daily_hours first so that agents
+      // who worked (have hours) but opened 0 trials in the filtered period
+      // still appear in the table with Trials=0.
       const agentMap = new Map<string, AgentDetail>();
-      for (const row of trialRows) {
-        if (!agentMap.has(row.agentName)) {
-          agentMap.set(row.agentName, {
-            agentName: row.agentName,
+
+      // Helper to ensure an agent entry exists
+      function ensureAgent(name: string): AgentDetail {
+        if (!agentMap.has(name)) {
+          agentMap.set(name, {
+            agentName: name,
             trials: 0,
             stillInTrial: 0,
             matured: 0,
@@ -337,7 +341,25 @@ export const openingDashboardRouter = router({
             dailyOpenings: 0,
           });
         }
-        const agent = agentMap.get(row.agentName)!;;
+        return agentMap.get(name)!;
+      }
+
+      // Seed from agent_daily_hours: any agent who has hours in the filtered
+      // period should appear even if they have no trials.
+      // We need to map Hubstaff names back to opening_trials names.
+      const TRIALS_NAME_FOR_HUBSTAFF = Object.fromEntries(
+        Object.entries(HUBSTAFF_TO_TRIALS_MAP)
+      );
+      for (const row of dailyHoursRows) {
+        // Convert Hubstaff name to trials name (use mapping, fallback to as-is)
+        const trialsName = TRIALS_NAME_FOR_HUBSTAFF[row.agentName] ?? row.agentName;
+        ensureAgent(trialsName);
+      }
+
+      // Overlay trial counts from trialRows
+      for (const row of trialRows) {
+        ensureAgent(row.agentName);
+        const agent = agentMap.get(row.agentName)!;
         const count = Number(row.count);
         agent.trials += count;
 
