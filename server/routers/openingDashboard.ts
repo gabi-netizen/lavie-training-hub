@@ -389,7 +389,7 @@ export const openingDashboardRouter = router({
         // Skip non-opening agents
         if (NON_OPENING_AGENTS.has(row.agentName.toLowerCase())) continue;
         ensureAgent(row.agentName);
-        const agent = agentMap.get(row.agentName)!;
+        const agent = agentMap.get(row.agentName.toLowerCase())!;
         const count = Number(row.count);
         agent.trials += count;
 
@@ -419,14 +419,19 @@ export const openingDashboardRouter = router({
       }
 
       // Calculate matured, working days, and daily openings for each agent
-      Array.from(agentMap.entries()).forEach(([name, agent]) => {
+      // Note: agentMap keys are lowercase; use agent.agentName (proper case) for lookups.
+      Array.from(agentMap.values()).forEach((agent) => {
+        const displayName = agent.agentName;
         // Matured = all trials that are NOT still_in_trial
         agent.matured = agent.trials - agent.stillInTrial;
         // Daily Openings = trials opened today (from todayCountMap)
-        agent.dailyOpenings = todayCountMap.get(name) || 0;
-
+        // todayCountMap is keyed by the raw DB name, try both the display name and lowercase
+        agent.dailyOpenings =
+          todayCountMap.get(displayName) ??
+          todayCountMap.get(displayName.toLowerCase()) ??
+          0;
         // Try to get working days from agent_daily_hours first
-        const hubstaffNames = getHubstaffNamesForTrialsAgent(name);
+        const hubstaffNames = getHubstaffNamesForTrialsAgent(displayName);;
         let dailyWorkingDays = 0;
         let foundInDailyTable = false;
 
@@ -444,7 +449,7 @@ export const openingDashboardRouter = router({
         } else {
           // Fallback to legacy agent_working_days table (always full-month)
           // Try matching by the trials agent name directly (legacy table uses same short names)
-          const legacyHours = legacyHoursMap.get(name) || 0;
+          const legacyHours = legacyHoursMap.get(displayName) || legacyHoursMap.get(displayName.toLowerCase()) || 0;
           agent.workingDays = calculateWorkingDaysFromHours(legacyHours);
         }
       });
