@@ -446,9 +446,15 @@ export const openingDashboardRouter = router({
         if (foundInDailyTable) {
           // Use the daily hours table (date-range aware)
           agent.workingDays = Math.round(dailyWorkingDays * 100) / 100;
+        } else if (dateWindow) {
+          // A date range filter is active but no Hubstaff data exists yet for
+          // this period (e.g. the n8n sync hasn't run yet for today).
+          // Default to 1.0 working day so Ave/Day is meaningful.
+          // Once real data is inserted it will automatically take precedence.
+          agent.workingDays = 1.0;
         } else {
-          // Fallback to legacy agent_working_days table (always full-month)
-          // Try matching by the trials agent name directly (legacy table uses same short names)
+          // No date range filter ("all" = full month) — fall back to legacy
+          // agent_working_days table.
           const legacyHours = legacyHoursMap.get(displayName) || legacyHoursMap.get(displayName.toLowerCase()) || 0;
           agent.workingDays = calculateWorkingDaysFromHours(legacyHours);
         }
