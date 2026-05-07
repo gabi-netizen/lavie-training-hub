@@ -120,10 +120,24 @@ function calculateWorkingDaysFromHours(totalHours: number): number {
   return totalHours / 8;
 }
 
-// ─── Agent Name Mapping ──────────────────────────────────────────────────────
+/// ─── Agent Name Mapping ──────────────────────────────────────────────────────
 // Maps opening_trials agent names (first name / short) to agent_daily_hours full names.
 // This mapping is used to look up daily hours data for each agent.
 // Case-insensitive matching with first-name fallback.
+
+/**
+ * Agents who are NOT part of the Opening team and should be excluded from
+ * the Opening Dashboard entirely — even if they have Hubstaff hours.
+ * Stored as lowercase opening_trials names for case-insensitive matching.
+ */
+const NON_OPENING_AGENTS = new Set([
+  "rob",        // Rob Chidzik — Retention agent
+  "guy",        // Guy — Retention agent
+  "julie ann",  // Julie Ann Relox — not an opening agent
+  "matt",       // Matthew Holman — not an opening agent
+  "muhammad",   // Muhammad Usama Waheed — not an opening agent
+  "wendy",      // Wendy Calderon — not an opening agent
+]);
 
 const HUBSTAFF_TO_TRIALS_MAP: Record<string, string> = {
   "Alan Churchman": "Alan",
@@ -353,11 +367,15 @@ export const openingDashboardRouter = router({
       for (const row of dailyHoursRows) {
         // Convert Hubstaff name to trials name (use mapping, fallback to as-is)
         const trialsName = TRIALS_NAME_FOR_HUBSTAFF[row.agentName] ?? row.agentName;
+        // Skip non-opening agents (retention agents, support staff, etc.)
+        if (NON_OPENING_AGENTS.has(trialsName.toLowerCase())) continue;
         ensureAgent(trialsName);
       }
 
       // Overlay trial counts from trialRows
       for (const row of trialRows) {
+        // Skip non-opening agents
+        if (NON_OPENING_AGENTS.has(row.agentName.toLowerCase())) continue;
         ensureAgent(row.agentName);
         const agent = agentMap.get(row.agentName)!;
         const count = Number(row.count);
