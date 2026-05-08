@@ -157,6 +157,7 @@ const HUBSTAFF_TO_TRIALS_MAP: Record<string, string> = {
   "Paige Taylor": "Paige",
   "Rob Chidzik": "Rob",
   "Shola Marie": "Shola",
+  "Sophie Rose": "Sophie",
   "Wendy Calderon": "Wendy",
 };
 
