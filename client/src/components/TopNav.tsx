@@ -56,6 +56,7 @@ const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDas
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
+const USERS_ITEM = { path: "/users", label: "משתמשים", icon: Users };
 const OPENING_DASHBOARD_ITEM = { path: "/opening-dashboard", label: "Opening", icon: Phone };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
@@ -261,6 +262,22 @@ export default function TopNav() {
               >
                 <Mail size={14} />
                 Support Tickets
+              </button>
+            </Link>
+          )}
+          {/* Users Management — admin only */}
+          {isAdmin && (
+            <Link href={USERS_ITEM.path}>
+              <button
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                  location === USERS_ITEM.path
+                    ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
+                    : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                )}
+              >
+                <Users size={14} />
+                {USERS_ITEM.label}
               </button>
             </Link>
           )}

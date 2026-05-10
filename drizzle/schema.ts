@@ -24,6 +24,8 @@ export const users = mysqlTable("users", {
   cloudtalkAgentId: varchar("cloudtalkAgentId", { length: 32 }),
   /** Team assignment: 'opening' or 'retention'. Null = unassigned / admin */
   team: mysqlEnum("team", ["opening", "retention"]),
+  /** Whether the user account is active. Disabled users cannot log in. */
+  active: boolean("active").default(true).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

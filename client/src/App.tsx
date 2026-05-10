@@ -18,6 +18,7 @@ import Workspace from "./pages/Workspace";
 import PhoneNumbers from "./pages/PhoneNumbers";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import SupportTickets from "@/pages/SupportTickets";
+import UsersPage from "@/pages/Users";
 import OpeningDashboard from "@/pages/OpeningDashboard";
 import SharedCallView from "./pages/SharedCallView";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -110,6 +111,11 @@ function Router() {
         {/* Support Tickets — admin only */}
         <Route path={"/support-tickets"}>
           {() => <AdminRoute component={SupportTickets} />}
+        </Route>
+
+        {/* Users Management — admin only */}
+        <Route path={"/users"}>
+          {() => <AdminRoute component={UsersPage} />}
         </Route>
 
         {/* Opening Agents Dashboard — all authenticated users */}

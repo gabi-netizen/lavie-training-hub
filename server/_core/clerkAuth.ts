@@ -151,5 +151,10 @@ export async function authenticateClerkRequest(req: Request): Promise<import("..
     throw new Error("Failed to get or create user");
   }
 
+  // Block disabled users from accessing the app
+  if (!user.active) {
+    throw new Error("Your account has been disabled. Please contact an administrator.");
+  }
+
   return user;
 }
