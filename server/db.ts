@@ -89,6 +89,28 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user by email: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUserOpenId(userId: number, newOpenId: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update user openId: database not available");
+    return;
+  }
+
+  await db.update(users).set({ openId: newOpenId, lastSignedIn: new Date() }).where(eq(users.id, userId));
+}
+
 // TODO: add feature queries here as your schema grows.
 
 // ── Pitch Customizations ──

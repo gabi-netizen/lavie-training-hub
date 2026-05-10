@@ -13,6 +13,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   Users as UsersIcon,
@@ -21,6 +37,7 @@ import {
   UserCheck,
   UserX,
   Search,
+  UserPlus,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
@@ -48,11 +65,22 @@ const TEAM_BADGE: Record<string, string> = {
   retention: "bg-amber-100 text-amber-800 border-amber-200",
 };
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function Users() {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+
+  // Add User modal state
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
+  const [emailError, setEmailError] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -87,6 +115,44 @@ export default function Users() {
       setDeleteTarget(null);
     },
   });
+
+  const addUserMutation = trpc.users.addUser.useMutation({
+    onSuccess: () => {
+      utils.users.getUsers.invalidate();
+      toast.success("User added successfully");
+      resetAddUserForm();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to add user");
+    },
+  });
+
+  function resetAddUserForm() {
+    setAddUserOpen(false);
+    setNewUserName("");
+    setNewUserEmail("");
+    setNewUserRole("user");
+    setEmailError("");
+  }
+
+  function handleAddUserSubmit() {
+    // Validate email
+    if (!newUserEmail.trim()) {
+      setEmailError("Email is required");
+      return;
+    }
+    if (!isValidEmail(newUserEmail.trim())) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+    setEmailError("");
+
+    addUserMutation.mutate({
+      name: newUserName.trim() || undefined,
+      email: newUserEmail.trim(),
+      role: newUserRole,
+    });
+  }
 
   // Redirect non-admin users
   if (!loading && user && user.role !== "admin") {
@@ -133,6 +199,13 @@ export default function Users() {
             <p className="text-sm text-gray-500">Manage users and access</p>
           </div>
         </div>
+        <Button
+          onClick={() => setAddUserOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white"
+        >
+          <UserPlus size={16} className="mr-2" />
+          Add User
+        </Button>
       </div>
 
       {/* Stats */}
@@ -326,6 +399,72 @@ export default function Users() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={addUserOpen} onOpenChange={(open) => { if (!open) resetAddUserForm(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Add a user to the whitelist. They will be able to sign in via Clerk once added.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="add-user-name">Name</Label>
+              <Input
+                id="add-user-name"
+                placeholder="Full name (optional)"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-user-email">
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="add-user-email"
+                type="email"
+                placeholder="user@example.com"
+                value={newUserEmail}
+                onChange={(e) => {
+                  setNewUserEmail(e.target.value);
+                  if (emailError) setEmailError("");
+                }}
+                className={emailError ? "border-red-500" : ""}
+              />
+              {emailError && (
+                <p className="text-xs text-red-500">{emailError}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-user-role">Role</Label>
+              <Select value={newUserRole} onValueChange={(val) => setNewUserRole(val as "user" | "admin")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetAddUserForm}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddUserSubmit}
+              disabled={addUserMutation.isPending}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {addUserMutation.isPending ? "Adding..." : "Add User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

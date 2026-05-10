@@ -6,7 +6,13 @@
  *  1. Frontend (ClerkProvider) issues a short-lived JWT after sign-in.
  *  2. Frontend sends the JWT in the Authorization header: "Bearer <token>"
  *  3. This module verifies the JWT using Clerk's JWKS endpoint.
- *  4. On success, upserts the user in our DB and returns the User row.
+ *  4. On success, checks if user is whitelisted in our DB and returns the User row.
+ *
+ * Whitelist-only auth:
+ *  - Existing users (openId already matches a real Clerk ID): continue as before.
+ *  - Users added via "Add User" (openId = "pending_<email>"): on first Clerk login,
+ *    match by email, update openId to Clerk ID, and allow access.
+ *  - Unknown users (email not in DB): BLOCKED with "Access denied" error.
  */
 
 import type { Request } from "express";
@@ -123,28 +129,45 @@ export async function authenticateClerkRequest(req: Request): Promise<import("..
     throw new Error("Invalid Clerk token: missing sub");
   }
 
-  // Check if user exists in DB
+  // Check if user exists in DB by their Clerk ID (openId)
   let user = await db.getUserByOpenId(clerkUserId);
 
-  if (!user) {
-    // Fetch full user details from Clerk API
-    const { email, name } = await getClerkUserDetails(clerkUserId);
-
+  if (user) {
+    // Existing user with matching Clerk ID — update lastSignedIn and continue
     await db.upsertUser({
       openId: clerkUserId,
-      name: name,
-      email: email,
-      loginMethod: "clerk",
       lastSignedIn: new Date(),
     });
     user = await db.getUserByOpenId(clerkUserId);
   } else {
-    // Update lastSignedIn
-    await db.upsertUser({
-      openId: clerkUserId,
-      lastSignedIn: new Date(),
-    });
-    user = await db.getUserByOpenId(clerkUserId);
+    // NEW user (Clerk ID not in DB) — check whitelist by email
+    const { email, name } = await getClerkUserDetails(clerkUserId);
+
+    if (!email) {
+      throw new Error("Access denied. Please contact an administrator to get access.");
+    }
+
+    // Look for an existing user row with matching email (e.g., added via "Add User" button)
+    const existingByEmail = await db.getUserByEmail(email);
+
+    if (existingByEmail) {
+      // Found a whitelisted user — update their openId to the real Clerk ID
+      await db.updateUserOpenId(existingByEmail.id, clerkUserId);
+
+      // Also update name if the existing row doesn't have one
+      if (!existingByEmail.name && name) {
+        await db.upsertUser({
+          openId: clerkUserId,
+          name: name,
+          lastSignedIn: new Date(),
+        });
+      }
+
+      user = await db.getUserByOpenId(clerkUserId);
+    } else {
+      // Email NOT in DB — BLOCK access
+      throw new Error("Access denied. Please contact an administrator to get access.");
+    }
   }
 
   if (!user) {

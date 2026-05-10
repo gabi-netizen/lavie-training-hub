@@ -2,7 +2,7 @@ import { z } from "zod";
 import { adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const usersRouter = router({
@@ -69,6 +69,54 @@ export const usersRouter = router({
         .where(eq(users.id, input.userId));
 
       return { success: true, active: newActive };
+    }),
+
+  /**
+   * Add a new user — admin only.
+   * Creates a user with a placeholder openId (pending_<email>).
+   * If a user with that email already exists, returns an error.
+   */
+  addUser: adminProcedure
+    .input(
+      z.object({
+        name: z.string().optional(),
+        email: z.string().email(),
+        role: z.enum(["user", "admin"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      // Check if a user with this email already exists
+      const [existing] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1);
+
+      if (existing) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A user with this email already exists",
+        });
+      }
+
+      // Create user with placeholder openId
+      const placeholderOpenId = `pending_${input.email}`;
+
+      await db.insert(users).values({
+        openId: placeholderOpenId,
+        name: input.name || null,
+        email: input.email,
+        role: input.role,
+        active: true,
+        loginMethod: "clerk",
+      });
+
+      return { success: true };
     }),
 
   /**
