@@ -130,7 +130,7 @@ export default function Users() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Users Management</h1>
-            <p className="text-sm text-gray-500">ניהול משתמשים</p>
+            <p className="text-sm text-gray-500">Manage users and access</p>
           </div>
         </div>
       </div>
