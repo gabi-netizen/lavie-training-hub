@@ -56,7 +56,7 @@ const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDas
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
-const USERS_ITEM = { path: "/users", label: "משתמשים", icon: Users };
+const USERS_ITEM = { path: "/users", label: "Users", icon: Users };
 const OPENING_DASHBOARD_ITEM = { path: "/opening-dashboard", label: "Opening", icon: Phone };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
