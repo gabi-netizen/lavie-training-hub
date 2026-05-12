@@ -1378,9 +1378,9 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
       wordTimestamps: wordTimestamps.length > 0 ? JSON.stringify(wordTimestamps) : undefined,
     });
 
-    // Skip AI analysis for very short calls (under 45 seconds)
-    if (durationSeconds < 45) {
-      console.log(`[CallAnalysis] Skipping AI for short call #${analysisId} (${durationSeconds}s < 45s)`);
+    // Skip AI analysis for very short calls (under 2 minutes)
+    if (durationSeconds < 120) {
+      console.log(`[CallAnalysis] Skipping AI for short call #${analysisId} (${durationSeconds}s < 120s)`);
       await updateCallAnalysisStatus(analysisId, {
         status: "done",
         overallScore: 0,
