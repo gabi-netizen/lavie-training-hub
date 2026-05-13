@@ -441,7 +441,13 @@ export async function transcribeAudio(audioUrl: string): Promise<{
     throw new Error(`Failed to fetch audio for transcription: ${audioRes.status} ${audioRes.statusText}`);
   }
   const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-  const contentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
+  let contentType = audioRes.headers.get("content-type") ?? "audio/mpeg";
+  
+  // Detect actual audio format from buffer
+  const isWav = audioBuffer.length >= 4 && audioBuffer.toString("ascii", 0, 4) === "RIFF";
+  if (isWav) {
+    contentType = "audio/wav";
+  }
 
   // ─── AUDIO CHUNKING: files over 24MB are split into 24MB chunks ─────────────
   // Deepgram's API has a 25MB limit per request. We split large files into
@@ -455,8 +461,26 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   if (audioBuffer.length > CHUNK_SIZE) {
     console.log(`[Transcription] File is ${(audioBuffer.length / 1024 / 1024).toFixed(1)}MB — splitting into chunks`);
     const chunks: Buffer[] = [];
-    for (let offset = 0; offset < audioBuffer.length; offset += CHUNK_SIZE) {
-      chunks.push(audioBuffer.slice(offset, offset + CHUNK_SIZE));
+    
+    if (isWav && audioBuffer.length >= 44) {
+      const wavHeader = audioBuffer.slice(0, 44);
+      for (let offset = 0; offset < audioBuffer.length; offset += CHUNK_SIZE) {
+        if (offset === 0) {
+          chunks.push(audioBuffer.slice(0, CHUNK_SIZE));
+        } else {
+          const chunkData = audioBuffer.slice(offset, offset + CHUNK_SIZE);
+          const newHeader = Buffer.from(wavHeader);
+          // Update data size (bytes 40-43)
+          newHeader.writeUInt32LE(chunkData.length, 40);
+          // Update RIFF chunk size (bytes 4-7)
+          newHeader.writeUInt32LE(chunkData.length + 36, 4);
+          chunks.push(Buffer.concat([newHeader, chunkData]));
+        }
+      }
+    } else {
+      for (let offset = 0; offset < audioBuffer.length; offset += CHUNK_SIZE) {
+        chunks.push(audioBuffer.slice(offset, offset + CHUNK_SIZE));
+      }
     }
     let totalAgentTime = 0;
     let totalSpeechTime = 0;
