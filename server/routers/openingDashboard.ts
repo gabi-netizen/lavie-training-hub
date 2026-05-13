@@ -136,6 +136,7 @@ function calculateWorkingDaysFromHours(totalHours: number): number {
 const NON_OPENING_AGENTS = new Set([
   "rob",        // Rob Chidzik — Retention agent
   "guy",        // Guy — Retention agent
+  "james",      // James Huxley — Retention agent
   "julie ann",  // Julie Ann Relox — not an opening agent
   "matt",       // Matthew Holman — not an opening agent
   "muhammad",   // Muhammad Usama Waheed — not an opening agent
