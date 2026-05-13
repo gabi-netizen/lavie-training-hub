@@ -610,3 +610,20 @@ export const agentDailyHours = mysqlTable("agent_daily_hours", {
 ]);
 export type AgentDailyHour = typeof agentDailyHours.$inferSelect;
 export type InsertAgentDailyHour = typeof agentDailyHours.$inferInsert;
+
+/**
+ * Agent trials override — manual override for the Trials count per agent per month.
+ * When an override exists for an agent+month, the dashboard uses this value
+ * instead of the Zoho-derived trial count.
+ */
+export const agentTrialsOverride = mysqlTable("agent_trials_override", {
+  id: int("id").autoincrement().primaryKey(),
+  agentName: varchar("agent_name", { length: 100 }).notNull(),
+  month: varchar("month", { length: 7 }).notNull(),
+  trialsCount: int("trials_count").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+}, (table) => [
+  unique("agent_trials_override_agent_month_unique").on(table.agentName, table.month),
+]);
+export type AgentTrialsOverride = typeof agentTrialsOverride.$inferSelect;
+export type InsertAgentTrialsOverride = typeof agentTrialsOverride.$inferInsert;

@@ -35,6 +35,7 @@ import {
 import { trpc } from "../lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import EditWorkingHoursModal from "../components/EditWorkingHoursModal";
+import EditTrialsOverrideModal from "../components/EditTrialsOverrideModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SortKey =
@@ -350,6 +351,8 @@ export default function OpeningDashboard() {
   } | null>(null);
   // ── Edit working hours modal (admin only) ──
   const [editHoursAgent, setEditHoursAgent] = useState<string | null>(null);
+  // ── Edit trials override modal (admin only) ──
+  const [editTrialsAgent, setEditTrialsAgent] = useState<{ agentName: string; currentTrials: number } | null>(null);
   // ── Admin check ──
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -770,7 +773,21 @@ export default function OpeningDashboard() {
                             )}
                           </div>
                           <div className="text-right text-sm text-gray-800 font-semibold">{row.avePerDay > 0 ? row.avePerDay.toFixed(1) : "\u2014"}</div>
-                          <div className="text-right text-sm text-gray-800 font-medium">{row.trials}</div>
+                          <div className="text-right text-sm text-gray-800 font-medium flex items-center justify-end gap-1">
+                            <span>{row.trials}</span>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditTrialsAgent({ agentName: row.agentName, currentTrials: row.trials });
+                                }}
+                                className="p-0.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                title="Edit trials override"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            )}
+                          </div>
                           <div className="text-right text-sm text-gray-800">{row.matured}</div>
                           <div className="text-right">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
@@ -935,6 +952,19 @@ export default function OpeningDashboard() {
           onSaved={() => {
             utils.openingDashboard.getAgentData.invalidate();
             setEditHoursAgent(null);
+          }}
+        />
+      )}
+      {/* ── Edit Trials Override Modal (Admin only) ── */}
+      {editTrialsAgent && isAdmin && (
+        <EditTrialsOverrideModal
+          agentName={editTrialsAgent.agentName}
+          month={selectedMonth}
+          currentTrials={editTrialsAgent.currentTrials}
+          onClose={() => setEditTrialsAgent(null)}
+          onSaved={() => {
+            utils.openingDashboard.getAgentData.invalidate();
+            setEditTrialsAgent(null);
           }}
         />
       )}

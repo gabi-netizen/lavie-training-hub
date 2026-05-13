@@ -6,8 +6,11 @@
  * 2. getCustomersByClassification — Returns customers for a classification across all agents
  * 3. getCustomerDetails — Returns individual customer names for a specific agent/classification
  * 4. getAvailableMonths — Returns months that have data in the opening_trials table
+ * 5. getTrialsOverride — Returns the manual trials override for an agent+month (admin)
+ * 6. upsertTrialsOverride — Insert or update a trials override (admin)
+ * 7. deleteTrialsOverride — Delete a trials override, reverting to Zoho data (admin)
  *
- * Reads from: opening_trials, agent_working_days, agent_daily_hours tables.
+ * Reads from: opening_trials, agent_working_days, agent_daily_hours, agent_trials_override tables.
  *
  * Date range filter: filters by the `created_date` column (when the trial was created in Zoho).
  * Supported values: "all" | "today" | "yesterday" | "last_7_days" | "this_month" | "last_month"
@@ -22,7 +25,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { openingTrials, agentWorkingDays, agentDailyHours } from "../../drizzle/schema";
+import { openingTrials, agentWorkingDays, agentDailyHours, agentTrialsOverride } from "../../drizzle/schema";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -461,6 +464,35 @@ export const openingDashboardRouter = router({
         }
       });
 
+      // ── Trials Override: apply manual overrides from agent_trials_override ──
+      // Only applies when dateRange is "all" (full month view) since overrides
+      // are per-month, not per date-range slice.
+      if (input.dateRange === "all") {
+        let overrideRows: { agentName: string; trialsCount: number }[] = [];
+        try {
+          overrideRows = await db
+            .select({
+              agentName: agentTrialsOverride.agentName,
+              trialsCount: agentTrialsOverride.trialsCount,
+            })
+            .from(agentTrialsOverride)
+            .where(eq(agentTrialsOverride.month, input.month));
+        } catch (err) {
+          // Table may not exist yet; ignore gracefully
+          console.warn("[openingDashboard] agent_trials_override query failed:", err);
+        }
+
+        for (const ov of overrideRows) {
+          const key = ov.agentName.toLowerCase();
+          const agent = agentMap.get(key);
+          if (agent) {
+            agent.trials = ov.trialsCount;
+            // Recalculate matured based on overridden trials
+            agent.matured = agent.trials - agent.stillInTrial;
+          }
+        }
+      }
+
       const agents = Array.from(agentMap.values());
 
       return { agents, month: input.month };
@@ -718,6 +750,89 @@ export const openingDashboardRouter = router({
       }
 
       await db.delete(agentDailyHours).where(eq(agentDailyHours.id, input.id));
+
+      return { success: true };
+    }),
+
+  // ─── Admin: Agent Trials Override CRUD ───────────────────────────────────────────
+
+  /**
+   * Get the trials override for a specific agent and month.
+   * Admin-only. Returns the override row if it exists, or null.
+   */
+  getTrialsOverride: adminProcedure
+    .input(z.object({
+      agentName: z.string().min(1),
+      month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        return { override: null };
+      }
+
+      const rows = await db
+        .select({
+          id: agentTrialsOverride.id,
+          agentName: agentTrialsOverride.agentName,
+          month: agentTrialsOverride.month,
+          trialsCount: agentTrialsOverride.trialsCount,
+          updatedAt: agentTrialsOverride.updatedAt,
+        })
+        .from(agentTrialsOverride)
+        .where(and(
+          eq(agentTrialsOverride.agentName, input.agentName),
+          eq(agentTrialsOverride.month, input.month),
+        ));
+
+      return { override: rows.length > 0 ? rows[0] : null };
+    }),
+
+  /**
+   * Insert or update a trials override for an agent+month.
+   * Admin-only. Uses ON DUPLICATE KEY UPDATE on the unique (agent_name, month) constraint.
+   */
+  upsertTrialsOverride: adminProcedure
+    .input(z.object({
+      agentName: z.string().min(1),
+      month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
+      trialsCount: z.number().int().min(0),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      await db.execute(sql`
+        INSERT INTO agent_trials_override (agent_name, month, trials_count)
+        VALUES (${input.agentName}, ${input.month}, ${input.trialsCount})
+        ON DUPLICATE KEY UPDATE
+          trials_count = VALUES(trials_count)
+      `);
+
+      return { success: true };
+    }),
+
+  /**
+   * Delete a trials override for an agent+month, reverting to Zoho data.
+   * Admin-only.
+   */
+  deleteTrialsOverride: adminProcedure
+    .input(z.object({
+      agentName: z.string().min(1),
+      month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error("Database not available");
+      }
+
+      await db.delete(agentTrialsOverride).where(and(
+        eq(agentTrialsOverride.agentName, input.agentName),
+        eq(agentTrialsOverride.month, input.month),
+      ));
 
       return { success: true };
     }),
