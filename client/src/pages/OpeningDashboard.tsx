@@ -373,10 +373,28 @@ export default function OpeningDashboard() {
   const [customDateTo, setCustomDateTo] = useState<string>("");
 
   // ── Agent filter (multi-select) ──
-  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set()); // empty = all agents shown
+  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("opening_dash_agents");
+      if (saved) {
+        const arr = JSON.parse(saved) as string[];
+        if (arr.length > 0) return new Set(arr);
+      }
+    } catch {}
+    return new Set();
+  });
   const [agentPopupOpen, setAgentPopupOpen] = useState(false);
   const [agentSearch, setAgentSearch] = useState("");
   const agentPopupRef = useRef<HTMLDivElement>(null);
+
+  // Persist agent selection to localStorage
+  useEffect(() => {
+    if (selectedAgents.size === 0) {
+      localStorage.removeItem("opening_dash_agents");
+    } else {
+      localStorage.setItem("opening_dash_agents", JSON.stringify([...selectedAgents]));
+    }
+  }, [selectedAgents]);
 
   // Close agent popup when clicking outside
   useEffect(() => {
