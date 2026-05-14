@@ -649,6 +649,9 @@ export default function OpeningDashboard() {
                         type="text"
                         value={agentSearch}
                         onChange={(e) => setAgentSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
                         placeholder="Search..."
                         className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white"
                         autoFocus
