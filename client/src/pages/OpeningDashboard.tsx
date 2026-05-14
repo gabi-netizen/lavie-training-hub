@@ -373,7 +373,7 @@ export default function OpeningDashboard() {
   const [customDateTo, setCustomDateTo] = useState<string>("");
 
   // ── Agent filter (multi-select) ──
-  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set()); // empty = all
+  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set()); // empty = all agents shown
   const [agentPopupOpen, setAgentPopupOpen] = useState(false);
   const [agentSearch, setAgentSearch] = useState("");
   const agentPopupRef = useRef<HTMLDivElement>(null);
@@ -436,8 +436,11 @@ export default function OpeningDashboard() {
       params.customDateFrom = customDateFrom;
       params.customDateTo = customDateTo;
     }
-    if (selectedAgents.size > 0) {
+    if (selectedAgents.size > 0 && !selectedAgents.has("__none__")) {
       params.agentNames = [...selectedAgents];
+    } else if (selectedAgents.has("__none__")) {
+      // None selected - pass a dummy name that matches nothing
+      params.agentNames = ["__none__"];
     }
     return params;
   }, [selectedMonth, dateRange, customDateFrom, customDateTo, selectedAgents]);
@@ -453,10 +456,12 @@ export default function OpeningDashboard() {
   // Derive whether "all" is effectively selected
   const allAgents = agentNamesData?.agents ?? [];
   const isAllAgentsSelected = selectedAgents.size === 0;
+  const isNoneSelected = selectedAgents.size === 1 && selectedAgents.has("__none__");
 
   // Helper: get display label for the agent filter button
   function getAgentFilterLabel(): string {
     if (isAllAgentsSelected) return "All Agents";
+    if (isNoneSelected) return "None Selected";
     if (selectedAgents.size === 1) return [...selectedAgents][0];
     return `${selectedAgents.size} selected`;
   }
@@ -654,7 +659,7 @@ export default function OpeningDashboard() {
                     {allAgents
                       .filter((name) => name.toLowerCase().includes(agentSearch.toLowerCase()))
                       .map((name) => {
-                        const isChecked = isAllAgentsSelected || selectedAgents.has(name);
+                        const isChecked = isAllAgentsSelected || (!isNoneSelected && selectedAgents.has(name));
                         return (
                           <div
                             key={name}
@@ -662,15 +667,23 @@ export default function OpeningDashboard() {
                             onClick={() => {
                               setSelectedAgents((prev) => {
                                 // If currently "all" (empty set), clicking an agent means
-                                // select ALL except this one (i.e. deselect this one)
+                                // deselect this one (select all others)
                                 if (prev.size === 0) {
                                   const next = new Set(allAgents);
                                   next.delete(name);
                                   return next;
                                 }
+                                // If currently "none" selected, clicking means select only this one
+                                if (prev.size === 1 && prev.has("__none__")) {
+                                  return new Set([name]);
+                                }
                                 const next = new Set(prev);
                                 if (next.has(name)) {
                                   next.delete(name);
+                                  // If nothing left, set to __none__ (not all)
+                                  if (next.size === 0) {
+                                    return new Set(["__none__"]);
+                                  }
                                 } else {
                                   next.add(name);
                                 }
@@ -702,7 +715,7 @@ export default function OpeningDashboard() {
                     <button
                       type="button"
                       onClick={() => {
-                        setSelectedAgents(new Set());
+                        setSelectedAgents(new Set(["__none__"]));
                       }}
                       className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
                     >
@@ -1211,7 +1224,7 @@ export default function OpeningDashboard() {
           dateRange={dateRange}
           customDateFrom={customDateFrom || undefined}
           customDateTo={customDateTo || undefined}
-          selectedAgents={selectedAgents.size > 0 ? [...selectedAgents] : []}
+          selectedAgents={selectedAgents.size > 0 && !selectedAgents.has("__none__") ? [...selectedAgents] : []}
           onClose={() => setSummaryCardModal(null)}
         />
       )}

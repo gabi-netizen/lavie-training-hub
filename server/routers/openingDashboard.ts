@@ -744,10 +744,10 @@ export const openingDashboardRouter = router({
         .from(openingTrials)
         .orderBy(openingTrials.agentName);
 
-      // Filter out non-opening agents and normalise to title case
+      // Filter out non-opening agents, empty names, and normalise to title case
       const agents = rows
         .map((r) => r.agentName)
-        .filter((name) => !NON_OPENING_AGENTS.has(name.toLowerCase()))
+        .filter((name) => name && name.trim() !== '' && !NON_OPENING_AGENTS.has(name.toLowerCase()))
         .map((name) =>
           name.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
         );
