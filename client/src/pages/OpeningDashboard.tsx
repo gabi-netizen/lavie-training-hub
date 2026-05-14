@@ -15,7 +15,7 @@
  *
  * Admin-only page.
  */
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Phone,
   Users,
@@ -31,6 +31,9 @@ import {
   Loader2,
   X,
   Pencil,
+  Search,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -252,7 +255,7 @@ function SummaryCardModal({
   dateRange,
   customDateFrom,
   customDateTo,
-  selectedAgent,
+  selectedAgents,
   onClose,
 }: {
   classification: string;
@@ -261,7 +264,7 @@ function SummaryCardModal({
   dateRange: DateRangeOption;
   customDateFrom?: string;
   customDateTo?: string;
-  selectedAgent: string;
+  selectedAgents: string[];
   onClose: () => void;
 }) {
   const { data, isLoading, isError, error } = trpc.openingDashboard.getCustomersByClassification.useQuery({
@@ -271,7 +274,7 @@ function SummaryCardModal({
     ...(dateRange === "custom" && customDateFrom && customDateTo
       ? { customDateFrom, customDateTo }
       : {}),
-    ...(selectedAgent !== "all" ? { agentName: selectedAgent } : {}),
+    ...(selectedAgents.length > 0 ? { agentNames: selectedAgents } : {}),
   });
 
   // Group customers by agent name
@@ -296,7 +299,7 @@ function SummaryCardModal({
           <div>
             <h3 className="font-bold text-gray-900">{classificationLabel}</h3>
             <p className="text-xs text-gray-600">
-              {selectedAgent !== "all" ? selectedAgent : "All Agents"} · {formatMonth(month)}
+              {selectedAgents.length > 0 ? (selectedAgents.length === 1 ? selectedAgents[0] : `${selectedAgents.length} agents`) : "All Agents"} · {formatMonth(month)}
               {dateRange !== "all" && (
                 <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange, customDateFrom, customDateTo)}</span>
               )}
@@ -369,8 +372,24 @@ export default function OpeningDashboard() {
   const [customDateFrom, setCustomDateFrom] = useState<string>("");
   const [customDateTo, setCustomDateTo] = useState<string>("");
 
-  // ── Agent filter ──
-  const [selectedAgent, setSelectedAgent] = useState<string>("all");
+  // ── Agent filter (multi-select) ──
+  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set()); // empty = all
+  const [agentPopupOpen, setAgentPopupOpen] = useState(false);
+  const [agentSearch, setAgentSearch] = useState("");
+  const agentPopupRef = useRef<HTMLDivElement>(null);
+
+  // Close agent popup when clicking outside
+  useEffect(() => {
+    if (!agentPopupOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (agentPopupRef.current && !agentPopupRef.current.contains(e.target as Node)) {
+        setAgentPopupOpen(false);
+        setAgentSearch("");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [agentPopupOpen]);
 
   // ── Filters ──
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
@@ -408,7 +427,7 @@ export default function OpeningDashboard() {
       dateRange: DateRangeOption;
       customDateFrom?: string;
       customDateTo?: string;
-      agentName?: string;
+      agentNames?: string[];
     } = {
       month: selectedMonth,
       dateRange,
@@ -417,11 +436,11 @@ export default function OpeningDashboard() {
       params.customDateFrom = customDateFrom;
       params.customDateTo = customDateTo;
     }
-    if (selectedAgent !== "all") {
-      params.agentName = selectedAgent;
+    if (selectedAgents.size > 0) {
+      params.agentNames = [...selectedAgents];
     }
     return params;
-  }, [selectedMonth, dateRange, customDateFrom, customDateTo, selectedAgent]);
+  }, [selectedMonth, dateRange, customDateFrom, customDateTo, selectedAgents]);
 
   // ── Fetch data from API ──
   const { data: agentData, isLoading, isError } = trpc.openingDashboard.getAgentData.useQuery(
@@ -430,6 +449,17 @@ export default function OpeningDashboard() {
   );
   const { data: monthsData } = trpc.openingDashboard.getAvailableMonths.useQuery();
   const { data: agentNamesData } = trpc.openingDashboard.getAgentNames.useQuery();
+
+  // Derive whether "all" is effectively selected
+  const allAgents = agentNamesData?.agents ?? [];
+  const isAllAgentsSelected = selectedAgents.size === 0;
+
+  // Helper: get display label for the agent filter button
+  function getAgentFilterLabel(): string {
+    if (isAllAgentsSelected) return "All Agents";
+    if (selectedAgents.size === 1) return [...selectedAgents][0];
+    return `${selectedAgents.size} selected`;
+  }
 
   // ── Sync default month with available months list ──
   // Once the available months load, ensure the selected month exists in the list.
@@ -487,7 +517,7 @@ export default function OpeningDashboard() {
     setDateRange("all");
     setCustomDateFrom("");
     setCustomDateTo("");
-    setSelectedAgent("all");
+    setSelectedAgents(new Set());
     setSortKey("avePerDay");
     setSortDir("desc");
   }
@@ -541,8 +571,8 @@ export default function OpeningDashboard() {
               {dateRange !== "all" && (
                 <span className="ml-1 text-indigo-600">· {activeFilterLabel}</span>
               )}
-              {selectedAgent !== "all" && (
-                <span className="ml-1 text-indigo-600">· {selectedAgent}</span>
+              {!isAllAgentsSelected && (
+                <span className="ml-1 text-indigo-600">· {getAgentFilterLabel()}</span>
               )}
             </p>
           </div>
@@ -573,23 +603,121 @@ export default function OpeningDashboard() {
                 )}
               </select>
             </div>
-            {/* Agent filter — populated from backend */}
-            <div>
+            {/* Agent filter — multi-select checkbox popup */}
+            <div className="relative" ref={agentPopupRef}>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Agent
               </label>
-              <select
-                value={selectedAgent}
-                onChange={(e) => setSelectedAgent(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              <button
+                type="button"
+                onClick={() => { setAgentPopupOpen((o) => !o); setAgentSearch(""); }}
+                className="flex items-center gap-1.5 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-[140px] justify-between"
               >
-                <option value="all">All Agents</option>
-                {agentNamesData?.agents?.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+                <span className="truncate">{getAgentFilterLabel()}</span>
+                <ChevronsUpDown size={14} className="text-gray-400 shrink-0" />
+              </button>
+              {agentPopupOpen && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg border border-gray-200 shadow-lg z-50">
+                  {/* Search input */}
+                  <div className="p-2 border-b border-gray-100">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={agentSearch}
+                        onChange={(e) => setAgentSearch(e.target.value)}
+                        placeholder="Search..."
+                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  {/* Checkbox list */}
+                  <div className="max-h-60 overflow-y-auto py-1">
+                    {/* "All" checkbox */}
+                    <div
+                      className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedAgents(new Set())}
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                        isAllAgentsSelected
+                          ? "bg-indigo-600 border-indigo-600"
+                          : "border-gray-300 bg-white"
+                      }`}>
+                        {isAllAgentsSelected && <Check size={12} className="text-white" />}
+                      </div>
+                      <span className="text-sm font-medium text-gray-900">All</span>
+                    </div>
+                    {/* Divider */}
+                    <div className="border-t border-gray-100 my-0.5" />
+                    {/* Agent checkboxes */}
+                    {allAgents
+                      .filter((name) => name.toLowerCase().includes(agentSearch.toLowerCase()))
+                      .map((name) => {
+                        const isChecked = isAllAgentsSelected || selectedAgents.has(name);
+                        return (
+                          <div
+                            key={name}
+                            className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 cursor-pointer"
+                            onClick={() => {
+                              setSelectedAgents((prev) => {
+                                // If currently "all" (empty set), clicking an agent means
+                                // select ALL except this one (i.e. deselect this one)
+                                if (prev.size === 0) {
+                                  const next = new Set(allAgents);
+                                  next.delete(name);
+                                  return next;
+                                }
+                                const next = new Set(prev);
+                                if (next.has(name)) {
+                                  next.delete(name);
+                                } else {
+                                  next.add(name);
+                                }
+                                // If all agents are now selected, revert to empty set (= "all")
+                                if (next.size === allAgents.length) {
+                                  return new Set();
+                                }
+                                return next;
+                              });
+                            }}
+                          >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                              isChecked
+                                ? "bg-indigo-600 border-indigo-600"
+                                : "border-gray-300 bg-white"
+                            }`}>
+                              {isChecked && <Check size={12} className="text-white" />}
+                            </div>
+                            <span className="text-sm text-gray-800">{name}</span>
+                          </div>
+                        );
+                      })}
+                    {allAgents.filter((name) => name.toLowerCase().includes(agentSearch.toLowerCase())).length === 0 && (
+                      <p className="text-xs text-gray-400 text-center py-3">No agents found</p>
+                    )}
+                  </div>
+                  {/* Footer: Clear + OK */}
+                  <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAgents(new Set());
+                      }}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAgentPopupOpen(false); setAgentSearch(""); }}
+                      className="px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             {/* Date range filter */}
             <div>
@@ -656,14 +784,14 @@ export default function OpeningDashboard() {
                 </button>
               </div>
             )}
-            {selectedAgent !== "all" && (
+            {!isAllAgentsSelected && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
                 <Users size={13} className="text-indigo-600 shrink-0" />
                 <span className="text-xs font-medium text-indigo-700">
-                  {selectedAgent}
+                  {getAgentFilterLabel()}
                 </span>
                 <button
-                  onClick={() => setSelectedAgent("all")}
+                  onClick={() => setSelectedAgents(new Set())}
                   className="ml-0.5 text-indigo-400 hover:text-indigo-700 transition-colors"
                   aria-label="Clear agent filter"
                 >
@@ -712,7 +840,7 @@ export default function OpeningDashboard() {
                 {dateRange === "all"
                   ? `Trials opened in ${formatMonth(selectedMonth)}`
                   : `Trials opened in ${formatMonth(selectedMonth)} · ${activeFilterLabel}`}
-                {selectedAgent !== "all" && ` · ${selectedAgent}`}
+                {!isAllAgentsSelected && ` · ${getAgentFilterLabel()}`}
               </p>
             </div>
 
@@ -1053,7 +1181,7 @@ export default function OpeningDashboard() {
             <p className="text-xs text-gray-500 text-center pb-4">
               Opening Agents Dashboard · {formatMonth(selectedMonth)}
               {dateRange !== "all" && ` · ${activeFilterLabel}`}
-              {selectedAgent !== "all" && ` · ${selectedAgent}`}
+              {!isAllAgentsSelected && ` · ${getAgentFilterLabel()}`}
               {" "}· Excludes Retention agents (Rob, Guy)
             </p>
           </>
@@ -1083,7 +1211,7 @@ export default function OpeningDashboard() {
           dateRange={dateRange}
           customDateFrom={customDateFrom || undefined}
           customDateTo={customDateTo || undefined}
-          selectedAgent={selectedAgent}
+          selectedAgents={selectedAgents.size > 0 ? [...selectedAgents] : []}
           onClose={() => setSummaryCardModal(null)}
         />
       )}

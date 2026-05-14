@@ -28,7 +28,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { openingTrials, agentWorkingDays, agentDailyHours, agentTrialsOverride } from "../../drizzle/schema";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte, sql, inArray } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -261,6 +261,7 @@ export const openingDashboardRouter = router({
       customDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       customDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       agentName: z.string().optional(),
+      agentNames: z.array(z.string()).optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -278,7 +279,10 @@ export const openingDashboardRouter = router({
       }
 
       // Agent filter: if specified, filter trials to this agent only
-      if (input.agentName && input.agentName !== "all") {
+      // Support both legacy single agentName and new multi-select agentNames
+      if (input.agentNames && input.agentNames.length > 0) {
+        conditions.push(inArray(openingTrials.agentName, input.agentNames));
+      } else if (input.agentName && input.agentName !== "all") {
         conditions.push(eq(openingTrials.agentName, input.agentName));
       }
 
@@ -371,7 +375,9 @@ export const openingDashboardRouter = router({
       ];
 
       // If agent filter is active, also filter today's count
-      if (input.agentName && input.agentName !== "all") {
+      if (input.agentNames && input.agentNames.length > 0) {
+        todayConditions.push(inArray(openingTrials.agentName, input.agentNames));
+      } else if (input.agentName && input.agentName !== "all") {
         todayConditions.push(eq(openingTrials.agentName, input.agentName));
       }
 
@@ -440,7 +446,9 @@ export const openingDashboardRouter = router({
         // Skip non-opening agents (retention agents, support staff, etc.)
         if (NON_OPENING_AGENTS.has(trialsName.toLowerCase())) continue;
         // If agent filter is active, skip agents that don't match
-        if (input.agentName && input.agentName !== "all" && trialsName.toLowerCase() !== input.agentName.toLowerCase()) continue;
+        if (input.agentNames && input.agentNames.length > 0) {
+          if (!input.agentNames.some(n => n.toLowerCase() === trialsName.toLowerCase())) continue;
+        } else if (input.agentName && input.agentName !== "all" && trialsName.toLowerCase() !== input.agentName.toLowerCase()) continue;
         ensureAgent(trialsName);
       }
 
@@ -571,6 +579,7 @@ export const openingDashboardRouter = router({
       customDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       customDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       agentName: z.string().optional(),
+      agentNames: z.array(z.string()).optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -584,10 +593,12 @@ export const openingDashboardRouter = router({
         ? [gte(openingTrials.createdDate, dateWindow.from), lte(openingTrials.createdDate, dateWindow.to)]
         : [];
 
-      // Agent filter condition
-      const agentConditions = (input.agentName && input.agentName !== "all")
-        ? [eq(openingTrials.agentName, input.agentName)]
-        : [];
+      // Agent filter condition — support both legacy single and new multi-select
+      const agentConditions = (input.agentNames && input.agentNames.length > 0)
+        ? [inArray(openingTrials.agentName, input.agentNames)]
+        : (input.agentName && input.agentName !== "all")
+          ? [eq(openingTrials.agentName, input.agentName)]
+          : [];
 
       let condition;
       if (input.classification === "matured_all") {
