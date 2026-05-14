@@ -13,8 +13,10 @@
  * Reads from: opening_trials, agent_working_days, agent_daily_hours, agent_trials_override tables.
  *
  * Date range filter: filters by the `created_date` column (when the trial was created in Zoho).
- * Supported values: "all" | "today" | "yesterday" | "last_7_days" | "this_month" | "last_month"
+ * Supported values: "all" | "today" | "yesterday" | "this_week" | "last_7_days" | "this_month" | "previous_month" | "last_month" | "last_3_months" | "custom"
  * The date range filter works in conjunction with the month filter (AND logic).
+ *
+ * Agent filter: optional agentName parameter filters all data to a single agent.
  *
  * Working Days calculation (updated):
  * - When dateRange is active and agent_daily_hours has data for the period, sum working_day_value
@@ -60,9 +62,13 @@ export const DATE_RANGE_OPTIONS = [
   "all",
   "today",
   "yesterday",
+  "this_week",
   "last_7_days",
   "this_month",
+  "previous_month",
   "last_month",
+  "last_3_months",
+  "custom",
 ] as const;
 
 export type DateRangeOption = (typeof DATE_RANGE_OPTIONS)[number];
@@ -74,8 +80,14 @@ export type DateRangeOption = (typeof DATE_RANGE_OPTIONS)[number];
  * Dates are returned as Date objects (start-of-day / end-of-day) for Drizzle's
  * MySqlDate column comparisons (which expect Date | SQLWrapper).
  * Returns null if the option is "all" (no date filtering needed).
+ *
+ * For "custom" range, the caller must provide customDateFrom and customDateTo.
  */
-function getDateRange(range: DateRangeOption): { from: Date; to: Date } | null {
+function getDateRange(
+  range: DateRangeOption,
+  customDateFrom?: string,
+  customDateTo?: string,
+): { from: Date; to: Date } | null {
   if (range === "all") return null;
 
   const now = new Date();
@@ -94,6 +106,14 @@ function getDateRange(range: DateRangeOption): { from: Date; to: Date } | null {
       return { from: yStart, to: yEnd };
     }
 
+    case "this_week": {
+      // Monday to today (ISO week starts on Monday)
+      const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const mondayStart = new Date(startOfToday.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000);
+      return { from: mondayStart, to: endOfToday };
+    }
+
     case "last_7_days": {
       const sevenDaysAgo = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
       return { from: sevenDaysAgo, to: endOfToday };
@@ -104,10 +124,26 @@ function getDateRange(range: DateRangeOption): { from: Date; to: Date } | null {
       return { from: firstOfMonth, to: endOfToday };
     }
 
+    case "previous_month":
     case "last_month": {
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       return { from: lastMonthStart, to: lastMonthEnd };
+    }
+
+    case "last_3_months": {
+      const threeMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      return { from: threeMonthsAgoStart, to: endOfToday };
+    }
+
+    case "custom": {
+      if (!customDateFrom || !customDateTo) return null;
+      // Parse YYYY-MM-DD strings into Date objects
+      const [fy, fm, fd] = customDateFrom.split("-").map(Number);
+      const [ty, tm, td] = customDateTo.split("-").map(Number);
+      const from = new Date(fy, fm - 1, fd, 0, 0, 0, 0);
+      const to = new Date(ty, tm - 1, td, 23, 59, 59, 999);
+      return { from, to };
     }
 
     default:
@@ -215,11 +251,16 @@ export const openingDashboardRouter = router({
    * specified date window (AND-ed with the month filter).
    * When a dateRange is active, working days are also filtered to that date range
    * using agent_daily_hours.
+   *
+   * Optional agentName filter narrows results to a single agent.
    */
   getAgentData: protectedProcedure
     .input(z.object({
       month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
       dateRange: dateRangeInput,
+      customDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      customDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      agentName: z.string().optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -230,10 +271,15 @@ export const openingDashboardRouter = router({
       // Build WHERE conditions for trials
       const conditions = [eq(openingTrials.month, input.month)];
 
-      const dateWindow = getDateRange(input.dateRange);
+      const dateWindow = getDateRange(input.dateRange, input.customDateFrom, input.customDateTo);
       if (dateWindow) {
         conditions.push(gte(openingTrials.createdDate, dateWindow.from));
         conditions.push(lte(openingTrials.createdDate, dateWindow.to));
+      }
+
+      // Agent filter: if specified, filter trials to this agent only
+      if (input.agentName && input.agentName !== "all") {
+        conditions.push(eq(openingTrials.agentName, input.agentName));
       }
 
       // Query 1: Get trial counts grouped by agent and classification
@@ -319,16 +365,23 @@ export const openingDashboardRouter = router({
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
+      const todayConditions: any[] = [
+        gte(openingTrials.createdDate, todayStart),
+        lte(openingTrials.createdDate, todayEnd),
+      ];
+
+      // If agent filter is active, also filter today's count
+      if (input.agentName && input.agentName !== "all") {
+        todayConditions.push(eq(openingTrials.agentName, input.agentName));
+      }
+
       const todayRows = await db
         .select({
           agentName: openingTrials.agentName,
           count: sql<number>`COUNT(*)`.as("count"),
         })
         .from(openingTrials)
-        .where(and(
-          gte(openingTrials.createdDate, todayStart),
-          lte(openingTrials.createdDate, todayEnd),
-        ))
+        .where(and(...todayConditions))
         .groupBy(openingTrials.agentName);
 
       // Build a map of agent -> today's trial count
@@ -386,6 +439,8 @@ export const openingDashboardRouter = router({
         const trialsName = TRIALS_NAME_FOR_HUBSTAFF[row.agentName] ?? row.agentName;
         // Skip non-opening agents (retention agents, support staff, etc.)
         if (NON_OPENING_AGENTS.has(trialsName.toLowerCase())) continue;
+        // If agent filter is active, skip agents that don't match
+        if (input.agentName && input.agentName !== "all" && trialsName.toLowerCase() !== input.agentName.toLowerCase()) continue;
         ensureAgent(trialsName);
       }
 
@@ -505,12 +560,17 @@ export const openingDashboardRouter = router({
    *
    * Optional dateRange filter narrows results to trials created within the
    * specified date window (AND-ed with the month filter).
+   *
+   * Optional agentName filter narrows results to a single agent.
    */
   getCustomersByClassification: protectedProcedure
     .input(z.object({
       month: z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format"),
       classification: z.string().min(1),
       dateRange: dateRangeInput,
+      customDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      customDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      agentName: z.string().optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -519,9 +579,14 @@ export const openingDashboardRouter = router({
       }
 
       // Build date range condition (if any)
-      const dateWindow = getDateRange(input.dateRange);
+      const dateWindow = getDateRange(input.dateRange, input.customDateFrom, input.customDateTo);
       const dateConditions = dateWindow
         ? [gte(openingTrials.createdDate, dateWindow.from), lte(openingTrials.createdDate, dateWindow.to)]
+        : [];
+
+      // Agent filter condition
+      const agentConditions = (input.agentName && input.agentName !== "all")
+        ? [eq(openingTrials.agentName, input.agentName)]
         : [];
 
       let condition;
@@ -529,19 +594,22 @@ export const openingDashboardRouter = router({
         condition = and(
           eq(openingTrials.month, input.month),
           sql`${openingTrials.classification} != 'still_in_trial'`,
-          ...dateConditions
+          ...dateConditions,
+          ...agentConditions,
         );
       } else if (input.classification === "converted_all") {
         condition = and(
           eq(openingTrials.month, input.month),
           sql`${openingTrials.classification} IN ('live', 'saved_by_retention', 'cancelled_after_payment')`,
-          ...dateConditions
+          ...dateConditions,
+          ...agentConditions,
         );
       } else {
         condition = and(
           eq(openingTrials.month, input.month),
           eq(openingTrials.classification, input.classification),
-          ...dateConditions
+          ...dateConditions,
+          ...agentConditions,
         );
       }
 
@@ -584,6 +652,8 @@ export const openingDashboardRouter = router({
       agentName: z.string().min(1),
       classification: z.string().min(1),
       dateRange: dateRangeInput,
+      customDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      customDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -598,7 +668,7 @@ export const openingDashboardRouter = router({
         eq(openingTrials.classification, input.classification),
       ];
 
-      const dateWindow = getDateRange(input.dateRange);
+      const dateWindow = getDateRange(input.dateRange, input.customDateFrom, input.customDateTo);
       if (dateWindow) {
         conditions.push(gte(openingTrials.createdDate, dateWindow.from));
         conditions.push(lte(openingTrials.createdDate, dateWindow.to));
@@ -645,6 +715,34 @@ export const openingDashboardRouter = router({
         .orderBy(openingTrials.month);
 
       return { months: rows.map((r) => r.month) };
+    }),
+
+  /**
+   * Get distinct agent names from opening_trials for the agent filter dropdown.
+   * Excludes non-opening agents (retention, support, etc.).
+   */
+  getAgentNames: protectedProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) {
+        return { agents: [] as string[] };
+      }
+
+      const rows = await db
+        .selectDistinct({ agentName: openingTrials.agentName })
+        .from(openingTrials)
+        .orderBy(openingTrials.agentName);
+
+      // Filter out non-opening agents and normalise to title case
+      const agents = rows
+        .map((r) => r.agentName)
+        .filter((name) => !NON_OPENING_AGENTS.has(name.toLowerCase()))
+        .map((name) =>
+          name.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        );
+
+      // Deduplicate (in case title-case normalisation creates duplicates)
+      return { agents: [...new Set(agents)] };
     }),
 
   // ─── Admin: Agent Daily Hours CRUD ──────────────────────────────────────────

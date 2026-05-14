@@ -49,7 +49,17 @@ type SortKey =
   | "workingDays"
   | "avePerDay";
 
-type DateRangeOption = "all" | "today" | "yesterday" | "last_7_days" | "this_month" | "last_month";
+type DateRangeOption =
+  | "all"
+  | "today"
+  | "yesterday"
+  | "this_week"
+  | "last_7_days"
+  | "this_month"
+  | "previous_month"
+  | "last_month"
+  | "last_3_months"
+  | "custom";
 
 interface AgentDetail {
   agentName: string;
@@ -79,9 +89,12 @@ const DATE_RANGE_OPTIONS: { value: DateRangeOption; label: string }[] = [
   { value: "all", label: "All" },
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
+  { value: "this_week", label: "This Week" },
   { value: "last_7_days", label: "Last 7 Days" },
   { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
+  { value: "previous_month", label: "Previous Month" },
+  { value: "last_3_months", label: "Last 3 Months" },
+  { value: "custom", label: "Custom Date" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -141,7 +154,10 @@ function formatMonth(month: string): string {
 }
 
 /** Get a human-readable label for the active date range filter */
-function getDateRangeLabel(range: DateRangeOption): string {
+function getDateRangeLabel(range: DateRangeOption, customFrom?: string, customTo?: string): string {
+  if (range === "custom" && customFrom && customTo) {
+    return `${customFrom} to ${customTo}`;
+  }
   return DATE_RANGE_OPTIONS.find((o) => o.value === range)?.label ?? range;
 }
 
@@ -153,6 +169,8 @@ function CustomerDetailModal({
   classificationLabel,
   month,
   dateRange,
+  customDateFrom,
+  customDateTo,
   onClose,
 }: {
   agentName: string;
@@ -160,6 +178,8 @@ function CustomerDetailModal({
   classificationLabel: string;
   month: string;
   dateRange: DateRangeOption;
+  customDateFrom?: string;
+  customDateTo?: string;
   onClose: () => void;
 }) {
   const { data, isLoading } = trpc.openingDashboard.getCustomerDetails.useQuery({
@@ -167,6 +187,9 @@ function CustomerDetailModal({
     agentName,
     classification,
     dateRange,
+    ...(dateRange === "custom" && customDateFrom && customDateTo
+      ? { customDateFrom, customDateTo }
+      : {}),
   });
 
   return (
@@ -181,7 +204,7 @@ function CustomerDetailModal({
             <p className="text-xs text-gray-600">
               {agentName} · {formatMonth(month)}
               {dateRange !== "all" && (
-                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange)}</span>
+                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange, customDateFrom, customDateTo)}</span>
               )}
             </p>
           </div>
@@ -227,18 +250,28 @@ function SummaryCardModal({
   classificationLabel,
   month,
   dateRange,
+  customDateFrom,
+  customDateTo,
+  selectedAgent,
   onClose,
 }: {
   classification: string;
   classificationLabel: string;
   month: string;
   dateRange: DateRangeOption;
+  customDateFrom?: string;
+  customDateTo?: string;
+  selectedAgent: string;
   onClose: () => void;
 }) {
   const { data, isLoading, isError, error } = trpc.openingDashboard.getCustomersByClassification.useQuery({
     month,
     classification,
     dateRange,
+    ...(dateRange === "custom" && customDateFrom && customDateTo
+      ? { customDateFrom, customDateTo }
+      : {}),
+    ...(selectedAgent !== "all" ? { agentName: selectedAgent } : {}),
   });
 
   // Group customers by agent name
@@ -263,9 +296,9 @@ function SummaryCardModal({
           <div>
             <h3 className="font-bold text-gray-900">{classificationLabel}</h3>
             <p className="text-xs text-gray-600">
-              All Agents · {formatMonth(month)}
+              {selectedAgent !== "all" ? selectedAgent : "All Agents"} · {formatMonth(month)}
               {dateRange !== "all" && (
-                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange)}</span>
+                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange, customDateFrom, customDateTo)}</span>
               )}
             </p>
           </div>
@@ -294,8 +327,10 @@ function SummaryCardModal({
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-indigo-700">{agentName.charAt(0).toUpperCase()}</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-700">{agentName}</p>
-                    <span className="text-xs text-gray-400">({customers.length})</span>
+                    <p className="text-sm font-bold text-gray-900">
+                      {agentName}{" "}
+                      <span className="text-xs font-normal text-gray-500">({customers.length})</span>
+                    </p>
                   </div>
                   <div className="space-y-2 pl-2">
                     {customers.map((c, i) => (
@@ -330,6 +365,13 @@ export default function OpeningDashboard() {
   // ── Date range filter ──
   const [dateRange, setDateRange] = useState<DateRangeOption>("all");
 
+  // ── Custom date range ──
+  const [customDateFrom, setCustomDateFrom] = useState<string>("");
+  const [customDateTo, setCustomDateTo] = useState<string>("");
+
+  // ── Agent filter ──
+  const [selectedAgent, setSelectedAgent] = useState<string>("all");
+
   // ── Filters ──
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
@@ -358,12 +400,36 @@ export default function OpeningDashboard() {
   const isAdmin = user?.role === "admin";
 
   const utils = trpc.useUtils();
+
+  // ── Build query params ──
+  const queryParams = useMemo(() => {
+    const params: {
+      month: string;
+      dateRange: DateRangeOption;
+      customDateFrom?: string;
+      customDateTo?: string;
+      agentName?: string;
+    } = {
+      month: selectedMonth,
+      dateRange,
+    };
+    if (dateRange === "custom" && customDateFrom && customDateTo) {
+      params.customDateFrom = customDateFrom;
+      params.customDateTo = customDateTo;
+    }
+    if (selectedAgent !== "all") {
+      params.agentName = selectedAgent;
+    }
+    return params;
+  }, [selectedMonth, dateRange, customDateFrom, customDateTo, selectedAgent]);
+
   // ── Fetch data from API ──
   const { data: agentData, isLoading, isError } = trpc.openingDashboard.getAgentData.useQuery(
-    { month: selectedMonth, dateRange },
+    queryParams,
     { placeholderData: (prev) => prev }
   );
   const { data: monthsData } = trpc.openingDashboard.getAvailableMonths.useQuery();
+  const { data: agentNamesData } = trpc.openingDashboard.getAgentNames.useQuery();
 
   // ── Sync default month with available months list ──
   // Once the available months load, ensure the selected month exists in the list.
@@ -419,8 +485,21 @@ export default function OpeningDashboard() {
     const months = monthsData?.months ?? [];
     setSelectedMonth(months.includes(current) ? current : (months[months.length - 1] ?? current));
     setDateRange("all");
+    setCustomDateFrom("");
+    setCustomDateTo("");
+    setSelectedAgent("all");
     setSortKey("avePerDay");
     setSortDir("desc");
+  }
+
+  function handleDateRangeChange(value: string) {
+    const newRange = value as DateRangeOption;
+    setDateRange(newRange);
+    // Clear custom dates when switching away from custom
+    if (newRange !== "custom") {
+      setCustomDateFrom("");
+      setCustomDateTo("");
+    }
   }
 
   // ── Calculate summary metrics ──
@@ -443,6 +522,9 @@ export default function OpeningDashboard() {
     0
   );
 
+  // ── Active filter description for display ──
+  const activeFilterLabel = getDateRangeLabel(dateRange, customDateFrom, customDateTo);
+
   // ── Render ──
   return (
     <div className="min-h-screen bg-gray-50">
@@ -457,7 +539,10 @@ export default function OpeningDashboard() {
             <p className="text-sm text-gray-600">
               Trial conversion performance — {formatMonth(selectedMonth)}
               {dateRange !== "all" && (
-                <span className="ml-1 text-indigo-600">· {getDateRangeLabel(dateRange)}</span>
+                <span className="ml-1 text-indigo-600">· {activeFilterLabel}</span>
+              )}
+              {selectedAgent !== "all" && (
+                <span className="ml-1 text-indigo-600">· {selectedAgent}</span>
               )}
             </p>
           </div>
@@ -488,17 +573,22 @@ export default function OpeningDashboard() {
                 )}
               </select>
             </div>
-            {/* Agent filter — placeholder, will be populated from backend */}
+            {/* Agent filter — populated from backend */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Agent
               </label>
               <select
-                defaultValue="all"
-                disabled
-                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               >
-                <option value="all">All</option>
+                <option value="all">All Agents</option>
+                {agentNamesData?.agents?.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
               </select>
             </div>
             {/* Date range filter */}
@@ -508,7 +598,7 @@ export default function OpeningDashboard() {
               </label>
               <select
                 value={dateRange}
-                onChange={(e) => setDateRange(e.target.value as DateRangeOption)}
+                onChange={(e) => handleDateRangeChange(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               >
                 {DATE_RANGE_OPTIONS.map((opt) => (
@@ -518,17 +608,64 @@ export default function OpeningDashboard() {
                 ))}
               </select>
             </div>
-            {/* Active filter badge — shown when a non-default date range is selected */}
+            {/* Custom Date Picker — shown only when "Custom Date" is selected */}
+            {dateRange === "custom" && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    value={customDateFrom}
+                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    value={customDateTo}
+                    onChange={(e) => setCustomDateTo(e.target.value)}
+                    min={customDateFrom || undefined}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                </div>
+              </>
+            )}
+            {/* Active filter badges */}
             {dateRange !== "all" && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
                 <CalendarDays size={13} className="text-indigo-600 shrink-0" />
                 <span className="text-xs font-medium text-indigo-700">
-                  {getDateRangeLabel(dateRange)}
+                  {activeFilterLabel}
                 </span>
                 <button
-                  onClick={() => setDateRange("all")}
+                  onClick={() => {
+                    setDateRange("all");
+                    setCustomDateFrom("");
+                    setCustomDateTo("");
+                  }}
                   className="ml-0.5 text-indigo-400 hover:text-indigo-700 transition-colors"
                   aria-label="Clear date range filter"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+            {selectedAgent !== "all" && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+                <Users size={13} className="text-indigo-600 shrink-0" />
+                <span className="text-xs font-medium text-indigo-700">
+                  {selectedAgent}
+                </span>
+                <button
+                  onClick={() => setSelectedAgent("all")}
+                  className="ml-0.5 text-indigo-400 hover:text-indigo-700 transition-colors"
+                  aria-label="Clear agent filter"
                 >
                   <X size={13} />
                 </button>
@@ -574,7 +711,8 @@ export default function OpeningDashboard() {
               <p className="text-indigo-300 text-xs mt-3">
                 {dateRange === "all"
                   ? `Trials opened in ${formatMonth(selectedMonth)}`
-                  : `Trials opened in ${formatMonth(selectedMonth)} · ${getDateRangeLabel(dateRange)}`}
+                  : `Trials opened in ${formatMonth(selectedMonth)} · ${activeFilterLabel}`}
+                {selectedAgent !== "all" && ` · ${selectedAgent}`}
               </p>
             </div>
 
@@ -914,7 +1052,8 @@ export default function OpeningDashboard() {
             {/* ── Footer note ── */}
             <p className="text-xs text-gray-500 text-center pb-4">
               Opening Agents Dashboard · {formatMonth(selectedMonth)}
-              {dateRange !== "all" && ` · ${getDateRangeLabel(dateRange)}`}
+              {dateRange !== "all" && ` · ${activeFilterLabel}`}
+              {selectedAgent !== "all" && ` · ${selectedAgent}`}
               {" "}· Excludes Retention agents (Rob, Guy)
             </p>
           </>
@@ -929,6 +1068,8 @@ export default function OpeningDashboard() {
           classificationLabel={customerModal.classificationLabel}
           month={selectedMonth}
           dateRange={dateRange}
+          customDateFrom={customDateFrom || undefined}
+          customDateTo={customDateTo || undefined}
           onClose={() => setCustomerModal(null)}
         />
       )}
@@ -940,6 +1081,9 @@ export default function OpeningDashboard() {
           classificationLabel={summaryCardModal.classificationLabel}
           month={selectedMonth}
           dateRange={dateRange}
+          customDateFrom={customDateFrom || undefined}
+          customDateTo={customDateTo || undefined}
+          selectedAgent={selectedAgent}
           onClose={() => setSummaryCardModal(null)}
         />
       )}
