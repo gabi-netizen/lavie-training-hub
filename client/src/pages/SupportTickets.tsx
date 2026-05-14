@@ -581,6 +581,7 @@ export default function SupportTickets() {
                               <SelectItem value="Diane">Diane</SelectItem>
                               <SelectItem value="Gabriel">Gabriel</SelectItem>
                               <SelectItem value="Guy">Guy</SelectItem>
+                              <SelectItem value="James">James</SelectItem>
                               <SelectItem value="Rob">Rob</SelectItem>
                               <SelectItem value="Wendy">Wendy</SelectItem>
                             </SelectContent>

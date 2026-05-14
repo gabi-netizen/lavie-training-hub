@@ -11,7 +11,7 @@
  * - Expandable rows: Show detail breakdown (Live Sub, Saved by Retention, Cancelled After Payment, etc.)
  *
  * Data: Fetched from opening_trials + agent_working_days tables via tRPC API
- * Excludes: Rob and Guy (Retention agents)
+ * Excludes: Rob, Guy and James (Retention agents)
  *
  * Admin-only page.
  */
@@ -1216,7 +1216,7 @@ export default function OpeningDashboard() {
               Opening Agents Dashboard · {formatMonth(selectedMonth)}
               {dateRange !== "all" && ` · ${activeFilterLabel}`}
               {!isAllAgentsSelected && ` · ${getAgentFilterLabel()}`}
-              {" "}· Excludes Retention agents (Rob, Guy)
+              {" "}· Excludes Retention agents (Rob, Guy, James)
             </p>
           </>
         )}

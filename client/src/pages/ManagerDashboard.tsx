@@ -112,7 +112,7 @@ function formatCurrency(amount: number | null | undefined, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }
 
-const AGENTS = ["Guy", "Rob"];
+const AGENTS = ["Guy", "Rob", "James"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Notes Cell — inline note editor (for Agent Note column)
