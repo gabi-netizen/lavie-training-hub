@@ -174,7 +174,6 @@ const NON_OPENING_AGENTS = new Set([
   "guy",        // Guy — Retention agent
   "james",      // James Huxley — Retention agent
   "julie ann",  // Julie Ann Relox — not an opening agent
-  "matt",       // Matthew Holman — not an opening agent
   "muhammad",   // Muhammad Usama Waheed — not an opening agent
   "wendy",      // Wendy Calderon — not an opening agent
 ]);
