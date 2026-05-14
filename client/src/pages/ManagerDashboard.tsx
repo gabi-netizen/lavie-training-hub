@@ -59,8 +59,11 @@ function getLeadTypeBadge(
     cycle_1:                { bg: "bg-[#bfdbfe]",  text: "text-[#1e3a8a]", label: "Cycle 1",             rowTint: "bg-white" },
     cycle_2:                { bg: "bg-[#451a03]",  text: "text-white",      label: "Cancel 2+ Cycle",     rowTint: "bg-white" },
     cycle_3_plus:           { bg: "bg-[#451a03]",  text: "text-white",      label: "Cancel 2+ Cycle",     rowTint: "bg-white" },
-    from_cat_to_rob:        { bg: "bg-[#92400e]",  text: "text-white",      label: "From Cat to Rob",     rowTint: "bg-white" },
-    trial_active:           { bg: "bg-[#7c3aed]",  text: "text-white",      label: "Trial Active",        rowTint: "bg-white" },
+    from_cat_to_rob:        { bg: "bg-[#92400e]",  text: "text-white",      label: "From Cat to Rob",          rowTint: "bg-white" },
+    hot_lead:               { bg: "bg-[#ef4444]",  text: "text-white",      label: "Hot Lead",                 rowTint: "bg-white" },
+    cancel_live_sub:        { bg: "bg-[#dc2626]",  text: "text-white",      label: "Cancel Live Sub (Cycle 1)",  rowTint: "bg-white" },
+    cancel_live_sub_2plus:  { bg: "bg-[#b91c1c]",  text: "text-white",      label: "Cancel Live Sub (Cycle 2+)", rowTint: "bg-white" },
+    trial_active:           { bg: "bg-[#7c3aed]",  text: "text-white",      label: "Trial Active",               rowTint: "bg-white" },
     trial_expired:          { bg: "bg-[#6d28d9]",  text: "text-white",      label: "Trial Expired",       rowTint: "bg-white" },
   };
   return map[leadType] || { bg: "bg-gray-200", text: "text-gray-700", label: leadType, rowTint: "bg-white" };
@@ -612,7 +615,7 @@ export default function ManagerDashboard() {
               <SelectTrigger className="h-9 w-32 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="All Agents" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom">
                 <SelectItem value="all">All Agents</SelectItem>
                 {AGENTS.map((a) => (
                   <SelectItem key={a} value={a}>
@@ -625,7 +628,7 @@ export default function ManagerDashboard() {
               <SelectTrigger className="h-9 w-36 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="Lead Status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom">
                 <SelectItem value="all">All Lead Status</SelectItem>
                 <SelectItem value="new">New (Unassigned)</SelectItem>
                 <SelectItem value="assigned">Assigned</SelectItem>
@@ -635,20 +638,22 @@ export default function ManagerDashboard() {
               <SelectTrigger className="h-9 w-48 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="All Lead Types" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom">
                 <SelectItem value="all">All Lead Types</SelectItem>
-                {leadTypes.map(({ key, label }) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="from_cat_to_rob">Cat to Rob</SelectItem>
+                <SelectItem value="pre_cycle_cancelled">Pre-Cycle-Cancelled</SelectItem>
+                <SelectItem value="cancel_live_sub">Cancel Live Sub (Cycle 1)</SelectItem>
+                <SelectItem value="cancel_live_sub_2plus">Cancel Live Sub (Cycle 2+)</SelectItem>
+                <SelectItem value="pre_cycle_decline">Pre-Cycle-Decline</SelectItem>
+                <SelectItem value="hot_lead">Hot Lead</SelectItem>
+                <SelectItem value="live_sub_critical">Decline Live Sub</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9 w-40 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="Work Status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom">
                 <SelectItem value="all">All Work Status</SelectItem>
                 {STATUS_OPTIONS.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
@@ -664,7 +669,7 @@ export default function ManagerDashboard() {
               <SelectTrigger className="h-9 w-36 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="This Month" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom">
                 <SelectItem value="this_month">This Month</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="yesterday">Yesterday</SelectItem>
@@ -704,7 +709,7 @@ export default function ManagerDashboard() {
                 <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="All Agents" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom">
                   <SelectItem value="all">All Agents</SelectItem>
                   {AGENTS.map((a) => (
                     <SelectItem key={a} value={a}>
@@ -717,7 +722,7 @@ export default function ManagerDashboard() {
                 <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="Lead Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom">
                   <SelectItem value="all">All Lead Status</SelectItem>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
@@ -727,20 +732,22 @@ export default function ManagerDashboard() {
                 <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="Lead Type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom">
                   <SelectItem value="all">All Lead Types</SelectItem>
-                  {leadTypes.map(({ key, label }) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="from_cat_to_rob">Cat to Rob</SelectItem>
+                  <SelectItem value="pre_cycle_cancelled">Pre-Cycle-Cancelled</SelectItem>
+                  <SelectItem value="cancel_live_sub">Cancel Live Sub (Cycle 1)</SelectItem>
+                  <SelectItem value="cancel_live_sub_2plus">Cancel Live Sub (Cycle 2+)</SelectItem>
+                  <SelectItem value="pre_cycle_decline">Pre-Cycle-Decline</SelectItem>
+                  <SelectItem value="hot_lead">Hot Lead</SelectItem>
+                  <SelectItem value="live_sub_critical">Decline Live Sub</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                   <SelectValue placeholder="Work Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom">
                   <SelectItem value="all">All Work Status</SelectItem>
                   {STATUS_OPTIONS.map((s) => (
                     <SelectItem key={s.value} value={s.value}>
@@ -757,7 +764,7 @@ export default function ManagerDashboard() {
               <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="This Month" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom">
                 <SelectItem value="this_month">This Month</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="yesterday">Yesterday</SelectItem>
