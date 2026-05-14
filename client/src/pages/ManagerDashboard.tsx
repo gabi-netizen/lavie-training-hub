@@ -552,7 +552,7 @@ export default function ManagerDashboard() {
         <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
           Agent Workload <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Today</span>
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 max-w-lg">
+        <div className="grid grid-cols-3 gap-3">
           {agentCardData.map((card) => (
             <div
               key={card.agent}
