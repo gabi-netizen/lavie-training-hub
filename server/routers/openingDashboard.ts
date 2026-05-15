@@ -726,7 +726,12 @@ export const openingDashboardRouter = router({
         .from(openingTrials)
         .orderBy(openingTrials.month);
 
-      return { months: rows.map((r) => r.month) };
+      // Only show months from April 2026 onwards (older months are irrelevant test data)
+      const months = rows
+        .map((r) => r.month)
+        .filter((m) => m >= "2026-04");
+
+      return { months };
     }),
 
   /**
