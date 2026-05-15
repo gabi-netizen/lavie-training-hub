@@ -1105,25 +1105,25 @@ export default function ManagerDashboard() {
                     <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-44">
                       Email
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
                       Agent
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-24">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
                       Status
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-36">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-40">
                       Work Status
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-24">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
                       Date
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-40">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-48">
                       Lead Type
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[200px]">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[240px]">
                       Customer Note
                     </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[180px]">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[200px]">
                       Agent Note
                     </th>
                     <th className="w-5"></th>
