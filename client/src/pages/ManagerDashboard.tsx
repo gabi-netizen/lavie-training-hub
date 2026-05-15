@@ -169,18 +169,18 @@ function NotesCell({
             if (!agentNote) setEditing(true);
           }}
           title={displayText || undefined}
-          className="flex items-start gap-1 text-left w-full group"
+          className="flex items-center gap-1 w-[180px] px-3 py-1.5 border border-gray-300 rounded-full bg-white shadow-sm hover:border-gray-400 transition-colors"
         >
-          <span className="text-sm text-gray-800 truncate max-w-[200px] block leading-snug">
+          <span className="text-sm text-gray-700 truncate flex-1 text-left">
             {displayText || <span className="text-gray-400 italic">Add note...</span>}
           </span>
-          <FileText className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-400 shrink-0 mt-0.5" />
+          <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900" />
         </button>
       )}
 
       {open && (
         <div
-          className="absolute z-[9999] left-0 top-0 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl p-3 max-h-[400px] overflow-y-auto"
+          className="absolute z-[9999] left-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl p-3 max-h-[400px] overflow-y-auto"
           style={{ isolation: "isolate", background: "#ffffff" }}
         >
           {editing ? (
