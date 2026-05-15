@@ -1149,7 +1149,6 @@ export default function ManagerDashboard() {
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[200px]">
                       Agent Note
                     </th>
-                    <th className="w-5"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1182,9 +1181,12 @@ export default function ManagerDashboard() {
                           </td>
                           {/* Name + Phone */}
                           <td className="px-2 py-3">
-                            <div className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px]">
+                            <button
+                              onClick={() => setExpandedRow(isExpanded ? null : lead.subscriptionId)}
+                              className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px] hover:text-blue-600 hover:underline cursor-pointer text-left"
+                            >
                               {lead.customerName}
-                            </div>
+                            </button>
                             {lead.phone && (
                               <a
                                 href={`tel:${lead.phone}`}
@@ -1345,23 +1347,7 @@ export default function ManagerDashboard() {
                               onOpen={() => setExpandedRow(null)}
                             />
                           </td>
-                          {/* Expand */}
-                          <td className="px-1 py-3">
-                            <button
-                              onClick={() =>
-                                setExpandedRow(
-                                  isExpanded ? null : lead.subscriptionId
-                                )
-                              }
-                              className="text-gray-800 hover:text-gray-600"
-                            >
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </button>
-                          </td>
+
                         </tr>
 
                         {/* Expanded detail row */}
