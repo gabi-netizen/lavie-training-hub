@@ -221,12 +221,7 @@ function NotesCell({
                   <p>{agentNote}</p>
                 </div>
               )}
-              {managerNote && (
-                <div className="mb-2 p-2 bg-blue-50 rounded text-sm text-blue-800 border border-blue-100">
-                  <p className="font-semibold text-blue-500 uppercase text-[10px] mb-0.5">Manager Note</p>
-                  <p>{managerNote}</p>
-                </div>
-              )}
+
               <div className="flex gap-1.5">
                 <Button
                   size="sm"
