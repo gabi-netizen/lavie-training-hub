@@ -1120,9 +1120,6 @@ export default function ManagerDashboard() {
                     <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
                       Lead Type
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-20">
-                      Spend
-                    </th>
                     <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[160px]">
                       Customer Note
                     </th>
@@ -1284,10 +1281,6 @@ export default function ManagerDashboard() {
                             >
                               {badge.label}
                             </span>
-                          </td>
-                          {/* Total Spend */}
-                          <td className="px-2 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
-                            {formatCurrency(lead.totalSpend, lead.currencyCode)}
                           </td>
                           {/* Customer Note — the customer's ticket message (managerNote used as customer note) */}
                           <td className="px-2 py-3 max-w-[200px]">
