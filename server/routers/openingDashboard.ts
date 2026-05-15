@@ -50,6 +50,7 @@ interface AgentDetail {
 interface CustomerDetail {
   subscriptionId: string;
   customerName: string | null;
+  email: string | null;
   planName: string | null;
   createdDate: string;
   status: string;
@@ -629,6 +630,7 @@ export const openingDashboardRouter = router({
         .select({
           subscriptionId: openingTrials.subscriptionId,
           customerName: openingTrials.customerName,
+          email: openingTrials.email,
           planName: openingTrials.planName,
           createdDate: openingTrials.createdDate,
           status: openingTrials.status,
@@ -641,6 +643,7 @@ export const openingDashboardRouter = router({
       const customers = rows.map((r) => ({
         subscriptionId: r.subscriptionId,
         customerName: r.customerName,
+        email: r.email ?? null,
         planName: r.planName,
         createdDate: String(r.createdDate),
         status: r.status,
@@ -694,6 +697,7 @@ export const openingDashboardRouter = router({
         .select({
           subscriptionId: openingTrials.subscriptionId,
           customerName: openingTrials.customerName,
+          email: openingTrials.email,
           planName: openingTrials.planName,
           createdDate: openingTrials.createdDate,
           status: openingTrials.status,
@@ -705,6 +709,7 @@ export const openingDashboardRouter = router({
       const customers: CustomerDetail[] = rows.map((r) => ({
         subscriptionId: r.subscriptionId,
         customerName: r.customerName,
+        email: r.email ?? null,
         planName: r.planName,
         createdDate: String(r.createdDate),
         status: r.status,

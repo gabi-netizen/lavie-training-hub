@@ -542,6 +542,7 @@ export const openingTrials = mysqlTable("opening_trials", {
   id: int("id").autoincrement().primaryKey(),
   subscriptionId: varchar("subscription_id", { length: 50 }).notNull().unique(),
   customerName: varchar("customer_name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
   agentName: varchar("agent_name", { length: 100 }).notNull(),
   planName: varchar("plan_name", { length: 255 }),
   createdDate: date("created_date").notNull(),
