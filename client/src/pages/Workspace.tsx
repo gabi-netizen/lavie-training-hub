@@ -223,11 +223,13 @@ function ContactCard({
   onAction,
   onFieldChange,
   isCallPending,
+  isSkipped,
 }: {
   contact: Contact;
   isActive: boolean;
   isDone: boolean;
   doneStatus?: string;
+  isSkipped?: boolean;
   onSelect: () => void;
   onClose: () => void;
   onAction: (action: string) => void;
@@ -340,7 +342,7 @@ function ContactCard({
 
   return (
     <div
-      className={`ws-item ${isActive ? "active" : ""} ${isDone ? "done" : ""}`}
+      className={`ws-item ${isActive ? "active" : ""} ${isDone ? "done" : ""} ${isSkipped && !isActive ? "skipped" : ""}`}
       onClick={onSelect}
     >
       <div className="ws-row1">
@@ -349,7 +351,7 @@ function ContactCard({
           <div className="ws-name">{contact.name}</div>
           <div className="ws-phone">{contact.phone}</div>
         </div>
-        {isDone && (
+        {(isDone || (isSkipped && !isActive)) && (
           <div
             className="ws-done-icon"
             style={{
@@ -358,13 +360,15 @@ function ContactCard({
                   ? "#16a34a"
                   : doneStatus === "N/A"
                   ? "#d97706"
+                  : doneStatus === "Skip"
+                  ? "#9ca3af"
                   : "#dc2626",
             }}
           >
             {doneStatus}
           </div>
         )}
-        {isActive && !isDone && (
+        {isActive && !isDone && (!isSkipped || isActive) && (
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="ml-auto px-3 py-1 flex items-center gap-1 rounded-md bg-gray-100 hover:bg-red-50 border border-gray-300 hover:border-red-300 text-gray-600 hover:text-red-600 font-semibold text-xs transition-colors"
@@ -1790,7 +1794,8 @@ export default function Workspace() {
             {contacts.map((contact: any) => {
               // Overdue callbacks are always unlocked (interactive) regardless of doneItems
               const isOverdueCallback = (callbacksDue as any[]).some((c) => c.id === contact.id);
-              const isDone = isOverdueCallback ? false : !!doneItems[contact.id];
+              const isSkipped = doneItems[contact.id] === "Skip";
+              const isDone = isOverdueCallback ? false : (!!doneItems[contact.id] && !isSkipped);
               return (
                 <div key={contact.id} id={`ws-contact-${contact.id}`}>
                   <ContactCard
@@ -1798,7 +1803,20 @@ export default function Workspace() {
                     isActive={activeId === contact.id}
                     isDone={isDone}
                     doneStatus={isOverdueCallback ? undefined : doneItems[contact.id]}
-                    onSelect={() => !isDone && setActiveId(contact.id)}
+                    isSkipped={isSkipped}
+                    onSelect={() => {
+                      if (isDone) return;
+                      if (isSkipped) {
+                        // Re-open skipped contact: clear local done + reset status in DB
+                        setLocalDoneItems((prev: Record<number, string>) => {
+                          const next = { ...prev };
+                          delete next[contact.id];
+                          return next;
+                        });
+                        updateContact.mutate({ id: contact.id, status: "new" as any });
+                      }
+                      setActiveId(contact.id);
+                    }}
                     onClose={() => setActiveId(null)}
                     onAction={(action) => handleAction(contact.id, action, contact.phone)}
                     onFieldChange={(field, value) => handleFieldChange(contact.id, field, value)}
