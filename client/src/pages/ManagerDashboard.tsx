@@ -99,6 +99,12 @@ function formatCurrency(amount: number | null | undefined, currency = "GBP") {
 
 const AGENTS = ["Guy", "Rob", "James"];
 
+const AGENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Guy:   { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-300" },
+  Rob:   { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-300" },
+  James: { bg: "bg-teal-100",   text: "text-teal-700",   border: "border-teal-300" },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Notes Cell — inline note editor (for Agent Note column)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -923,7 +929,9 @@ export default function ManagerDashboard() {
                       >
                         <SelectTrigger
                           className={`h-9 w-32 text-sm border rounded-lg font-medium ${
-                            lead.assignedAgent
+                            lead.assignedAgent && AGENT_COLORS[lead.assignedAgent]
+                              ? `${AGENT_COLORS[lead.assignedAgent].bg} ${AGENT_COLORS[lead.assignedAgent].text} ${AGENT_COLORS[lead.assignedAgent].border}`
+                              : lead.assignedAgent
                               ? "text-gray-800 border-gray-300"
                               : "text-green-700 bg-green-100 border-green-300"
                           }`}
@@ -1179,7 +1187,9 @@ export default function ManagerDashboard() {
                             >
                               <SelectTrigger
                                 className={`h-8 w-[90px] text-sm border rounded-lg px-2 font-medium ${
-                                  lead.assignedAgent
+                                  lead.assignedAgent && AGENT_COLORS[lead.assignedAgent]
+                                    ? `${AGENT_COLORS[lead.assignedAgent].bg} ${AGENT_COLORS[lead.assignedAgent].text} ${AGENT_COLORS[lead.assignedAgent].border}`
+                                    : lead.assignedAgent
                                     ? "text-gray-900 border-gray-300"
                                     : "text-green-700 bg-green-100 border-green-300"
                                 }`}
