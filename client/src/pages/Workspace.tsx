@@ -249,17 +249,6 @@ function ContactCard({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
-  const isAdmin = user?.role === "admin";
-  const utils = trpc.useUtils();
-  const createTemplateMutation = trpc.emailTemplates.create.useMutation({
-    onSuccess: () => {
-      toast.success("Template created!");
-      setShowAddTemplate(false);
-      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "" });
-      utils.emailTemplates.list.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
   // Parse concerns from DB comma-separated string, or fall back to concerns array
   const parseConcerns = (c: Contact) => {
     if (c.concern) return c.concern.split(", ").filter(Boolean);
@@ -280,6 +269,17 @@ function ContactCard({
   }, [contact.id, contact.callNotes, contact.concern, contact.skinType, contact.routine, contact.trialKit]);
 
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const utils = trpc.useUtils();
+  const createTemplateMutation = trpc.emailTemplates.create.useMutation({
+    onSuccess: () => {
+      toast.success("Template created!");
+      setShowAddTemplate(false);
+      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "" });
+      utils.emailTemplates.list.invalidate();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   const { data: emailTemplates, isLoading: templatesLoading } = trpc.emailTemplates.list.useQuery(
     undefined,
