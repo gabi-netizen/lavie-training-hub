@@ -234,7 +234,10 @@ function CustomerDetailModal({
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {c.customerName || "Unknown Customer"}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">{c.subscriptionId}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {c.createdDate ? new Date(c.createdDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : ""}
+                      {c.planName ? ` · ${c.planName}` : ""}
+                    </p>
                   </div>
                 </div>
               ))}
