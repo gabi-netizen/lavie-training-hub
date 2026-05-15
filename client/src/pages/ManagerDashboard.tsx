@@ -1099,31 +1099,31 @@ export default function ManagerDashboard() {
                         )}
                       </button>
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-36">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-40">
                       Name
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-36">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-44">
                       Email
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-24">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
                       Agent
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-20">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-24">
                       Status
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-36">
                       Work Status
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-20">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-24">
                       Date
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-40">
                       Lead Type
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[160px]">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[200px]">
                       Customer Note
                     </th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[160px]">
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[180px]">
                       Agent Note
                     </th>
                     <th className="w-5"></th>
