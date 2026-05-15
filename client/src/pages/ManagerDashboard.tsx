@@ -253,6 +253,84 @@ function NotesCell({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Customer Message Editor (admin only)
+// ─────────────────────────────────────────────────────────────────────────────
+function CustomerMessageEditor({
+  leadId,
+  message,
+  onSave,
+}: {
+  leadId: string;
+  message: string;
+  onSave: (msg: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message);
+  const cleaned = stripHtml(message);
+
+  if (!message && !editing) {
+    return (
+      <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-amber-600 uppercase text-[10px]">Customer Message</p>
+          <button
+            onClick={() => { setDraft(""); setEditing(true); }}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+          >
+            + Add message
+          </button>
+        </div>
+        <p className="text-sm text-gray-400 mt-1">No message</p>
+      </div>
+    );
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+        <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1">Customer Message</p>
+        <textarea
+          className="w-full border border-amber-200 rounded p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+          rows={4}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          autoFocus
+        />
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => { onSave(draft); setEditing(false); }}
+            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => { setDraft(message); setEditing(false); }}
+            className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg max-h-[200px] overflow-y-auto">
+      <div className="flex items-center justify-between sticky top-0 bg-amber-50">
+        <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1">Customer Message</p>
+        <button
+          onClick={() => { setDraft(cleaned); setEditing(true); }}
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+        >
+          Edit
+        </button>
+      </div>
+      <p className="text-sm text-amber-900 whitespace-pre-wrap">{cleaned}</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Dashboard Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ManagerDashboard() {
@@ -1356,7 +1434,14 @@ export default function ManagerDashboard() {
                             key={`${lead.subscriptionId}-exp`}
                             className="bg-blue-50 border-b-2 border-blue-200"
                           >
-                            <td colSpan={12} className="px-6 py-4">
+                            <td colSpan={12} className="px-6 py-4 relative">
+                              <button
+                                onClick={() => setExpandedRow(null)}
+                                className="absolute top-2 right-4 p-1 rounded-full hover:bg-blue-200 transition-colors"
+                                title="Close"
+                              >
+                                <X className="w-5 h-5 text-gray-700" />
+                              </button>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                                 <div>
                                   <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
@@ -1431,13 +1516,17 @@ export default function ManagerDashboard() {
                                   </div>
                                 </div>
                               </div>
-                              {/* Full customer note in expanded row */}
-                              {lead.managerNote && (
-                                <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg max-h-[200px] overflow-y-auto">
-                                  <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1 sticky top-0 bg-amber-50">Customer Message</p>
-                                  <p className="text-sm text-amber-900 whitespace-pre-wrap">{stripHtml(lead.managerNote)}</p>
-                                </div>
-                              )}
+                              {/* Full customer note in expanded row - editable by admin */}
+                              <CustomerMessageEditor
+                                leadId={lead.subscriptionId}
+                                message={lead.managerNote || ""}
+                                onSave={(newMsg) =>
+                                  assignLead.mutate({
+                                    subscriptionId: lead.subscriptionId,
+                                    managerNote: newMsg,
+                                  })
+                                }
+                              />
                             </td>
                           </tr>
                         )}
