@@ -1074,7 +1074,13 @@ export default function OpeningDashboard() {
                           </div>
                           <div className="text-right text-sm text-gray-800 font-semibold">{row.avePerDay > 0 ? row.avePerDay.toFixed(1) : "\u2014"}</div>
                           <div className="text-right text-sm text-gray-800 font-medium flex items-center justify-end gap-1">
-                            <span>{row.trials}</span>
+                            <span
+                              className="cursor-pointer hover:text-indigo-600 hover:underline transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomerModal({ agentName: row.agentName, classification: "all_trials", classificationLabel: `All Trials — ${row.agentName}` });
+                              }}
+                            >{row.trials}</span>
                             {isAdmin && (
                               <button
                                 onClick={(e) => {

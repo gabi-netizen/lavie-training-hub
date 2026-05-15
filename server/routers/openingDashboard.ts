@@ -677,8 +677,12 @@ export const openingDashboardRouter = router({
       const conditions = [
         eq(openingTrials.month, input.month),
         eq(openingTrials.agentName, input.agentName),
-        eq(openingTrials.classification, input.classification),
       ];
+
+      // "all_trials" means show all trials for this agent (no classification filter)
+      if (input.classification !== "all_trials") {
+        conditions.push(eq(openingTrials.classification, input.classification));
+      }
 
       const dateWindow = getDateRange(input.dateRange, input.customDateFrom, input.customDateTo);
       if (dateWindow) {
