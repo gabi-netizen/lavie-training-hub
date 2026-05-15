@@ -362,18 +362,19 @@ function ContactCard({
             {doneStatus}
           </div>
         )}
-      </div>
-
-      {isActive && !isDone && (
-        <div className="ws-expanded" onClick={(e) => e.stopPropagation()}>
-          {/* Close button */}
+        {isActive && !isDone && (
           <button
-            onClick={onClose}
-            className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors z-10"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="ml-auto w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
             title="Close"
           >
             <X size={16} />
           </button>
+        )}
+      </div>
+
+      {isActive && !isDone && (
+        <div className="ws-expanded" onClick={(e) => e.stopPropagation()}>
           {/* Contact Details — Editable */}
           <div className="ws-details">
             <EditableField
