@@ -169,12 +169,12 @@ function NotesCell({
             if (!agentNote) setEditing(true);
           }}
           title={displayText || undefined}
-          className="flex items-center gap-1 w-[180px] px-3 py-1.5 border border-gray-300 rounded-full bg-white shadow-sm hover:border-gray-400 transition-colors"
+          className="flex items-start gap-1 w-[250px] px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm hover:border-gray-400 transition-colors"
         >
-          <span className="text-sm text-gray-700 truncate flex-1 text-left">
+          <span className="text-sm text-gray-700 flex-1 text-left line-clamp-2 leading-snug">
             {displayText || <span className="text-gray-400 italic">Add note...</span>}
           </span>
-          <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900" />
+          <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5" />
         </button>
       )}
 
@@ -1311,18 +1311,18 @@ export default function ManagerDashboard() {
                               return (
                                 <details className="group">
                                   <summary className="cursor-pointer list-none">
-                                    <div className="flex items-center gap-1 w-[180px] px-3 py-1.5 border border-gray-300 rounded-full bg-white shadow-sm">
-                                      <span className="text-sm text-gray-700 truncate flex-1">{cleaned.slice(0, 30)}{cleaned.length > 30 ? "..." : ""}</span>
-                                      <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 group-open:rotate-180 transition-transform" />
+                                    <div className="flex items-start gap-1 w-[250px] px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
+                                      <span className="text-sm text-gray-700 flex-1 line-clamp-2 leading-snug">{cleaned}</span>
+                                      <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5 group-open:rotate-180 transition-transform" />
                                     </div>
                                   </summary>
-                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[250px]">
+                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[280px]">
                                     <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
                                   </div>
                                 </details>
                               );
                             })() : (
-                              <div className="flex items-center gap-1 w-[180px] px-3 py-1.5 border border-gray-200 rounded-full bg-gray-50">
+                              <div className="flex items-start gap-1 w-[250px] px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
                                 <span className="text-sm text-gray-400 italic flex-1">No note</span>
                               </div>
                             )}
