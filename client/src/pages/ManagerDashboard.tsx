@@ -37,17 +37,31 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 function stripHtml(text: string | null | undefined): string {
   if (!text) return "";
+  // Remove <style>...</style> blocks entirely
+  let clean = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
   // Remove HTML tags
-  let clean = text.replace(/<[^>]*>/g, " ");
-  // Remove CSS blocks (div.zm_..., css-skikae, apple-link, { color:... })
+  clean = clean.replace(/<[^>]*>/g, " ");
+  // Remove [data-...] attribute selectors
+  clean = clean.replace(/\[data-[^\]]*\]/g, "");
+  // Remove .x_NNNNReadMsgBody, .x_NNNNExternalClass, #x_NNNNoutlook patterns
+  clean = clean.replace(/[.#]x_[\w]+/g, "");
+  // Remove ReadMsgBody, ExternalClass standalone
+  clean = clean.replace(/ReadMsgBody/g, "");
+  clean = clean.replace(/ExternalClass/g, "");
+  // Remove CSS blocks { ... }
+  clean = clean.replace(/\{[^}]*\}/g, "");
+  // Remove div.zm_..., css-skikae, apple-link patterns
   clean = clean.replace(/div\.[\w_.-]+/g, "");
-  clean = clean.replace(/\.[\w_]+-[\w_]+/g, "");
   clean = clean.replace(/css-[\w]+/g, "");
   clean = clean.replace(/apple-link/g, "");
-  clean = clean.replace(/\{[^}]*\}/g, "");
+  // Remove remaining CSS selectors (a, img, p, span, font, td, etc.)
+  clean = clean.replace(/\b(a|img)\s+\./g, "");
   // Remove &nbsp; and other HTML entities
-  clean = clean.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-  // Collapse multiple spaces/newlines
+  clean = clean.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#?\w+;/g, " ");
+  // Remove orphaned CSS-like tokens (color:, font-size:, etc.)
+  clean = clean.replace(/[\w-]+\s*:\s*[^;,]+[;,]/g, "");
+  // Collapse multiple spaces/newlines and trim
+  clean = clean.replace(/[,;]+\s*/g, " ");
   clean = clean.replace(/\s+/g, " ").trim();
   return clean;
 }
