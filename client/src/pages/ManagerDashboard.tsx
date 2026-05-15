@@ -1315,15 +1315,15 @@ export default function ManagerDashboard() {
                               const isLong = cleaned.length > 80;
                               return (
                                 <details className="group">
-                                  <summary className="text-sm text-gray-800 leading-snug cursor-pointer list-none flex items-start gap-1">
-                                    <span className="line-clamp-2">{cleaned.slice(0, 80)}{isLong ? "..." : ""}</span>
-                                    {isLong && <ChevronDown className="h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400 group-open:hidden" />}
-                                  </summary>
-                                  {isLong && (
-                                    <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto">
-                                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
+                                  <summary className="cursor-pointer list-none">
+                                    <div className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-full bg-white shadow-sm max-w-[220px]">
+                                      <span className="text-sm text-gray-700 truncate">{cleaned.slice(0, 40)}{isLong ? "..." : ""}</span>
+                                      <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 group-open:rotate-180 transition-transform" />
                                     </div>
-                                  )}
+                                  </summary>
+                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto">
+                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
+                                  </div>
                                 </details>
                               );
                             })() : <span className="text-gray-400 italic text-xs">—</span>}
