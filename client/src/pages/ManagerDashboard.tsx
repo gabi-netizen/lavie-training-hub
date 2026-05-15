@@ -166,6 +166,7 @@ function NotesCell({
           onClick={() => {
             setOpen(true);
             setEditValue(agentNote || "");
+            if (!agentNote) setEditing(true);
           }}
           title={displayText || undefined}
           className="flex items-start gap-1 text-left w-full group"
