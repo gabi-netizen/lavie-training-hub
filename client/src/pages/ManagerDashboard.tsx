@@ -1309,24 +1309,27 @@ export default function ManagerDashboard() {
                             </span>
                           </td>
                           {/* Customer Note — expandable */}
-                          <td className="px-2 py-3 max-w-[250px]">
+                          <td className="px-2 py-3">
                             {lead.managerNote ? (() => {
                               const cleaned = stripHtml(lead.managerNote);
-                              const isLong = cleaned.length > 80;
                               return (
                                 <details className="group">
                                   <summary className="cursor-pointer list-none">
-                                    <div className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-full bg-white shadow-sm max-w-[220px]">
-                                      <span className="text-sm text-gray-700 truncate">{cleaned.slice(0, 40)}{isLong ? "..." : ""}</span>
+                                    <div className="flex items-center gap-1 w-[180px] px-3 py-1.5 border border-gray-300 rounded-full bg-white shadow-sm">
+                                      <span className="text-sm text-gray-700 truncate flex-1">{cleaned.slice(0, 30)}{cleaned.length > 30 ? "..." : ""}</span>
                                       <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 group-open:rotate-180 transition-transform" />
                                     </div>
                                   </summary>
-                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto">
+                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[250px]">
                                     <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
                                   </div>
                                 </details>
                               );
-                            })() : <span className="text-gray-400 italic text-xs">—</span>}
+                            })() : (
+                              <div className="flex items-center gap-1 w-[180px] px-3 py-1.5 border border-gray-200 rounded-full bg-gray-50">
+                                <span className="text-sm text-gray-400 italic flex-1">No note</span>
+                              </div>
+                            )}
                           </td>
                           {/* Agent Note */}
                           <td className="px-2 py-3 max-w-[200px]">
