@@ -120,8 +120,10 @@ function getDateRange(
     }
 
     case "this_month": {
-      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: firstOfMonth, to: endOfToday };
+      // Return null so that "This Month" relies on the month column filter only.
+      // This avoids excluding manually-added trials whose createdDate may not
+      // fall within the calendar month window.
+      return null;
     }
 
     case "previous_month":
