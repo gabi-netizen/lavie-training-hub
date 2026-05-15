@@ -53,7 +53,7 @@ function getLeadTypeBadge(
 
 // Lead Status — derived from assignedAgent (read-only badge)
 const LEAD_STATUS_OPTIONS = [
-  { value: "new",      label: "New",      bg: "bg-gray-100",  text: "text-gray-600" },
+  { value: "new",      label: "New",      bg: "bg-green-100",  text: "text-green-700" },
   { value: "assigned", label: "Assigned", bg: "bg-blue-100",  text: "text-blue-700" },
 ];
 
