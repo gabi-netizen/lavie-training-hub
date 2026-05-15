@@ -622,13 +622,13 @@ export default function ManagerDashboard() {
               </SelectTrigger>
               <SelectContent side="bottom">
                 <SelectItem value="all">All Lead Types</SelectItem>
-                <SelectItem value="from_cat_to_rob">Cat to Rob</SelectItem>
-                <SelectItem value="pre_cycle_cancelled">Pre-Cycle-Cancelled</SelectItem>
-                <SelectItem value="cancel_live_sub">Cancel Live Sub (Cycle 1)</SelectItem>
-                <SelectItem value="cancel_live_sub_2plus">Cancel Live Sub (Cycle 2+)</SelectItem>
-                <SelectItem value="pre_cycle_decline">Pre-Cycle-Decline</SelectItem>
-                <SelectItem value="hot_lead">Hot Lead</SelectItem>
-                <SelectItem value="live_sub_critical">Decline Live Sub</SelectItem>
+                <SelectItem value="Cat to Rob"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#92400e]"></span>Cat to Rob</span></SelectItem>
+                <SelectItem value="Pre-Cycle-Cancelled"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span>Pre-Cycle-Cancelled</span></SelectItem>
+                <SelectItem value="Cancel Live Sub (Cycle 1)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>Cancel Live Sub (Cycle 1)</span></SelectItem>
+                <SelectItem value="Cancel Live Sub (Cycle 2+)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></span>Cancel Live Sub (Cycle 2+)</span></SelectItem>
+                <SelectItem value="Pre-Cycle-Decline"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#1a1a1a]"></span>Pre-Cycle-Decline</span></SelectItem>
+                <SelectItem value="Hot Lead"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#eab308]"></span>Hot Lead</span></SelectItem>
+                <SelectItem value="Decline Live Sub"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>Decline Live Sub</span></SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -716,13 +716,13 @@ export default function ManagerDashboard() {
                 </SelectTrigger>
                 <SelectContent side="bottom">
                   <SelectItem value="all">All Lead Types</SelectItem>
-                  <SelectItem value="from_cat_to_rob">Cat to Rob</SelectItem>
-                  <SelectItem value="pre_cycle_cancelled">Pre-Cycle-Cancelled</SelectItem>
-                  <SelectItem value="cancel_live_sub">Cancel Live Sub (Cycle 1)</SelectItem>
-                  <SelectItem value="cancel_live_sub_2plus">Cancel Live Sub (Cycle 2+)</SelectItem>
-                  <SelectItem value="pre_cycle_decline">Pre-Cycle-Decline</SelectItem>
-                  <SelectItem value="hot_lead">Hot Lead</SelectItem>
-                  <SelectItem value="live_sub_critical">Decline Live Sub</SelectItem>
+                  <SelectItem value="Cat to Rob"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#92400e]"></span>Cat to Rob</span></SelectItem>
+                  <SelectItem value="Pre-Cycle-Cancelled"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span>Pre-Cycle-Cancelled</span></SelectItem>
+                  <SelectItem value="Cancel Live Sub (Cycle 1)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>Cancel Live Sub (Cycle 1)</span></SelectItem>
+                  <SelectItem value="Cancel Live Sub (Cycle 2+)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></span>Cancel Live Sub (Cycle 2+)</span></SelectItem>
+                  <SelectItem value="Pre-Cycle-Decline"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#1a1a1a]"></span>Pre-Cycle-Decline</span></SelectItem>
+                  <SelectItem value="Hot Lead"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#eab308]"></span>Hot Lead</span></SelectItem>
+                  <SelectItem value="Decline Live Sub"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>Decline Live Sub</span></SelectItem>
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
