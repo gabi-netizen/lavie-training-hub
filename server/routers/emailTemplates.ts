@@ -195,7 +195,7 @@ export const emailTemplatesRouter = router({
       const resolvedHtml = fillPlaceholders(template.htmlBody, vars);
 
       // Send via Postmark
-      const fromAddress = `${agentName} <support@lavielabs.com>`;
+      const fromAddress = `${agentName} <trial@lavielabs.com>`;
       let postmarkMessageId: string | null = null;
       try {
         const result = await sendViaPostmark({
