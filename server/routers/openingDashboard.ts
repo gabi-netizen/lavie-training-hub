@@ -530,9 +530,9 @@ export const openingDashboardRouter = router({
       });
 
       // ── Trials Override: apply manual overrides from agent_trials_override ──
-      // Only applies when dateRange is "all" (full month view) since overrides
+      // Only applies when dateRange is "all" or "this_month" (full month view) since overrides
       // are per-month, not per date-range slice.
-      if (input.dateRange === "all") {
+      if (input.dateRange === "all" || input.dateRange === "this_month") {
         let overrideRows: { agentName: string; trialsCount: number }[] = [];
         try {
           overrideRows = await db
