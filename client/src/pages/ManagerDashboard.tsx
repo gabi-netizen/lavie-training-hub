@@ -1083,7 +1083,7 @@ export default function ManagerDashboard() {
             </div>
 
             {/* ── DESKTOP TABLE (hidden on mobile) ── */}
-            <div className="hidden sm:block bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+            <div className="hidden sm:block bg-white rounded-lg border border-gray-200 overflow-visible shadow-sm">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-[#f8f9fa] border-b border-gray-200 text-sm">
@@ -1148,7 +1148,7 @@ export default function ManagerDashboard() {
                           } ${isSelected ? "ring-2 ring-inset ring-blue-400" : ""}`}
                         >
                           {/* Checkbox */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             <button
                               onClick={() => toggleSelect(lead.subscriptionId)}
                               className="text-gray-800 hover:text-blue-600"
@@ -1161,7 +1161,7 @@ export default function ManagerDashboard() {
                             </button>
                           </td>
                           {/* Name + Phone */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             <div className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px]">
                               {lead.customerName}
                             </div>
@@ -1176,7 +1176,7 @@ export default function ManagerDashboard() {
                             )}
                           </td>
                           {/* Email — compact, smaller font, truncate */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             <a
                               href={`mailto:${lead.email}`}
                               title={lead.email}
@@ -1187,7 +1187,7 @@ export default function ManagerDashboard() {
                             </a>
                           </td>
                           {/* Agent — prominent dropdown with visible border */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             <Select
                               value={lead.assignedAgent || "unassigned"}
                               onValueChange={(v) =>
@@ -1220,7 +1220,7 @@ export default function ManagerDashboard() {
                             </Select>
                           </td>
                           {/* Lead Status */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             {(() => {
                               const ls = getLeadStatus(lead.assignedAgent);
                               return (
@@ -1233,7 +1233,7 @@ export default function ManagerDashboard() {
                             })()}
                           </td>
                           {/* Work Status — prominent dropdown with visible border, slightly smaller badge */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             <Select
                               value={
                                 lead.workStatus &&
@@ -1274,11 +1274,11 @@ export default function ManagerDashboard() {
                             </Select>
                           </td>
                           {/* Date */}
-                          <td className="px-2 py-2 text-sm text-gray-800 whitespace-nowrap">
+                          <td className="px-2 py-3 text-sm text-gray-800 whitespace-nowrap">
                             {formatDate(leadDate)}
                           </td>
                           {/* Lead Type */}
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-3">
                             <span
                               className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
                             >
@@ -1286,20 +1286,20 @@ export default function ManagerDashboard() {
                             </span>
                           </td>
                           {/* Total Spend */}
-                          <td className="px-2 py-2 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                          <td className="px-2 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
                             {formatCurrency(lead.totalSpend, lead.currencyCode)}
                           </td>
                           {/* Customer Note — the customer's ticket message (managerNote used as customer note) */}
-                          <td className="px-2 py-2 max-w-[200px]">
+                          <td className="px-2 py-3 max-w-[200px]">
                             <p
-                              className="text-sm text-gray-800 truncate leading-snug"
+                              className="text-sm text-gray-800 line-clamp-2 leading-snug"
                               title={lead.managerNote || ""}
                             >
                               {lead.managerNote || <span className="text-gray-400 italic text-xs">—</span>}
                             </p>
                           </td>
                           {/* Agent Note */}
-                          <td className="px-2 py-2 max-w-[200px]">
+                          <td className="px-2 py-3 max-w-[200px]">
                             <NotesCell
                               managerNote={lead.managerNote}
                               agentNote={lead.agentNote}
@@ -1313,7 +1313,7 @@ export default function ManagerDashboard() {
                             />
                           </td>
                           {/* Expand */}
-                          <td className="px-1 py-2">
+                          <td className="px-1 py-3">
                             <button
                               onClick={() =>
                                 setExpandedRow(
@@ -1335,10 +1335,10 @@ export default function ManagerDashboard() {
                         {isExpanded && (
                           <tr
                             key={`${lead.subscriptionId}-exp`}
-                            className="bg-blue-50/60 border-b border-blue-100"
+                            className="bg-blue-50 border-b-2 border-blue-200"
                           >
-                            <td colSpan={12} className="px-6 py-3">
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                            <td colSpan={12} className="px-6 py-4">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                                 <div>
                                   <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
                                     Plan
@@ -1412,6 +1412,13 @@ export default function ManagerDashboard() {
                                   </div>
                                 </div>
                               </div>
+                              {/* Full customer note in expanded row */}
+                              {lead.managerNote && (
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                                  <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1">Customer Message</p>
+                                  <p className="text-sm text-amber-900 whitespace-pre-wrap">{lead.managerNote}</p>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}
