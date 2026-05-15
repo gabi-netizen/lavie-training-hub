@@ -222,6 +222,7 @@ function ContactCard({
   onClose,
   onAction,
   onFieldChange,
+  isCallPending,
 }: {
   contact: Contact;
   isActive: boolean;
@@ -231,6 +232,7 @@ function ContactCard({
   onClose: () => void;
   onAction: (action: string) => void;
   onFieldChange: (field: string, value: any) => void;
+  isCallPending?: boolean;
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
@@ -644,7 +646,7 @@ function ContactCard({
 
           {/* Action Buttons */}
           <div className="ws-actions">
-            <button className="ws-btn ws-btn-call" onClick={() => onAction("call")}>Call</button>
+            <button className="ws-btn ws-btn-call" onClick={() => onAction("call")} disabled={isCallPending} style={isCallPending ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{isCallPending ? "Calling…" : "Call"}</button>
             <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
             <button className="ws-btn ws-btn-na" onClick={() => onAction("na")}>N/A</button>
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
@@ -1604,8 +1606,13 @@ export default function Workspace() {
   }, [callbacksDue.length, callbacksDueDismissed]);
 
   // Click-to-call mutation
+  const [callCooldown, setCallCooldown] = useState(false);
   const clickToCall = trpc.contacts.clickToCall.useMutation({
-    onSuccess: () => toast.success("Call initiated! Your phone will ring first."),
+    onSuccess: () => {
+      toast.success("Call initiated! Your phone will ring first.");
+      setCallCooldown(true);
+      setTimeout(() => setCallCooldown(false), 15000);
+    },
     onError: (err) => {
       if (err.message === "NO_CLOUDTALK_AGENT_ID") {
         toast.error(
@@ -1650,6 +1657,7 @@ export default function Workspace() {
 
   const handleAction = (contactId: number, action: string, phone?: string) => {
     if (action === "call") {
+      if (callCooldown || clickToCall.isPending) return;
       clickToCall.mutate({ contactId });
     } else if (action === "callback") {
       // Open date/time picker modal — do NOT mark done yet
@@ -1794,6 +1802,7 @@ export default function Workspace() {
                     onClose={() => setActiveId(null)}
                     onAction={(action) => handleAction(contact.id, action, contact.phone)}
                     onFieldChange={(field, value) => handleFieldChange(contact.id, field, value)}
+                    isCallPending={clickToCall.isPending || callCooldown}
                   />
                 </div>
               );
