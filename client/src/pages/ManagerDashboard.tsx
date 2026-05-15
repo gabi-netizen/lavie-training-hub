@@ -39,32 +39,14 @@ function getLeadTypeBadge(
   leadType: string,
   daysSinceEvent: number
 ): { bg: string; text: string; label: string; rowTint: string } {
-  if (leadType === "live_sub_healthy" && daysSinceEvent >= 14) {
-    return { bg: "bg-[#8b5cf6]", text: "text-white", label: "Live Sub 14 Days +", rowTint: "bg-white" };
-  }
-  if (leadType === "live_sub_healthy" && daysSinceEvent >= 7) {
-    return { bg: "bg-[#a78bfa]", text: "text-white", label: "Live Sub 7 Days", rowTint: "bg-white" };
-  }
   const map: Record<string, { bg: string; text: string; label: string; rowTint: string }> = {
-    pre_cycle_decline:      { bg: "bg-[#1a1a1a]",  text: "text-white",      label: "Pre-Cycle-Decline",   rowTint: "bg-white" },
-    pre_cycle_cancelled:    { bg: "bg-[#22c55e]",  text: "text-white",      label: "Pre-Cycle-Cancelled", rowTint: "bg-white" },
-    live_sub_critical:      { bg: "bg-[#7c3aed]",  text: "text-white",      label: "Live Sub Decline",    rowTint: "bg-white" },
-    live_sub_at_risk:       { bg: "bg-[#1e3a8a]",  text: "text-white",      label: "Live Sub 2nd +",      rowTint: "bg-white" },
-    live_sub_healthy:       { bg: "bg-[#4c1d95]",  text: "text-white",      label: "Live Sub 3 Days",     rowTint: "bg-white" },
-    installment_first_fail: { bg: "bg-[#84cc16]",  text: "text-white",      label: "Instalment Decline",  rowTint: "bg-white" },
-    installment_defaulted:  { bg: "bg-[#84cc16]",  text: "text-white",      label: "Instalment Decline",  rowTint: "bg-white" },
-    installment_finished:   { bg: "bg-[#166534]",  text: "text-white",      label: "End of Instalment",   rowTint: "bg-white" },
-    installment_returned:   { bg: "bg-[#6b7280]",  text: "text-white",      label: "Instalment Returned", rowTint: "bg-white" },
-    installment_active:     { bg: "bg-[#166534]",  text: "text-white",      label: "Instalment Active",   rowTint: "bg-white" },
-    cycle_1:                { bg: "bg-[#bfdbfe]",  text: "text-[#1e3a8a]", label: "Cycle 1",             rowTint: "bg-white" },
-    cycle_2:                { bg: "bg-[#451a03]",  text: "text-white",      label: "Cancel 2+ Cycle",     rowTint: "bg-white" },
-    cycle_3_plus:           { bg: "bg-[#451a03]",  text: "text-white",      label: "Cancel 2+ Cycle",     rowTint: "bg-white" },
-    from_cat_to_rob:        { bg: "bg-[#92400e]",  text: "text-white",      label: "From Cat to Rob",          rowTint: "bg-white" },
-    hot_lead:               { bg: "bg-[#ef4444]",  text: "text-white",      label: "Hot Lead",                 rowTint: "bg-white" },
-    cancel_live_sub:        { bg: "bg-[#dc2626]",  text: "text-white",      label: "Cancel Live Sub (Cycle 1)",  rowTint: "bg-white" },
-    cancel_live_sub_2plus:  { bg: "bg-[#b91c1c]",  text: "text-white",      label: "Cancel Live Sub (Cycle 2+)", rowTint: "bg-white" },
-    trial_active:           { bg: "bg-[#7c3aed]",  text: "text-white",      label: "Trial Active",               rowTint: "bg-white" },
-    trial_expired:          { bg: "bg-[#6d28d9]",  text: "text-white",      label: "Trial Expired",       rowTint: "bg-white" },
+    "Cat to Rob":                 { bg: "bg-[#92400e]", text: "text-white", label: "Cat to Rob",                 rowTint: "bg-white" },
+    "Pre-Cycle-Cancelled":        { bg: "bg-[#22c55e]", text: "text-white", label: "Pre-Cycle-Cancelled",        rowTint: "bg-white" },
+    "Cancel Live Sub (Cycle 1)":  { bg: "bg-[#2563eb]", text: "text-white", label: "Cancel Live Sub (Cycle 1)",  rowTint: "bg-white" },
+    "Cancel Live Sub (Cycle 2+)": { bg: "bg-[#3b82f6]", text: "text-white", label: "Cancel Live Sub (Cycle 2+)", rowTint: "bg-white" },
+    "Hot Lead":                   { bg: "bg-[#eab308]", text: "text-white", label: "Hot Lead",                   rowTint: "bg-white" },
+    "Pre-Cycle-Decline":          { bg: "bg-[#1a1a1a]", text: "text-white", label: "Pre-Cycle-Decline",          rowTint: "bg-white" },
+    "Decline Live Sub":           { bg: "bg-[#7c3aed]", text: "text-white", label: "Decline Live Sub",           rowTint: "bg-white" },
   };
   return map[leadType] || { bg: "bg-gray-200", text: "text-gray-700", label: leadType, rowTint: "bg-white" };
 }
