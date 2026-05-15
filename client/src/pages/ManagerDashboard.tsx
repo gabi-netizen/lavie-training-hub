@@ -102,7 +102,7 @@ const AGENTS = ["Guy", "Rob", "James"];
 const AGENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Guy:   { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-300" },
   Rob:   { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-300" },
-  James: { bg: "bg-teal-100",   text: "text-teal-700",   border: "border-teal-300" },
+  James: { bg: "bg-fuchsia-100", text: "text-fuchsia-700", border: "border-fuchsia-300" },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
