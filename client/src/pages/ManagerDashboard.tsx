@@ -154,7 +154,7 @@ function NotesCell({
   onSaveNote: (note: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [editValue, setEditValue] = useState(managerNote || "");
+  const [editValue, setEditValue] = useState(agentNote || "");
   const [editing, setEditing] = useState(false);
 
   const displayText = agentNote || "";
@@ -165,7 +165,7 @@ function NotesCell({
         <button
           onClick={() => {
             setOpen(true);
-            setEditValue(managerNote || "");
+            setEditValue(agentNote || "");
           }}
           title={displayText || undefined}
           className="flex items-start gap-1 text-left w-full group"
@@ -189,7 +189,7 @@ function NotesCell({
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 autoFocus
-                placeholder="Manager note..."
+                placeholder="Agent note..."
               />
               <div className="flex gap-1.5 mt-1.5">
                 <Button
@@ -229,7 +229,7 @@ function NotesCell({
                   className="h-6 px-2 text-xs"
                   onClick={() => setEditing(true)}
                 >
-                  {managerNote ? "Edit note" : "Add note"}
+                  {agentNote ? "Edit note" : "Add note"}
                 </Button>
                 <Button
                   size="sm"
