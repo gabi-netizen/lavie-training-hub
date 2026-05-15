@@ -539,8 +539,11 @@ function ContactCard({
                           placeholder="Paste HTML body here..."
                           value={newTemplate.htmlBody}
                           onChange={(e) => setNewTemplate({ ...newTemplate, htmlBody: e.target.value })}
-                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2 h-32 resize-y font-mono"
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-1 h-32 resize-y font-mono"
                         />
+                        <p className="text-xs text-gray-500 mb-2">
+                          📷 Need images? <a href="https://account.postmarkapp.com/servers/18989704/templates" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Upload in Postmark</a> and paste the URL in your HTML.
+                        </p>
                         <button
                           onClick={() => createTemplateMutation.mutate(newTemplate)}
                           disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.htmlBody || createTemplateMutation.isPending}
