@@ -1187,7 +1187,7 @@ export default function ManagerDashboard() {
             <div className="hidden sm:block bg-white rounded-lg border border-gray-200 overflow-visible shadow-sm">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="bg-[#f8f9fa] border-b border-gray-200 text-sm">
+                  <tr className="bg-blue-100/60 border-b-2 border-blue-200 text-sm">
                     <th className="px-2 py-2.5 w-8">
                       <button
                         onClick={() => toggleSelectAll(leads)}
@@ -1240,9 +1240,9 @@ export default function ManagerDashboard() {
                     return (
                       <React.Fragment key={lead.subscriptionId}>
                         <tr
-                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all ${
+                          className={`border-b-2 border-blue-200 hover:bg-blue-100 transition-all bg-blue-50/40 ${
                             badge.rowTint
-                          } ${isSelected ? "ring-2 ring-inset ring-blue-400" : ""}`}
+                          } ${isSelected ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
                         >
                           {/* Checkbox */}
                           <td className="px-2 py-3">
