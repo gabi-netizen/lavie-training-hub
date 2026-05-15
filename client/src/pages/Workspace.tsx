@@ -365,10 +365,10 @@ function ContactCard({
         {isActive && !isDone && (
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="ml-auto w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-            title="Close"
+            className="ml-auto px-3 py-1 flex items-center gap-1 rounded-md bg-gray-100 hover:bg-red-50 border border-gray-300 hover:border-red-300 text-gray-600 hover:text-red-600 font-semibold text-xs transition-colors"
           >
-            <X size={16} />
+            <X size={14} strokeWidth={2.5} />
+            Close
           </button>
         )}
       </div>
