@@ -157,7 +157,7 @@ function NotesCell({
 
       {open && (
         <div
-          className="absolute z-[9999] left-0 top-0 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl p-3"
+          className="absolute z-[9999] left-0 top-0 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl p-3 max-h-[400px] overflow-y-auto"
           style={{ isolation: "isolate", background: "#ffffff" }}
         >
           {editing ? (
@@ -1414,8 +1414,8 @@ export default function ManagerDashboard() {
                               </div>
                               {/* Full customer note in expanded row */}
                               {lead.managerNote && (
-                                <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
-                                  <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1">Customer Message</p>
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg max-h-[200px] overflow-y-auto">
+                                  <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1 sticky top-0 bg-amber-50">Customer Message</p>
                                   <p className="text-sm text-amber-900 whitespace-pre-wrap">{lead.managerNote}</p>
                                 </div>
                               )}
