@@ -1070,7 +1070,7 @@ export default function ManagerDashboard() {
                             onSaveNote={(note) =>
                               assignLead.mutate({
                                 subscriptionId: lead.subscriptionId,
-                                managerNote: note,
+                                agentNote: note,
                               })
                             }
                           />
@@ -1300,7 +1300,7 @@ export default function ManagerDashboard() {
                               onSaveNote={(note) =>
                                 assignLead.mutate({
                                   subscriptionId: lead.subscriptionId,
-                                  managerNote: note,
+                                  agentNote: note,
                                 })
                               }
                             />
