@@ -247,6 +247,19 @@ function ContactCard({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [showAddTemplate, setShowAddTemplate] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
+  const isAdmin = user?.role === "admin";
+  const utils = trpc.useUtils();
+  const createTemplateMutation = trpc.emailTemplates.create.useMutation({
+    onSuccess: () => {
+      toast.success("Template created!");
+      setShowAddTemplate(false);
+      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "" });
+      utils.emailTemplates.list.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
   // Parse concerns from DB comma-separated string, or fall back to concerns array
   const parseConcerns = (c: Contact) => {
     if (c.concern) return c.concern.split(", ").filter(Boolean);
@@ -475,7 +488,58 @@ function ContactCard({
                 <div className="flex flex-1 overflow-hidden">
                   {/* Left: Template list */}
                   <div className="w-72 shrink-0 border-r border-gray-200 overflow-y-auto p-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Choose Template</p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Choose Template</p>
+                      {isAdmin && (
+                        <button
+                          onClick={() => setShowAddTemplate(!showAddTemplate)}
+                          className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                          {showAddTemplate ? "Cancel" : "+ Add"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Add Template Form */}
+                    {showAddTemplate && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <input
+                          type="text"
+                          placeholder="Template Name"
+                          value={newTemplate.name}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Subject Line"
+                          value={newTemplate.subject}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Description (optional)"
+                          value={newTemplate.description}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2"
+                        />
+                        <textarea
+                          placeholder="Paste HTML body here..."
+                          value={newTemplate.htmlBody}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, htmlBody: e.target.value })}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2 h-32 resize-y font-mono"
+                        />
+                        <button
+                          onClick={() => createTemplateMutation.mutate(newTemplate)}
+                          disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.htmlBody || createTemplateMutation.isPending}
+                          className="w-full px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {createTemplateMutation.isPending ? "Saving…" : "Save Template"}
+                        </button>
+                      </div>
+                    )}
+
                     {templatesLoading && (
                       <div className="text-sm text-gray-400 text-center py-8">Loading…</div>
                     )}
