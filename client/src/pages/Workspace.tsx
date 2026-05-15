@@ -219,6 +219,7 @@ function ContactCard({
   isDone,
   doneStatus,
   onSelect,
+  onClose,
   onAction,
   onFieldChange,
 }: {
@@ -227,6 +228,7 @@ function ContactCard({
   isDone: boolean;
   doneStatus?: string;
   onSelect: () => void;
+  onClose: () => void;
   onAction: (action: string) => void;
   onFieldChange: (field: string, value: any) => void;
 }) {
@@ -364,6 +366,14 @@ function ContactCard({
 
       {isActive && !isDone && (
         <div className="ws-expanded" onClick={(e) => e.stopPropagation()}>
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors z-10"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
           {/* Contact Details — Editable */}
           <div className="ws-details">
             <EditableField
@@ -1777,6 +1787,7 @@ export default function Workspace() {
                     isDone={isDone}
                     doneStatus={isOverdueCallback ? undefined : doneItems[contact.id]}
                     onSelect={() => !isDone && setActiveId(contact.id)}
+                    onClose={() => setActiveId(null)}
                     onAction={(action) => handleAction(contact.id, action, contact.phone)}
                     onFieldChange={(field, value) => handleFieldChange(contact.id, field, value)}
                   />
