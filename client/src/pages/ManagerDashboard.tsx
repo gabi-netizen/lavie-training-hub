@@ -33,6 +33,26 @@ import {
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Strip HTML/CSS from customer notes (for display)
+// ─────────────────────────────────────────────────────────────────────────────
+function stripHtml(text: string | null | undefined): string {
+  if (!text) return "";
+  // Remove HTML tags
+  let clean = text.replace(/<[^>]*>/g, " ");
+  // Remove CSS blocks (div.zm_..., css-skikae, apple-link, { color:... })
+  clean = clean.replace(/div\.[\w_.-]+/g, "");
+  clean = clean.replace(/\.[\w_]+-[\w_]+/g, "");
+  clean = clean.replace(/css-[\w]+/g, "");
+  clean = clean.replace(/apple-link/g, "");
+  clean = clean.replace(/\{[^}]*\}/g, "");
+  // Remove &nbsp; and other HTML entities
+  clean = clean.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  // Collapse multiple spaces/newlines
+  clean = clean.replace(/\s+/g, " ").trim();
+  return clean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Lead type badge styles — matched exactly to the Google Sheet screenshot
 // ─────────────────────────────────────────────────────────────────────────────
 function getLeadTypeBadge(
@@ -1002,7 +1022,7 @@ export default function ManagerDashboard() {
                     {(lead.managerNote || lead.agentNote) && (
                       <div className="px-4 pb-2">
                         <p className="text-sm text-gray-800 line-clamp-2">
-                          {lead.managerNote || lead.agentNote}
+                          {stripHtml(lead.managerNote) || lead.agentNote}
                         </p>
                       </div>
                     )}
@@ -1274,14 +1294,25 @@ export default function ManagerDashboard() {
                               {badge.label}
                             </span>
                           </td>
-                          {/* Customer Note — the customer's ticket message (managerNote used as customer note) */}
-                          <td className="px-2 py-3 max-w-[200px]">
-                            <p
-                              className="text-sm text-gray-800 line-clamp-2 leading-snug"
-                              title={lead.managerNote || ""}
-                            >
-                              {lead.managerNote || <span className="text-gray-400 italic text-xs">—</span>}
-                            </p>
+                          {/* Customer Note — expandable */}
+                          <td className="px-2 py-3 max-w-[250px]">
+                            {lead.managerNote ? (() => {
+                              const cleaned = stripHtml(lead.managerNote);
+                              const isLong = cleaned.length > 80;
+                              return (
+                                <details className="group">
+                                  <summary className="text-sm text-gray-800 leading-snug cursor-pointer list-none flex items-start gap-1">
+                                    <span className="line-clamp-2">{cleaned.slice(0, 80)}{isLong ? "..." : ""}</span>
+                                    {isLong && <ChevronDown className="h-4 w-4 mt-0.5 flex-shrink-0 text-gray-400 group-open:hidden" />}
+                                  </summary>
+                                  {isLong && (
+                                    <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto">
+                                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
+                                    </div>
+                                  )}
+                                </details>
+                              );
+                            })() : <span className="text-gray-400 italic text-xs">—</span>}
                           </td>
                           {/* Agent Note */}
                           <td className="px-2 py-3 max-w-[200px]">
@@ -1401,7 +1432,7 @@ export default function ManagerDashboard() {
                               {lead.managerNote && (
                                 <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg max-h-[200px] overflow-y-auto">
                                   <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1 sticky top-0 bg-amber-50">Customer Message</p>
-                                  <p className="text-sm text-amber-900 whitespace-pre-wrap">{lead.managerNote}</p>
+                                  <p className="text-sm text-amber-900 whitespace-pre-wrap">{stripHtml(lead.managerNote)}</p>
                                 </div>
                               )}
                             </td>
