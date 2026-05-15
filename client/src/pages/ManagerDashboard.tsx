@@ -925,7 +925,7 @@ export default function ManagerDashboard() {
                           className={`h-9 w-32 text-sm border rounded-lg font-medium ${
                             lead.assignedAgent
                               ? "text-gray-800 border-gray-300"
-                              : "text-gray-500 italic border-gray-200"
+                              : "text-green-700 bg-green-100 border-green-300"
                           }`}
                         >
                           <SelectValue placeholder="Assign..." />
@@ -1178,10 +1178,10 @@ export default function ManagerDashboard() {
                               }
                             >
                               <SelectTrigger
-                                className={`h-8 w-[90px] text-sm border border-gray-300 rounded-lg px-2 font-medium ${
+                                className={`h-8 w-[90px] text-sm border rounded-lg px-2 font-medium ${
                                   lead.assignedAgent
-                                    ? "text-gray-900"
-                                    : "text-gray-500 italic"
+                                    ? "text-gray-900 border-gray-300"
+                                    : "text-green-700 bg-green-100 border-green-300"
                                 }`}
                               >
                                 <SelectValue placeholder="Assign..." />
