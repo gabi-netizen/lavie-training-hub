@@ -739,4 +739,55 @@ export const contactsRouter = router({
 
       return { success: true };
     }),
+
+  // ─── Check Payment Status via Stripe Payment Link ─────────────────────────
+  checkPaymentStatus: protectedProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { email } = input;
+
+      // Search for completed checkout sessions by customer email
+      const sessions = await stripe.checkout.sessions.list({
+        customer_details: { email } as any,
+        limit: 10,
+      });
+
+      // Check if any session with this email was paid
+      const paidSession = sessions.data.find(
+        (s) => s.payment_status === "paid" && s.customer_details?.email === email
+      );
+
+      if (paidSession) {
+        return {
+          paid: true,
+          amount: paidSession.amount_total ? (paidSession.amount_total / 100).toFixed(2) : "4.95",
+          currency: paidSession.currency || "gbp",
+          paidAt: paidSession.created ? new Date(paidSession.created * 1000).toISOString() : null,
+        };
+      }
+
+      // Also check PaymentIntents as fallback (for card payments done via the form)
+      const paymentIntents = await stripe.paymentIntents.list({
+        limit: 20,
+      });
+
+      const paidIntent = paymentIntents.data.find(
+        (pi) => pi.status === "succeeded" && pi.receipt_email === email
+      );
+
+      if (paidIntent) {
+        return {
+          paid: true,
+          amount: (paidIntent.amount / 100).toFixed(2),
+          currency: paidIntent.currency || "gbp",
+          paidAt: paidIntent.created ? new Date(paidIntent.created * 1000).toISOString() : null,
+        };
+      }
+
+      return { paid: false, amount: null, currency: null, paidAt: null };
+    }),
 });

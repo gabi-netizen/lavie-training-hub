@@ -1011,6 +1011,8 @@ function StripePaymentSection({
   const [testMode, setTestMode] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<{ paid: boolean; amount?: string | null; paidAt?: string | null } | null>(null);
 
   const sendPaymentEmail = trpc.contacts.sendPaymentEmail.useMutation({
     onSuccess: () => {
@@ -1036,6 +1038,30 @@ function StripePaymentSection({
       name: contact.name,
       email: contact.email,
     });
+  };
+
+  const handleCheckPayment = async () => {
+    if (!contact.email) {
+      toast.error("Contact must have an email address.");
+      return;
+    }
+    setCheckingPayment(true);
+    setPaymentStatus(null);
+    try {
+      const res = await fetch(`/api/trpc/contacts.checkPaymentStatus?input=${encodeURIComponent(JSON.stringify({ email: contact.email }))}`);
+      const data = await res.json();
+      const result = data?.result?.data;
+      if (result?.paid) {
+        setPaymentStatus({ paid: true, amount: result.amount, paidAt: result.paidAt });
+        toast.success("Payment confirmed! £" + result.amount);
+      } else {
+        setPaymentStatus({ paid: false });
+        toast.error("No payment found for this customer.");
+      }
+    } catch (err) {
+      toast.error("Failed to check payment status.");
+    }
+    setCheckingPayment(false);
   };
 
   const createPaymentIntent = trpc.contacts.createPaymentIntent.useMutation({
@@ -1133,6 +1159,46 @@ function StripePaymentSection({
         {emailSent && (
           <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "6px", textAlign: "center" }}>
             Sent to {contact.email}
+          </div>
+        )}
+      </div>
+
+      {/* ── Check Payment Status section ── */}
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+        <button
+          type="button"
+          onClick={handleCheckPayment}
+          disabled={checkingPayment}
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "8px",
+            border: "2px solid #f59e0b",
+            background: "white",
+            color: "#f59e0b",
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: checkingPayment ? "not-allowed" : "pointer",
+            opacity: checkingPayment ? 0.6 : 1,
+          }}
+        >
+          {checkingPayment ? "Checking…" : "🔍 Check Payment Status"}
+        </button>
+        {paymentStatus && (
+          <div style={{
+            marginTop: "8px",
+            padding: "10px",
+            borderRadius: "8px",
+            background: paymentStatus.paid ? "#ecfdf5" : "#fef2f2",
+            border: paymentStatus.paid ? "1px solid #10b981" : "1px solid #ef4444",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: paymentStatus.paid ? "#065f46" : "#991b1b",
+            textAlign: "center",
+          }}>
+            {paymentStatus.paid
+              ? `✅ Paid £${paymentStatus.amount}${paymentStatus.paidAt ? " on " + new Date(paymentStatus.paidAt).toLocaleDateString("en-GB") : ""}`
+              : "❌ Not paid yet"}
           </div>
         )}
       </div>
