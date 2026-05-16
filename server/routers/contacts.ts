@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { adminProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import Stripe from "stripe";
+
+// Stripe restricted key — read from Railway environment variable
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 import {
   listContacts,
   getContact,
@@ -632,4 +637,65 @@ export const contactsRouter = router({
   callbacksDue: protectedProcedure.query(async () => {
     return getCallbacksDue();
   }),
+
+  // ─── Stripe: Create PaymentIntent for £4.95 ──────────────────────────────
+  createPaymentIntent: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        name: z.string().min(1),
+        email: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { contactId, name, email } = input;
+
+      // Create a Stripe Customer
+      const customer = await stripe.customers.create({
+        name,
+        email,
+        metadata: { contactId: String(contactId) },
+      });
+
+      // Create a PaymentIntent for £4.95 (495 pence) attached to the customer
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 495,
+        currency: "gbp",
+        customer: customer.id,
+        metadata: { contactId: String(contactId) },
+        automatic_payment_methods: { enabled: true },
+      });
+
+      return {
+        clientSecret: paymentIntent.client_secret,
+        customerId: customer.id,
+      };
+    }),
+
+  // ─── Stripe: Confirm payment success — save customer ID & mark sold ───────
+  confirmPayment: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        stripeCustomerId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { contactId, stripeCustomerId } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const { contacts: contactsTable } = await import("../../drizzle/schema");
+
+      // Save Stripe Customer ID and mark as sold (done_deal)
+      await db
+        .update(contactsTable)
+        .set({
+          stripeCustomerId,
+          status: "done_deal",
+        })
+        .where(eq(contactsTable.id, contactId));
+
+      return { success: true };
+    }),
 });

@@ -7,6 +7,16 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// Stripe publishable keys
+const STRIPE_LIVE_PK = "pk_live_51IuIy2EfUpox0KeWfAcGnlsc5OyDrbkti82yntGcWWd8xHUHuJBIoUjq5dLQCOBBSGDT7plnxVl8CJxUjTgulIlE00toX4MBQf";
+const STRIPE_TEST_PK = import.meta.env.VITE_STRIPE_TEST_PK || "pk_test_51IuIy2EfUpox0KeWXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+
+// Lazy-load Stripe instances
+const stripeLivePromise = loadStripe(STRIPE_LIVE_PK);
+const stripeTestPromise = loadStripe(STRIPE_TEST_PK);
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronLeft, ChevronDown, CreditCard, Search,
@@ -892,24 +902,206 @@ function ContactCard({
           </div>
 
           {payOpen && (
-            <div className="ws-pay-box">
-              <div className="ws-pay-title">
-                <CreditCard size={14} /> Payment Details
-              </div>
-              <div className="ws-pay-grid">
-                <input className="ws-pay-input" placeholder="Card Number" />
-                <div className="ws-pay-row2">
-                  <input className="ws-pay-input" placeholder="MM/YY" />
-                  <input className="ws-pay-input" placeholder="CVV" />
-                </div>
-                <input className="ws-pay-input" placeholder="Name on Card" />
-              </div>
-              <button className="ws-pay-submit">
-                Charge £4.95
-              </button>
-            </div>
+            <StripePaymentSection
+              contact={contact}
+              isAdmin={isAdmin}
+              onSuccess={() => {
+                setPayOpen(false);
+                onAction("sold");
+              }}
+            />
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// STRIPE PAYMENT SECTION COMPONENT
+// ==========================================
+
+/** Inner form that uses Stripe hooks (must be inside <Elements>) */
+function StripeCheckoutForm({
+  contactId,
+  customerId,
+  onSuccess,
+}: {
+  contactId: number;
+  customerId: string;
+  onSuccess: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const confirmPaymentMutation = trpc.contacts.confirmPayment.useMutation({
+    onSuccess: () => {
+      toast.success("Payment successful! Contact marked as Sold.");
+      onSuccess();
+    },
+    onError: (err: any) => {
+      toast.error(`Failed to save payment: ${err.message}`);
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setErrorMsg(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.href,
+      },
+      redirect: "if_required",
+    });
+
+    if (error) {
+      setErrorMsg(error.message || "Payment failed. Please try again.");
+      setProcessing(false);
+    } else {
+      // Payment succeeded — save to DB
+      confirmPaymentMutation.mutate({
+        contactId,
+        stripeCustomerId: customerId,
+      });
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      {errorMsg && (
+        <div style={{ color: "#ef4444", fontSize: "12px", marginTop: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+          <AlertCircle size={12} /> {errorMsg}
+        </div>
+      )}
+      <button
+        type="submit"
+        className="ws-pay-submit"
+        disabled={!stripe || processing}
+        style={processing ? { opacity: 0.6, cursor: "not-allowed" } : {}}
+      >
+        {processing ? "Processing…" : "Charge \u00a34.95"}
+      </button>
+    </form>
+  );
+}
+
+/** Wrapper that handles PaymentIntent creation and renders Stripe Elements */
+function StripePaymentSection({
+  contact,
+  isAdmin,
+  onSuccess,
+}: {
+  contact: Contact;
+  isAdmin: boolean;
+  onSuccess: () => void;
+}) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [testMode, setTestMode] = useState(false);
+
+  const createPaymentIntent = trpc.contacts.createPaymentIntent.useMutation({
+    onSuccess: (data) => {
+      setClientSecret(data.clientSecret);
+      setCustomerId(data.customerId);
+      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.message || "Failed to initialize payment.");
+      setLoading(false);
+    },
+  });
+
+  useEffect(() => {
+    // Auto-create PaymentIntent when section opens
+    if (!contact.email) {
+      setError("Contact must have an email address to process payment.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setClientSecret(null);
+    setCustomerId(null);
+    createPaymentIntent.mutate({
+      contactId: contact.id,
+      name: contact.name,
+      email: contact.email,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact.id]);
+
+  const stripePromise = testMode ? stripeTestPromise : stripeLivePromise;
+
+  return (
+    <div className="ws-pay-box">
+      <div className="ws-pay-title" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <CreditCard size={14} /> Payment Details
+        </span>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setTestMode(!testMode)}
+            style={{
+              fontSize: "10px",
+              padding: "2px 8px",
+              borderRadius: "4px",
+              border: "1px solid #d1d5db",
+              background: testMode ? "#fef3c7" : "#d1fae5",
+              color: testMode ? "#92400e" : "#065f46",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {testMode ? "⚠\ufe0f TEST" : "\u2705 LIVE"}
+          </button>
+        )}
+      </div>
+
+      {loading && (
+        <div style={{ padding: "16px", textAlign: "center", color: "#6b7280", fontSize: "13px" }}>
+          Initializing payment…
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: "12px", color: "#ef4444", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+          <AlertCircle size={12} /> {error}
+        </div>
+      )}
+
+      {clientSecret && customerId && (
+        <Elements
+          stripe={stripePromise}
+          options={{
+            clientSecret,
+            appearance: {
+              theme: "stripe",
+              variables: {
+                colorPrimary: "#6366f1",
+                borderRadius: "8px",
+                fontFamily: "Inter, system-ui, sans-serif",
+                fontSizeBase: "13px",
+              },
+            },
+          }}
+        >
+          <StripeCheckoutForm
+            contactId={contact.id}
+            customerId={customerId}
+            onSuccess={onSuccess}
+          />
+        </Elements>
       )}
     </div>
   );

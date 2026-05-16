@@ -188,6 +188,8 @@ export const contacts = mysqlTable("contacts", {
   address: text("address"),
   /** Department: opening or retention. Default opening. */
   department: mysqlEnum("department", ["opening", "retention"]).default("opening").notNull(),
+  /** Stripe Customer ID — set after successful payment */
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
