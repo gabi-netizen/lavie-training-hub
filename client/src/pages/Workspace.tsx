@@ -10,8 +10,21 @@ import { useLocation } from "wouter";
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronDown, CreditCard, Search,
-  Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus
+  Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus, ChevronsUpDown
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 // ==========================================
 // TYPES
@@ -24,11 +37,11 @@ interface Contact {
   address?: string;
   leadType?: string;
   status?: string;
+  /** stores age value (e.g. "52", "30 & Under", "90+") — DB column: skinType */
   skinType?: string;
-  /** comma-separated string from DB */
+  /** stores current skincare brand — DB column: concern */
   concern?: string;
-  /** UI-only: parsed from concern */
-  concerns?: string[];
+  /** stores products used — DB column: routine */
   routine?: string;
   trialKit?: string;
   /** free notes from DB */
@@ -41,87 +54,106 @@ interface Contact {
 }
 
 // ==========================================
-// CONCERN OPTIONS
+// DROPDOWN OPTIONS
 // ==========================================
-const CONCERN_OPTIONS = [
-  "Wrinkles", "Dark circles", "Puffiness", "Sun damage",
-  "Dry patches", "Fine lines", "Firmness", "Acne", "Other"
+
+// AGE: "30 & Under", 31–89, "90+"
+const AGE_OPTIONS: string[] = [
+  "30 & Under",
+  ...Array.from({ length: 59 }, (_, i) => String(31 + i)), // 31..89
+  "90+",
 ];
 
-const SKIN_OPTIONS = ["Dry", "Combination", "Oily", "Sensitive", "Normal"];
-const ROUTINE_OPTIONS = ["None", "Basic", "Full routine", "Medical"];
+const CURRENT_BRAND_OPTIONS = [
+  // Premium
+  "Estée Lauder",
+  "Clinique",
+  "Lancôme",
+  "Clarins",
+  "Elemis",
+  "L'Occitane",
+  // Budget
+  "No.7",
+  "Nivea",
+  "Olay",
+  "Simple",
+  // Other
+  "Other",
+  "None",
+];
+
+const PRODUCTS_USED_OPTIONS = [
+  "Cleanser only",
+  "Moisturiser only",
+  "2-3 Products",
+  "Full Routine (4+)",
+  "Nothing",
+];
+
 const TRIAL_KIT_OPTIONS = ["Matinika + Oulala", "Matinika + Ashkara"];
 
 // ==========================================
-// MULTI-SELECT CONCERN COMPONENT
+// AGE SEARCHABLE COMBOBOX COMPONENT
 // ==========================================
-function ConcernMultiSelect({
-  selected,
+function AgeCombobox({
+  value,
   onChange,
 }: {
-  selected: string[];
-  onChange: (val: string[]) => void;
+  value: string;
+  onChange: (val: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, []);
-
-  const toggle = (val: string) => {
-    onChange(
-      selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val]
-    );
-  };
 
   return (
-    <div className="ws-concern-multi" ref={ref}>
-      <div className="ws-concern-trigger" onClick={() => setOpen(!open)}>
-        <div className="ws-concern-tags">
-          {selected.length === 0 ? (
-            <span className="text-[#1f2937] text-xs">Select</span>
-          ) : (
-            selected.map((val) => (
-              <span key={val} className="ws-concern-tag">
-                {val}
-                <span
-                  className="ws-concern-remove"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggle(val);
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          className="ws-select flex items-center justify-between cursor-pointer text-left"
+          style={{ appearance: "none" }}
+        >
+          <span className={value ? "text-[#1f2937]" : "text-gray-400"}>
+            {value || "Select"}
+          </span>
+          <ChevronsUpDown size={12} className="text-gray-400 shrink-0 ml-1" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0 bg-white border border-gray-200 shadow-lg rounded-lg"
+        style={{ width: "160px", zIndex: 9999 }}
+        align="start"
+      >
+        <Command>
+          <CommandInput placeholder="Type age..." className="text-xs h-8" />
+          <CommandList style={{ maxHeight: "200px" }}>
+            <CommandEmpty className="text-xs text-gray-400 py-2 text-center">No match</CommandEmpty>
+            <CommandGroup>
+              {AGE_OPTIONS.map((opt) => (
+                <CommandItem
+                  key={opt}
+                  value={opt}
+                  onSelect={(currentValue) => {
+                    onChange(currentValue === value ? "" : currentValue);
+                    setOpen(false);
                   }}
+                  className="text-xs cursor-pointer"
                 >
-                  &times;
-                </span>
-              </span>
-            ))
-          )}
-        </div>
-        <span className="text-[#1f2937] text-[10px]">&#9660;</span>
-      </div>
-      {open && (
-        <div className="ws-concern-dropdown">
-          {CONCERN_OPTIONS.map((opt) => (
-            <div
-              key={opt}
-              className={`ws-concern-option ${selected.includes(opt) ? "selected" : ""}`}
-              onClick={() => toggle(opt)}
-            >
-              <span className="ws-concern-check">
-                {selected.includes(opt) ? "✓" : ""}
-              </span>
-              {opt}
-            </div>
-          ))}
-          <div className="ws-concern-scroll-hint">↓ scroll for more</div>
-        </div>
-      )}
-    </div>
+                  <Check
+                    size={12}
+                    className={`mr-1.5 shrink-0 ${
+                      value === opt ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                  {opt}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -258,24 +290,17 @@ function ContactCard({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
-  // Parse concerns from DB comma-separated string, or fall back to concerns array
-  const parseConcerns = (c: Contact) => {
-    if (c.concern) return c.concern.split(", ").filter(Boolean);
-    return c.concerns ?? [];
-  };
-  const [concerns, setConcerns] = useState<string[]>(() => parseConcerns(contact));
   const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const [savedNotes, setSavedNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const notesChanged = notes !== savedNotes;
 
   // Sync local state when contact changes (different contact selected OR same contact refetched from DB)
   useEffect(() => {
-    setConcerns(parseConcerns(contact));
     const freshNotes = contact.callNotes ?? contact.notes ?? "";
     setNotes(freshNotes);
     setSavedNotes(freshNotes);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact.id, contact.callNotes, contact.concern, contact.skinType, contact.routine, contact.trialKit]);
+  }, [contact.id, contact.callNotes, contact.skinType, contact.concern, contact.routine, contact.trialKit]);
 
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -337,11 +362,6 @@ function ContactCard({
     .join("")
     .toUpperCase()
     .slice(0, 2);
-
-  const handleConcernChange = (val: string[]) => {
-    setConcerns(val);
-    onFieldChange("concerns", val);
-  };
 
   return (
     <div
@@ -432,33 +452,36 @@ function ContactCard({
           <div className="ws-fields">
             <div className="ws-field-row">
               <div className="ws-field">
-                <label>Skin</label>
+                <label>Age</label>
+                <AgeCombobox
+                  value={contact.skinType ?? ""}
+                  onChange={(v) => onFieldChange("skinType", v)}
+                />
+              </div>
+              <div className="ws-field">
+                <label>Current Brand</label>
                 <select
                   className="ws-select"
-                  value={contact.skinType ?? ""}
-                  onChange={(e) => onFieldChange("skinType", e.target.value)}
+                  value={contact.concern ?? ""}
+                  onChange={(e) => onFieldChange("concern", e.target.value)}
                 >
                   <option value="">Select</option>
-                  {SKIN_OPTIONS.map((o) => (
+                  {CURRENT_BRAND_OPTIONS.map((o) => (
                     <option key={o}>{o}</option>
                   ))}
                 </select>
               </div>
-              <div className="ws-field">
-                <label>Concern</label>
-                <ConcernMultiSelect selected={concerns} onChange={handleConcernChange} />
-              </div>
             </div>
             <div className="ws-field-row">
               <div className="ws-field">
-                <label>Routine</label>
+                <label>Products Used</label>
                 <select
                   className="ws-select"
                   value={contact.routine ?? ""}
                   onChange={(e) => onFieldChange("routine", e.target.value)}
                 >
                   <option value="">Select</option>
-                  {ROUTINE_OPTIONS.map((o) => (
+                  {PRODUCTS_USED_OPTIONS.map((o) => (
                     <option key={o}>{o}</option>
                   ))}
                 </select>
@@ -1768,9 +1791,6 @@ export default function Workspace() {
     const persistedFields = ["name", "phone", "email", "status", "leadType", "skinType", "concern", "routine", "trialKit", "callNotes", "address"];
     if (persistedFields.includes(field)) {
       updateContact.mutate({ id: contactId, [field]: value });
-    } else if (field === "concerns") {
-      // concerns is a string[] in UI but stored as comma-separated string in DB
-      updateContact.mutate({ id: contactId, concern: Array.isArray(value) ? value.join(", ") : value });
     } else if (field === "notes") {
       // "notes" in UI maps to "callNotes" in DB
       updateContact.mutate({ id: contactId, callNotes: value });
