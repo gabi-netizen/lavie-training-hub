@@ -33,17 +33,17 @@ export const pitchRouter = router({
       return { success: true };
     }),
 
-  allUsers: adminProcedure.query(async () => {
+  allUsers: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
     return db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users);
   }),
 
-  agentsOverview: adminProcedure.query(async () => {
+  agentsOverview: protectedProcedure.query(async () => {
     return getAllPitchCustomizationsOverview();
   }),
 
-  agentCustomizations: adminProcedure
+  agentCustomizations: protectedProcedure
     .input(z.object({ agentUserId: z.number() }))
     .query(async ({ input }) => {
       return getUserPitchCustomizations(input.agentUserId);

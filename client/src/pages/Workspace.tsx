@@ -1489,7 +1489,7 @@ export default function Workspace() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
   // Fetch all users (for manager view agent filtering)
-  const { data: allUsersWs } = trpc.pitch.allUsers.useQuery(undefined, { enabled: isAdmin });
+  const { data: allUsersWs } = trpc.pitch.allUsers.useQuery(undefined, { enabled: true });
   const selectedAgentEmail = useMemo(() => {
     if (!managerMode || !selectedAgentId || !allUsersWs) return undefined;
     const agent = allUsersWs.find((u: any) => u.id === selectedAgentId);
@@ -1839,26 +1839,24 @@ export default function Workspace() {
         <div className="ws-sales-tools">
           <div className="ws-script-col">
             <div className="ws-sales-content">
-              {/* ── My Pitch / Manager View Toggle (admin only) ── */}
-              {isAdmin && (
-                <div className="ws-mode-toggle" style={{ marginBottom: 12 }}>
-                  <button
-                    className={`ws-mode-btn ${!managerMode ? "active" : ""}`}
-                    onClick={() => setManagerMode(false)}
-                  >
-                    <Edit3 size={14} /> My Pitch
-                  </button>
-                  <button
-                    className={`ws-mode-btn ${managerMode ? "active" : ""}`}
-                    onClick={() => setManagerMode(true)}
-                  >
-                    <Users size={14} /> Manager View
-                  </button>
-                </div>
-              )}
+              {/* ── My Pitch / Manager View Toggle (all users temporarily) ── */}
+              <div className="ws-mode-toggle" style={{ marginBottom: 12 }}>
+                <button
+                  className={`ws-mode-btn ${!managerMode ? "active" : ""}`}
+                  onClick={() => setManagerMode(false)}
+                >
+                  <Edit3 size={14} /> My Pitch
+                </button>
+                <button
+                  className={`ws-mode-btn ${managerMode ? "active" : ""}`}
+                  onClick={() => setManagerMode(true)}
+                >
+                  <Users size={14} /> Manager View
+                </button>
+              </div>
 
               {/* ── Pitch Panel (7-stage with Edit/Reset) ── */}
-              {managerMode && isAdmin ? (
+              {managerMode ? (
                 <ManagerView
                   selectedAgentId={selectedAgentId}
                   setSelectedAgentId={setSelectedAgentId}
