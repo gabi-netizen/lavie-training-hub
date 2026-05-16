@@ -492,7 +492,7 @@ function ContactCard({
       onClick={onSelect}
     >
       <div className="ws-row1">
-        {isActive && (
+        {isActive ? (
           <div className="flex items-center gap-1 mr-2">
             <button
               onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
@@ -511,8 +511,9 @@ function ContactCard({
               <ChevronRight size={18} strokeWidth={2.5} />
             </button>
           </div>
+        ) : (
+          <div className="ws-avatar">{initials}</div>
         )}
-        <div className="ws-avatar">{initials}</div>
         <div className="ws-name-box">
           <div className="ws-name">{contact.name}</div>
           <div className="ws-phone">{contact.phone}</div>
