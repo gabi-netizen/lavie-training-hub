@@ -130,6 +130,18 @@ function AgeCombobox({
           <CommandList style={{ maxHeight: "200px" }}>
             <CommandEmpty className="text-xs text-gray-400 py-2 text-center">No match</CommandEmpty>
             <CommandGroup>
+              {value && (
+                <CommandItem
+                  value="__clear__"
+                  onSelect={() => {
+                    onChange("");
+                    setOpen(false);
+                  }}
+                  className="text-xs cursor-pointer text-red-500"
+                >
+                  ✕ Clear selection
+                </CommandItem>
+              )}
               {AGE_OPTIONS.map((opt) => (
                 <CommandItem
                   key={opt}
@@ -212,6 +224,19 @@ function BrandCombobox({
           />
         </div>
         <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+          {value && !search.trim() && (
+            <button
+              type="button"
+              className="w-full text-left text-xs px-3 py-1.5 hover:bg-red-50 text-red-500 cursor-pointer border-b border-gray-100"
+              onClick={() => {
+                onChange("");
+                setSearch("");
+                setOpen(false);
+              }}
+            >
+              ✕ Clear selection
+            </button>
+          )}
           {search.trim() && !filtered.some((o) => o.toLowerCase() === search.toLowerCase()) && (
             <button
               type="button"
