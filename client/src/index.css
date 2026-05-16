@@ -800,6 +800,7 @@
 .ws-ps-arrow { color: #1f2937; flex-shrink: 0; }
 .ws-ps-body { padding: 0 12px 16px 44px; }
 .ws-ps-instruction {
+  font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: #16a34a;
@@ -813,6 +814,7 @@
   margin-bottom: 6px;
 }
 .ws-ps-say {
+  font-family: 'DM Sans', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: #111827;
@@ -821,7 +823,7 @@
   padding: 14px 16px;
   border-radius: 0 6px 6px 0;
   margin-bottom: 14px;
-  font-style: italic;
+  font-style: normal;
   line-height: 1.75;
 }
 .ws-ps-closing {
