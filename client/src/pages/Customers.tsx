@@ -187,6 +187,10 @@ const STATUS_COLOURS: Record<string, string> = {
   open:          "bg-blue-100 text-blue-700",
   working:       "bg-amber-100 text-amber-700",
   assigned:      "bg-purple-100 text-purple-700",
+  called:        "bg-sky-100 text-sky-700",
+  sold:          "bg-green-100 text-green-700",
+  not_interested: "bg-orange-100 text-orange-700",
+  no_answer:     "bg-yellow-100 text-yellow-700",
   done_deal:     "bg-green-100 text-green-700",
   retained_sub:  "bg-emerald-100 text-emerald-700",
   cancelled_sub: "bg-red-100 text-red-700",
@@ -198,11 +202,25 @@ const STATUS_LABELS: Record<string, string> = {
   open:          "Open",
   working:       "Working",
   assigned:      "Assigned",
+  called:        "Called",
+  sold:          "Sold",
+  not_interested: "Not Interested",
+  no_answer:     "No Answer",
   done_deal:     "Done Deal",
   retained_sub:  "Retained Sub",
   cancelled_sub: "Cancelled Sub",
   closed:        "Closed",
 };
+
+// Opening-specific statuses for the filter dropdown
+const OPENING_STATUSES = [
+  { value: "new", label: "New" },
+  { value: "assigned", label: "Assigned" },
+  { value: "called", label: "Called" },
+  { value: "sold", label: "Sold" },
+  { value: "not_interested", label: "Not Interested" },
+  { value: "no_answer", label: "No Answer" },
+] as const;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function LeadTypeBadge({ type }: { type?: string | null }) {
@@ -234,6 +252,9 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [filterLeadType, setFilterLeadType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterAgent, setFilterAgent] = useState("");
+  const [filterSource, setFilterSource] = useState("");
+  const [filterLeadDateFrom, setFilterLeadDateFrom] = useState("");
+  const [filterLeadDateTo, setFilterLeadDateTo] = useState("");
   const [importing, setImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(100);
@@ -258,6 +279,9 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
     department,
+    source: filterSource || undefined,
+    leadDateFrom: filterLeadDateFrom || undefined,
+    leadDateTo: filterLeadDateTo || undefined,
   });
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
@@ -265,6 +289,9 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
     department,
+    source: filterSource || undefined,
+    leadDateFrom: filterLeadDateFrom || undefined,
+    leadDateTo: filterLeadDateTo || undefined,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   });
@@ -434,7 +461,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     });
   };
 
-  const activeFilters = [filterLeadType, filterStatus, filterAgent].filter(Boolean).length;
+  const activeFilters = [filterLeadType, filterStatus, filterAgent, filterSource, filterLeadDateFrom, filterLeadDateTo].filter(Boolean).length;
 
   // Stats
   const totalContacts = contacts.length;
@@ -495,7 +522,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
         {/* ── Department Tabs ── */}
         <div className="mt-4">
-          <Tabs value={department} onValueChange={(v) => { setDepartment(v as "opening" | "retention"); resetPage(); setSelectedIds(new Set()); }}>
+          <Tabs value={department} onValueChange={(v) => { setDepartment(v as "opening" | "retention"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
             <TabsList>
               <TabsTrigger value="opening" className="px-6">Opening</TabsTrigger>
               <TabsTrigger value="retention" className="px-6">Retention</TabsTrigger>
@@ -556,8 +583,85 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <ChevronDown size={13} />
           </Button>
 
-          {showFilters && (
+          {showFilters && department === "opening" && (
             <>
+              {/* Source filter (Opening only) */}
+              <Select value={filterSource || "__all__"} onValueChange={v => { setFilterSource(v === "__all__" ? "" : v); resetPage(); }}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
+                  <SelectValue placeholder="All sources" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 max-h-64">
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All sources</SelectItem>
+                  {meta?.sources?.map(s => (
+                    <SelectItem key={s} value={s} className="text-gray-800 text-sm">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status filter (Opening-specific statuses) */}
+              <Select value={filterStatus || "__all__"} onValueChange={v => { setFilterStatus(v === "__all__" ? "" : v); resetPage(); }}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All statuses</SelectItem>
+                  {OPENING_STATUSES.map(s => (
+                    <SelectItem key={s.value} value={s.value} className="text-gray-800 text-sm">{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Agent filter */}
+              <Select value={filterAgent || "__all__"} onValueChange={v => { setFilterAgent(v === "__all__" ? "" : v); resetPage(); }}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
+                  <SelectValue placeholder="All agents" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 max-h-64">
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All agents</SelectItem>
+                  <SelectItem value="unassigned" className="text-gray-800 text-sm">Unassigned</SelectItem>
+                  {agentList.map((a: any) => (
+                    <SelectItem key={a.id} value={a.email ?? `agent-${a.id}`} className="text-gray-800 text-sm">{a.name ?? `Agent #${a.id}`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Lead Date range filter */}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={filterLeadDateFrom}
+                  onChange={e => { setFilterLeadDateFrom(e.target.value); resetPage(); }}
+                  className="bg-white border border-gray-200 text-gray-700 text-sm h-9 px-2 rounded-md w-[130px] focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  placeholder="From"
+                  title="Lead Date From"
+                />
+                <span className="text-gray-400 text-xs">to</span>
+                <input
+                  type="date"
+                  value={filterLeadDateTo}
+                  onChange={e => { setFilterLeadDateTo(e.target.value); resetPage(); }}
+                  className="bg-white border border-gray-200 text-gray-700 text-sm h-9 px-2 rounded-md w-[130px] focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  placeholder="To"
+                  title="Lead Date To"
+                />
+              </div>
+
+              {activeFilters > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
+                  onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}
+                >
+                  <X size={13} /> Clear
+                </Button>
+              )}
+            </>
+          )}
+
+          {showFilters && department === "retention" && (
+            <>
+              {/* Lead Type filter (Retention only) */}
               <Select value={filterLeadType || "__all__"} onValueChange={v => { setFilterLeadType(v === "__all__" ? "" : v); resetPage(); }}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
                   <SelectValue placeholder="All lead types" />
@@ -570,6 +674,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
 
+              {/* Status filter (Retention - all statuses) */}
               <Select value={filterStatus || "__all__"} onValueChange={v => { setFilterStatus(v === "__all__" ? "" : v); resetPage(); }}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
                   <SelectValue placeholder="All statuses" />
@@ -582,6 +687,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
 
+              {/* Agent filter */}
               <Select value={filterAgent || "__all__"} onValueChange={v => { setFilterAgent(v === "__all__" ? "" : v); resetPage(); }}>
                 <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
                   <SelectValue placeholder="All agents" />

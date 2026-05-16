@@ -14,6 +14,7 @@ import {
   normalisePhone,
   getCallbacksDue,
   countContacts,
+  getDistinctSources,
   LEAD_TYPES,
   CONTACT_STATUSES,
   type CsvContactRow,
@@ -153,6 +154,9 @@ export const contactsRouter = router({
         agentName: z.string().optional(),
         agentEmail: z.string().optional(),
         department: z.enum(["opening", "retention"]).optional(),
+        source: z.string().optional(),
+        leadDateFrom: z.string().optional(),
+        leadDateTo: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -174,6 +178,9 @@ export const contactsRouter = router({
         agentName: z.string().optional(),
         agentEmail: z.string().optional(),
         department: z.enum(["opening", "retention"]).optional(),
+        source: z.string().optional(),
+        leadDateFrom: z.string().optional(),
+        leadDateTo: z.string().optional(),
         limit: z.number().min(1).max(5000).default(5000),
         offset: z.number().min(0).default(0),
       })
@@ -358,10 +365,14 @@ export const contactsRouter = router({
     }),
 
   // ─── Return metadata (lead types, statuses) ───────────────────────────────
-  meta: protectedProcedure.query(() => ({
-    leadTypes: LEAD_TYPES,
-    statuses: CONTACT_STATUSES,
-  })),
+  meta: protectedProcedure.query(async () => {
+    const sources = await getDistinctSources();
+    return {
+      leadTypes: LEAD_TYPES,
+      statuses: CONTACT_STATUSES,
+      sources,
+    };
+  }),
 
   // ─── ActiveCampaign: get lists ────────────────────────────────────────────
   acLists: protectedProcedure.query(async () => {

@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { contacts, contactCallNotes, type Contact, type InsertContact } from "../drizzle/schema";
-import { eq, like, or, desc, and, gte, lte, isNull, inArray, count } from "drizzle-orm";
+import { eq, like, or, desc, and, gte, lte, isNull, isNotNull, inArray, count, sql } from "drizzle-orm";
 
 // ─── Lead Types ───────────────────────────────────────────────────────────────
 export const LEAD_TYPES = [
@@ -70,6 +70,9 @@ export async function listContacts({
   agentName,
   agentEmail,
   department,
+  source,
+  leadDateFrom,
+  leadDateTo,
   limit = 50,
   offset = 0,
 }: {
@@ -79,6 +82,9 @@ export async function listContacts({
   agentName?: string;
   agentEmail?: string;
   department?: string;
+  source?: string;
+  leadDateFrom?: string;
+  leadDateTo?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -104,7 +110,15 @@ export async function listContacts({
   } else if (agentEmail) {
     conditions.push(eq(contacts.agentEmail, agentEmail));
   }
-  if (department) conditions.push(eq(contacts.department, department));
+  if (department) conditions.push(eq(contacts.department, department as "opening" | "retention"));
+  if (source) conditions.push(eq(contacts.source, source));
+  if (leadDateFrom) conditions.push(gte(contacts.leadDate, new Date(leadDateFrom)));
+  if (leadDateTo) {
+    // Include the entire "to" day
+    const toEnd = new Date(leadDateTo);
+    toEnd.setHours(23, 59, 59, 999);
+    conditions.push(lte(contacts.leadDate, toEnd));
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -125,6 +139,9 @@ export async function countContacts({
   agentName,
   agentEmail,
   department,
+  source,
+  leadDateFrom,
+  leadDateTo,
 }: {
   search?: string;
   leadType?: string;
@@ -132,6 +149,9 @@ export async function countContacts({
   agentName?: string;
   agentEmail?: string;
   department?: string;
+  source?: string;
+  leadDateFrom?: string;
+  leadDateTo?: string;
 } = {}) {
   const db = await getDb();
   if (!db) return 0;
@@ -153,10 +173,31 @@ export async function countContacts({
   } else if (agentEmail) {
     conditions.push(eq(contacts.agentEmail, agentEmail));
   }
-  if (department) conditions.push(eq(contacts.department, department));
+  if (department) conditions.push(eq(contacts.department, department as "opening" | "retention"));
+  if (source) conditions.push(eq(contacts.source, source));
+  if (leadDateFrom) conditions.push(gte(contacts.leadDate, new Date(leadDateFrom)));
+  if (leadDateTo) {
+    const toEnd = new Date(leadDateTo);
+    toEnd.setHours(23, 59, 59, 999);
+    conditions.push(lte(contacts.leadDate, toEnd));
+  }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [row] = await db.select({ total: count() }).from(contacts).where(where);
   return row?.total ?? 0;
+}
+
+// ─── Get Distinct Sources ─────────────────────────────────────────────────────
+export async function getDistinctSources(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .selectDistinct({ source: contacts.source })
+    .from(contacts)
+    .where(isNotNull(contacts.source));
+  return rows
+    .map((r) => r.source)
+    .filter((s): s is string => !!s && s.trim().length > 0)
+    .sort();
 }
 
 // ─── Get Single Contact ────────────────────────────────────────────────────────
