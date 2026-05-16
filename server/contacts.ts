@@ -353,6 +353,24 @@ export async function getCallbacksDue() {
     .orderBy(contacts.callbackAt);
 }
 
+// ─── Get ALL scheduled callbacks (future + overdue) ──────────────────────────
+export async function getAllCallbacks(agentEmail?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [
+    isNotNull(contacts.callbackAt),
+    eq(contacts.status, "working"),
+  ];
+  if (agentEmail) {
+    conditions.push(eq(contacts.agentEmail, agentEmail));
+  }
+  return db
+    .select()
+    .from(contacts)
+    .where(and(...conditions))
+    .orderBy(contacts.callbackAt);
+}
+
 // ─── Lookup Contact By Phone ───────────────────────────────────────────────────
 /**
  * Normalize a phone number for comparison.

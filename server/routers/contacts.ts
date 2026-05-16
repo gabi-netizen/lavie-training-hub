@@ -18,6 +18,7 @@ import {
   bulkAssignContacts,
   normalisePhone,
   getCallbacksDue,
+  getAllCallbacks,
   countContacts,
   getDistinctSources,
   LEAD_TYPES,
@@ -636,6 +637,13 @@ export const contactsRouter = router({
   // ─── Get overdue callbacks (callbackAt <= now) ────────────────────────────
   callbacksDue: protectedProcedure.query(async () => {
     return getCallbacksDue();
+  }),
+
+  // ─── Get ALL scheduled callbacks (future + overdue) for the current agent ──
+  allCallbacks: protectedProcedure.query(async ({ ctx }) => {
+    // Non-admin agents only see their own callbacks
+    const agentEmail = ctx.user.role !== 'admin' ? (ctx.user.email ?? undefined) : undefined;
+    return getAllCallbacks(agentEmail);
   }),
 
   // ─── Stripe: Create PaymentIntent for £4.95 ──────────────────────────────

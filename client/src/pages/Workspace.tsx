@@ -1980,6 +1980,130 @@ function QuickTools() {
 }
 
 // ==========================================
+// CALLBACKS PANEL — list all scheduled callbacks
+// ==========================================
+function CallbacksPanel({
+  callbacks,
+  onSelectContact,
+}: {
+  callbacks: any[];
+  onSelectContact: (id: number) => void;
+}) {
+  const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
+  const now = new Date();
+
+  if (callbacks.length === 0) {
+    return (
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", padding: "60px 20px", color: "#6b7280",
+        gap: 12,
+      }}>
+        <Calendar size={40} className="text-gray-300" />
+        <p style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>No callbacks scheduled \uD83C\uDF89</p>
+        <p style={{ fontSize: 13, color: "#9ca3af" }}>When you schedule callbacks, they'll appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "4px 0" }}>
+      {callbacks.map((cb) => {
+        const cbDate = cb.callbackAt ? new Date(cb.callbackAt) : null;
+        const isOverdue = cbDate ? cbDate <= now : false;
+        const formattedDate = cbDate
+          ? cbDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) +
+            ", " + cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+          : "No date";
+        const notesText = cb.callNotes || "";
+        const notesLines = notesText.split("\n");
+        const isExpanded = expandedNotes[cb.id] || false;
+        const shouldTruncate = notesLines.length > 2;
+        const displayedNotes = isExpanded ? notesText : notesLines.slice(0, 2).join("\n");
+
+        return (
+          <div
+            key={cb.id}
+            style={{
+              background: isOverdue ? "#fef2f2" : "#f9fafb",
+              border: isOverdue ? "1.5px solid #fca5a5" : "1.5px solid #e5e7eb",
+              borderRadius: 10,
+              padding: "14px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            {/* Top row: name + call now */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#1f2937" }}>{cb.name}</div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{cb.phone || "No phone"}</div>
+              </div>
+              <button
+                onClick={() => onSelectContact(cb.id)}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: 7,
+                  border: "none",
+                  background: isOverdue ? "#dc2626" : "#4F46E5",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <Phone size={12} /> Call Now
+              </button>
+            </div>
+
+            {/* Date row */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              fontSize: 12, fontWeight: 600,
+              color: isOverdue ? "#dc2626" : "#4F46E5",
+            }}>
+              <Calendar size={12} />
+              {formattedDate}
+              {isOverdue && (
+                <span style={{
+                  marginLeft: 6, fontSize: 10, fontWeight: 700,
+                  background: "#dc2626", color: "#fff",
+                  padding: "2px 6px", borderRadius: 4,
+                }}>OVERDUE</span>
+              )}
+            </div>
+
+            {/* Notes */}
+            {notesText && (
+              <div style={{ fontSize: 12, color: "#4b5563", lineHeight: 1.5 }}>
+                <div style={{ whiteSpace: "pre-wrap" }}>{displayedNotes}</div>
+                {shouldTruncate && (
+                  <button
+                    onClick={() => setExpandedNotes((prev) => ({ ...prev, [cb.id]: !isExpanded }))}
+                    style={{
+                      background: "none", border: "none", color: "#6366f1",
+                      fontSize: 11, fontWeight: 600, cursor: "pointer",
+                      padding: "4px 0 0 0",
+                    }}
+                  >
+                    {isExpanded ? "Show less" : "Show more..."}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ==========================================
 // MAIN WORKSPACE PAGE
 // ==========================================
 export default function Workspace() {
@@ -1990,7 +2114,8 @@ export default function Workspace() {
   const [searchQuery, setSearchQuery] = useState("");
   const [localDoneItems, setLocalDoneItems] = useState<Record<number, string>>({});
 
-  const [managerMode, setManagerMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager">("pitch");
+  const managerMode = activeTab === "manager";
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
   // Fetch all users (for manager view agent filtering)
@@ -2127,6 +2252,16 @@ export default function Workspace() {
       setCallbacksDueOpen(true);
     }
   }, [callbacksDue.length, callbacksDueDismissed]);
+
+  // ── All callbacks query (for My Callbacks tab) ──
+  const { data: allCallbacks = [] } = trpc.contacts.allCallbacks.useQuery(
+    undefined,
+    { staleTime: 0, refetchOnMount: "always", refetchInterval: 60_000 }
+  );
+  const overdueCallbackCount = useMemo(() => {
+    const now = new Date();
+    return (allCallbacks as any[]).filter((c) => c.callbackAt && new Date(c.callbackAt) <= now).length;
+  }, [allCallbacks]);
 
   // Click-to-call mutation
   const [callCooldown, setCallCooldown] = useState(false);
@@ -2370,27 +2505,63 @@ export default function Workspace() {
         <div className="ws-sales-tools">
           <div className="ws-script-col">
             <div className="ws-sales-content">
-              {/* ── My Pitch / Manager View Toggle (all users temporarily) ── */}
+              {/* ── My Pitch / My Callbacks / Manager View Toggle ── */}
               <div className="ws-mode-toggle" style={{ marginBottom: 12 }}>
                 <button
-                  className={`ws-mode-btn ${!managerMode ? "active" : ""}`}
-                  onClick={() => setManagerMode(false)}
+                  className={`ws-mode-btn ${activeTab === "pitch" ? "active" : ""}`}
+                  onClick={() => setActiveTab("pitch")}
                 >
                   <Edit3 size={14} /> My Pitch
                 </button>
                 <button
-                  className={`ws-mode-btn ${managerMode ? "active" : ""}`}
-                  onClick={() => setManagerMode(true)}
+                  className={`ws-mode-btn ${activeTab === "callbacks" ? "active" : ""}`}
+                  onClick={() => setActiveTab("callbacks")}
+                  style={{ position: "relative" }}
+                >
+                  <Calendar size={14} /> \uD83D\uDCC5 My Callbacks{allCallbacks.length > 0 && (
+                    <span style={{
+                      marginLeft: 6,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minWidth: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "0 6px",
+                      background: overdueCallbackCount > 0 ? "#dc2626" : "#6366f1",
+                      color: "#fff",
+                    }}>
+                      {allCallbacks.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  className={`ws-mode-btn ${activeTab === "manager" ? "active" : ""}`}
+                  onClick={() => setActiveTab("manager")}
                 >
                   <Users size={14} /> Manager View
                 </button>
               </div>
 
-              {/* ── Pitch Panel (7-stage with Edit/Reset) ── */}
-              {managerMode ? (
+              {/* ── Tab Content ── */}
+              {activeTab === "manager" ? (
                 <ManagerView
                   selectedAgentId={selectedAgentId}
                   setSelectedAgentId={setSelectedAgentId}
+                />
+              ) : activeTab === "callbacks" ? (
+                <CallbacksPanel
+                  callbacks={allCallbacks as any[]}
+                  onSelectContact={(id: number) => {
+                    setActiveId(id);
+                    setActiveTab("pitch");
+                    setTimeout(() => {
+                      const el = document.getElementById(`ws-contact-${id}`);
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 100);
+                  }}
                 />
               ) : (
                 <AgentPitchPanel />
