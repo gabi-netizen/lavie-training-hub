@@ -10,7 +10,7 @@ import { useLocation } from "wouter";
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronDown, CreditCard, Search,
-  Edit3, Save, AlertCircle, Eye, Users, Calendar
+  Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus
 } from "lucide-react";
 
 // ==========================================
@@ -1662,6 +1662,19 @@ export default function Workspace() {
     onSuccess: () => refetch(),
   });
 
+  // ── Add Contact modal ──
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [addContactForm, setAddContactForm] = useState({ name: "", phone: "", email: "", address: "", source: "" });
+  const createContactMutation = trpc.contacts.create.useMutation({
+    onSuccess: () => {
+      toast.success("Contact added successfully!");
+      refetch();
+      setShowAddContactModal(false);
+      setAddContactForm({ name: "", phone: "", email: "", address: "", source: "" });
+    },
+    onError: (err: any) => toast.error(`Failed to add contact: ${err.message}`),
+  });
+
   // Map action label → contact status for DB persistence
   const ACTION_TO_STATUS: Record<string, string> = {
     sold: "done_deal",
@@ -1776,6 +1789,12 @@ export default function Workspace() {
           <div className="ws-dl-header">
             <div className="ws-dl-title-row">
               <h3>Today's List</h3>
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg border-2 border-green-800 transition-colors"
+                onClick={() => setShowAddContactModal(true)}
+              >
+                <UserPlus size={13} /> Add Contact
+              </button>
               <div className="ws-dl-stats">
                 <div className="ws-dl-stat">
                   <div className="ws-dl-stat-num">{totalContacts}</div>
@@ -2022,6 +2041,91 @@ export default function Workspace() {
                 }}
               >
                 Confirm Callback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Contact Modal ── */}
+      {showAddContactModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: 420, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 18, color: "#1f2937" }}>Add New Contact</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Name *</label>
+                <input
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 14 }}
+                  placeholder="Full name"
+                  value={addContactForm.name}
+                  onChange={(e) => setAddContactForm({ ...addContactForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Phone</label>
+                <input
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 14 }}
+                  placeholder="+447..."
+                  value={addContactForm.phone}
+                  onChange={(e) => setAddContactForm({ ...addContactForm, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Email</label>
+                <input
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 14 }}
+                  placeholder="email@example.com"
+                  value={addContactForm.email}
+                  onChange={(e) => setAddContactForm({ ...addContactForm, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Address</label>
+                <input
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 14 }}
+                  placeholder="Full address"
+                  value={addContactForm.address}
+                  onChange={(e) => setAddContactForm({ ...addContactForm, address: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Source</label>
+                <input
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 14 }}
+                  placeholder="Data source name"
+                  value={addContactForm.source}
+                  onChange={(e) => setAddContactForm({ ...addContactForm, source: e.target.value })}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+              <button
+                onClick={() => { setShowAddContactModal(false); setAddContactForm({ name: "", phone: "", email: "", address: "", source: "" }); }}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!addContactForm.name.trim()) { toast.error("Name is required"); return; }
+                  createContactMutation.mutate({
+                    name: addContactForm.name,
+                    phone: addContactForm.phone || undefined,
+                    email: addContactForm.email ? addContactForm.email.toLowerCase() : undefined,
+                    address: addContactForm.address || undefined,
+                    source: addContactForm.source || undefined,
+                    status: "new",
+                    department: "opening",
+                    agentEmail: user?.email || "trial@lavielabs.com",
+                    agentName: user?.name || "trial lavie labs",
+                    leadDate: new Date().toISOString().split("T")[0],
+                  });
+                }}
+                disabled={createContactMutation.isPending}
+                style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+              >
+                {createContactMutation.isPending ? "Adding..." : "Add Contact"}
               </button>
             </div>
           </div>
