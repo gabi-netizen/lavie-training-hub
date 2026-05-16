@@ -909,7 +909,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 placeholder="e.g. 40-60 Premium"
                 className={cn(importSourceError && "border-red-500 ring-1 ring-red-500")}
               />
-              {importSourceError && <p className="text-xs text-red-500">Source name is required for data analysis</p>}
+              {importSourceError && <p className="text-xs text-red-500">You must enter the lead name in the source field</p>}
             </div>
           </div>
           <DialogFooter className="gap-2">
