@@ -512,6 +512,17 @@ function ContactCard({
         )}
         {isActive && (
           <div className="ml-auto flex items-center gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Mark ${contact.name} as "Do Not Call"? This means the customer asked to be removed.`)) {
+                  onAction("no");
+                }
+              }}
+              className="px-3 py-1 flex items-center gap-1 rounded-md bg-red-50 hover:bg-red-100 border border-red-300 hover:border-red-400 text-red-600 hover:text-red-700 font-semibold text-xs transition-colors"
+            >
+              No
+            </button>
             {onDelete && !contact.source && (
               <button
                 onClick={(e) => {
@@ -808,7 +819,6 @@ function ContactCard({
             <button className="ws-btn ws-btn-call" onClick={() => onAction("call")} disabled={isCallPending} style={isCallPending ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{isCallPending ? "Calling…" : "Call"}</button>
             <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
-            <button className="ws-btn ws-btn-no" onClick={() => onAction("no")}>No</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
           </div>
 
