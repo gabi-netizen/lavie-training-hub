@@ -8,6 +8,7 @@ import {
   upsertPitchCustomization,
 } from "../db";
 import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export const pitchRouter = router({
   myCustomizations: protectedProcedure.query(async ({ ctx }) => {
@@ -36,7 +37,10 @@ export const pitchRouter = router({
   allUsers: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    return db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users);
+    return db
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+      .from(users)
+      .where(eq(users.active, true));
   }),
 
   agentsOverview: protectedProcedure.query(async () => {

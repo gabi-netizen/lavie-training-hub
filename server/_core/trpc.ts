@@ -13,6 +13,11 @@ export const publicProcedure = t.procedure;
 const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;
 
+  // If the user was disabled, return a specific error message
+  if (ctx.disabledMessage) {
+    throw new TRPCError({ code: "FORBIDDEN", message: ctx.disabledMessage });
+  }
+
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
@@ -30,6 +35,11 @@ export const protectedProcedure = t.procedure.use(requireUser);
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
+
+    // If the user was disabled, return a specific error message
+    if (ctx.disabledMessage) {
+      throw new TRPCError({ code: "FORBIDDEN", message: ctx.disabledMessage });
+    }
 
     if (!ctx.user || ctx.user.role !== 'admin') {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });

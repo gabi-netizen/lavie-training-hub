@@ -1,5 +1,6 @@
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { callCoachRouter } from "./routers/callCoach";
 import { contactsRouter } from "./routers/contacts";
 import { phoneNumbersRouter } from "./routers/phoneNumbers";
@@ -15,7 +16,13 @@ import { usersRouter } from "./routers/users";
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(opts => {
+      // If user was disabled, throw a FORBIDDEN error so the frontend can display the message
+      if (opts.ctx.disabledMessage) {
+        throw new TRPCError({ code: "FORBIDDEN", message: opts.ctx.disabledMessage });
+      }
+      return opts.ctx.user;
+    }),
     logout: publicProcedure.mutation(() => {
       // Clerk handles session invalidation on the frontend via signOut().
       // This endpoint is kept for compatibility but does nothing server-side.
