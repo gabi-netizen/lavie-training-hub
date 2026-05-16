@@ -36,7 +36,7 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
 
 // Admin email for notifications
@@ -63,11 +63,44 @@ export const contactsRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      const leadDate = input.leadDate ? new Date(input.leadDate) : undefined;
+
+      // ── Duplicate prevention ─────────────────────────────────────────────
       const { contacts: contactsTable } = await import("../../drizzle/schema");
+      const normalisedPhone = normalisePhone(input.phone) || undefined;
+
+      if (input.email?.trim()) {
+        const [existingByEmail] = await db
+          .select({ id: contactsTable.id })
+          .from(contactsTable)
+          .where(eq(contactsTable.email, input.email.trim()))
+          .limit(1);
+        if (existingByEmail) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A contact with this email already exists",
+          });
+        }
+      }
+
+      if (normalisedPhone) {
+        const [existingByPhone] = await db
+          .select({ id: contactsTable.id })
+          .from(contactsTable)
+          .where(eq(contactsTable.phone, normalisedPhone))
+          .limit(1);
+        if (existingByPhone) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A contact with this phone number already exists",
+          });
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
+      const leadDate = input.leadDate ? new Date(input.leadDate) : undefined;
       const [result] = await db.insert(contactsTable).values({
         name: input.name.trim(),
-        phone: normalisePhone(input.phone) || undefined,
+        phone: normalisedPhone,
         email: input.email?.trim() || undefined,
         leadType: input.leadType?.trim() || undefined,
         status: input.status,
