@@ -361,11 +361,11 @@ function ContactCard({
               color:
                 doneStatus === "Sold"
                   ? "#16a34a"
-                  : doneStatus === "N/A"
-                  ? "#d97706"
+                  : doneStatus === "No"
+                  ? "#dc2626"
                   : doneStatus === "Skip"
                   ? "#9ca3af"
-                  : "#dc2626",
+                  : "#d97706",
             }}
           >
             {doneStatus}
@@ -671,7 +671,6 @@ function ContactCard({
           <div className="ws-actions">
             <button className="ws-btn ws-btn-call" onClick={() => onAction("call")} disabled={isCallPending} style={isCallPending ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{isCallPending ? "Calling…" : "Call"}</button>
             <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
-            <button className="ws-btn ws-btn-na" onClick={() => onAction("na")}>N/A</button>
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
             <button className="ws-btn ws-btn-no" onClick={() => onAction("no")}>No</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
@@ -1622,7 +1621,9 @@ export default function Workspace() {
     const fromDB: Record<number, string> = {};
     for (const c of contacts as any[]) {
       if (c.status === "done_deal") fromDB[c.id] = "Sold";
+      else if (c.status === "do_not_call") fromDB[c.id] = "No";
       else if (c.status === "closed") fromDB[c.id] = "No";
+      else if (c.status === "no_answer") fromDB[c.id] = "Skip";
       else if (c.status === "skipped") fromDB[c.id] = "Skip";
     }
     return { ...fromDB, ...localDoneItems };
@@ -1697,10 +1698,9 @@ export default function Workspace() {
   // Map action label → contact status for DB persistence
   const ACTION_TO_STATUS: Record<string, string> = {
     sold: "done_deal",
-    na: "closed",
-    no: "closed",
+    no: "do_not_call",
     callback: "working",
-    skip: "skipped",
+    skip: "no_answer",
   };
 
   const handleAction = (contactId: number, action: string, phone?: string) => {
@@ -1712,23 +1712,13 @@ export default function Workspace() {
       const contact = (contacts as any[]).find((c) => c.id === contactId);
       setCallbackDateTime("");
       setCallbackModal({ contactId, contactName: contact?.name ?? "Contact" });
-    } else if (action === "no") {
-      // "No" deletes the contact and advances to next
-      const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
-      const nextContact = contacts[currentIndex + 1] ?? contacts[currentIndex - 1];
-      deleteContact.mutate({ id: contactId }, {
-        onSuccess: () => {
-          if (nextContact) setActiveId(nextContact.id);
-          else setActiveId(null);
-        }
-      });
     } else if (action === "next") {
       // Advance to next contact without any status change
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
-    } else if (action === "sold" || action === "na" || action === "skip") {
-      const displayLabel = action === "sold" ? "Sold" : action === "na" ? "N/A" : "Skip";
+    } else if (action === "sold" || action === "no" || action === "skip") {
+      const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];

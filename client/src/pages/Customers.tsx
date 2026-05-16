@@ -195,6 +195,7 @@ const STATUS_COLOURS: Record<string, string> = {
   retained_sub:  "bg-emerald-100 text-emerald-700",
   cancelled_sub: "bg-red-100 text-red-700",
   closed:        "bg-gray-100 text-gray-800",
+  do_not_call:   "bg-red-100 text-red-700",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -210,6 +211,7 @@ const STATUS_LABELS: Record<string, string> = {
   retained_sub:  "Retained Sub",
   cancelled_sub: "Cancelled Sub",
   closed:        "Closed",
+  do_not_call:   "Do Not Call",
 };
 
 // Opening-specific statuses for the filter dropdown
@@ -220,6 +222,7 @@ const OPENING_STATUSES = [
   { value: "sold", label: "Sold" },
   { value: "not_interested", label: "Not Interested" },
   { value: "no_answer", label: "No Answer" },
+  { value: "do_not_call", label: "Do Not Call" },
 ] as const;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
