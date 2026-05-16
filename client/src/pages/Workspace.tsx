@@ -1009,6 +1009,40 @@ function StripePaymentSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testMode, setTestMode] = useState(false);
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const createPaymentLink = trpc.contacts.createPaymentLink.useMutation({
+    onSuccess: (data) => {
+      setPaymentLinkUrl(data.url);
+      setLinkLoading(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to create payment link.");
+      setLinkLoading(false);
+    },
+  });
+
+  const handleCreateLink = () => {
+    setLinkLoading(true);
+    setPaymentLinkUrl(null);
+    setLinkCopied(false);
+    createPaymentLink.mutate({
+      contactId: contact.id,
+      name: contact.name,
+      email: contact.email || undefined,
+    });
+  };
+
+  const handleCopyLink = () => {
+    if (paymentLinkUrl) {
+      navigator.clipboard.writeText(paymentLinkUrl);
+      setLinkCopied(true);
+      toast.success("Payment link copied!");
+      setTimeout(() => setLinkCopied(false), 3000);
+    }
+  };
 
   const createPaymentIntent = trpc.contacts.createPaymentIntent.useMutation({
     onSuccess: (data) => {
@@ -1079,6 +1113,55 @@ function StripePaymentSection({
           <AlertCircle size={12} /> {error}
         </div>
       )}
+
+      {/* ── Send Payment Link section ── */}
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Or send a payment link to the customer:</div>
+        {!paymentLinkUrl ? (
+          <button
+            type="button"
+            onClick={handleCreateLink}
+            disabled={linkLoading}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "2px solid #6366f1",
+              background: "white",
+              color: "#6366f1",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: linkLoading ? "not-allowed" : "pointer",
+              opacity: linkLoading ? 0.6 : 1,
+            }}
+          >
+            {linkLoading ? "Creating link…" : "🔗 Generate Payment Link"}
+          </button>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ fontSize: "11px", color: "#6b7280", wordBreak: "break-all", background: "#f3f4f6", padding: "8px", borderRadius: "6px" }}>
+              {paymentLinkUrl}
+            </div>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "none",
+                background: linkCopied ? "#10b981" : "#6366f1",
+                color: "white",
+                fontWeight: 600,
+                fontSize: "13px",
+                cursor: "pointer",
+              }}
+            >
+              {linkCopied ? "✅ Copied!" : "📋 Copy Link"}
+            </button>
+          </div>
+        )}
+      </div>
 
       {clientSecret && customerId && (
         <Elements
