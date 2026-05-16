@@ -778,18 +778,45 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             </div>
             <div className="text-center">
               <p className="font-semibold text-gray-800">No contacts found</p>
-              <p className="text-sm mt-1">Import a CSV file to get started, or clear your filters</p>
+              {activeFilters > 0 ? (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-gray-600">Your active filters returned 0 results:</p>
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-2">
+                    {filterSource && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Source: {filterSource}</span>}
+                    {filterStatus && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Status: {OPENING_STATUSES.find(s => s.value === filterStatus)?.label || (meta?.statuses as string[] || []).find(s => s === filterStatus) || filterStatus}</span>}
+                    {filterAgent && filterAgent !== 'unassigned' && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: {agentList.find((a: any) => a.email === filterAgent)?.name || filterAgent}</span>}
+                    {filterAgent === 'unassigned' && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: Unassigned</span>}
+                    {filterLeadType && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Lead Type: {filterLeadType}</span>}
+                    {filterLeadDateFrom && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">From: {filterLeadDateFrom}</span>}
+                    {filterLeadDateTo && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">To: {filterLeadDateTo}</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Try removing one or more filters to see results</p>
+                </div>
+              ) : (
+                <p className="text-sm mt-1">Import a CSV file to get started</p>
+              )}
             </div>
-            <Button
-              size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white mt-2"
-              onClick={() => {
-                setImportDepartment(department);
-                setShowImportDeptPicker(true);
-              }}
-            >
-              <Upload size={14} className="mr-1.5" /> Import CSV
-            </Button>
+            {activeFilters > 0 ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}
+              >
+                Clear All Filters
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white mt-2"
+                onClick={() => {
+                  setImportDepartment(department);
+                  setShowImportDeptPicker(true);
+                }}
+              >
+                <Upload size={14} className="mr-1.5" /> Import CSV
+              </Button>
+            )}
           </div>
         ) : (
           <>

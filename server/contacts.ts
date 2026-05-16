@@ -405,7 +405,7 @@ export async function bulkAssignContacts(
   if (!db) return { assigned: 0 };
   await db
     .update(contacts)
-    .set({ agentName, agentEmail })
+    .set({ agentName, agentEmail, status: "assigned" as any })
     .where(inArray(contacts.id, ids));
   return { assigned: ids.length };
 }
