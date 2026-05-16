@@ -316,7 +316,7 @@ export async function importContacts(rows: CsvContactRow[], department: string =
 
     const insert: InsertContact = {
       name: row.name.trim(),
-      email: row.email?.trim() || undefined,
+      email: row.email?.trim().toLowerCase() || undefined,
       phone: normalisePhone(row.phone) || undefined,
       leadType: row.leadType?.trim() || undefined,
       status,
@@ -325,7 +325,7 @@ export async function importContacts(rows: CsvContactRow[], department: string =
       importedNotes: row.notes?.trim() || undefined,
       source: row.source?.trim() || undefined,
       leadDate,
-      address: row.address?.trim() || undefined,
+      address: row.address?.trim().toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) || undefined,
       department: department as any,
     };
 

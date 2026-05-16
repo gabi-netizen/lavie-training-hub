@@ -900,14 +900,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{c.name}</p>
-                          {c.email && <p className="text-xs text-gray-800 truncate max-w-[160px]">{c.email}</p>}
+                          {c.email && <p className="text-xs text-gray-800 truncate max-w-[160px]">{c.email.toLowerCase()}</p>}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5"><LeadTypeBadge type={c.leadType} /></td>
                     <td className="px-4 py-3.5"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-800 font-mono">{c.phone ?? "—"}</span></td>
-                    <td className="px-4 py-3.5"><span className="text-xs text-gray-700 max-w-[180px] truncate block" title={c.address ?? ""}>{c.address ?? "—"}</span></td>
+                    <td className="px-4 py-3.5"><span className="text-xs text-gray-700 max-w-[180px] truncate block" title={c.address ?? ""}>{c.address ? c.address.toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : "—"}</span></td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-800">{c.agentName ?? "—"}</span></td>
                     <td className="px-4 py-3.5">
                       <span className="text-xs text-gray-800 font-mono">{c.agentEmail ?? "—"}</span>
