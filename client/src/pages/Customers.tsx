@@ -245,6 +245,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   // ─── Import department picker state ───────────────────────────────────────
   const [showImportDeptPicker, setShowImportDeptPicker] = useState(false);
   const [importDepartment, setImportDepartment] = useState<"opening" | "retention">("opening");
+  const [importSource, setImportSource] = useState("");
+  const [importSourceError, setImportSourceError] = useState(false);
 
   // Reset to page 1 whenever filters/search/pageSize change
   const resetPage = () => setCurrentPage(1);
@@ -293,7 +295,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         setImporting(false);
         return;
       }
-      importMutation.mutate({ rows, department: importDepartment });
+      importMutation.mutate({ rows, department: importDepartment, source: importSource });
     };
 
     if (isXlsx) {
@@ -859,41 +861,55 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       </div>
 
       {/* ─── Import Department Picker Dialog ─────────────────────────────────────────── */}
-      <Dialog open={showImportDeptPicker} onOpenChange={setShowImportDeptPicker}>
+      <Dialog open={showImportDeptPicker} onOpenChange={(open) => { setShowImportDeptPicker(open); if (!open) { setImportSourceError(false); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload size={18} className="text-indigo-600" />
-              For which department?
+              Import Settings
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-3">
-            <p className="text-sm text-gray-600">Select the department for all imported contacts:</p>
-            <div className="flex gap-3">
-              <Button
-                variant={importDepartment === "opening" ? "default" : "outline"}
-                className={cn(
-                  "flex-1 h-12 text-base font-semibold",
-                  importDepartment === "opening"
-                    ? "bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-800"
-                    : "border-2 border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600"
-                )}
-                onClick={() => setImportDepartment("opening")}
-              >
-                Opening
-              </Button>
-              <Button
-                variant={importDepartment === "retention" ? "default" : "outline"}
-                className={cn(
-                  "flex-1 h-12 text-base font-semibold",
-                  importDepartment === "retention"
-                    ? "bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-800"
-                    : "border-2 border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600"
-                )}
-                onClick={() => setImportDepartment("retention")}
-              >
-                Retention
-              </Button>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">Department</p>
+              <p className="text-xs text-gray-500">Select the department for all imported contacts:</p>
+              <div className="flex gap-3">
+                <Button
+                  variant={importDepartment === "opening" ? "default" : "outline"}
+                  className={cn(
+                    "flex-1 h-12 text-base font-semibold",
+                    importDepartment === "opening"
+                      ? "bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-800"
+                      : "border-2 border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600"
+                  )}
+                  onClick={() => setImportDepartment("opening")}
+                >
+                  Opening
+                </Button>
+                <Button
+                  variant={importDepartment === "retention" ? "default" : "outline"}
+                  className={cn(
+                    "flex-1 h-12 text-base font-semibold",
+                    importDepartment === "retention"
+                      ? "bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-800"
+                      : "border-2 border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600"
+                  )}
+                  onClick={() => setImportDepartment("retention")}
+                >
+                  Retention
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">Source Name <span className="text-red-500">*</span></p>
+              <p className="text-xs text-gray-500">Required — identifies this data batch (e.g. "40-60 Premium")</p>
+              <Input
+                value={importSource}
+                onChange={(e) => { setImportSource(e.target.value); setImportSourceError(false); }}
+                placeholder="e.g. 40-60 Premium"
+                className={cn(importSourceError && "border-red-500 ring-1 ring-red-500")}
+              />
+              {importSourceError && <p className="text-xs text-red-500">Source name is required for data analysis</p>}
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -901,6 +917,10 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <Button
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
               onClick={() => {
+                if (!importSource.trim()) {
+                  setImportSourceError(true);
+                  return;
+                }
                 setShowImportDeptPicker(false);
                 fileRef.current?.click();
               }}

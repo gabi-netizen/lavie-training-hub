@@ -309,14 +309,19 @@ export const contactsRouter = router({
           })
         ),
         department: z.enum(["opening", "retention"]).default("opening"),
+        source: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const result = await importContacts(input.rows as CsvContactRow[], input.department);
+      // If a source was provided at import-level, override all row sources
+      const rows = input.source
+        ? input.rows.map(r => ({ ...r, source: input.source }))
+        : input.rows;
+      const result = await importContacts(rows as CsvContactRow[], input.department);
 
       // ── CloudTalk: sync all imported contacts so dialer shows name/email/phone ──
       Promise.all(
-        input.rows.map((row) =>
+        rows.map((row) =>
           syncContactToCloudTalk({
             name: row.name,
             email: row.email || null,
@@ -327,7 +332,7 @@ export const contactsRouter = router({
 
       // ── ActiveCampaign: sync all imported contacts (fire-and-forget) ────
       Promise.all(
-        input.rows.map((row) =>
+        rows.map((row) =>
           syncContactToAC({
             name: row.name,
             email: row.email,
