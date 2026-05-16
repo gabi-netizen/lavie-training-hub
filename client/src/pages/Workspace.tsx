@@ -819,6 +819,7 @@ function ContactCard({
             <button className="ws-btn ws-btn-call" onClick={() => onAction("call")} disabled={isCallPending} style={isCallPending ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{isCallPending ? "Calling…" : "Call"}</button>
             <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
+            <button className="ws-btn ws-btn-done" onClick={() => onAction("done")}>Done</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Skip</button>
           </div>
 
@@ -1847,6 +1848,7 @@ export default function Workspace() {
     no: "do_not_call",
     callback: "working",
     skip: "no_answer",
+    done: "done",
   };
 
   const handleAction = (contactId: number, action: string, phone?: string) => {
@@ -1863,8 +1865,8 @@ export default function Workspace() {
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
-    } else if (action === "sold" || action === "no" || action === "skip") {
-      const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : "Skip";
+    } else if (action === "sold" || action === "no" || action === "skip" || action === "done") {
+      const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : action === "done" ? "Done" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];

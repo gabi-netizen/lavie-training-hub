@@ -723,6 +723,8 @@
 .ws-btn-cb:hover { background: #4F46E5; color: #fff; }
 .ws-btn-no { border-color: #dc2626; color: #dc2626; }
 .ws-btn-no:hover { background: #dc2626; color: #fff; }
+.ws-btn-done { border-color: #4338CA; color: #4338CA; }
+.ws-btn-done:hover { background: #4338CA; color: #fff; }
 .ws-btn-skip { border-color: #1a1a1a; color: #1a1a1a; }
 .ws-btn-skip:hover { background: #1a1a1a; color: #fff; }
 .ws-btn-next { border-color: #4F46E5; color: #4F46E5; font-weight: 700; }

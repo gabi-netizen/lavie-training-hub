@@ -34,6 +34,7 @@ export const CONTACT_STATUSES = [
   "skipped",
   "do_not_call",
   "no_answer",
+  "done",
 ] as const;
 
 export type ContactStatus = (typeof CONTACT_STATUSES)[number];
