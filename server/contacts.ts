@@ -267,6 +267,8 @@ export async function importContacts(rows: CsvContactRow[], department: string =
       const parsed = new Date(row.leadDate);
       if (!isNaN(parsed.getTime())) leadDate = parsed;
     }
+    // Default to today (import date) if no leadDate provided
+    if (!leadDate) leadDate = new Date();
 
     const insert: InsertContact = {
       name: row.name.trim(),
