@@ -149,13 +149,18 @@ export const contactsRouter = router({
         leadType: z.string().optional(),
         status: z.string().optional(),
         agentName: z.string().optional(),
+        agentEmail: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       // Non-admin agents only count their own assigned contacts
+      // Admin can optionally filter by agentEmail (e.g. Agent filter on Contacts page)
+      const agentEmail = ctx.user.role !== 'admin'
+        ? (ctx.user.email ?? undefined)
+        : input.agentEmail ?? undefined;
       return countContacts({
         ...input,
-        agentEmail: ctx.user.role !== 'admin' ? (ctx.user.email ?? undefined) : undefined,
+        agentEmail,
       });
     }),
   // ─── List contacts with search/filter ─────────────────────────────────────────────────

@@ -1491,10 +1491,14 @@ export default function Workspace() {
   // Fetch all users (for manager view agent filtering)
   const { data: allUsersWs } = trpc.pitch.allUsers.useQuery(undefined, { enabled: true });
   const selectedAgentEmail = useMemo(() => {
-    if (!managerMode || !selectedAgentId || !allUsersWs) return undefined;
+    if (!managerMode) {
+      // In "My Pitch" mode, always show only the current user's own leads
+      return user?.email ?? undefined;
+    }
+    if (!selectedAgentId || !allUsersWs) return undefined;
     const agent = allUsersWs.find((u: any) => u.id === selectedAgentId);
     return agent?.email ?? undefined;
-  }, [managerMode, selectedAgentId, allUsersWs]);
+  }, [managerMode, selectedAgentId, allUsersWs, user?.email]);
 
   // ── Callback scheduler modal state ──
   const [callbackModal, setCallbackModal] = useState<{ contactId: number; contactName: string } | null>(null);
@@ -1588,9 +1592,9 @@ export default function Workspace() {
     sendToCloudTalk("hangup");
   }, [sendToCloudTalk]);
 
-  // Fetch contacts from the API (filter by selected agent in manager mode)
+  // Fetch contacts from the API (filter by selected agent in manager mode, or current user in My Pitch)
   const { data: contacts = [], refetch } = trpc.contacts.list.useQuery(
-    { search: searchQuery || undefined, limit: 50, agentEmail: selectedAgentEmail },
+    { search: searchQuery || undefined, limit: 5000, agentEmail: selectedAgentEmail },
     { enabled: true, staleTime: 0, refetchOnMount: "always" }
   );
 

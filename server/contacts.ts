@@ -97,7 +97,11 @@ export async function listContacts({
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
   if (status) conditions.push(eq(contacts.status, status as ContactStatus));
   if (agentName) conditions.push(eq(contacts.agentName, agentName));
-  if (agentEmail) conditions.push(eq(contacts.agentEmail, agentEmail));
+  if (agentEmail === 'unassigned') {
+    conditions.push(or(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com')));
+  } else if (agentEmail) {
+    conditions.push(eq(contacts.agentEmail, agentEmail));
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -139,7 +143,11 @@ export async function countContacts({
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
   if (status) conditions.push(eq(contacts.status, status as ContactStatus));
   if (agentName) conditions.push(eq(contacts.agentName, agentName));
-  if (agentEmail) conditions.push(eq(contacts.agentEmail, agentEmail));
+  if (agentEmail === 'unassigned') {
+    conditions.push(or(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com')));
+  } else if (agentEmail) {
+    conditions.push(eq(contacts.agentEmail, agentEmail));
+  }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [row] = await db.select({ total: count() }).from(contacts).where(where);
   return row?.total ?? 0;

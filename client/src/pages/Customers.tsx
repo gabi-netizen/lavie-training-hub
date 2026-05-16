@@ -231,6 +231,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [search, setSearch] = useState("");
   const [filterLeadType, setFilterLeadType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterAgent, setFilterAgent] = useState("");
   const [importing, setImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(100);
@@ -244,11 +245,13 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
+    agentEmail: filterAgent || undefined,
   });
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
+    agentEmail: filterAgent || undefined,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   });
@@ -412,7 +415,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     });
   };
 
-  const activeFilters = [filterLeadType, filterStatus].filter(Boolean).length;
+  const activeFilters = [filterLeadType, filterStatus, filterAgent].filter(Boolean).length;
 
   // Stats
   const totalContacts = contacts.length;
@@ -544,12 +547,25 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
 
+              <Select value={filterAgent || "__all__"} onValueChange={v => { setFilterAgent(v === "__all__" ? "" : v); resetPage(); }}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
+                  <SelectValue placeholder="All agents" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200 max-h-64">
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All agents</SelectItem>
+                  <SelectItem value="unassigned" className="text-gray-800 text-sm">Unassigned</SelectItem>
+                  {agentList.map((a: any) => (
+                    <SelectItem key={a.id} value={a.email ?? `agent-${a.id}`} className="text-gray-800 text-sm">{a.name ?? `Agent #${a.id}`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               {activeFilters > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
-                  onClick={() => { setFilterLeadType(""); setFilterStatus(""); }}
+                  onClick={() => { setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); }}
                 >
                   <X size={13} /> Clear
                 </Button>
