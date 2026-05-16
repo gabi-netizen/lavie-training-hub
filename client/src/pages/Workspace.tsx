@@ -2718,68 +2718,160 @@ export default function Workspace() {
       )}
 
       {/* ── Callback Scheduler Modal ── */}
-      {callbackModal && (
-        <div
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
-          }}
-          onClick={() => setCallbackModal(null)}
-        >
+      {callbackModal && (() => {
+        const TIME_SLOTS = [
+          "09:00","09:30","10:00","10:30","11:00","11:30",
+          "12:00","12:30","13:00","13:30","14:00","14:30",
+          "15:00","15:30","16:00","16:30","17:00","17:30",
+          "18:00","18:30","19:00","19:30","20:00"
+        ];
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10);
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+        const in2Days = new Date(today); in2Days.setDate(today.getDate() + 2);
+        const in2DaysStr = in2Days.toISOString().slice(0, 10);
+        const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+        const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+
+        // Parse current callbackDateTime into date and time parts
+        const cbParts = callbackDateTime.split("T");
+        const selectedDate = cbParts[0] || "";
+        const selectedTime = cbParts[1]?.slice(0, 5) || "";
+        const isCustomDate = selectedDate && selectedDate !== todayStr && selectedDate !== tomorrowStr && selectedDate !== in2DaysStr && selectedDate !== nextWeekStr;
+        const showCustomPicker = isCustomDate || (!selectedDate && false);
+
+        const setDatePart = (dateStr: string) => {
+          setCallbackDateTime(dateStr + "T" + (selectedTime || ""));
+        };
+        const setTimePart = (timeStr: string) => {
+          const datePart = selectedDate || todayStr;
+          setCallbackDateTime(datePart + "T" + timeStr);
+        };
+
+        const isValid = selectedDate && selectedTime;
+
+        const quickBtnStyle = (active: boolean) => ({
+          padding: "7px 14px",
+          borderRadius: 8,
+          border: active ? "2px solid #4F46E5" : "1.5px solid #d1d5db",
+          background: active ? "#EEF2FF" : "#fff",
+          color: active ? "#4F46E5" : "#374151",
+          fontWeight: 600 as const,
+          fontSize: 13,
+          cursor: "pointer" as const,
+          transition: "all 0.15s",
+        });
+
+        return (
           <div
             style={{
-              background: "#fff", borderRadius: 14, padding: "28px 32px",
-              minWidth: 340, maxWidth: 420, boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
-              display: "flex", flexDirection: "column", gap: 18
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setCallbackModal(null)}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Calendar size={20} color="#4F46E5" />
-              <span style={{ fontWeight: 700, fontSize: 17, color: "#1f2937" }}>Schedule Callback</span>
-            </div>
-            <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
-              Scheduling callback for <strong>{callbackModal.contactName}</strong>
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Date &amp; Time</label>
-              <input
-                type="datetime-local"
-                value={callbackDateTime}
-                onChange={(e) => setCallbackDateTime(e.target.value)}
-                style={{
-                  border: "1.5px solid #d1d5db", borderRadius: 8, padding: "9px 12px",
-                  fontSize: 14, color: "#1f2937", outline: "none", width: "100%"
-                }}
-                min={new Date().toISOString().slice(0, 16)}
-              />
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setCallbackModal(null)}
-                style={{
-                  padding: "8px 18px", borderRadius: 8, border: "1.5px solid #d1d5db",
-                  background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer"
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCallbackConfirm}
-                disabled={!callbackDateTime}
-                style={{
-                  padding: "8px 20px", borderRadius: 8, border: "none",
-                  background: callbackDateTime ? "#4F46E5" : "#c7d2fe",
-                  color: "#fff", fontWeight: 700, fontSize: 14,
-                  cursor: callbackDateTime ? "pointer" : "not-allowed"
-                }}
-              >
-                Confirm Callback
-              </button>
+            <div
+              style={{
+                background: "#fff", borderRadius: 14, padding: "28px 32px",
+                minWidth: 380, maxWidth: 460, boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+                display: "flex", flexDirection: "column", gap: 18
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Calendar size={20} color="#4F46E5" />
+                <span style={{ fontWeight: 700, fontSize: 17, color: "#1f2937" }}>Schedule Callback</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
+                Scheduling callback for <strong>{callbackModal.contactName}</strong>
+              </p>
+
+              {/* Quick date buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Date</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => setDatePart(todayStr)} style={quickBtnStyle(selectedDate === todayStr)}>Today</button>
+                  <button type="button" onClick={() => setDatePart(tomorrowStr)} style={quickBtnStyle(selectedDate === tomorrowStr)}>Tomorrow</button>
+                  <button type="button" onClick={() => setDatePart(in2DaysStr)} style={quickBtnStyle(selectedDate === in2DaysStr)}>In 2 Days</button>
+                  <button type="button" onClick={() => setDatePart(nextWeekStr)} style={quickBtnStyle(selectedDate === nextWeekStr)}>Next Week</button>
+                  <button type="button" onClick={() => {
+                    // Toggle custom mode - clear date to show picker
+                    setCallbackDateTime("T" + (selectedTime || ""));
+                  }} style={quickBtnStyle(isCustomDate)}>Custom</button>
+                </div>
+                {/* Custom date picker - shown when Custom is selected or date doesn't match quick buttons */}
+                {(isCustomDate || (!selectedDate && callbackDateTime.startsWith("T"))) && (
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setDatePart(e.target.value)}
+                    min={todayStr}
+                    style={{
+                      border: "1.5px solid #d1d5db", borderRadius: 8, padding: "8px 12px",
+                      fontSize: 14, color: "#1f2937", outline: "none", marginTop: 4, width: "100%"
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Time dropdown */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Time</label>
+                <select
+                  value={selectedTime}
+                  onChange={(e) => setTimePart(e.target.value)}
+                  style={{
+                    border: "1.5px solid #d1d5db", borderRadius: 8, padding: "9px 12px",
+                    fontSize: 14, color: selectedTime ? "#1f2937" : "#9ca3af", outline: "none",
+                    width: "100%", background: "#fff", cursor: "pointer"
+                  }}
+                >
+                  <option value="" disabled>Select time...</option>
+                  {TIME_SLOTS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Summary */}
+              {isValid && (
+                <div style={{
+                  background: "#F0FDF4", border: "1.5px solid #86efac", borderRadius: 8,
+                  padding: "8px 12px", fontSize: 13, color: "#166534", fontWeight: 600,
+                  textAlign: "center"
+                }}>
+                  {new Date(callbackDateTime).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} at {selectedTime}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setCallbackModal(null)}
+                  style={{
+                    padding: "8px 18px", borderRadius: 8, border: "1.5px solid #d1d5db",
+                    background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCallbackConfirm}
+                  disabled={!isValid}
+                  style={{
+                    padding: "8px 20px", borderRadius: 8, border: "none",
+                    background: isValid ? "#4F46E5" : "#c7d2fe",
+                    color: "#fff", fontWeight: 700, fontSize: 14,
+                    cursor: isValid ? "pointer" : "not-allowed"
+                  }}
+                >
+                  Confirm Callback
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Add Contact Modal ── */}
       {showAddContactModal && (
