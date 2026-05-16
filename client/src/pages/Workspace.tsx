@@ -404,6 +404,7 @@ function ContactCard({
   onPrev?: () => void;
   onNext?: () => void;
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
   const [emailDropOpen, setEmailDropOpen] = useState(false);
@@ -1465,7 +1466,7 @@ function ScriptPanel({
   isSaving: boolean;
   isManagerView?: boolean;
 }) {
-  const [openStages, setOpenStages] = useState<number[]>([1]);
+  const [openStages, setOpenStages] = useState<number[]>([]);
   const [activeBranches, setActiveBranches] = useState<Record<string, string>>({});
   const [editingStage, setEditingStage] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<Record<string, unknown> | null>(null);
@@ -1917,8 +1918,8 @@ const PRODUCTS = [
 ];
 
 function QuickTools() {
-  const [openObj, setOpenObj] = useState<number[]>([0]);
-  const [openProd, setOpenProd] = useState<number[]>([0]);
+  const [openObj, setOpenObj] = useState<number[]>([]);
+  const [openProd, setOpenProd] = useState<number[]>([]);
 
   return (
     <div className="ws-quick-tools">
