@@ -58,6 +58,7 @@ export const contactsRouter = router({
         leadDate: z.string().optional(),
         notes: z.string().max(2000).optional(),
         address: z.string().optional(),
+        department: z.enum(["opening", "retention"]).default("opening"),
       })
     )
     .mutation(async ({ input }) => {
@@ -110,6 +111,7 @@ export const contactsRouter = router({
         leadDate,
         importedNotes: input.notes?.trim() || undefined,
         address: input.address?.trim() || undefined,
+        department: input.department,
       });
       const newId = (result as any).insertId as number;
 
@@ -150,6 +152,7 @@ export const contactsRouter = router({
         status: z.string().optional(),
         agentName: z.string().optional(),
         agentEmail: z.string().optional(),
+        department: z.enum(["opening", "retention"]).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -170,6 +173,7 @@ export const contactsRouter = router({
         status: z.string().optional(),
         agentName: z.string().optional(),
         agentEmail: z.string().optional(),
+        department: z.enum(["opening", "retention"]).optional(),
         limit: z.number().min(1).max(5000).default(5000),
         offset: z.number().min(0).default(0),
       })
@@ -304,10 +308,11 @@ export const contactsRouter = router({
             address: z.string().optional(),
           })
         ),
+        department: z.enum(["opening", "retention"]).default("opening"),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const result = await importContacts(input.rows as CsvContactRow[]);
+      const result = await importContacts(input.rows as CsvContactRow[], input.department);
 
       // ── CloudTalk: sync all imported contacts so dialer shows name/email/phone ──
       Promise.all(

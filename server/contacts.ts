@@ -69,6 +69,7 @@ export async function listContacts({
   status,
   agentName,
   agentEmail,
+  department,
   limit = 50,
   offset = 0,
 }: {
@@ -77,6 +78,7 @@ export async function listContacts({
   status?: string;
   agentName?: string;
   agentEmail?: string;
+  department?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -102,6 +104,7 @@ export async function listContacts({
   } else if (agentEmail) {
     conditions.push(eq(contacts.agentEmail, agentEmail));
   }
+  if (department) conditions.push(eq(contacts.department, department));
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -121,12 +124,14 @@ export async function countContacts({
   status,
   agentName,
   agentEmail,
+  department,
 }: {
   search?: string;
   leadType?: string;
   status?: string;
   agentName?: string;
   agentEmail?: string;
+  department?: string;
 } = {}) {
   const db = await getDb();
   if (!db) return 0;
@@ -148,6 +153,7 @@ export async function countContacts({
   } else if (agentEmail) {
     conditions.push(eq(contacts.agentEmail, agentEmail));
   }
+  if (department) conditions.push(eq(contacts.department, department));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [row] = await db.select({ total: count() }).from(contacts).where(where);
   return row?.total ?? 0;
@@ -226,7 +232,7 @@ export interface CsvContactRow {
   address?: string;
 }
 
-export async function importContacts(rows: CsvContactRow[]): Promise<{ imported: number; skipped: number }> {
+export async function importContacts(rows: CsvContactRow[], department: string = "opening"): Promise<{ imported: number; skipped: number }> {
   const db = await getDb();
   if (!db) return { imported: 0, skipped: rows.length };
 
@@ -274,6 +280,7 @@ export async function importContacts(rows: CsvContactRow[]): Promise<{ imported:
       source: row.source?.trim() || undefined,
       leadDate,
       address: row.address?.trim() || undefined,
+      department: department as any,
     };
 
     await db.insert(contacts).values(insert);

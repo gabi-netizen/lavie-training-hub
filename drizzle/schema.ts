@@ -185,6 +185,8 @@ export const contacts = mysqlTable("contacts", {
   callNotes: text("callNotes"),
   /** Full postal address (street, town, county, postcode) */
   address: text("address"),
+  /** Department: opening or retention. Default opening. */
+  department: mysqlEnum("department", ["opening", "retention"]).default("opening").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

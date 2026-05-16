@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import * as XLSX from "xlsx";
@@ -65,6 +66,7 @@ interface Contact {
   leadDate?: Date | null;
   callbackAt?: Date | null;
   address?: string | null;
+  department?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -237,6 +239,13 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // ─── Department tab state ─────────────────────────────────────────────────
+  const [department, setDepartment] = useState<"opening" | "retention">("opening");
+
+  // ─── Import department picker state ───────────────────────────────────────
+  const [showImportDeptPicker, setShowImportDeptPicker] = useState(false);
+  const [importDepartment, setImportDepartment] = useState<"opening" | "retention">("opening");
+
   // Reset to page 1 whenever filters/search/pageSize change
   const resetPage = () => setCurrentPage(1);
 
@@ -246,12 +255,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
+    department,
   });
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
+    department,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   });
@@ -260,6 +271,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     onSuccess: (result) => {
       toast.success(`Import complete: ${result.imported} contacts imported, ${result.skipped} skipped.`);
       utils.contacts.list.invalidate();
+      utils.contacts.count.invalidate();
       setImporting(false);
     },
     onError: (err) => {
@@ -281,7 +293,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         setImporting(false);
         return;
       }
-      importMutation.mutate({ rows });
+      importMutation.mutate({ rows, department: importDepartment });
     };
 
     if (isXlsx) {
@@ -300,7 +312,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       reader.readAsText(file);
     }
     e.target.value = "";
-  }, [importMutation]);
+  }, [importMutation, importDepartment]);
 
   // ─── Add Contact modal ──────────────────────────────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
@@ -309,12 +321,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     status: "new", agentName: "", agentEmail: "trial@lavielabs.com",
     source: "", leadDate: new Date().toISOString().split("T")[0], notes: "",
     address: "",
+    department: "opening" as "opening" | "retention",
   });
   const [addForm, setAddForm] = useState(emptyForm);
   const createMutation = trpc.contacts.create.useMutation({
     onSuccess: () => {
       toast.success("Contact added successfully!");
       utils.contacts.list.invalidate();
+      utils.contacts.count.invalidate();
       setShowAddModal(false);
       setAddForm(emptyForm());
     },
@@ -334,6 +348,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       leadDate: addForm.leadDate || undefined,
       notes: addForm.notes || undefined,
       address: addForm.address || undefined,
+      department: addForm.department,
     });
   };
 
@@ -343,6 +358,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     onSuccess: () => {
       toast.success("Contact deleted.");
       utils.contacts.list.invalidate();
+      utils.contacts.count.invalidate();
       setDeleteTarget(null);
     },
     onError: (err) => {
@@ -380,6 +396,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     onSuccess: (result) => {
       toast.success(`${result.deleted} contact${result.deleted !== 1 ? 's' : ''} deleted.`);
       utils.contacts.list.invalidate();
+      utils.contacts.count.invalidate();
       setSelectedIds(new Set());
       setShowBulkDeleteDialog(false);
     },
@@ -446,7 +463,10 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <Button
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 font-semibold border-2 border-indigo-800"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                setImportDepartment(department);
+                setShowImportDeptPicker(true);
+              }}
               disabled={importing}
             >
               {importing ? (
@@ -459,13 +479,26 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white h-9 px-4 font-semibold border-2 border-green-800"
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setAddForm({ ...emptyForm(), department });
+                setShowAddModal(true);
+              }}
             >
               <UserPlus size={14} className="mr-1.5" />
               Add Contact
             </Button>
             <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
           </div>
+        </div>
+
+        {/* ── Department Tabs ── */}
+        <div className="mt-4">
+          <Tabs value={department} onValueChange={(v) => { setDepartment(v as "opening" | "retention"); resetPage(); setSelectedIds(new Set()); }}>
+            <TabsList>
+              <TabsTrigger value="opening" className="px-6">Opening</TabsTrigger>
+              <TabsTrigger value="retention" className="px-6">Retention</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Stats row */}
@@ -642,7 +675,10 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <Button
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-700 text-white mt-2"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                setImportDepartment(department);
+                setShowImportDeptPicker(true);
+              }}
             >
               <Upload size={14} className="mr-1.5" /> Import CSV
             </Button>
@@ -685,7 +721,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-3.5 w-[48px]" onClick={e => e.stopPropagation()}>
+                  <th className="px-4 py-3.5 w-[48px]" onClick={toggleSelectAll}>
                     <Checkbox
                       checked={allSelected}
                       onCheckedChange={toggleSelectAll}
@@ -822,6 +858,59 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         })()}
       </div>
 
+      {/* ─── Import Department Picker Dialog ─────────────────────────────────────────── */}
+      <Dialog open={showImportDeptPicker} onOpenChange={setShowImportDeptPicker}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload size={18} className="text-indigo-600" />
+              For which department?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <p className="text-sm text-gray-600">Select the department for all imported contacts:</p>
+            <div className="flex gap-3">
+              <Button
+                variant={importDepartment === "opening" ? "default" : "outline"}
+                className={cn(
+                  "flex-1 h-12 text-base font-semibold",
+                  importDepartment === "opening"
+                    ? "bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-800"
+                    : "border-2 border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600"
+                )}
+                onClick={() => setImportDepartment("opening")}
+              >
+                Opening
+              </Button>
+              <Button
+                variant={importDepartment === "retention" ? "default" : "outline"}
+                className={cn(
+                  "flex-1 h-12 text-base font-semibold",
+                  importDepartment === "retention"
+                    ? "bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-indigo-800"
+                    : "border-2 border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600"
+                )}
+                onClick={() => setImportDepartment("retention")}
+              >
+                Retention
+              </Button>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowImportDeptPicker(false)}>Cancel</Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={() => {
+                setShowImportDeptPicker(false);
+                fileRef.current?.click();
+              }}
+            >
+              Continue to File Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ─── Bulk Assign Dialog─────────────────────────────────────────────────────────────────── */}
       <Dialog open={showBulkAssignDialog} onOpenChange={(open) => { setShowBulkAssignDialog(open); if (!open) setSelectedAgentId(""); }}>
         <DialogContent className="max-w-sm">
@@ -930,6 +1019,17 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <div>
               <Label className="text-xs font-semibold text-gray-700 mb-1 block">Email</Label>
               <Input value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+            </div>
+            {/* Department */}
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 mb-1 block">Department</Label>
+              <Select value={addForm.department} onValueChange={v => setAddForm(f => ({ ...f, department: v as "opening" | "retention" }))}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="opening">Opening</SelectItem>
+                  <SelectItem value="retention">Retention</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {/* Lead Type */}
             <div>
