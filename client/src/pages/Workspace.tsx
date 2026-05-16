@@ -2633,87 +2633,52 @@ export default function Workspace() {
         </div>
       </div>
 
-      {/* ── Callbacks Due Popup ── */}
+      {/* ── Callbacks Due Banner (non-blocking) ── */}
       {callbacksDueOpen && callbacksDue.length > 0 && (
         <div
           style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9998
+            position: "fixed", top: 0, left: 0, right: 0, zIndex: 9998,
+            background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
+            color: "#fff", padding: "10px 20px",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 14,
+            boxShadow: "0 4px 16px rgba(220,38,38,0.3)",
+            animation: "slideDown 0.3s ease-out"
           }}
-          onClick={() => { setCallbacksDueOpen(false); setCallbacksDueDismissed(true); }}
         >
-          <div
-            style={{
-              background: "#fff", borderRadius: 14, padding: "28px 32px",
-              minWidth: 360, maxWidth: 480, boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
-              display: "flex", flexDirection: "column", gap: 16
+          <Calendar size={16} color="#fff" />
+          <span style={{ fontWeight: 700, fontSize: 14 }}>
+            {callbacksDue.length === 1 ? "1 Callback Due" : `${callbacksDue.length} Callbacks Due`}
+          </span>
+          <span style={{ fontSize: 13, opacity: 0.9 }}>—</span>
+          <span style={{ fontSize: 13, opacity: 0.9 }}>
+            {(callbacksDue as any[]).map((c) => c.name).join(", ")}
+          </span>
+          <button
+            onClick={() => {
+              setActiveTab("callbacks");
+              setCallbacksDueOpen(false);
+              setCallbacksDueDismissed(true);
             }}
-            onClick={(e) => e.stopPropagation()}
+            style={{
+              padding: "5px 14px", borderRadius: 6, border: "2px solid rgba(255,255,255,0.6)",
+              background: "rgba(255,255,255,0.15)", color: "#fff",
+              fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
+              marginLeft: 4
+            }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Calendar size={20} color="#dc2626" />
-              <span style={{ fontWeight: 700, fontSize: 17, color: "#1f2937" }}>
-                {callbacksDue.length === 1 ? "1 Callback Due" : `${callbacksDue.length} Callbacks Due`}
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
-              The following contacts are scheduled for a callback now:
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflowY: "auto" }}>
-              {(callbacksDue as any[]).map((c) => {
-                const scheduledAt = c.callbackAt ? new Date(c.callbackAt) : null;
-                const formatted = scheduledAt
-                  ? scheduledAt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
-                    " " + scheduledAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-                  : "";
-                return (
-                  <div
-                    key={c.id}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      background: "#fef2f2", borderRadius: 8, padding: "10px 14px",
-                      border: "1px solid #fecaca"
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: "#1f2937" }}>{c.name}</div>
-                      {formatted && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 2 }}>Scheduled: {formatted}</div>}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setActiveId(c.id);
-                        setCallbacksDueOpen(false);
-                        setCallbacksDueDismissed(true);
-                        // Scroll to contact in list
-                        setTimeout(() => {
-                          const el = document.getElementById(`ws-contact-${c.id}`);
-                          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                        }, 100);
-                      }}
-                      style={{
-                        padding: "6px 14px", borderRadius: 7, border: "none",
-                        background: "#dc2626", color: "#fff",
-                        fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap"
-                      }}
-                    >
-                      Go to Contact
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => { setCallbacksDueOpen(false); setCallbacksDueDismissed(true); }}
-                style={{
-                  padding: "8px 18px", borderRadius: 8, border: "1.5px solid #d1d5db",
-                  background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer"
-                }}
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
+            View Callbacks
+          </button>
+          <button
+            onClick={() => { setCallbacksDueOpen(false); setCallbacksDueDismissed(true); }}
+            style={{
+              background: "none", border: "none", color: "#fff", cursor: "pointer",
+              padding: "2px 6px", fontSize: 18, fontWeight: 700, opacity: 0.7,
+              marginLeft: 8
+            }}
+            title="Dismiss"
+          >
+            ×
+          </button>
         </div>
       )}
 
