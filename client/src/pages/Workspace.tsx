@@ -2518,7 +2518,7 @@ export default function Workspace() {
                   onClick={() => setActiveTab("callbacks")}
                   style={{ position: "relative" }}
                 >
-                  <Calendar size={14} /> \uD83D\uDCC5 My Callbacks{allCallbacks.length > 0 && (
+                  <Calendar size={14} /> My Callbacks{allCallbacks.length > 0 && (
                     <span style={{
                       marginLeft: 6,
                       display: "inline-flex",
