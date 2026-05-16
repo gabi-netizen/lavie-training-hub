@@ -699,7 +699,7 @@ export const contactsRouter = router({
       return { success: true };
     }),
 
-  // ─── Stripe: Create Payment Link for customer self-checkout ─────────────
+  // ─── Stripe: Create Checkout Session for customer self-checkout ─────────
   createPaymentLink: protectedProcedure
     .input(
       z.object({
@@ -711,36 +711,29 @@ export const contactsRouter = router({
     .mutation(async ({ input }) => {
       const { contactId, name, email } = input;
 
-      // Create or reuse a Stripe Product + Price for the £4.95 trial kit
-      // Use a fixed product so we don't create duplicates
-      const products = await stripe.products.list({ limit: 1, active: true });
-      let product = products.data.find((p) => p.metadata?.type === "trial_kit_495");
-      if (!product) {
-        product = await stripe.products.create({
-          name: "Lavie Labs Trial Kit",
-          metadata: { type: "trial_kit_495" },
-        });
-      }
-
-      const prices = await stripe.prices.list({ product: product.id, active: true, limit: 1 });
-      let price = prices.data[0];
-      if (!price) {
-        price = await stripe.prices.create({
-          product: product.id,
-          unit_amount: 495,
-          currency: "gbp",
-        });
-      }
-
-      // Create a Stripe Payment Link
-      const paymentLink = await stripe.paymentLinks.create({
-        line_items: [{ price: price.id, quantity: 1 }],
+      // Create a Stripe Checkout Session for £4.95
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "gbp",
+              unit_amount: 495,
+              product_data: {
+                name: "Lavie Labs Trial Kit",
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: email || undefined,
         metadata: { contactId: String(contactId), customerName: name },
-        after_completion: { type: "redirect", redirect: { url: "https://www.lavielabs.com/thank-you" } },
+        success_url: "https://www.lavielabs.com/thank-you",
+        cancel_url: "https://www.lavielabs.com",
       });
 
       return {
-        url: paymentLink.url,
+        url: session.url,
       };
     }),
 });
