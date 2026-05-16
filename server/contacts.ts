@@ -127,6 +127,7 @@ export async function listContacts({
     .from(contacts)
     .where(where)
     .orderBy(
+      sql`CASE WHEN (${contacts.email} IS NOT NULL AND ${contacts.email} != '' AND ${contacts.address} IS NOT NULL AND ${contacts.address} != '') THEN 0 WHEN (${contacts.email} IS NOT NULL AND ${contacts.email} != '') OR (${contacts.address} IS NOT NULL AND ${contacts.address} != '') THEN 1 ELSE 2 END`,
       sql`CASE WHEN ${contacts.status} = 'new' THEN 0 ELSE 1 END`,
       desc(contacts.createdAt)
     )
