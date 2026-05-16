@@ -404,7 +404,7 @@ function ContactCard({
   onPrev?: () => void;
   onNext?: () => void;
 }) {
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
   const [emailDropOpen, setEmailDropOpen] = useState(false);
@@ -586,6 +586,20 @@ function ContactCard({
 
       {isActive && (
         <div className="ws-expanded" onClick={(e) => e.stopPropagation()}>
+          {/* Toggle details */}
+          <button
+            onClick={() => setDetailsOpen(!detailsOpen)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, color: "#6366f1",
+              padding: "4px 0", marginBottom: 4
+            }}
+          >
+            {detailsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {detailsOpen ? "Hide Details" : "Show Details"}
+          </button>
+          {detailsOpen && <>
           {/* Contact Details — Editable */}
           <div className="ws-details">
             <EditableField
@@ -680,6 +694,7 @@ function ContactCard({
               Save Notes
             </button>
           )}
+          </>}
 
           {/* Email Template Modal */}
           {emailTemplateOpen && (
