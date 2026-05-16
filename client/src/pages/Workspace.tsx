@@ -37,6 +37,7 @@ interface Contact {
   notes?: string;
   importedNotes?: string;
   callbackAt?: Date | string | null;
+  source?: string | null;
 }
 
 // ==========================================
@@ -224,6 +225,7 @@ function ContactCard({
   onFieldChange,
   isCallPending,
   isSkipped,
+  onDelete,
 }: {
   contact: Contact;
   isActive: boolean;
@@ -235,6 +237,7 @@ function ContactCard({
   onAction: (action: string) => void;
   onFieldChange: (field: string, value: any) => void;
   isCallPending?: boolean;
+  onDelete?: () => void;
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
@@ -369,13 +372,29 @@ function ContactCard({
           </div>
         )}
         {isActive && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="ml-auto px-3 py-1 flex items-center gap-1 rounded-md bg-gray-100 hover:bg-red-50 border border-gray-300 hover:border-red-300 text-gray-600 hover:text-red-600 font-semibold text-xs transition-colors"
-          >
-            <X size={14} strokeWidth={2.5} />
-            Close
-          </button>
+          <div className="ml-auto flex items-center gap-1.5">
+            {onDelete && !contact.source && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete ${contact.name}? This cannot be undone.`)) {
+                    onDelete();
+                  }
+                }}
+                className="px-3 py-1 flex items-center gap-1 rounded-md bg-red-50 hover:bg-red-100 border border-red-300 hover:border-red-400 text-red-600 hover:text-red-700 font-semibold text-xs transition-colors"
+              >
+                <X size={14} strokeWidth={2.5} />
+                Delete
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              className="px-3 py-1 flex items-center gap-1 rounded-md bg-gray-100 hover:bg-red-50 border border-gray-300 hover:border-red-300 text-gray-600 hover:text-red-600 font-semibold text-xs transition-colors"
+            >
+              <X size={14} strokeWidth={2.5} />
+              Close
+            </button>
+          </div>
         )}
       </div>
 
@@ -1851,6 +1870,16 @@ export default function Workspace() {
                     onAction={(action) => handleAction(contact.id, action, contact.phone)}
                     onFieldChange={(field, value) => handleFieldChange(contact.id, field, value)}
                     isCallPending={clickToCall.isPending || callCooldown}
+                    onDelete={() => {
+                      const currentIndex = contacts.findIndex((c: any) => c.id === contact.id);
+                      const nextContact = contacts[currentIndex + 1] ?? contacts[currentIndex - 1];
+                      deleteContact.mutate({ id: contact.id }, {
+                        onSuccess: () => {
+                          if (nextContact) setActiveId(nextContact.id);
+                          else setActiveId(null);
+                        }
+                      });
+                    }}
                   />
                 </div>
               );
