@@ -1985,9 +1985,13 @@ function QuickTools() {
 function CallbacksPanel({
   callbacks,
   onSelectContact,
+  onReschedule,
+  onCancel,
 }: {
   callbacks: any[];
   onSelectContact: (id: number) => void;
+  onReschedule: (id: number, name: string) => void;
+  onCancel: (id: number, name: string) => void;
 }) {
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
   const now = new Date();
@@ -2034,31 +2038,69 @@ function CallbacksPanel({
               gap: 8,
             }}
           >
-            {/* Top row: name + call now */}
+            {/* Top row: name + action buttons */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "#1f2937" }}>{cb.name}</div>
                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{cb.phone || "No phone"}</div>
               </div>
-              <button
-                onClick={() => onSelectContact(cb.id)}
-                style={{
-                  padding: "7px 14px",
-                  borderRadius: 7,
-                  border: "none",
-                  background: isOverdue ? "#dc2626" : "#4F46E5",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-              >
-                <Phone size={12} /> Call Now
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  onClick={() => onReschedule(cb.id, cb.name)}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1.5px solid #d1d5db",
+                    background: "#fff",
+                    color: "#374151",
+                    fontWeight: 600,
+                    fontSize: 11,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Pencil size={11} /> Reschedule
+                </button>
+                <button
+                  onClick={() => onCancel(cb.id, cb.name)}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1.5px solid #fca5a5",
+                    background: "#fff",
+                    color: "#dc2626",
+                    fontWeight: 600,
+                    fontSize: 11,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <X size={11} /> Closed
+                </button>
+                <button
+                  onClick={() => onSelectContact(cb.id)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 7,
+                    border: "none",
+                    background: isOverdue ? "#dc2626" : "#4F46E5",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <Phone size={12} /> Call Now
+                </button>
+              </div>
             </div>
 
             {/* Date row */}
@@ -2561,6 +2603,19 @@ export default function Workspace() {
                       const el = document.getElementById(`ws-contact-${id}`);
                       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
                     }, 100);
+                  }}
+                  onReschedule={(id: number, name: string) => {
+                    setCallbackDateTime("");
+                    setCallbackModal({ contactId: id, contactName: name });
+                  }}
+                  onCancel={(id: number, name: string) => {
+                    if (!confirm(`Close callback for ${name}? Status will be set to Closed.`)) return;
+                    updateContact.mutate({ id, status: "closed" as any, callbackAt: null }, {
+                      onSuccess: () => {
+                        toast.success(`${name} marked as Closed`);
+                        refetch();
+                      }
+                    });
                   }}
                 />
               ) : (
