@@ -162,14 +162,21 @@ export default function Users() {
 
   // Filter users by search
   const filteredUsers = useMemo(() => {
-    if (!search.trim()) return allUsers;
-    const q = search.toLowerCase();
-    return allUsers.filter(
-      (u) =>
-        (u.name?.toLowerCase().includes(q)) ||
-        (u.email?.toLowerCase().includes(q)) ||
-        u.role.toLowerCase().includes(q)
-    );
+    let list = allUsers;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (u) =>
+          (u.name?.toLowerCase().includes(q)) ||
+          (u.email?.toLowerCase().includes(q)) ||
+          u.role.toLowerCase().includes(q)
+      );
+    }
+    // Sort: active users first, then disabled
+    return [...list].sort((a, b) => {
+      if (a.active === b.active) return 0;
+      return a.active ? -1 : 1;
+    });
   }, [allUsers, search]);
 
   // Stats
