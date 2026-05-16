@@ -233,7 +233,7 @@ export const callCoachRouter = router({
       .select({ id: users.id, name: users.name, email: users.email, role: users.role })
       .from(users)
       .orderBy(users.name);
-    return rows.filter(r => r.name && r.role !== "admin");
+    return rows.filter(r => r.name && r.email && r.role !== "admin");
   }),
 
   /** Admin-only: re-run the full analysis pipeline for a call */

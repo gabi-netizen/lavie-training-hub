@@ -392,6 +392,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   // ─── Bulk assign state ──────────────────────────────────────────────────
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  const [assignCount, setAssignCount] = useState<string>("100");
   const { data: agentList = [] } = trpc.callCoach.getAgentList.useQuery();
   const bulkAssignMutation = trpc.contacts.bulkAssign.useMutation({
     onSuccess: (result) => {
@@ -408,8 +409,10 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const handleBulkAssign = () => {
     const agent = agentList.find((a: any) => String(a.id) === selectedAgentId);
     if (!agent) { toast.error("Please select an agent"); return; }
+    const count = Number(assignCount);
+    const idsToAssign = Array.from(selectedIds).slice(0, count);
     bulkAssignMutation.mutate({
-      ids: Array.from(selectedIds),
+      ids: idsToAssign,
       agentName: agent.name!,
       agentEmail: agent.email ?? "trial@lavielabs.com",
     });
@@ -828,23 +831,41 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           <DialogHeader>
             <DialogTitle>Assign {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''} to Agent</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
-            <Label className="text-sm font-semibold text-gray-700 mb-2 block">Select Agent</Label>
-            <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choose an agent…" />
-              </SelectTrigger>
-              <SelectContent>
-                {agentList.map((agent: any) => (
-                  <SelectItem key={agent.id} value={String(agent.id)}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{agent.name}</span>
-                      {agent.email && <span className="text-xs text-gray-500">{agent.email}</span>}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="py-2 space-y-3">
+            <div>
+              <Label className="text-sm font-semibold text-gray-700 mb-2 block">Select Agent</Label>
+              <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose an agent…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentList.map((agent: any) => (
+                    <SelectItem key={agent.id} value={String(agent.id)}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{agent.name}</span>
+                        {agent.email && <span className="text-xs text-gray-500">{agent.email}</span>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-semibold text-gray-700 mb-2 block">How many to assign?</Label>
+              <Select value={assignCount} onValueChange={setAssignCount}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(n => (
+                    <SelectItem key={n} value={String(n)}>{n} contacts</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {Number(assignCount) > selectedIds.size && (
+                <p className="text-xs text-amber-600 mt-1">Only {selectedIds.size} selected — all will be assigned.</p>
+              )}
+            </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => { setShowBulkAssignDialog(false); setSelectedAgentId(""); }}>Cancel</Button>
@@ -853,7 +874,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               onClick={handleBulkAssign}
               disabled={!selectedAgentId || bulkAssignMutation.isPending}
             >
-              {bulkAssignMutation.isPending ? "Assigning…" : `Assign ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}`}
+              {bulkAssignMutation.isPending ? "Assigning…" : `Assign ${Math.min(Number(assignCount), selectedIds.size)} Contact${Math.min(Number(assignCount), selectedIds.size) !== 1 ? 's' : ''}`}
             </Button>
           </DialogFooter>
         </DialogContent>
