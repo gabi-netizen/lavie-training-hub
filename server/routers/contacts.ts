@@ -699,41 +699,44 @@ export const contactsRouter = router({
       return { success: true };
     }),
 
-  // ─── Stripe: Create Checkout Session for customer self-checkout ─────────
-  createPaymentLink: protectedProcedure
+  // ─── Send Payment Email via Postmark ─────────────────────────────────────
+  sendPaymentEmail: protectedProcedure
     .input(
       z.object({
         contactId: z.number(),
         name: z.string().min(1),
-        email: z.string().email().optional(),
+        email: z.string().email(),
       })
     )
     .mutation(async ({ input }) => {
       const { contactId, name, email } = input;
 
-      // Create a Stripe Checkout Session for £4.95
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: "gbp",
-              unit_amount: 495,
-              product_data: {
-                name: "Lavie Labs Trial Kit",
-              },
-            },
-            quantity: 1,
+      const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "f8d7dddf-68c1-4621-8881-13923bb57b7f";
+      const PAYMENT_LINK = "https://buy.stripe.com/cNi3cvgcR4879BDgSSb3q0r";
+      const TEMPLATE_ID = 45041782;
+
+      const res = await fetch("https://api.postmarkapp.com/email/withTemplate", {
+        method: "POST",
+        headers: {
+          "X-Postmark-Server-Token": POSTMARK_TOKEN,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          From: "trial@lavielabs.com",
+          To: email,
+          TemplateId: TEMPLATE_ID,
+          TemplateModel: {
+            name: name,
+            payment_link: PAYMENT_LINK,
           },
-        ],
-        customer_email: email || undefined,
-        metadata: { contactId: String(contactId), customerName: name },
-        success_url: "https://www.lavielabs.com/thank-you",
-        cancel_url: "https://www.lavielabs.com",
+        }),
       });
 
-      return {
-        url: session.url,
-      };
+      if (!res.ok) {
+        const err = await res.text();
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to send email: " + err });
+      }
+
+      return { success: true };
     }),
 });

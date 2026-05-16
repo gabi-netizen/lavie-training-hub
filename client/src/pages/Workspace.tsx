@@ -1009,39 +1009,33 @@ function StripePaymentSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testMode, setTestMode] = useState(false);
-  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string | null>(null);
-  const [linkLoading, setLinkLoading] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
 
-  const createPaymentLink = trpc.contacts.createPaymentLink.useMutation({
-    onSuccess: (data) => {
-      setPaymentLinkUrl(data.url);
-      setLinkLoading(false);
+  const sendPaymentEmail = trpc.contacts.sendPaymentEmail.useMutation({
+    onSuccess: () => {
+      setEmailSent(true);
+      setEmailLoading(false);
+      toast.success("Payment email sent to " + contact.email);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to create payment link.");
-      setLinkLoading(false);
+      toast.error(err.message || "Failed to send payment email.");
+      setEmailLoading(false);
     },
   });
 
-  const handleCreateLink = () => {
-    setLinkLoading(true);
-    setPaymentLinkUrl(null);
-    setLinkCopied(false);
-    createPaymentLink.mutate({
+  const handleSendPaymentEmail = () => {
+    if (!contact.email) {
+      toast.error("Contact must have an email address.");
+      return;
+    }
+    setEmailLoading(true);
+    setEmailSent(false);
+    sendPaymentEmail.mutate({
       contactId: contact.id,
       name: contact.name,
-      email: contact.email || undefined,
+      email: contact.email,
     });
-  };
-
-  const handleCopyLink = () => {
-    if (paymentLinkUrl) {
-      navigator.clipboard.writeText(paymentLinkUrl);
-      setLinkCopied(true);
-      toast.success("Payment link copied!");
-      setTimeout(() => setLinkCopied(false), 3000);
-    }
   };
 
   const createPaymentIntent = trpc.contacts.createPaymentIntent.useMutation({
@@ -1114,51 +1108,31 @@ function StripePaymentSection({
         </div>
       )}
 
-      {/* ── Send Payment Link section ── */}
+      {/* ── Send Payment Email section ── */}
       <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
-        <div style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Or send a payment link to the customer:</div>
-        {!paymentLinkUrl ? (
-          <button
-            type="button"
-            onClick={handleCreateLink}
-            disabled={linkLoading}
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "8px",
-              border: "2px solid #6366f1",
-              background: "white",
-              color: "#6366f1",
-              fontWeight: 600,
-              fontSize: "13px",
-              cursor: linkLoading ? "not-allowed" : "pointer",
-              opacity: linkLoading ? 0.6 : 1,
-            }}
-          >
-            {linkLoading ? "Creating link…" : "🔗 Generate Payment Link"}
-          </button>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <div style={{ fontSize: "11px", color: "#6b7280", wordBreak: "break-all", background: "#f3f4f6", padding: "8px", borderRadius: "6px" }}>
-              {paymentLinkUrl}
-            </div>
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "8px",
-                border: "none",
-                background: linkCopied ? "#10b981" : "#6366f1",
-                color: "white",
-                fontWeight: 600,
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
-            >
-              {linkCopied ? "✅ Copied!" : "📋 Copy Link"}
-            </button>
+        <div style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Or send a secure payment link via email:</div>
+        <button
+          type="button"
+          onClick={handleSendPaymentEmail}
+          disabled={emailLoading || emailSent}
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "8px",
+            border: emailSent ? "none" : "2px solid #6366f1",
+            background: emailSent ? "#10b981" : "white",
+            color: emailSent ? "white" : "#6366f1",
+            fontWeight: 600,
+            fontSize: "13px",
+            cursor: (emailLoading || emailSent) ? "not-allowed" : "pointer",
+            opacity: emailLoading ? 0.6 : 1,
+          }}
+        >
+          {emailLoading ? "Sending…" : emailSent ? "✉️ Email Sent!" : "✉️ Send Payment Link to Customer"}
+        </button>
+        {emailSent && (
+          <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "6px", textAlign: "center" }}>
+            Sent to {contact.email}
           </div>
         )}
       </div>
