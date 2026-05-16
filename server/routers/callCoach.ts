@@ -233,7 +233,15 @@ export const callCoachRouter = router({
       .select({ id: users.id, name: users.name, email: users.email, role: users.role })
       .from(users)
       .orderBy(users.name);
-    return rows.filter(r => r.name && r.email && r.role !== "admin");
+    const filtered = rows.filter(r => r.name && r.email && r.role !== "admin");
+    // Deduplicate by email — keep the first (lowest id) for each email
+    const seen = new Set<string>();
+    return filtered.filter(r => {
+      const key = r.email!.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }),
 
   /** Admin-only: re-run the full analysis pipeline for a call */
