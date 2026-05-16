@@ -663,7 +663,7 @@ export const contactsRouter = router({
         currency: "gbp",
         customer: customer.id,
         metadata: { contactId: String(contactId) },
-        automatic_payment_methods: { enabled: true },
+        payment_method_types: ["card"],
       });
 
       return {
