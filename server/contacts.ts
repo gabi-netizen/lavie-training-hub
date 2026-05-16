@@ -126,7 +126,10 @@ export async function listContacts({
     .select()
     .from(contacts)
     .where(where)
-    .orderBy(desc(contacts.createdAt))
+    .orderBy(
+      sql`CASE WHEN ${contacts.status} = 'new' THEN 0 ELSE 1 END`,
+      desc(contacts.createdAt)
+    )
     .limit(limit)
     .offset(offset);
 }
