@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
-  ChevronRight, ChevronDown, CreditCard, Search,
+  ChevronRight, ChevronLeft, ChevronDown, CreditCard, Search,
   Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus, ChevronsUpDown
 } from "lucide-react";
 import {
@@ -377,6 +377,8 @@ function ContactCard({
   isCallPending,
   isSkipped,
   onDelete,
+  onPrev,
+  onNext,
 }: {
   contact: Contact;
   isActive: boolean;
@@ -389,6 +391,8 @@ function ContactCard({
   onFieldChange: (field: string, value: any) => void;
   isCallPending?: boolean;
   onDelete?: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
@@ -488,6 +492,26 @@ function ContactCard({
       onClick={onSelect}
     >
       <div className="ws-row1">
+        {isActive && (
+          <div className="flex items-center gap-1 mr-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
+              disabled={!onPrev}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-indigo-100 border border-gray-300 hover:border-indigo-400 text-gray-600 hover:text-indigo-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Previous contact"
+            >
+              <ChevronLeft size={18} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+              disabled={!onNext}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-indigo-100 border border-gray-300 hover:border-indigo-400 text-gray-600 hover:text-indigo-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Next contact"
+            >
+              <ChevronRight size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
         <div className="ws-avatar">{initials}</div>
         <div className="ws-name-box">
           <div className="ws-name">{contact.name}</div>
@@ -1976,11 +2000,13 @@ export default function Workspace() {
           </div>
 
           <div className="ws-dl-items">
-            {contacts.map((contact: any) => {
+            {contacts.map((contact: any, idx: number) => {
               // Overdue callbacks are always unlocked (interactive) regardless of doneItems
               const isOverdueCallback = (callbacksDue as any[]).some((c) => c.id === contact.id);
               const isSkipped = doneItems[contact.id] === "Skip";
               const isDone = isOverdueCallback ? false : (!!doneItems[contact.id] && !isSkipped);
+              const prevContact = contacts[idx - 1];
+              const nextContact = contacts[idx + 1];
               return (
                 <div key={contact.id} id={`ws-contact-${contact.id}`}>
                   <ContactCard
@@ -1989,6 +2015,8 @@ export default function Workspace() {
                     isDone={isDone}
                     doneStatus={isOverdueCallback ? undefined : doneItems[contact.id]}
                     isSkipped={isSkipped}
+                    onPrev={prevContact ? () => setActiveId(prevContact.id) : undefined}
+                    onNext={nextContact ? () => setActiveId(nextContact.id) : undefined}
                     onSelect={() => {
                       if (isSkipped) {
                         // Re-open skipped contact: clear local done + reset status in DB
