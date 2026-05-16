@@ -368,7 +368,7 @@ function ContactCard({
             {doneStatus}
           </div>
         )}
-        {isActive && !isDone && (!isSkipped || isActive) && (
+        {isActive && (
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="ml-auto px-3 py-1 flex items-center gap-1 rounded-md bg-gray-100 hover:bg-red-50 border border-gray-300 hover:border-red-300 text-gray-600 hover:text-red-600 font-semibold text-xs transition-colors"
@@ -379,7 +379,7 @@ function ContactCard({
         )}
       </div>
 
-      {isActive && !isDone && (
+      {isActive && (
         <div className="ws-expanded" onClick={(e) => e.stopPropagation()}>
           {/* Contact Details — Editable */}
           <div className="ws-details">
@@ -1488,6 +1488,14 @@ export default function Workspace() {
   const [managerMode, setManagerMode] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
+  // Fetch all users (for manager view agent filtering)
+  const { data: allUsersWs } = trpc.pitch.allUsers.useQuery(undefined, { enabled: isAdmin });
+  const selectedAgentEmail = useMemo(() => {
+    if (!managerMode || !selectedAgentId || !allUsersWs) return undefined;
+    const agent = allUsersWs.find((u: any) => u.id === selectedAgentId);
+    return agent?.email ?? undefined;
+  }, [managerMode, selectedAgentId, allUsersWs]);
+
   // ── Callback scheduler modal state ──
   const [callbackModal, setCallbackModal] = useState<{ contactId: number; contactName: string } | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
@@ -1580,9 +1588,9 @@ export default function Workspace() {
     sendToCloudTalk("hangup");
   }, [sendToCloudTalk]);
 
-  // Fetch contacts from the API
+  // Fetch contacts from the API (filter by selected agent in manager mode)
   const { data: contacts = [], refetch } = trpc.contacts.list.useQuery(
-    { search: searchQuery || undefined, limit: 50 },
+    { search: searchQuery || undefined, limit: 50, agentEmail: selectedAgentEmail },
     { enabled: true, staleTime: 0, refetchOnMount: "always" }
   );
 
@@ -1805,7 +1813,6 @@ export default function Workspace() {
                     doneStatus={isOverdueCallback ? undefined : doneItems[contact.id]}
                     isSkipped={isSkipped}
                     onSelect={() => {
-                      if (isDone) return;
                       if (isSkipped) {
                         // Re-open skipped contact: clear local done + reset status in DB
                         setLocalDoneItems((prev: Record<number, string>) => {

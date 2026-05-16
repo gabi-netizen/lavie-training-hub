@@ -131,15 +131,20 @@ export const contactsRouter = router({
         leadType: z.string().optional(),
         status: z.string().optional(),
         agentName: z.string().optional(),
+        agentEmail: z.string().optional(),
         limit: z.number().min(1).max(5000).default(5000),
         offset: z.number().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
       // Non-admin agents only see contacts assigned to them
+      // Admin can optionally filter by agentEmail (e.g. Manager View)
+      const agentEmail = ctx.user.role !== 'admin'
+        ? (ctx.user.email ?? undefined)
+        : input.agentEmail ?? undefined;
       return listContacts({
         ...input,
-        agentEmail: ctx.user.role !== 'admin' ? (ctx.user.email ?? undefined) : undefined,
+        agentEmail,
       });
     }),
   // ─── Get single contact with call notes ──────────────────────────────────────
