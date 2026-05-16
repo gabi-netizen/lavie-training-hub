@@ -1163,7 +1163,7 @@ function ScriptPanel({
                     ))}
 
                     {stage.says?.map((say, i) => (
-                      <div key={i} className="ws-ps-say">{say}</div>
+                      <div key={i} className="ws-ps-say">{say.replace(/^"+|"+$/g, '')}</div>
                     ))}
 
                     {stage.endInstruction && (
@@ -1171,11 +1171,11 @@ function ScriptPanel({
                     )}
 
                     {stage.notes?.map((note, i) => (
-                      <div key={i} className="ws-ps-say">{note}</div>
+                      <div key={i} className="ws-ps-say">{note.replace(/^"+|"+$/g, '')}</div>
                     ))}
 
                     {stage.closingSay && (
-                      <div className="ws-ps-say ws-ps-closing">{stage.closingSay}</div>
+                      <div className="ws-ps-say ws-ps-closing">{stage.closingSay.replace(/^"+|"+$/g, '')}</div>
                     )}
 
                     {/* Branch Buttons */}
@@ -1200,7 +1200,7 @@ function ScriptPanel({
                                 <div className="ws-ps-instruction">{opt.instruction}</div>
                               )}
                               {opt.says.map((say, i) => (
-                                <div key={i} className="ws-ps-say">{say}</div>
+                                <div key={i} className="ws-ps-say">{say.replace(/^"+|"+$/g, '')}</div>
                               ))}
                             </div>
                           ) : null
