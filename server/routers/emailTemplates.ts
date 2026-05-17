@@ -39,6 +39,47 @@ async function sendViaPostmark(opts: {
   return res.json() as Promise<{ MessageID: string }>;
 }
 
+/** Wrap email body in a professional HTML layout with optional header image + footer */
+function wrapEmailHtml(opts: {
+  bodyHtml: string;
+  headerImageUrl?: string | null;
+  agentName: string;
+}) {
+  const logoUrl = "https://lavielabs.com/cdn/shop/files/logo-big.png?v=1761659671&width=300";
+  const headerSection = opts.headerImageUrl
+    ? `<tr><td align="center" style="padding:20px 20px 10px;">
+        <img src="${opts.headerImageUrl}" alt="Lavie Labs" style="max-width:100%;height:auto;max-height:120px;" />
+      </td></tr>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
+    <tr><td align="center" style="padding:20px 0;">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+        ${headerSection}
+        <!-- Body -->
+        <tr><td style="padding:20px 30px;font-size:15px;color:#333333;line-height:1.6;">
+          ${opts.bodyHtml}
+        </td></tr>
+        <!-- Agent signature -->
+        <tr><td style="padding:0 30px 15px;font-size:13px;color:#555555;">
+          Kind regards,<br/><strong>${opts.agentName}</strong><br/>Lavie Labs UK
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="border-top:1px solid #eeeeee;padding:20px 30px;text-align:center;">
+          <img src="${logoUrl}" alt="Lavie Labs" style="max-width:120px;height:auto;margin-bottom:8px;" /><br/>
+          <span style="font-size:12px;color:#999999;">Lavie Labs UK &bull; <a href="https://lavielabs.co.uk" style="color:#999999;text-decoration:underline;">www.lavielabs.co.uk</a></span><br/>
+          <span style="font-size:11px;color:#bbbbbb;"><a href="mailto:support@lavielabs.com" style="color:#bbbbbb;text-decoration:underline;">support@lavielabs.com</a></span>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 /** Replace all known placeholders in a template string */
 function fillPlaceholders(
   template: string,
@@ -201,7 +242,14 @@ export const emailTemplatesRouter = router({
       };
 
       const resolvedSubject = fillPlaceholders(template.subject, vars);
-      const resolvedHtml = fillPlaceholders(template.htmlBody, vars);
+      const resolvedBodyHtml = fillPlaceholders(template.htmlBody, vars);
+
+      // Wrap in professional email layout with header image + footer + agent signature
+      const resolvedHtml = wrapEmailHtml({
+        bodyHtml: resolvedBodyHtml,
+        headerImageUrl: template.headerImageUrl,
+        agentName,
+      });
 
       // Send via Postmark
       const fromAddress = `${agentName} <trial@lavielabs.com>`;
