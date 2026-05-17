@@ -1064,7 +1064,7 @@ function StripePaymentSection({
     setCheckingPayment(true);
     setPaymentStatus(null);
     try {
-      const res = await fetch(`/api/trpc/contacts.checkPaymentStatus?input=${encodeURIComponent(JSON.stringify({ email: contact.email }))}`);
+      const res = await fetch(`/api/trpc/contacts.checkPaymentStatus?input=${encodeURIComponent(JSON.stringify({ email: contact.email, contactId: contact.id }))}`);
       const data = await res.json();
       const result = data?.result?.data;
       if (result?.paid) {

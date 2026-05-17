@@ -720,8 +720,34 @@ export const contactsRouter = router({
       const { contactId, name, email } = input;
 
       const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "f8d7dddf-68c1-4621-8881-13923bb57b7f";
-      const PAYMENT_LINK = "https://buy.stripe.com/cNi3cvgcR4879BDgSSb3q0r";
       const TEMPLATE_ID = 45041782;
+
+      // Create a unique Checkout Session for this contact
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "gbp",
+              unit_amount: 495,
+              product_data: {
+                name: "Trial Package Matinika™",
+                description: "£4.95 trial today — your 20ml starter jar ships now. After 21 days, your full-size 60ml jar (2-month supply) ships automatically at £44.90 every 2 months — just £22.45/month. Cancel anytime, no commitments.",
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: email,
+        metadata: { contactId: String(contactId) },
+        payment_intent_data: {
+          metadata: { contactId: String(contactId) },
+        },
+        success_url: "https://www.lavielabs.com/thank-you",
+        cancel_url: "https://www.lavielabs.com",
+      });
+
+      const paymentLink = session.url!;
 
       const res = await fetch("https://api.postmarkapp.com/email/withTemplate", {
         method: "POST",
@@ -735,7 +761,7 @@ export const contactsRouter = router({
           TemplateId: TEMPLATE_ID,
           TemplateModel: {
             name: name,
-            payment_link: PAYMENT_LINK,
+            payment_link: paymentLink,
           },
         }),
       });
@@ -748,45 +774,73 @@ export const contactsRouter = router({
       return { success: true };
     }),
 
-  // ─── Check Payment Status via Stripe Payment Link ─────────────────────────
+  // ─── Check Payment Status via Stripe (by contactId metadata first, then email fallback) ─────────────────────────
   checkPaymentStatus: protectedProcedure
     .input(
       z.object({
         email: z.string().email(),
+        contactId: z.number().optional(),
       })
     )
     .query(async ({ input }) => {
-      const { email } = input;
+      const { email, contactId } = input;
 
-      // Search for completed checkout sessions by customer email
+      // 1. Search Checkout Sessions (check all recent ones for contactId match)
       const sessions = await stripe.checkout.sessions.list({
-        customer_details: { email } as any,
-        limit: 10,
+        limit: 50,
       });
 
-      // Check if any session with this email was paid
-      const paidSession = sessions.data.find(
+      // First priority: match by contactId in metadata
+      if (contactId) {
+        const paidByContactId = sessions.data.find(
+          (s) => s.payment_status === "paid" && s.metadata?.contactId === String(contactId)
+        );
+        if (paidByContactId) {
+          return {
+            paid: true,
+            amount: paidByContactId.amount_total ? (paidByContactId.amount_total / 100).toFixed(2) : "4.95",
+            currency: paidByContactId.currency || "gbp",
+            paidAt: paidByContactId.created ? new Date(paidByContactId.created * 1000).toISOString() : null,
+          };
+        }
+      }
+
+      // 2. Fallback: match by email in checkout session
+      const paidByEmail = sessions.data.find(
         (s) => s.payment_status === "paid" && s.customer_details?.email === email
       );
-
-      if (paidSession) {
+      if (paidByEmail) {
         return {
           paid: true,
-          amount: paidSession.amount_total ? (paidSession.amount_total / 100).toFixed(2) : "4.95",
-          currency: paidSession.currency || "gbp",
-          paidAt: paidSession.created ? new Date(paidSession.created * 1000).toISOString() : null,
+          amount: paidByEmail.amount_total ? (paidByEmail.amount_total / 100).toFixed(2) : "4.95",
+          currency: paidByEmail.currency || "gbp",
+          paidAt: paidByEmail.created ? new Date(paidByEmail.created * 1000).toISOString() : null,
         };
       }
 
-      // Also check PaymentIntents as fallback (for card payments done via the form)
+      // 3. Fallback: check PaymentIntents by contactId metadata
       const paymentIntents = await stripe.paymentIntents.list({
-        limit: 20,
+        limit: 30,
       });
 
+      if (contactId) {
+        const paidIntentById = paymentIntents.data.find(
+          (pi) => pi.status === "succeeded" && pi.metadata?.contactId === String(contactId)
+        );
+        if (paidIntentById) {
+          return {
+            paid: true,
+            amount: (paidIntentById.amount / 100).toFixed(2),
+            currency: paidIntentById.currency || "gbp",
+            paidAt: paidIntentById.created ? new Date(paidIntentById.created * 1000).toISOString() : null,
+          };
+        }
+      }
+
+      // 4. Final fallback: PaymentIntent by receipt_email
       const paidIntent = paymentIntents.data.find(
         (pi) => pi.status === "succeeded" && pi.receipt_email === email
       );
-
       if (paidIntent) {
         return {
           paid: true,
