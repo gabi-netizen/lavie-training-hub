@@ -469,7 +469,7 @@ function ContactCard({
 
   const { data: emailTemplates, isLoading: templatesLoading } = trpc.emailTemplates.list.useQuery(
     undefined,
-    { enabled: emailTemplateOpen }
+    { enabled: emailDropOpen || emailTemplateOpen }
   );
 
   const { data: selectedTemplate, isLoading: templateDetailLoading } = trpc.emailTemplates.getById.useQuery(
@@ -977,29 +977,26 @@ function ContactCard({
               </button>
               {emailDropOpen && (
                 <div className="ws-email-drop-menu">
-                  <button
-                    className="ws-email-drop-item"
-                    onClick={() => {
-                      setEmailDropOpen(false);
-                      setEmailTemplateOpen(true);
-                    }}
-                  >
-                    <span className="ws-email-drop-icon">✉️</span>
-                    Post-Call Follow-Up
-                  </button>
-                  <button
-                    className="ws-email-drop-item"
-                    onClick={() => {
-                      setEmailDropOpen(false);
-                      // Find and open the Form template directly
-                      setEmailTemplateOpen(true);
-                      // We'll auto-select the Form template after templates load
-                      setAutoSelectFormTemplate(true);
-                    }}
-                  >
-                    <span className="ws-email-drop-icon">🔗</span>
-                    Send Payment Form
-                  </button>
+                  {templatesLoading && (
+                    <div className="ws-email-drop-item text-gray-400 text-sm">Loading...</div>
+                  )}
+                  {!templatesLoading && (!emailTemplates || emailTemplates.length === 0) && (
+                    <div className="ws-email-drop-item text-gray-400 text-sm">No templates</div>
+                  )}
+                  {!templatesLoading && emailTemplates && emailTemplates.map((t: { id: number; name: string }) => (
+                    <button
+                      key={t.id}
+                      className="ws-email-drop-item"
+                      onClick={() => {
+                        setEmailDropOpen(false);
+                        setSelectedTemplateId(t.id);
+                        setEmailTemplateOpen(true);
+                      }}
+                    >
+                      <span className="ws-email-drop-icon">✉️</span>
+                      {t.name}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
