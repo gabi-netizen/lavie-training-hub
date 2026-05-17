@@ -424,6 +424,8 @@ function ContactCard({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
   const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
+  const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
+  const [editTemplate, setEditTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
   const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const [savedNotes, setSavedNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const notesChanged = notes !== savedNotes;
@@ -443,6 +445,15 @@ function ContactCard({
     onSuccess: () => {
       utils.emailTemplates.list.invalidate();
       setSelectedTemplateId(null);
+    },
+  });
+
+  const updateTemplateMutation = trpc.emailTemplates.update.useMutation({
+    onSuccess: () => {
+      toast.success("Template updated!");
+      setEditingTemplateId(null);
+      utils.emailTemplates.list.invalidate();
+      utils.emailTemplates.getById.invalidate();
     },
   });
 
@@ -792,33 +803,61 @@ function ContactCard({
                     )}
                     <div className="flex flex-col gap-2">
                       {emailTemplates?.map((tpl) => (
-                        <div key={tpl.id} className="relative group">
-                          <button
-                            onClick={() => setSelectedTemplateId(tpl.id)}
-                            className={`w-full text-left px-3 py-3 rounded-lg border-2 transition-colors ${
-                              selectedTemplateId === tpl.id
-                                ? "border-amber-500 bg-amber-50"
-                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                            }`}
-                          >
-                            <p className="text-sm font-semibold text-gray-900 leading-tight pr-6">{tpl.name}</p>
-                            {tpl.description && (
-                              <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
-                            )}
-                            <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Delete template "${tpl.name}"?`)) {
-                                deleteTemplateMutation.mutate({ id: tpl.id });
-                              }
-                            }}
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 p-1 rounded"
-                            title="Delete template"
-                          >
-                            <X size={14} />
-                          </button>
+                        <div key={tpl.id} className="relative">
+                          {editingTemplateId === tpl.id ? (
+                            <div className="p-3 rounded-lg border-2 border-blue-400 bg-blue-50">
+                              <input className="w-full text-sm font-semibold border border-gray-300 rounded px-2 py-1 mb-1" value={editTemplate.name} onChange={(e) => setEditTemplate({...editTemplate, name: e.target.value})} placeholder="Name" />
+                              <input className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-1" value={editTemplate.subject} onChange={(e) => setEditTemplate({...editTemplate, subject: e.target.value})} placeholder="Subject" />
+                              <input className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-1" value={editTemplate.description} onChange={(e) => setEditTemplate({...editTemplate, description: e.target.value})} placeholder="Description" />
+                              <textarea className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-2" rows={4} value={editTemplate.htmlBody} onChange={(e) => setEditTemplate({...editTemplate, htmlBody: e.target.value})} placeholder="HTML Body" />
+                              <div className="flex gap-2">
+                                <button onClick={() => updateTemplateMutation.mutate({ id: tpl.id, ...editTemplate })} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+                                <button onClick={() => setEditingTemplateId(null)} className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setSelectedTemplateId(tpl.id)}
+                                className={`w-full text-left px-3 py-3 rounded-lg border-2 transition-colors ${
+                                  selectedTemplateId === tpl.id
+                                    ? "border-amber-500 bg-amber-50"
+                                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                <p className="text-sm font-semibold text-gray-900 leading-tight pr-14">{tpl.name}</p>
+                                {tpl.description && (
+                                  <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
+                              </button>
+                              <div className="absolute top-2 right-2 flex gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingTemplateId(tpl.id);
+                                    setEditTemplate({ name: tpl.name, subject: tpl.subject || "", description: tpl.description || "", htmlBody: "" });
+                                  }}
+                                  className="text-blue-400 hover:text-blue-600 p-1 rounded"
+                                  title="Edit template"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Delete template "${tpl.name}"?`)) {
+                                      deleteTemplateMutation.mutate({ id: tpl.id });
+                                    }
+                                  }}
+                                  className="text-red-400 hover:text-red-600 p-1 rounded"
+                                  title="Delete template"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
