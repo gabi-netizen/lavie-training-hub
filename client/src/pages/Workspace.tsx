@@ -469,7 +469,7 @@ function ContactCard({
 
   const { data: emailTemplates, isLoading: templatesLoading } = trpc.emailTemplates.list.useQuery(
     undefined,
-    { enabled: emailDropOpen || emailTemplateOpen }
+    { enabled: emailTemplateOpen }
   );
 
   const { data: selectedTemplate, isLoading: templateDetailLoading } = trpc.emailTemplates.getById.useQuery(
@@ -967,39 +967,12 @@ function ContactCard({
             <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)}>
               Take Payment
             </button>
-            <div className="ws-email-drop-wrap" ref={emailDropRef}>
-              <button
-                className="ws-btn-email ws-btn-pair-item ws-email-drop-trigger"
-                onClick={() => setEmailDropOpen((v) => !v)}
-              >
-                Send Email
-                <span className="ws-email-drop-arrow">{emailDropOpen ? "▲" : "▼"}</span>
-              </button>
-              {emailDropOpen && (
-                <div className="ws-email-drop-menu">
-                  {templatesLoading && (
-                    <div className="ws-email-drop-item text-gray-400 text-sm">Loading...</div>
-                  )}
-                  {!templatesLoading && (!emailTemplates || emailTemplates.length === 0) && (
-                    <div className="ws-email-drop-item text-gray-400 text-sm">No templates</div>
-                  )}
-                  {!templatesLoading && emailTemplates && emailTemplates.map((t: { id: number; name: string }) => (
-                    <button
-                      key={t.id}
-                      className="ws-email-drop-item"
-                      onClick={() => {
-                        setEmailDropOpen(false);
-                        setSelectedTemplateId(t.id);
-                        setEmailTemplateOpen(true);
-                      }}
-                    >
-                      <span className="ws-email-drop-icon">✉️</span>
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              className="ws-btn-email ws-btn-pair-item"
+              onClick={() => setEmailTemplateOpen(true)}
+            >
+              Send Email
+            </button>
           </div>
 
           {payOpen && (
