@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { handleGmailWebhook } from "../webhooks/gmail";
+import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
@@ -80,6 +81,10 @@ async function startServer() {
   // in the support@lavielabs.com inbox.
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/webhooks/gmail", handleGmailWebhook);
+
+  // ─── Postmark Inbound Webhook ─────────────────────────────────────────────
+  // Postmark pushes inbound emails here when trial@lavielabs.com receives mail
+  app.post("/api/webhooks/postmark-inbound", handlePostmarkInbound);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
   // Public endpoint — called by the payment page to initiate a Stripe payment.
