@@ -231,12 +231,15 @@ export const emailTemplatesRouter = router({
       const resolvedSubject = fillPlaceholders(template.subject, vars);
       const resolvedBodyHtml = fillPlaceholders(template.htmlBody, vars);
 
-      // Wrap in professional email layout with header image + footer + agent signature
-      const resolvedHtml = wrapEmailHtml({
-        bodyHtml: resolvedBodyHtml,
-        headerImageUrl: template.headerImageUrl,
-        agentName,
-      });
+      // Only wrap simple templates; skip wrapping if template already contains full HTML
+      const isFullHtml = /<html[\s>]/i.test(resolvedBodyHtml);
+      const resolvedHtml = isFullHtml
+        ? resolvedBodyHtml
+        : wrapEmailHtml({
+            bodyHtml: resolvedBodyHtml,
+            headerImageUrl: template.headerImageUrl,
+            agentName,
+          });
 
       // Send via Postmark
       const fromAddress = `${agentName} - Lavie Labs Skincare <trial@lavielabs.com>`;
