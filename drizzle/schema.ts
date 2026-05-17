@@ -266,6 +266,8 @@ export const emailTemplates = mysqlTable("email_templates", {
   htmlBody: text("htmlBody").notNull(),
   /** Short description shown in the template picker */
   description: varchar("description", { length: 512 }),
+  /** Optional header image URL displayed at the top of the email template */
+  headerImageUrl: varchar("headerImageUrl", { length: 500 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

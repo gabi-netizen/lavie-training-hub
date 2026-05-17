@@ -64,6 +64,7 @@ export const emailTemplatesRouter = router({
         name: emailTemplates.name,
         subject: emailTemplates.subject,
         description: emailTemplates.description,
+        headerImageUrl: emailTemplates.headerImageUrl,
         createdAt: emailTemplates.createdAt,
         updatedAt: emailTemplates.updatedAt,
       })
@@ -94,6 +95,7 @@ export const emailTemplatesRouter = router({
         subject: z.string().min(1),
         htmlBody: z.string().min(1),
         description: z.string().optional(),
+        headerImageUrl: z.string().url().optional().or(z.literal('')),
       })
     )
     .mutation(async ({ input }) => {
@@ -104,6 +106,7 @@ export const emailTemplatesRouter = router({
         subject: input.subject,
         htmlBody: input.htmlBody,
         description: input.description ?? null,
+        headerImageUrl: input.headerImageUrl || null,
       });
       return { success: true };
     }),
@@ -117,12 +120,18 @@ export const emailTemplatesRouter = router({
         subject: z.string().min(1).optional(),
         htmlBody: z.string().min(1).optional(),
         description: z.string().optional(),
+        headerImageUrl: z.string().url().optional().or(z.literal('')),
       })
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const { id, ...fields } = input;
+      const { id, headerImageUrl, ...rest } = input;
+      const fields: Record<string, unknown> = { ...rest };
+      // Allow clearing the field by passing empty string
+      if (headerImageUrl !== undefined) {
+        fields.headerImageUrl = headerImageUrl || null;
+      }
       await db
         .update(emailTemplates)
         .set(fields)

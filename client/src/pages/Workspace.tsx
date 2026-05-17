@@ -423,9 +423,9 @@ function ContactCard({
   }, []);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
+  const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "" });
   const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
-  const [editTemplate, setEditTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "" });
+  const [editTemplate, setEditTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "" });
   const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const [savedNotes, setSavedNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const notesChanged = notes !== savedNotes;
@@ -461,7 +461,7 @@ function ContactCard({
     onSuccess: () => {
       toast.success("Template created!");
       setShowAddTemplate(false);
-      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "" });
+      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "" });
       utils.emailTemplates.list.invalidate();
     },
     onError: (err: any) => toast.error(err.message),
@@ -780,11 +780,24 @@ function ContactCard({
                           placeholder="Paste HTML body here..."
                           value={newTemplate.htmlBody}
                           onChange={(e) => setNewTemplate({ ...newTemplate, htmlBody: e.target.value })}
-                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-1 h-32 resize-y font-mono"
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2 h-32 resize-y font-mono"
                         />
-                        <p className="text-xs text-gray-500 mb-2">
-                          📷 Need images? <a href="https://account.postmarkapp.com/servers/18989704/templates" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Upload in Postmark</a> and paste the URL in your HTML.
-                        </p>
+                        <label className="block text-xs font-bold text-black mb-1">Header Image URL (optional)</label>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/image.png"
+                          value={newTemplate.headerImageUrl}
+                          onChange={(e) => setNewTemplate({ ...newTemplate, headerImageUrl: e.target.value })}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-1"
+                        />
+                        {newTemplate.headerImageUrl && (
+                          <img
+                            src={newTemplate.headerImageUrl}
+                            alt="Header preview"
+                            className="w-full max-h-24 object-contain rounded border border-gray-200 mb-2"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
                         <button
                           onClick={() => createTemplateMutation.mutate(newTemplate)}
                           disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.htmlBody || createTemplateMutation.isPending}
@@ -810,6 +823,22 @@ function ContactCard({
                               <input className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-1" value={editTemplate.subject} onChange={(e) => setEditTemplate({...editTemplate, subject: e.target.value})} placeholder="Subject" />
                               <input className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-1" value={editTemplate.description} onChange={(e) => setEditTemplate({...editTemplate, description: e.target.value})} placeholder="Description" />
                               <textarea className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-2" rows={4} value={editTemplate.htmlBody} onChange={(e) => setEditTemplate({...editTemplate, htmlBody: e.target.value})} placeholder="HTML Body" />
+                              <label className="block text-xs font-bold text-black mb-1">Header Image URL (optional)</label>
+                              <input
+                                type="url"
+                                placeholder="https://example.com/image.png"
+                                value={editTemplate.headerImageUrl}
+                                onChange={(e) => setEditTemplate({...editTemplate, headerImageUrl: e.target.value})}
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-1"
+                              />
+                              {editTemplate.headerImageUrl && (
+                                <img
+                                  src={editTemplate.headerImageUrl}
+                                  alt="Header preview"
+                                  className="w-full max-h-24 object-contain rounded border border-gray-200 mb-2"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              )}
                               <div className="flex gap-2">
                                 <button onClick={() => updateTemplateMutation.mutate({ id: tpl.id, ...editTemplate })} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
                                 <button onClick={() => setEditingTemplateId(null)} className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</button>
@@ -836,7 +865,7 @@ function ContactCard({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEditingTemplateId(tpl.id);
-                                    setEditTemplate({ name: tpl.name, subject: tpl.subject || "", description: tpl.description || "", htmlBody: "" });
+                                    setEditTemplate({ name: tpl.name, subject: tpl.subject || "", description: tpl.description || "", htmlBody: "", headerImageUrl: (tpl as any).headerImageUrl || "" });
                                   }}
                                   className="text-blue-400 hover:text-blue-600 p-1 rounded"
                                   title="Edit template"
