@@ -2804,7 +2804,7 @@ export default function Workspace() {
                   onChange={(e) => setTimePart(e.target.value)}
                   style={{
                     border: "1.5px solid #d1d5db", borderRadius: 8, padding: "9px 12px",
-                    fontSize: 14, color: selectedTime ? "#000000" : "#9ca3af", fontWeight: selectedTime ? 700 : 400, outline: "none",
+                    fontSize: 14, color: "#000000", fontWeight: 700, outline: "none",
                     width: "100%", background: "#fff", cursor: "pointer"
                   }}
                 >
