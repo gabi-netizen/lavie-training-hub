@@ -45,37 +45,24 @@ function wrapEmailHtml(opts: {
   headerImageUrl?: string | null;
   agentName: string;
 }) {
-  const logoUrl = "https://lavielabs.com/cdn/shop/files/logo-big.png?v=1761659671&width=300";
+  const logoUrl = "https://lavielabs.com/cdn/shop/files/logo-big.png?v=1761659671&width=200";
   const headerSection = opts.headerImageUrl
-    ? `<tr><td align="center" style="padding:20px 20px 10px;">
-        <img src="${opts.headerImageUrl}" alt="Lavie Labs" style="max-width:100%;height:auto;max-height:120px;" />
-      </td></tr>`
+    ? `<img src="${opts.headerImageUrl}" alt="Lavie Labs" style="max-width:100%;height:auto;max-height:100px;display:block;margin-bottom:16px;" />`
     : "";
 
   return `<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
-    <tr><td align="center" style="padding:20px 0;">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
-        ${headerSection}
-        <!-- Body -->
-        <tr><td style="padding:20px 30px;font-size:15px;color:#333333;line-height:1.6;">
-          ${opts.bodyHtml}
-        </td></tr>
-        <!-- Agent signature -->
-        <tr><td style="padding:0 30px 15px;font-size:13px;color:#555555;">
-          Kind regards,<br/><strong>${opts.agentName}</strong><br/>Lavie Labs UK
-        </td></tr>
-        <!-- Footer -->
-        <tr><td style="border-top:1px solid #eeeeee;padding:20px 30px;text-align:center;">
-          <img src="${logoUrl}" alt="Lavie Labs" style="max-width:120px;height:auto;margin-bottom:8px;" /><br/>
-          <span style="font-size:12px;color:#999999;">Lavie Labs UK &bull; <a href="https://lavielabs.co.uk" style="color:#999999;text-decoration:underline;">www.lavielabs.co.uk</a></span><br/>
-          <span style="font-size:11px;color:#bbbbbb;"><a href="mailto:support@lavielabs.com" style="color:#bbbbbb;text-decoration:underline;">support@lavielabs.com</a></span>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#333333;font-size:15px;line-height:1.6;">
+${headerSection}${opts.bodyHtml}
+<br/><br/>
+Kind regards,<br/>
+<strong>${opts.agentName}</strong><br/>
+Lavie Labs UK
+<br/><br/>
+<hr style="border:none;border-top:1px solid #dddddd;margin:16px 0;" />
+<img src="${logoUrl}" alt="Lavie Labs" style="max-width:100px;height:auto;" /><br/>
+<span style="font-size:12px;color:#888888;">Lavie Labs UK &bull; <a href="https://lavielabs.co.uk" style="color:#888888;">www.lavielabs.co.uk</a></span><br/>
+<span style="font-size:11px;color:#aaaaaa;"><a href="mailto:support@lavielabs.com" style="color:#aaaaaa;">support@lavielabs.com</a></span>
 </body>
 </html>`;
 }
@@ -252,7 +239,7 @@ export const emailTemplatesRouter = router({
       });
 
       // Send via Postmark
-      const fromAddress = `${agentName} <trial@lavielabs.com>`;
+      const fromAddress = `${agentName} - Lavie Labs Skincare <trial@lavielabs.com>`;
       let postmarkMessageId: string | null = null;
       try {
         const result = await sendViaPostmark({
