@@ -720,34 +720,8 @@ export const contactsRouter = router({
       const { contactId, name, email } = input;
 
       const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "f8d7dddf-68c1-4621-8881-13923bb57b7f";
+      const PAYMENT_LINK = "https://buy.stripe.com/cNi3cvgcR4879BDgSSb3q0r";
       const TEMPLATE_ID = 45041782;
-
-      // Create a unique Checkout Session for this contact
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: "gbp",
-              unit_amount: 495,
-              product_data: {
-                name: "Trial Package Matinika™",
-                description: "£4.95 trial today — your 20ml starter jar ships now. After 21 days, your full-size 60ml jar (2-month supply) ships automatically at £44.90 every 2 months — just £22.45/month. Cancel anytime, no commitments.",
-              },
-            },
-            quantity: 1,
-          },
-        ],
-        customer_email: email,
-        metadata: { contactId: String(contactId) },
-        payment_intent_data: {
-          metadata: { contactId: String(contactId) },
-        },
-        success_url: "https://www.lavielabs.com/thank-you",
-        cancel_url: "https://www.lavielabs.com",
-      });
-
-      const paymentLink = session.url!;
 
       const res = await fetch("https://api.postmarkapp.com/email/withTemplate", {
         method: "POST",
@@ -761,7 +735,7 @@ export const contactsRouter = router({
           TemplateId: TEMPLATE_ID,
           TemplateModel: {
             name: name,
-            payment_link: paymentLink,
+            payment_link: PAYMENT_LINK,
           },
         }),
       });
