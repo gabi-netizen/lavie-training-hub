@@ -44,8 +44,8 @@ function wrapEmailHtml(opts: {
   bodyHtml: string;
   headerImageUrl?: string | null;
   agentName: string;
+  contactName: string;
 }) {
-  const logoUrl = "https://lavielabs.com/cdn/shop/files/logo-big.png?v=1761659671&width=200";
   const headerSection = opts.headerImageUrl
     ? `<img src="${opts.headerImageUrl}" alt="Lavie Labs" style="max-width:100%;height:auto;max-height:100px;display:block;margin-bottom:16px;" />`
     : "";
@@ -53,16 +53,18 @@ function wrapEmailHtml(opts: {
   return `<!DOCTYPE html>
 <html>
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#333333;font-size:15px;line-height:1.6;">
-${headerSection}${opts.bodyHtml}
-<br/><br/>
-Kind regards,<br/>
-<strong>${opts.agentName}</strong><br/>
-Lavie Labs UK
-<br/><br/>
-<hr style="border:none;border-top:1px solid #dddddd;margin:16px 0;" />
-<img src="${logoUrl}" alt="Lavie Labs" style="max-width:100px;height:auto;" /><br/>
-<span style="font-size:12px;color:#888888;">Lavie Labs UK &bull; <a href="https://lavielabs.co.uk" style="color:#888888;">www.lavielabs.co.uk</a></span><br/>
-<span style="font-size:11px;color:#aaaaaa;"><a href="mailto:support@lavielabs.com" style="color:#aaaaaa;">support@lavielabs.com</a></span>
+${headerSection}
+<p style="margin:0 0 14px 0;">Dear ${opts.contactName},</p>
+
+${opts.bodyHtml}
+
+<p style="margin:16px 0 14px 0;">Should you need anything please don't hesitate to respond to this email. Alternatively email <a href="mailto:support@lavielabs.com" style="color:#2b5cab;text-decoration:underline;">support@lavielabs.com</a></p>
+
+<p style="margin:16px 0;text-align:center;">
+  <a href="mailto:support@lavielabs.com" style="display:inline-block;padding:10px 24px;font-size:13px;line-height:16px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:18px;font-weight:bold;background-color:#6f9fea;">Contact Us</a>
+</p>
+
+<p style="margin:14px 0 0 0;">Warm regards,<br/><strong>${opts.agentName}</strong></p>
 </body>
 </html>`;
 }
@@ -239,10 +241,11 @@ export const emailTemplatesRouter = router({
             bodyHtml: resolvedBodyHtml,
             headerImageUrl: template.headerImageUrl,
             agentName,
+            contactName: contact.name || firstName,
           });
 
       // Send via Postmark
-      const fromAddress = `${agentName} - Lavie Labs Skincare <trial@lavielabs.com>`;
+      const fromAddress = `${agentName} <trial@lavielabs.com>`;
       let postmarkMessageId: string | null = null;
       try {
         const result = await sendViaPostmark({
