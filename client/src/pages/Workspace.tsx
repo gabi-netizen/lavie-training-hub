@@ -439,6 +439,13 @@ function ContactCard({
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const utils = trpc.useUtils();
+  const deleteTemplateMutation = trpc.emailTemplates.delete.useMutation({
+    onSuccess: () => {
+      utils.emailTemplates.list.invalidate();
+      setSelectedTemplateId(null);
+    },
+  });
+
   const createTemplateMutation = trpc.emailTemplates.create.useMutation({
     onSuccess: () => {
       toast.success("Template created!");
@@ -785,21 +792,34 @@ function ContactCard({
                     )}
                     <div className="flex flex-col gap-2">
                       {emailTemplates?.map((tpl) => (
-                        <button
-                          key={tpl.id}
-                          onClick={() => setSelectedTemplateId(tpl.id)}
-                          className={`w-full text-left px-3 py-3 rounded-lg border-2 transition-colors ${
-                            selectedTemplateId === tpl.id
-                              ? "border-amber-500 bg-amber-50"
-                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          <p className="text-sm font-semibold text-gray-900 leading-tight">{tpl.name}</p>
-                          {tpl.description && (
-                            <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
-                          )}
-                          <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
-                        </button>
+                        <div key={tpl.id} className="relative group">
+                          <button
+                            onClick={() => setSelectedTemplateId(tpl.id)}
+                            className={`w-full text-left px-3 py-3 rounded-lg border-2 transition-colors ${
+                              selectedTemplateId === tpl.id
+                                ? "border-amber-500 bg-amber-50"
+                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <p className="text-sm font-semibold text-gray-900 leading-tight pr-6">{tpl.name}</p>
+                            {tpl.description && (
+                              <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete template "${tpl.name}"?`)) {
+                                deleteTemplateMutation.mutate({ id: tpl.id });
+                              }
+                            }}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 p-1 rounded"
+                            title="Delete template"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
