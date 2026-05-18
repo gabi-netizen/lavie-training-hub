@@ -150,6 +150,7 @@ export default function SupportTickets() {
   const {
     data: ticketsData,
     isLoading,
+    isFetching,
     refetch,
   } = trpc.tickets.getTickets.useQuery(
     {
@@ -202,10 +203,11 @@ export default function SupportTickets() {
               variant="outline"
               size="sm"
               onClick={() => refetch()}
+              disabled={isFetching}
               className="gap-1.5"
             >
-              <RefreshCw className="h-4 w-4" />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isFetching ? 'Loading...' : 'Refresh'}</span>
             </Button>
           </div>
         </div>
