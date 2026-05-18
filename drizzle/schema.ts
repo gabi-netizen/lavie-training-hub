@@ -637,6 +637,7 @@ export const agentTrialsOverride = mysqlTable("agent_trials_override", {
   agentName: varchar("agent_name", { length: 100 }).notNull(),
   month: varchar("month", { length: 7 }).notNull(),
   trialsCount: int("trials_count").notNull(),
+  dbCountAtOverride: int("db_count_at_override").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 }, (table) => [
   unique("agent_trials_override_agent_month_unique").on(table.agentName, table.month),

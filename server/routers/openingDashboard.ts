@@ -531,15 +531,19 @@ export const openingDashboardRouter = router({
       });
 
       // ── Trials Override: apply manual overrides from agent_trials_override ──
+      // The override stores a "bonus" = trialsCount - dbCountAtOverride.
+      // Final displayed trials = current DB count + bonus.
+      // This way, new trials added after the override are automatically counted.
       // Only applies when dateRange is "all" or "this_month" (full month view) since overrides
       // are per-month, not per date-range slice.
       if (input.dateRange === "all" || input.dateRange === "this_month") {
-        let overrideRows: { agentName: string; trialsCount: number }[] = [];
+        let overrideRows: { agentName: string; trialsCount: number; dbCountAtOverride: number }[] = [];
         try {
           overrideRows = await db
             .select({
               agentName: agentTrialsOverride.agentName,
               trialsCount: agentTrialsOverride.trialsCount,
+              dbCountAtOverride: agentTrialsOverride.dbCountAtOverride,
             })
             .from(agentTrialsOverride)
             .where(eq(agentTrialsOverride.month, input.month));
@@ -552,8 +556,11 @@ export const openingDashboardRouter = router({
           const key = ov.agentName.toLowerCase();
           const agent = agentMap.get(key);
           if (agent) {
-            agent.trials = ov.trialsCount;
-            // Recalculate matured based on overridden trials
+            // bonus = what the admin added manually beyond what was in DB at override time
+            const bonus = ov.trialsCount - ov.dbCountAtOverride;
+            // Final trials = current DB count + bonus (bonus can be negative if admin reduced)
+            agent.trials = agent.trials + bonus;
+            // Recalculate matured based on adjusted trials
             agent.matured = agent.trials - agent.stillInTrial;
           }
         }
@@ -929,11 +936,22 @@ export const openingDashboardRouter = router({
         throw new Error("Database not available");
       }
 
+      // Get current DB count for this agent+month to store as baseline
+      const [countRow] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(openingTrials)
+        .where(and(
+          eq(openingTrials.agentName, input.agentName),
+          eq(openingTrials.month, input.month),
+        ));
+      const dbCountNow = Number(countRow?.count ?? 0);
+
       await db.execute(sql`
-        INSERT INTO agent_trials_override (agent_name, month, trials_count)
-        VALUES (${input.agentName}, ${input.month}, ${input.trialsCount})
+        INSERT INTO agent_trials_override (agent_name, month, trials_count, db_count_at_override)
+        VALUES (${input.agentName}, ${input.month}, ${input.trialsCount}, ${dbCountNow})
         ON DUPLICATE KEY UPDATE
-          trials_count = VALUES(trials_count)
+          trials_count = VALUES(trials_count),
+          db_count_at_override = VALUES(db_count_at_override)
       `);
 
       return { success: true };
