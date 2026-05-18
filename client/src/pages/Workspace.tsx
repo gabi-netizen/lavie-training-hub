@@ -467,6 +467,9 @@ function ContactCard({
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Fetch all users for visibility agent picker
+  const { data: allUsersWs } = trpc.pitch.allUsers.useQuery();
+
   const { data: emailTemplates, isLoading: templatesLoading } = trpc.emailTemplates.list.useQuery(
     undefined,
     { enabled: emailTemplateOpen }
