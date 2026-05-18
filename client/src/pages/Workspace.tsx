@@ -2379,6 +2379,9 @@ export default function Workspace() {
     return (allCallbacks as any[]).filter((c) => c.callbackAt && new Date(c.callbackAt) <= now).length;
   }, [allCallbacks]);
 
+  // How to Use guide modal
+  const [showGuide, setShowGuide] = useState(false);
+
   // Click-to-call mutation
   const [callCooldown, setCallCooldown] = useState(false);
   const clickToCall = trpc.contacts.clickToCall.useMutation({
@@ -2539,6 +2542,12 @@ export default function Workspace() {
                 onClick={() => setShowAddContactModal(true)}
               >
                 <UserPlus size={13} /> Add Contact
+              </button>
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg border-2 border-indigo-800 transition-colors"
+                onClick={() => setShowGuide(true)}
+              >
+                📖 How to Use
               </button>
               <div className="ws-dl-stats">
                 <div className="ws-dl-stat">
@@ -2992,6 +3001,103 @@ export default function Workspace() {
               >
                 {createContactMutation.isPending ? "Adding..." : "Add Contact"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── How to Use Guide Modal ── */}
+      {showGuide && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>
+            <button onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1f2937", marginBottom: 20 }}>📖 How to Use the Workspace</h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>🔌 Connecting Your Phone (CloudTalk)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Download the <strong>CloudTalk Phone</strong> app on your mobile or use the desktop app</li>
+                  <li>Log in with the credentials provided by your manager</li>
+                  <li>Make sure your status is set to <strong>"Available"</strong></li>
+                  <li>When you click "Call Now" in the system, CloudTalk will ring YOUR phone first, then connect you to the customer</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📋 Today's List</h3>
+                <p>Your daily contact list appears on the left. Each contact shows their name, phone, and status. Click on a contact to load their details and start working.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📞 Making a Call</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click the green <strong>"Call Now"</strong> button</li>
+                  <li>Your CloudTalk phone will ring — pick up!</li>
+                  <li>Once you answer, the system connects you to the customer</li>
+                  <li>Follow the script stages on the right panel</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📝 Saving a Call Note</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>After the call, select the outcome (Connected, Sale, No Answer, etc.)</li>
+                  <li>Write what happened — key objections, outcome, next steps</li>
+                  <li>Click <strong>"Save Note"</strong></li>
+                  <li>The note is saved and visible to managers</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>💬 WhatsApp / Email / SMS</h3>
+                <p>Use the action buttons below the contact details:</p>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>WhatsApp</strong> — Opens WhatsApp with the customer's number</li>
+                  <li><strong>Email</strong> — Opens email compose or use "Send Email Template" for pre-made emails</li>
+                  <li><strong>SMS</strong> — Opens your phone's SMS app with the number</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>💳 Taking Payment (£4.95 Trial)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Select the Starter Kit the customer wants</li>
+                  <li>Click <strong>"Send Payment Link"</strong> or use the payment box</li>
+                  <li>The customer receives a secure Stripe payment link</li>
+                  <li>Once paid, the status updates automatically</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📅 Scheduling a Callback</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click the <strong>"Callback"</strong> button on the contact</li>
+                  <li>Select date and time</li>
+                  <li>The callback will appear in your "My Callbacks" tab</li>
+                  <li>You'll see a reminder when it's time to call back</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>🎯 The Script Panel (Right Side)</h3>
+                <p>The right panel shows your pitch stages (1-7). Click each stage to expand it and see the script. Follow the stages in order for best results. You can customise stages by clicking the edit icon.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>❓ Having Issues?</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Phone not ringing?</strong> — Check CloudTalk app is open and status is "Available"</li>
+                  <li><strong>Can't see contacts?</strong> — Make sure your manager assigned contacts to you</li>
+                  <li><strong>Payment not working?</strong> — Contact your manager immediately</li>
+                  <li><strong>System slow?</strong> — Refresh the page (F5)</li>
+                </ul>
+              </div>
+
+              <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 10, padding: "14px 18px", marginTop: 4 }}>
+                <p style={{ margin: 0, fontWeight: 600, color: "#166534" }}>💡 Tip: If something doesn't work, don't waste time — tell your manager right away!</p>
+              </div>
             </div>
           </div>
         </div>
