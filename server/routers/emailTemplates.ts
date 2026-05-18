@@ -167,7 +167,7 @@ export const emailTemplatesRouter = router({
         id: z.number(),
         name: z.string().min(1).optional(),
         subject: z.string().min(1).optional(),
-        htmlBody: z.string().min(1).optional(),
+        htmlBody: z.string().optional(),
         description: z.string().optional(),
         headerImageUrl: z.string().url().optional().or(z.literal('')),
         visibility: z.string().optional(),
@@ -176,8 +176,12 @@ export const emailTemplatesRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const { id, headerImageUrl, visibility, ...rest } = input;
+      const { id, headerImageUrl, visibility, htmlBody, ...rest } = input;
       const fields: Record<string, unknown> = { ...rest };
+      // Only update htmlBody if it's non-empty (don't overwrite with blank)
+      if (htmlBody) {
+        fields.htmlBody = htmlBody;
+      }
       // Allow clearing the field by passing empty string
       if (headerImageUrl !== undefined) {
         fields.headerImageUrl = headerImageUrl || null;
