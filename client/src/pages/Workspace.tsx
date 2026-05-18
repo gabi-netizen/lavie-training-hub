@@ -1237,8 +1237,7 @@ function StripePaymentSection({
     },
   });
 
-  useEffect(() => {
-    // Auto-create PaymentIntent when section opens
+  const handleTakePayment = () => {
     if (!contact.email) {
       setError("Contact must have an email address to process payment.");
       return;
@@ -1252,8 +1251,7 @@ function StripePaymentSection({
       name: contact.name,
       email: contact.email,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact.id]);
+  };
 
   const stripePromise = testMode ? stripeTestPromise : stripeLivePromise;
 
@@ -1282,6 +1280,28 @@ function StripePaymentSection({
           </button>
         )}
       </div>
+
+      {!clientSecret && !loading && (
+        <div style={{ padding: "12px" }}>
+          <button
+            type="button"
+            onClick={handleTakePayment}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "2px solid #6366f1",
+              background: "white",
+              color: "#6366f1",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+            }}
+          >
+            💳 Take Payment Over Phone
+          </button>
+        </div>
+      )}
 
       {loading && (
         <div style={{ padding: "16px", textAlign: "center", color: "#6b7280", fontSize: "13px" }}>
