@@ -423,9 +423,9 @@ function ContactCard({
   }, []);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [showAddTemplate, setShowAddTemplate] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "" });
+  const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "", visibility: "" });
   const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
-  const [editTemplate, setEditTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "" });
+  const [editTemplate, setEditTemplate] = useState({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "", visibility: "" });
   const [notes, setNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const [savedNotes, setSavedNotes] = useState(contact.callNotes ?? contact.notes ?? "");
   const notesChanged = notes !== savedNotes;
@@ -461,7 +461,7 @@ function ContactCard({
     onSuccess: () => {
       toast.success("Template created!");
       setShowAddTemplate(false);
-      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "" });
+      setNewTemplate({ name: "", subject: "", description: "", htmlBody: "", headerImageUrl: "", visibility: "" });
       utils.emailTemplates.list.invalidate();
     },
     onError: (err: any) => toast.error(err.message),
@@ -798,12 +798,49 @@ function ContactCard({
                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                           />
                         )}
+                        {/* Visibility selector */}
+                        <label className="block text-xs font-bold text-black mb-1 mt-2">Visible to:</label>
+                        <select
+                          value={(() => { try { const v = JSON.parse(newTemplate.visibility || '{"type":"everyone"}'); return v.type === 'everyone' ? 'everyone' : v.type === 'team' ? v.value : 'agents'; } catch { return 'everyone'; } })()}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'everyone') setNewTemplate({ ...newTemplate, visibility: JSON.stringify({ type: 'everyone' }) });
+                            else if (val === 'opening' || val === 'retention') setNewTemplate({ ...newTemplate, visibility: JSON.stringify({ type: 'team', value: val }) });
+                            else setNewTemplate({ ...newTemplate, visibility: JSON.stringify({ type: 'agents', ids: [] }) });
+                          }}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded mb-2"
+                        >
+                          <option value="everyone">Everyone</option>
+                          <option value="opening">Opening only</option>
+                          <option value="retention">Retention only</option>
+                          <option value="agents">Specific agents</option>
+                        </select>
+                        {(() => { try { const v = JSON.parse(newTemplate.visibility || '{}'); return v.type === 'agents'; } catch { return false; } })() && allUsersWs && (
+                          <div className="mb-2 max-h-28 overflow-y-auto border border-gray-200 rounded p-2">
+                            {(allUsersWs as any[]).filter((u: any) => u.role !== 'admin').map((u: any) => (
+                              <label key={u.id} className="flex items-center gap-2 text-xs py-0.5">
+                                <input
+                                  type="checkbox"
+                                  checked={(() => { try { const v = JSON.parse(newTemplate.visibility || '{}'); return v.ids?.includes(u.id); } catch { return false; } })()}
+                                  onChange={(e) => {
+                                    const v = JSON.parse(newTemplate.visibility || '{"type":"agents","ids":[]}');
+                                    const ids = v.ids || [];
+                                    if (e.target.checked) ids.push(u.id);
+                                    else { const idx = ids.indexOf(u.id); if (idx > -1) ids.splice(idx, 1); }
+                                    setNewTemplate({ ...newTemplate, visibility: JSON.stringify({ type: 'agents', ids }) });
+                                  }}
+                                />
+                                {u.name || u.email}
+                              </label>
+                            ))}
+                          </div>
+                        )}
                         <button
                           onClick={() => createTemplateMutation.mutate(newTemplate)}
                           disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.htmlBody || createTemplateMutation.isPending}
                           className="w-full px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {createTemplateMutation.isPending ? "Saving…" : "Save Template"}
+                          {createTemplateMutation.isPending ? "Saving\u2026" : "Save Template"}
                         </button>
                       </div>
                     )}
@@ -839,6 +876,43 @@ function ContactCard({
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                 />
                               )}
+                              {/* Visibility selector (edit) */}
+                              <label className="block text-xs font-bold text-black mb-1 mt-1">Visible to:</label>
+                              <select
+                                value={(() => { try { const v = JSON.parse(editTemplate.visibility || '{"type":"everyone"}'); return v.type === 'everyone' ? 'everyone' : v.type === 'team' ? v.value : 'agents'; } catch { return 'everyone'; } })()}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === 'everyone') setEditTemplate({ ...editTemplate, visibility: JSON.stringify({ type: 'everyone' }) });
+                                  else if (val === 'opening' || val === 'retention') setEditTemplate({ ...editTemplate, visibility: JSON.stringify({ type: 'team', value: val }) });
+                                  else setEditTemplate({ ...editTemplate, visibility: JSON.stringify({ type: 'agents', ids: [] }) });
+                                }}
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 mb-2"
+                              >
+                                <option value="everyone">Everyone</option>
+                                <option value="opening">Opening only</option>
+                                <option value="retention">Retention only</option>
+                                <option value="agents">Specific agents</option>
+                              </select>
+                              {(() => { try { const v = JSON.parse(editTemplate.visibility || '{}'); return v.type === 'agents'; } catch { return false; } })() && allUsersWs && (
+                                <div className="mb-2 max-h-28 overflow-y-auto border border-gray-200 rounded p-2">
+                                  {(allUsersWs as any[]).filter((u: any) => u.role !== 'admin').map((u: any) => (
+                                    <label key={u.id} className="flex items-center gap-2 text-xs py-0.5">
+                                      <input
+                                        type="checkbox"
+                                        checked={(() => { try { const v = JSON.parse(editTemplate.visibility || '{}'); return v.ids?.includes(u.id); } catch { return false; } })()}
+                                        onChange={(e) => {
+                                          const v = JSON.parse(editTemplate.visibility || '{"type":"agents","ids":[]}');
+                                          const ids = v.ids || [];
+                                          if (e.target.checked) ids.push(u.id);
+                                          else { const idx = ids.indexOf(u.id); if (idx > -1) ids.splice(idx, 1); }
+                                          setEditTemplate({ ...editTemplate, visibility: JSON.stringify({ type: 'agents', ids }) });
+                                        }}
+                                      />
+                                      {u.name || u.email}
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
                               <div className="flex gap-2">
                                 <button onClick={() => updateTemplateMutation.mutate({ id: tpl.id, ...editTemplate })} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
                                 <button onClick={() => setEditingTemplateId(null)} className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</button>
@@ -865,7 +939,7 @@ function ContactCard({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEditingTemplateId(tpl.id);
-                                    setEditTemplate({ name: tpl.name, subject: tpl.subject || "", description: tpl.description || "", htmlBody: "", headerImageUrl: (tpl as any).headerImageUrl || "" });
+                                    setEditTemplate({ name: tpl.name, subject: tpl.subject || "", description: tpl.description || "", htmlBody: "", headerImageUrl: (tpl as any).headerImageUrl || "", visibility: (tpl as any).visibility || "" });
                                   }}
                                   className="text-blue-400 hover:text-blue-600 p-1 rounded"
                                   title="Edit template"

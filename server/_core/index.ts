@@ -14,6 +14,7 @@ import { handleGmailWebhook } from "../webhooks/gmail";
 import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
+import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -182,6 +183,12 @@ async function startServer() {
         console.error("[DB] Error ensuring shareToken column:", err)
       );
     }, 4000);
+    // Ensure visibility column exists on email_templates
+    setTimeout(() => {
+      ensureTemplateVisibilityColumn().catch((err) =>
+        console.error("[DB] Error ensuring template visibility column:", err)
+      );
+    }, 5000);
     // Background: sync any contacts that missed CloudTalk sync during hibernation
     setTimeout(() => {
       syncUnsyncedContactsToCloudTalk().catch((err) =>

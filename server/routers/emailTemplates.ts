@@ -85,7 +85,7 @@ function fillPlaceholders(
 
 export const emailTemplatesRouter = router({
   /** List all templates (name, subject, description — no full HTML for perf) */
-  list: protectedProcedure.query(async () => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const rows = await db
@@ -95,12 +95,29 @@ export const emailTemplatesRouter = router({
         subject: emailTemplates.subject,
         description: emailTemplates.description,
         headerImageUrl: emailTemplates.headerImageUrl,
+        visibility: emailTemplates.visibility,
         createdAt: emailTemplates.createdAt,
         updatedAt: emailTemplates.updatedAt,
       })
       .from(emailTemplates)
       .orderBy(emailTemplates.name);
-    return rows;
+
+    // Admin sees all templates
+    if (ctx.user.role === "admin") return rows;
+
+    // Non-admin: filter by visibility
+    return rows.filter((t) => {
+      if (!t.visibility) return true; // null = everyone
+      try {
+        const vis = JSON.parse(t.visibility) as { type: string; value?: string; ids?: number[] };
+        if (vis.type === "everyone") return true;
+        if (vis.type === "team") return ctx.user.team === vis.value;
+        if (vis.type === "agents") return vis.ids?.includes(ctx.user.id) ?? false;
+        return true;
+      } catch {
+        return true; // invalid JSON = show to everyone
+      }
+    });
   }),
 
   /** Get a single template including full HTML (for preview/edit) */
@@ -126,6 +143,7 @@ export const emailTemplatesRouter = router({
         htmlBody: z.string().min(1),
         description: z.string().optional(),
         headerImageUrl: z.string().url().optional().or(z.literal('')),
+        visibility: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -137,6 +155,7 @@ export const emailTemplatesRouter = router({
         htmlBody: input.htmlBody,
         description: input.description ?? null,
         headerImageUrl: input.headerImageUrl || null,
+        visibility: input.visibility || null,
       });
       return { success: true };
     }),
@@ -151,16 +170,20 @@ export const emailTemplatesRouter = router({
         htmlBody: z.string().min(1).optional(),
         description: z.string().optional(),
         headerImageUrl: z.string().url().optional().or(z.literal('')),
+        visibility: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const { id, headerImageUrl, ...rest } = input;
+      const { id, headerImageUrl, visibility, ...rest } = input;
       const fields: Record<string, unknown> = { ...rest };
       // Allow clearing the field by passing empty string
       if (headerImageUrl !== undefined) {
         fields.headerImageUrl = headerImageUrl || null;
+      }
+      if (visibility !== undefined) {
+        fields.visibility = visibility || null;
       }
       await db
         .update(emailTemplates)

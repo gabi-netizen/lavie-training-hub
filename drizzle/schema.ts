@@ -268,6 +268,12 @@ export const emailTemplates = mysqlTable("email_templates", {
   description: varchar("description", { length: 512 }),
   /** Optional header image URL displayed at the top of the email template */
   headerImageUrl: varchar("headerImageUrl", { length: 500 }),
+  /**
+   * Visibility JSON — controls who can see this template.
+   * Format: {"type":"everyone"} | {"type":"team","value":"opening"|"retention"} | {"type":"agents","ids":[1,2,3]}
+   * Default: everyone
+   */
+  visibility: text("visibility"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
