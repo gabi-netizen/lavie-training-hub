@@ -983,7 +983,7 @@ function ContactCard({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (confirm(`Delete template "${tpl.name}"?`)) {
+                                    if (confirm(`Are you sure you want to permanently delete the template "${tpl.name}"? This action cannot be undone.`)) {
                                       deleteTemplateMutation.mutate({ id: tpl.id });
                                     }
                                   }}
