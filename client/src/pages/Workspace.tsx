@@ -497,11 +497,17 @@ function ContactCard({
 
   const previewHtml = useMemo(() => {
     if (!selectedTemplate || !contact) return null;
-    return selectedTemplate.htmlBody
+    const body = selectedTemplate.htmlBody
       .replaceAll("${Customers.First Name}", (contact.name ?? "").split(" ")[0] || "[Name]")
       .replaceAll("${Customers.Customers Owner}", user?.name ?? "[Agent]")
       .replaceAll("${agentName}", user?.name ?? "[Agent Name]")
       .replaceAll("${agentEmail}", user?.email ?? "[Agent Email]");
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(body);
+    const formattedBody = hasHtmlTags ? body : body.replace(/\n/g, "<br>");
+    const headerImg = selectedTemplate.headerImageUrl
+      ? `<tr><td style="padding:0;"><img src="${selectedTemplate.headerImageUrl}" alt="Lavie Labs" style="width:100%;height:auto;display:block;" /></td></tr>`
+      : "";
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:32px 0;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">${headerImg}<tr><td style="padding:32px 32px 24px;"><p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;">${formattedBody}</p></td></tr><tr><td style="padding:0 32px 24px;"><p style="margin:0;font-size:15px;color:#333333;">Warm regards,<br/><strong>${user?.name ?? "[Agent]"}</strong></p></td></tr></table></td></tr></table></body></html>`;
   }, [selectedTemplate, contact, user]);
 
   // Auto-select the "Form" template when "Send Payment Form" is clicked
