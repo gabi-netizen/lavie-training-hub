@@ -1,8 +1,8 @@
 /**
  * ContactCard — Full-page CRM customer card
  * Route: /contacts/:id
- * Design: Light/white background, professional CRM layout (HubSpot-style)
- * Layout: Left sidebar (identity) | Main area (log call + history) | Right panel (actions + info)
+ * Design: Professional 3-column CRM layout matching approved mockup
+ * Layout: Left sidebar (identity + gradient card) | Center (history + docs) | Right sidebar (KPIs + info)
  */
 import { useState, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
@@ -14,7 +14,6 @@ import {
   Mail,
   User,
   Calendar,
-  ArrowLeft,
   PhoneCall,
   PhoneMissed,
   Voicemail,
@@ -26,7 +25,16 @@ import {
   MessageSquare,
   Send,
   X,
-  MapPin,
+  Shield,
+  Package,
+  AlertTriangle,
+  Plus,
+  CreditCard,
+  Archive,
+  FileText,
+  Activity,
+  Lock,
+  ChevronRight,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -82,14 +90,14 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Closed",
 };
 
-const NOTE_OUTCOMES: Record<string, { dot: string; label: string }> = {
-  connected:  { dot: "bg-blue-500",    label: "Connected" },
-  sale:       { dot: "bg-green-500",   label: "Sale" },
-  follow_up:  { dot: "bg-amber-500",   label: "Follow-up" },
-  no_answer:  { dot: "bg-red-400",     label: "No Answer" },
-  voicemail:  { dot: "bg-indigo-400",  label: "Voicemail" },
-  callback:   { dot: "bg-purple-400",  label: "Callback" },
-  other:      { dot: "bg-gray-400",    label: "Note" },
+const NOTE_OUTCOMES: Record<string, { dot: string; label: string; badge: string }> = {
+  connected:  { dot: "bg-blue-600",    label: "Connected",  badge: "bg-blue-50 text-blue-700" },
+  sale:       { dot: "bg-green-500",   label: "Sale",       badge: "bg-green-50 text-green-700" },
+  follow_up:  { dot: "bg-amber-500",   label: "Follow-up",  badge: "bg-amber-50 text-amber-700" },
+  no_answer:  { dot: "bg-red-400",     label: "No Answer",  badge: "bg-red-50 text-red-600" },
+  voicemail:  { dot: "bg-indigo-400",  label: "Voicemail",  badge: "bg-indigo-50 text-indigo-600" },
+  callback:   { dot: "bg-purple-400",  label: "Callback",   badge: "bg-purple-50 text-purple-600" },
+  other:      { dot: "bg-gray-400",    label: "Note",       badge: "bg-gray-100 text-gray-600" },
 };
 
 const NOTE_TYPES = [
@@ -105,37 +113,6 @@ const NOTE_TYPES = [
 const ALL_STATUSES = [
   "new", "open", "working", "assigned", "done_deal", "retained_sub", "cancelled_sub", "closed",
 ] as const;
-
-// ─── Avatar ────────────────────────────────────────────────────────────────────
-function Avatar({ name, size = "lg" }: { name: string; size?: "sm" | "lg" }) {
-  const initials = name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-  const dim = size === "lg" ? "w-16 h-16 text-xl" : "w-8 h-8 text-sm";
-  return (
-    <div className={cn("rounded-full flex items-center justify-center font-bold bg-indigo-100 text-indigo-600", dim)}>
-      {initials}
-    </div>
-  );
-}
-
-// ─── Badge ─────────────────────────────────────────────────────────────────────
-function Chip({ label, colour }: { label: string; colour: string }) {
-  return (
-    <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border", colour)}>
-      {label}
-    </span>
-  );
-}
-
-// ─── Info row ──────────────────────────────────────────────────────────────────
-function InfoRow({ icon: Icon, value }: { icon: React.ElementType; value?: string | null }) {
-  if (!value) return null;
-  return (
-    <div className="flex items-center gap-2.5 text-sm text-gray-800">
-      <Icon size={14} className="text-gray-800 shrink-0" />
-      <span className="truncate">{value}</span>
-    </div>
-  );
-}
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function ContactCard() {
@@ -162,6 +139,7 @@ export default function ContactCard() {
     onSuccess: () => {
       setNoteText("");
       setNoteType("connected");
+      setShowNoteForm(false);
       refetch();
       toast.success("Note saved");
     },
@@ -232,15 +210,20 @@ export default function ContactCard() {
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("connected");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
 
   // Email compose state
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
+  // Tab state
+  const [centerTopTab, setCenterTopTab] = useState<"history" | "transactions" | "shipments" | "notes">("history");
+  const [centerBottomTab, setCenterBottomTab] = useState<"documents" | "activities" | "cloudtalk" | "privacy">("documents");
+
   const { data: cloudTalkHistory, isLoading: historyLoading } = trpc.contacts.callHistory.useQuery(
     { phone: contact?.phone ?? "", limit: 20 },
-    { enabled: showCloudTalkHistory && !!contact?.phone }
+    { enabled: (showCloudTalkHistory || centerBottomTab === "cloudtalk") && !!contact?.phone }
   );
 
   const streamRecordingMutation = trpc.contacts.streamRecording.useMutation({
@@ -282,10 +265,10 @@ export default function ContactCard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-800 bg-gray-50">
+      <div className="flex items-center justify-center h-64 text-gray-800" style={{ background: "#f0f2f5" }}>
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm">Loading contact…</p>
+          <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading contact…</p>
         </div>
       </div>
     );
@@ -293,12 +276,12 @@ export default function ContactCard() {
 
   if (isError || !contact) {
     return (
-      <div className="flex items-center justify-center h-64 bg-gray-50">
+      <div className="flex items-center justify-center h-64" style={{ background: "#f0f2f5" }}>
         <div className="text-center">
           <p className="text-gray-700 font-medium mb-2">Contact not found</p>
           <button
             onClick={() => navigate("/contacts")}
-            className="text-sm text-indigo-600 hover:underline"
+            className="text-sm text-blue-600 hover:underline"
           >
             ← Back to Contacts
           </button>
@@ -328,518 +311,976 @@ export default function ContactCard() {
       toast.error("No phone number on file");
       return;
     }
-    // Use CloudTalk API click-to-call — CloudTalk calls the agent first, then the customer
     clickToCallMutation.mutate({ contactId });
   };
 
+  // Helper: initials from name
+  const getInitials = (name: string) =>
+    name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+
+  // Helper: pad ID
+  const paddedId = String(contact.id ?? contactId).padStart(5, "0");
+
+  // Helper: format date nicely
+  const formatDate = (d: string | Date) => {
+    const date = new Date(d);
+    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  // Helper: format month/year
+  const formatMonthYear = (d: string | Date) => {
+    const date = new Date(d);
+    return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  };
+
+  // Last contact info
+  const lastNote = contact.callNotes.length > 0 ? contact.callNotes[0] : null;
+
+  // Callback time display
+  const callbackDisplay = contact.callbackAt
+    ? new Date(contact.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })
+    : null;
+
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: "#f0f2f5" }}>
 
-      {/* ── Top header bar ── */}
-      <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-3 md:py-4 flex items-center gap-3 md:gap-4">
-        <button
-          onClick={() => navigate("/contacts")}
-          className="flex items-center gap-1.5 text-sm text-gray-800 hover:text-gray-700 transition-colors shrink-0"
-        >
-          <ArrowLeft size={15} />
-          Back
-        </button>
-        <div className="w-px h-5 bg-gray-200" />
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-indigo-600">{contact.name.charAt(0).toUpperCase()}</span>
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-base font-bold text-gray-900 truncate">{contact.name}</h1>
-            {contact.phone && <p className="text-xs text-gray-800 font-mono">{contact.phone}</p>}
+      {/* ── Breadcrumb Bar ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <button onClick={() => navigate("/contacts")} className="hover:text-blue-700 transition-colors">
+            Customers
+          </button>
+          <ChevronRight size={14} className="text-gray-400" />
+          <span className="text-gray-800 font-semibold">{contact.name}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Status dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setStatusOpen((v) => !v)}
+              className={cn(
+                "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border cursor-pointer hover:opacity-80 transition-opacity",
+                STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-800 border-gray-200"
+              )}
+            >
+              {STATUS_LABELS[contact.status] ?? contact.status}
+              <ChevronDown size={10} />
+            </button>
+            {statusOpen && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-50">
+                {ALL_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleStatusChange(s)}
+                    className={cn(
+                      "w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors",
+                      contact.status === s ? "font-semibold text-gray-900" : "text-gray-600"
+                    )}
+                  >
+                    {STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {contact.leadType && (
             <span className={cn(
-              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border shrink-0",
+              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border",
               LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-800 border-gray-200"
             )}>
               {contact.leadType}
             </span>
           )}
-          <span className={cn(
-            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
-            STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-800"
-          )}>
-            {STATUS_LABELS[contact.status] ?? contact.status}
-          </span>
-        </div>
-        {/* Quick call from header */}
-        {contact.phone && (
-          <button
-            onClick={handleCallNow}
-            disabled={clickToCallMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-semibold text-sm transition-colors shadow-sm shrink-0"
-          >
-            <Phone size={15} />
-            {clickToCallMutation.isPending ? "Calling…" : "Call Now"}
-          </button>
-        )}
-      </div>
-
-      {/* ── 2-column body ── */}
-      <div className="flex flex-col md:grid md:grid-cols-[320px_1fr] md:h-[calc(100vh-112px)]">
-
-        {/* ══════════════════════════════════════════════════
-            LEFT — Identity panel
-        ══════════════════════════════════════════════════ */}
-        <aside className="bg-white border-b md:border-b-0 md:border-r border-gray-200 flex flex-col overflow-y-auto">
-          {/* Header */}
-          <div className="p-6 border-b border-gray-100 text-center">
-            <div className="flex justify-center mb-3">
-              <Avatar name={contact.name} size="lg" />
-            </div>
-            <h1 className="text-lg font-bold text-gray-900">{contact.name}</h1>
-
-            {/* Badges */}
-            <div className="flex flex-wrap justify-center gap-1.5 mt-2">
-              {contact.leadType && (
-                <Chip
-                  label={contact.leadType}
-                  colour={LEAD_TYPE_COLOURS[contact.leadType] ?? "bg-gray-100 text-gray-800 border-gray-200"}
-                />
-              )}
-
-              {/* Status with dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setStatusOpen((v) => !v)}
-                  className={cn(
-                    "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity",
-                    STATUS_COLOURS[contact.status] ?? "bg-gray-100 text-gray-800 border-gray-200"
-                  )}
-                >
-                  {STATUS_LABELS[contact.status] ?? contact.status}
-                  <ChevronDown size={10} />
-                </button>
-                {statusOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-40 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-50">
-                    {ALL_STATUSES.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => handleStatusChange(s)}
-                        className={cn(
-                          "w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors",
-                          contact.status === s ? "font-semibold text-gray-900" : "text-gray-800"
-                        )}
-                      >
-                        {STATUS_LABELS[s]}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Contact details */}
-          <div className="p-5 flex flex-col gap-3 border-b border-gray-100">
-            <InfoRow icon={Phone} value={contact.phone} />
-            <InfoRow icon={Mail} value={contact.email} />
-            {contact.address && <InfoRow icon={MapPin} value={contact.address} />}
-            <InfoRow icon={Tag} value={contact.source ? `Source: ${contact.source}` : null} />
-            <InfoRow icon={User} value={contact.agentName ? `Agent: ${contact.agentName}` : null} />
-            {contact.agentName && (
-              <InfoRow
-                icon={Mail}
-                value={`trial+${contact.agentName.toLowerCase().split(" ")[0].replace(/[^a-z0-9]/g, "")}@lavielabs.com`}
-              />
-            )}
-            <InfoRow
-              icon={Calendar}
-              value={contact.leadDate ? `Lead: ${new Date(contact.leadDate).toLocaleDateString("en-GB")}` : null}
-            />
-          </div>
-
-          {/* Callback */}
-          <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Callback</p>
-            {contact.callbackAt ? (
-              <p className="text-sm font-medium text-amber-600">
-                {new Date(contact.callbackAt).toLocaleString("en-GB")}
-              </p>
-            ) : (
-              <p className="text-sm text-gray-800 italic">Not scheduled</p>
-            )}
-          </div>
-          {/* Starter Kit */}
-          <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Starter Kit</p>
-            <select
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-              value={contact.trialKit || ""}
-              onChange={(e) => updateMutation.mutate({ id: contactId, trialKit: e.target.value || undefined })}
-            >
-              <option value="">Select kit...</option>
-              <option value="Starter Kit Ashkara">Starter Kit Ashkara</option>
-              <option value="Starter Kit Oulala">Starter Kit Oulala</option>
-            </select>
-            {contact.trialKit && (
-              <button
-                onClick={() => alert("Coming soon")}
-                className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors shadow-sm"
-              >
-                Create Subscription
-              </button>
-            )}
-          </div>
-
-          {/* Call stats */}
-          {contact.callNotes.length > 0 && (
-            <div className="p-5 grid grid-cols-2 md:grid-cols-2 gap-3">
-              <div className="rounded-xl bg-gray-50 border-2 border-gray-900 p-3 text-center">
-                <p className="text-2xl font-bold text-gray-800">{contact.callNotes.length}</p>
-                <p className="text-xs text-gray-800 mt-0.5">Calls</p>
-              </div>
-              <div className="rounded-xl bg-green-50 border-2 border-gray-900 p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  {contact.callNotes.filter((n) => n.statusAtTime === "sale").length}
-                </p>
-                <p className="text-xs text-green-500 mt-0.5">Sales</p>
-              </div>
-            </div>
-          )}
-
-          {/* ── Contact Actions (moved from right panel) ── */}
-          <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-3">Contact</p>
+          {/* Quick call from header */}
+          {contact.phone && (
             <button
               onClick={handleCallNow}
               disabled={clickToCallMutation.isPending}
-              className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-bold text-sm transition-colors shadow-sm mb-3"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-white text-xs font-semibold transition-colors disabled:opacity-60 shadow-sm"
+              style={{ background: "#4caf50" }}
             >
-              <Phone size={16} />
+              <Phone size={13} />
               {clickToCallMutation.isPending ? "Calling…" : "Call Now"}
-              {contact.phone && !clickToCallMutation.isPending && (
-                <span className="ml-1 text-xs font-mono opacity-80 truncate max-w-[100px]">
-                  {contact.phone}
-                </span>
-              )}
             </button>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => {
-                  if (!contact.phone) { toast.error("No phone number on file"); return; }
-                  const num = contact.phone.replace(/\D/g, "");
-                  window.open(`https://wa.me/${num}`, "_blank");
-                }}
-                disabled={!contact.phone}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 border-gray-900 text-gray-800 hover:bg-green-50 hover:border-green-600 hover:text-green-700 font-semibold text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                WhatsApp
-              </button>
-              <button
-                onClick={() => {
-                  if (!contact.email) { toast.error("No email address on file"); return; }
-                  setEmailOpen((v) => !v);
-                }}
-                disabled={!contact.email}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 border-gray-900 text-gray-800 hover:bg-blue-50 hover:border-blue-600 hover:text-blue-700 font-semibold text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Mail size={18} />
-                Email
-              </button>
-              <button
-                onClick={() => {
-                  if (!contact.phone) { toast.error("No phone number on file"); return; }
-                  window.open(`sms:${contact.phone}`);
-                }}
-                disabled={!contact.phone}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 border-gray-900 text-gray-800 hover:bg-purple-50 hover:border-purple-600 hover:text-purple-700 font-semibold text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <MessageSquare size={18} />
-                SMS
-              </button>
-            </div>
-          </div>
-
-          {/* ── Email Compose Panel ── */}
-          {emailOpen && (
-            <div className="p-5 border-b border-gray-100 bg-blue-50">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Compose Email</p>
-                <button onClick={() => setEmailOpen(false)} className="text-gray-800 hover:text-gray-800 transition-colors">
-                  <X size={14} />
-                </button>
-              </div>
-              {contact.email && (
-                <p className="text-xs text-gray-700 mb-3">To: <span className="font-medium text-gray-700">{contact.email}</span></p>
-              )}
-              <div className="flex flex-col gap-2">
-                <Input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} placeholder="Subject" className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-800 focus-visible:ring-blue-400" />
-                <Textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} placeholder="Write your message here…" className="min-h-[120px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-800 focus-visible:ring-blue-400" />
-                <Button onClick={() => {
-                  if (!emailSubject.trim()) { toast.error("Please enter a subject"); return; }
-                  if (!emailBody.trim()) { toast.error("Please enter a message"); return; }
-                  sendEmailMutation.mutate({ contactId, subject: emailSubject.trim(), body: emailBody.trim() });
-                }} disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailBody.trim()} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full flex items-center gap-2">
-                  <Send size={13} />
-                  {sendEmailMutation.isPending ? "Sending…" : "Send Email"}
-                </Button>
-              </div>
-            </div>
           )}
+        </div>
+      </div>
 
-          {/* ── Integrations ── */}
-          <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-3">Integrations</p>
-            <div className="flex flex-col gap-2">
-              <button onClick={() => syncToACMutation.mutate({ id: contactId })} disabled={syncToACMutation.isPending} className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 border-gray-900 text-indigo-600 hover:bg-indigo-50 font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                <Tag size={15} />
-                {syncToACMutation.isPending ? "Syncing…" : "Sync to ActiveCampaign"}
-              </button>
-              <button onClick={() => setTemplatePickerOpen(true)} className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 border-gray-900 text-amber-700 hover:bg-amber-50 font-semibold text-sm transition-colors">
-                <Mail size={15} />
-                Send Email Template
-              </button>
-            </div>
-          </div>
-
-          {/* ── Lead Info ── */}
-          <div className="p-5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-3">Lead Info</p>
-            <div className="flex flex-col gap-2.5">
-              {[
-                { label: "Lead Type",  value: contact.leadType },
-                { label: "Source",     value: contact.source },
-                { label: "Lead Date",  value: contact.leadDate ? new Date(contact.leadDate).toLocaleDateString("en-GB") : null },
-                { label: "Status",     value: STATUS_LABELS[contact.status] ?? contact.status },
-                { label: "Agent",      value: contact.agentName },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between items-start gap-2">
-                  <span className="text-xs font-semibold text-gray-900 shrink-0">{label}</span>
-                  <span className="text-xs text-gray-900 text-right font-bold">{value ?? <span className="text-gray-900 italic">—</span>}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Imported Notes ── */}
-          {contact.importedNotes && (
-            <div className="p-5 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide mb-2">Imported Notes</p>
-              <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-sm text-gray-900 font-medium leading-relaxed border-l-4 border-l-amber-400">
-                {contact.importedNotes}
-              </div>
-            </div>
-          )}
-
-          <p className="px-5 pb-4 text-xs text-gray-800 mt-auto">
-            Added {new Date(contact.createdAt).toLocaleDateString("en-GB")}
-          </p>
-        </aside>
+      {/* ── 3-Column Layout ── */}
+      <div className="flex gap-5 mx-auto px-5 py-5" style={{ maxWidth: "1400px", alignItems: "flex-start" }}>
 
         {/* ══════════════════════════════════════════════════
-            MIDDLE — Log call + History
+            LEFT SIDEBAR (~300px)
         ══════════════════════════════════════════════════ */}
-        <main className="flex flex-col md:overflow-hidden bg-gray-50 min-h-[400px] md:min-h-0">
+        <div className="shrink-0 flex flex-col gap-4" style={{ width: "300px" }}>
 
-          {/* Log call form */}
-          <div className="bg-white border-b border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Log this call</p>
-            <Textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="What happened? Key objections, outcome, next steps…"
-              className="min-h-[88px] text-sm resize-none border-gray-200 text-gray-800 placeholder:text-gray-800 bg-white focus-visible:ring-indigo-400"
-            />
-            <div className="flex items-center gap-3 mt-3">
-              <Select value={noteType} onValueChange={setNoteType}>
-                <SelectTrigger className="w-44 text-sm border-gray-200 text-gray-700 bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  {NOTE_TYPES.map(({ value, label, icon: Icon }) => (
-                    <SelectItem key={value} value={value} className="text-gray-700">
-                      <span className="flex items-center gap-2">
-                        <Icon size={12} />
-                        {label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleSaveNote}
-                disabled={!noteText.trim() || addNoteMutation.isPending}
-                size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5"
+          {/* ── Blue Gradient Card ── */}
+          <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: "linear-gradient(180deg, #1a5276 0%, #2980b9 100%)" }}>
+
+            {/* Avatar + Name + ID */}
+            <div className="flex flex-col items-center pt-8 pb-4 px-5">
+              <div className="relative mb-4">
+                <div
+                  className="w-24 h-24 rounded-full border-4 flex items-center justify-center text-3xl font-bold shadow-lg"
+                  style={{ background: "rgba(255,255,255,0.15)", color: "white", borderColor: "rgba(255,255,255,0.8)" }}
+                >
+                  {getInitials(contact.name)}
+                </div>
+                <span
+                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full"
+                  style={{ background: "#4caf50", borderWidth: "3px", borderStyle: "solid", borderColor: "white" }}
+                />
+              </div>
+              <h2 className="text-white text-xl font-bold text-center leading-tight">{contact.name}</h2>
+              <p className="text-xs mt-1 text-center" style={{ color: "rgba(255,255,255,0.7)" }}>
+                Customer ID: #LVL-{paddedId}
+              </p>
+              <p className="text-xs mt-0.5 text-center" style={{ color: "rgba(255,255,255,0.7)" }}>
+                Customer since{" "}
+                <span style={{ color: "#f5a623", fontWeight: 600 }}>
+                  {formatMonthYear(contact.createdAt)}
+                </span>
+              </p>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 mt-5 w-full">
+                <button
+                  onClick={handleCallNow}
+                  disabled={clickToCallMutation.isPending}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-white text-xs font-semibold py-2.5 px-3 rounded-lg shadow-md disabled:opacity-60 transition-colors"
+                  style={{ background: "#4caf50" }}
+                >
+                  <Phone size={14} />
+                  {clickToCallMutation.isPending
+                    ? "Calling…"
+                    : contact.phone || "No phone"}
+                </button>
+                <button
+                  onClick={() => {
+                    if (!contact.email) { toast.error("No email address on file"); return; }
+                    setEmailOpen((v) => !v);
+                  }}
+                  className="flex items-center justify-center gap-1.5 text-white text-xs font-semibold py-2.5 px-4 rounded-lg shadow-md transition-colors"
+                  style={{ background: "#1565c0" }}
+                >
+                  <Mail size={14} />
+                  Email
+                </button>
+              </div>
+            </div>
+
+            {/* Best Time to Contact */}
+            <div className="px-5 pb-4 pt-2">
+              <div
+                className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-3 uppercase tracking-wider"
+                style={{ background: "#f5a623", color: "#1a3a5c" }}
               >
-                Save Note
-              </Button>
+                Best Time to Contact
+              </div>
+              {contact.callbackAt ? (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-white font-bold" style={{ fontSize: "36px", lineHeight: 1 }}>
+                      {new Date(contact.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                    Scheduled callback
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>Not set</p>
+              )}
+            </div>
+
+            {/* Last contact */}
+            <div className="px-5 pb-5 flex items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+              <Clock size={14} />
+              {lastNote ? (
+                <>
+                  Last contact: {formatDate(lastNote.createdAt)}
+                  {lastNote.agentName && (
+                    <>
+                      {" "}&bull;{" "}
+                      <span style={{ color: "#f5a623", fontWeight: 500 }}>{lastNote.agentName}</span>
+                    </>
+                  )}
+                </>
+              ) : (
+                "No previous contact"
+              )}
             </div>
           </div>
 
-          {/* Timeline */}
-          <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-            <p className="text-xs font-semibold text-gray-800 uppercase tracking-wide">
-              Call History &amp; Notes
-              {contact.callNotes.length > 0 && (
-                <span className="ml-1.5 text-gray-800">({contact.callNotes.length})</span>
-              )}
-            </p>
-
-            {contact.callNotes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-800">
-                <PhoneOff size={36} className="mb-3 opacity-50" />
-                <p className="text-sm font-medium">No call notes yet</p>
-                <p className="text-xs mt-1">Log your first call above</p>
+          {/* ── White Info Card ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            {/* Email */}
+            {contact.email && (
+              <div className="mb-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Email</p>
+                <p className="text-sm text-gray-700">{contact.email}</p>
               </div>
-            ) : (
-              contact.callNotes.map((note) => {
-                const outcome = NOTE_OUTCOMES[note.statusAtTime ?? "other"] ?? NOTE_OUTCOMES.other;
-                return (
-                  <div
-                    key={note.id}
-                    className="bg-white rounded-xl border-2 border-gray-200 p-4 flex gap-4 shadow-sm"
-                  >
-                    {/* Dot + line */}
-                    <div className="flex flex-col items-center pt-1.5 shrink-0">
-                      <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", outcome.dot)} />
-                      <div className="w-px flex-1 bg-gray-100 mt-2" />
+            )}
+
+            {/* Address */}
+            {contact.address && (
+              <div className="mb-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Shipping Address</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{contact.address}</p>
+              </div>
+            )}
+
+            {/* Current Product */}
+            <div className={cn("pt-3 border-t border-gray-100", !contact.address && !contact.email && "pt-0 border-t-0")}>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Current Product</p>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#f0f2f5" }}>
+                  <Package size={16} className="text-gray-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {contact.trialKit || contact.leadType || "Not set"}
+                  </p>
+                  {contact.trialKit && (
+                    <p className="text-xs text-gray-400">Starter Kit</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Source & Agent */}
+            <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+              {contact.source && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Source</span>
+                  <span className="text-xs font-medium text-gray-700">{contact.source}</span>
+                </div>
+              )}
+              {contact.agentName && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Agent</span>
+                  <span className="text-xs font-medium text-gray-700">{contact.agentName}</span>
+                </div>
+              )}
+              {contact.leadDate && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Lead Date</span>
+                  <span className="text-xs font-medium text-gray-700">{formatDate(contact.leadDate)}</span>
+                </div>
+              )}
+              {contact.department && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Department</span>
+                  <span className="text-xs font-medium text-gray-700 capitalize">{contact.department}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Contact Buttons */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Quick Contact</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => {
+                    if (!contact.phone) { toast.error("No phone number on file"); return; }
+                    const num = contact.phone.replace(/\D/g, "");
+                    window.open(`https://wa.me/${num}`, "_blank");
+                  }}
+                  disabled={!contact.phone}
+                  className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-green-50 hover:border-green-300 hover:text-green-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  WhatsApp
+                </button>
+                <button
+                  onClick={() => {
+                    if (!contact.email) { toast.error("No email address on file"); return; }
+                    setEmailOpen((v) => !v);
+                  }}
+                  disabled={!contact.email}
+                  className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Mail size={16} />
+                  Email
+                </button>
+                <button
+                  onClick={() => {
+                    if (!contact.phone) { toast.error("No phone number on file"); return; }
+                    window.open(`sms:${contact.phone}`);
+                  }}
+                  disabled={!contact.phone}
+                  className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <MessageSquare size={16} />
+                  SMS
+                </button>
+              </div>
+            </div>
+
+            {/* Integrations */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Integrations</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => syncToACMutation.mutate({ id: contactId })}
+                  disabled={syncToACMutation.isPending}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-indigo-600 hover:bg-indigo-50 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Tag size={13} />
+                  {syncToACMutation.isPending ? "Syncing…" : "Sync to ActiveCampaign"}
+                </button>
+                <button
+                  onClick={() => setTemplatePickerOpen(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-amber-700 hover:bg-amber-50 font-medium text-xs transition-colors"
+                >
+                  <Mail size={13} />
+                  Send Email Template
+                </button>
+              </div>
+            </div>
+
+            {/* Starter Kit Selector */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Starter Kit</p>
+              <select
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                value={contact.trialKit || ""}
+                onChange={(e) => updateMutation.mutate({ id: contactId, trialKit: e.target.value || undefined })}
+              >
+                <option value="">Select kit...</option>
+                <option value="Starter Kit Ashkara">Starter Kit Ashkara</option>
+                <option value="Starter Kit Oulala">Starter Kit Oulala</option>
+              </select>
+              {contact.trialKit && (
+                <button
+                  onClick={() => alert("Coming soon")}
+                  className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white font-semibold text-xs transition-colors shadow-sm"
+                  style={{ background: "#1565c0" }}
+                >
+                  Create Subscription
+                </button>
+              )}
+            </div>
+
+            {/* Imported Notes */}
+            {contact.importedNotes && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Imported Notes</p>
+                <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-xs text-gray-700 leading-relaxed">
+                  {contact.importedNotes}
+                </div>
+              </div>
+            )}
+
+            {/* Skin Info */}
+            {(contact.skinType || contact.concern || contact.routine) && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skin Profile</p>
+                <div className="flex flex-col gap-1.5">
+                  {contact.skinType && (
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-400">Skin Type</span>
+                      <span className="text-xs font-medium text-gray-700">{contact.skinType}</span>
                     </div>
-                    {/* Body */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-xs text-gray-800">
-                          {new Date(note.createdAt).toLocaleString("en-GB")}
-                        </span>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full font-medium border",
-                          note.statusAtTime === "sale"
-                            ? "bg-green-100 text-green-700 border-green-200"
-                            : note.statusAtTime === "connected"
-                            ? "bg-blue-100 text-blue-700 border-blue-200"
-                            : note.statusAtTime === "no_answer"
-                            ? "bg-red-100 text-red-700 border-red-200"
-                            : "bg-gray-100 text-gray-800 border-gray-200"
-                        )}>
-                          {outcome.label}
-                        </span>
-                        {note.agentName && (
-                          <span className="text-xs text-gray-800">· {note.agentName}</span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-700 leading-relaxed">{note.note}</p>
+                  )}
+                  {contact.concern && (
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-400">Concern</span>
+                      <span className="text-xs font-medium text-gray-700">{contact.concern}</span>
                     </div>
-                  </div>
-                );
-              })
+                  )}
+                  {contact.routine && (
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-400">Routine</span>
+                      <span className="text-xs font-medium text-gray-700">{contact.routine}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
+        </div>
 
-          {/* ── CloudTalk Call History Panel ── */}
-          <div className="border-t border-gray-200">
-            <button
-              onClick={() => setShowCloudTalkHistory((v) => !v)}
-              className="w-full flex items-center justify-between px-5 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide hover:bg-gray-50 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <PhoneCall size={13} className="text-indigo-500" />
-                CloudTalk History
-                {cloudTalkHistory && (
-                  <span className="ml-1 text-gray-500">({cloudTalkHistory.totalCount} total)</span>
+        {/* ══════════════════════════════════════════════════
+            CENTER — Main content (flexible)
+        ══════════════════════════════════════════════════ */}
+        <div className="flex-1 flex flex-col gap-5 min-w-0">
+
+          {/* ── Top Card: History / Transactions / Shipments / Notes ── */}
+          <div className="rounded-2xl shadow-sm overflow-hidden bg-white border border-gray-100">
+
+            {/* Tab row */}
+            <div className="flex items-center border-b border-gray-200 px-4 bg-white">
+              <button
+                onClick={() => setCenterTopTab("history")}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerTopTab === "history"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
                 )}
-              </span>
-              <ChevronDown size={13} className={cn("transition-transform", showCloudTalkHistory && "rotate-180")} />
-            </button>
+              >
+                <Clock size={16} />
+                History
+              </button>
+              <button
+                onClick={() => setCenterTopTab("transactions")}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerTopTab === "transactions"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                )}
+              >
+                <CreditCard size={16} />
+                Transactions
+              </button>
+              <button
+                onClick={() => setCenterTopTab("shipments")}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerTopTab === "shipments"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                )}
+              >
+                <Archive size={16} />
+                Shipments
+              </button>
+              <button
+                onClick={() => setCenterTopTab("notes")}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerTopTab === "notes"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                )}
+              >
+                <FileText size={16} />
+                Notes
+              </button>
+              <div className="ml-auto">
+                <button
+                  onClick={() => setShowNoteForm((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-white px-4 py-2 rounded-lg my-2 transition-colors"
+                  style={{ background: "#1565c0" }}
+                >
+                  <Plus size={14} />
+                  Add Entry
+                </button>
+              </div>
+            </div>
 
-            {showCloudTalkHistory && (
-              <div className="px-5 pb-5 flex flex-col gap-2">
-                {historyLoading ? (
-                  <div className="flex items-center gap-2 py-4 text-gray-500 text-sm">
-                    <div className="w-4 h-4 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
-                    Loading call history…
-                  </div>
-                ) : !cloudTalkHistory || cloudTalkHistory.calls.length === 0 ? (
-                  <div className="flex flex-col items-center py-8 text-gray-400">
-                    <PhoneOff size={28} className="mb-2 opacity-40" />
-                    <p className="text-sm">No CloudTalk calls found for this number</p>
-                  </div>
-                ) : (
-                  cloudTalkHistory.calls.map((call) => {
-                    const isAnswered = call.status === "answered";
-                    const durationSec = call.call_times?.talking_time ?? 0;
-                    const mins = Math.floor(durationSec / 60);
-                    const secs = durationSec % 60;
-                    const b64 = audioData[call.cdr_id];
-                    return (
-                      <div key={call.cdr_id} className="bg-white rounded-xl border-2 border-gray-200 p-3 shadow-sm">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            {isAnswered ? (
-                              <PhoneCall size={13} className="text-green-500 shrink-0 mt-0.5" />
-                            ) : (
-                              <PhoneMissed size={13} className="text-red-400 shrink-0 mt-0.5" />
+            {/* Note form (shown when Add Entry clicked) */}
+            {showNoteForm && (
+              <div className="p-5 border-b border-gray-200 bg-blue-50/50">
+                <p className="text-xs font-semibold text-gray-600 mb-2">Log a new entry</p>
+                <Textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="What happened? Key objections, outcome, next steps…"
+                  className="min-h-[88px] text-sm resize-none border-gray-200 text-gray-800 placeholder:text-gray-400 bg-white focus-visible:ring-blue-400"
+                />
+                <div className="flex items-center gap-3 mt-3">
+                  <Select value={noteType} onValueChange={setNoteType}>
+                    <SelectTrigger className="w-44 text-sm border-gray-200 text-gray-700 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-200">
+                      {NOTE_TYPES.map(({ value, label, icon: Icon }) => (
+                        <SelectItem key={value} value={value} className="text-gray-700">
+                          <span className="flex items-center gap-2">
+                            <Icon size={12} />
+                            {label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleSaveNote}
+                    disabled={!noteText.trim() || addNoteMutation.isPending}
+                    size="sm"
+                    className="text-white font-semibold px-5"
+                    style={{ background: "#1565c0" }}
+                  >
+                    {addNoteMutation.isPending ? "Saving…" : "Save Note"}
+                  </Button>
+                  <button
+                    onClick={() => setShowNoteForm(false)}
+                    className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab content */}
+            <div className="p-6">
+              {/* History tab */}
+              {centerTopTab === "history" && (
+                <div className="flex flex-col">
+                  {contact.callNotes.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                      <PhoneOff size={36} className="mb-3 opacity-50" />
+                      <p className="text-sm font-medium">No call notes yet</p>
+                      <p className="text-xs mt-1">Click "+ Add Entry" to log your first call</p>
+                    </div>
+                  ) : (
+                    contact.callNotes.map((note, idx) => {
+                      const outcome = NOTE_OUTCOMES[note.statusAtTime ?? "other"] ?? NOTE_OUTCOMES.other;
+                      const agentInitials = note.agentName
+                        ? note.agentName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+                        : "??";
+                      const isLast = idx === contact.callNotes.length - 1;
+                      return (
+                        <div key={note.id} className="flex gap-3">
+                          {/* Timeline dot + line */}
+                          <div className="flex flex-col items-center" style={{ width: "20px" }}>
+                            <div className={cn("w-2.5 h-2.5 rounded-full shrink-0 mt-1.5", outcome.dot)} />
+                            {!isLast && (
+                              <div className="w-0.5 bg-gray-200 mt-1 flex-1" style={{ minHeight: "24px" }} />
                             )}
-                            <div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={cn(
-                                  "text-xs px-1.5 py-0.5 rounded-full font-medium",
-                                  isAnswered ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                                )}>
-                                  {isAnswered ? "Answered" : "Missed"}
-                                </span>
-                                {durationSec > 0 && (
-                                  <span className="text-xs text-gray-500">{mins}m {secs}s</span>
-                                )}
-                                {call.agent?.name && (
-                                  <span className="text-xs text-gray-500">· {call.agent.name}</span>
-                                )}
+                          </div>
+                          {/* Entry content */}
+                          <div className={cn("flex-1", !isLast && "pb-6")}>
+                            <div className="flex items-start gap-3">
+                              {/* Agent avatar */}
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 shadow"
+                                style={{
+                                  background: note.statusAtTime === "sale" ? "#4caf50"
+                                    : note.statusAtTime === "no_answer" ? "#ef5350"
+                                    : note.statusAtTime === "follow_up" ? "#f5a623"
+                                    : note.statusAtTime === "callback" ? "#9c27b0"
+                                    : "#1565c0"
+                                }}
+                              >
+                                {agentInitials}
                               </div>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {call.date ? new Date(call.date).toLocaleString("en-GB") : ""}
-                              </p>
+                              <div className="flex-1 min-w-0">
+                                {/* Title = first line of note */}
+                                <p className="text-sm font-semibold text-gray-800 leading-snug">
+                                  {note.note.split("\n")[0].length > 80
+                                    ? note.note.split("\n")[0].slice(0, 80) + "…"
+                                    : note.note.split("\n")[0]}
+                                </p>
+                                {/* Meta row */}
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="w-1.5 h-1.5 rounded-full inline-block bg-gray-400" />
+                                  <span className="text-xs text-gray-500">{formatDate(note.createdAt)}</span>
+                                  {note.agentName && (
+                                    <>
+                                      <span className="text-gray-300 text-xs">&bull;</span>
+                                      <span className="text-xs">
+                                        by <span className="font-medium text-blue-600">{note.agentName}</span>
+                                      </span>
+                                    </>
+                                  )}
+                                  <span className={cn(
+                                    "text-[11px] font-semibold px-2.5 py-0.5 rounded-full",
+                                    outcome.badge
+                                  )}>
+                                    {outcome.label}
+                                  </span>
+                                </div>
+                                {/* Full note text */}
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">{note.note}</p>
+                              </div>
                             </div>
                           </div>
-                          {call.recorded && (
-                            <button
-                              onClick={() => {
-                                if (b64) {
-                                  setAudioData((prev) => { const n = {...prev}; delete n[call.cdr_id]; return n; });
-                                } else {
-                                  streamRecordingMutation.mutate({ callId: call.cdr_id });
-                                }
-                              }}
-                              disabled={streamRecordingMutation.isPending}
-                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium shrink-0 disabled:opacity-50"
-                            >
-                              {streamRecordingMutation.isPending && !b64 ? (
-                                <div className="w-3 h-3 border border-indigo-400 border-t-indigo-700 rounded-full animate-spin" />
-                              ) : b64 ? (
-                                <span>Hide</span>
-                              ) : (
-                                <span>▶ Play</span>
-                              )}
-                            </button>
-                          )}
                         </div>
-                        {b64 && (
-                          <audio
-                            controls
-                            className="w-full mt-2 h-8"
-                            src={`data:audio/wav;base64,${b64}`}
-                          />
-                        )}
-                      </div>
-                    );
-                  })
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* Transactions tab */}
+              {centerTopTab === "transactions" && (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                  <CreditCard size={36} className="mb-3 opacity-40" />
+                  <p className="text-sm font-medium">Transactions</p>
+                  <p className="text-xs mt-1">Coming soon — transaction data will appear here</p>
+                </div>
+              )}
+
+              {/* Shipments tab */}
+              {centerTopTab === "shipments" && (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                  <Archive size={36} className="mb-3 opacity-40" />
+                  <p className="text-sm font-medium">Shipments</p>
+                  <p className="text-xs mt-1">Coming soon — shipment tracking will appear here</p>
+                </div>
+              )}
+
+              {/* Notes tab */}
+              {centerTopTab === "notes" && (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                  <FileText size={36} className="mb-3 opacity-40" />
+                  <p className="text-sm font-medium">Notes</p>
+                  <p className="text-xs mt-1">Use the History tab to view and add call notes</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Bottom Card: Documents / Activities / CloudTalk History / Data Privacy ── */}
+          <div className="rounded-2xl shadow-sm overflow-hidden bg-white border border-gray-100">
+
+            {/* Sub-tab row */}
+            <div className="flex items-center border-b border-gray-200 px-4">
+              <button
+                onClick={() => setCenterBottomTab("documents")}
+                className={cn(
+                  "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerBottomTab === "documents"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
                 )}
+              >
+                Documents
+              </button>
+              <button
+                onClick={() => setCenterBottomTab("activities")}
+                className={cn(
+                  "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerBottomTab === "activities"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                )}
+              >
+                Activities
+              </button>
+              <button
+                onClick={() => setCenterBottomTab("cloudtalk")}
+                className={cn(
+                  "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerBottomTab === "cloudtalk"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                )}
+              >
+                CloudTalk History
+              </button>
+              <button
+                onClick={() => setCenterBottomTab("privacy")}
+                className={cn(
+                  "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
+                  centerBottomTab === "privacy"
+                    ? "text-blue-700 border-blue-700 font-semibold"
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                )}
+              >
+                Data Privacy
+              </button>
+            </div>
+
+            {/* Sub-tab content */}
+            <div className="p-5">
+              {/* Documents */}
+              {centerBottomTab === "documents" && (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <FileText size={28} className="mb-2 opacity-40" />
+                  <p className="text-sm">No documents uploaded yet</p>
+                </div>
+              )}
+
+              {/* Activities */}
+              {centerBottomTab === "activities" && (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <Activity size={28} className="mb-2 opacity-40" />
+                  <p className="text-sm">No recent activities to display</p>
+                </div>
+              )}
+
+              {/* CloudTalk History */}
+              {centerBottomTab === "cloudtalk" && (
+                <div>
+                  {!contact.phone ? (
+                    <div className="flex flex-col items-center py-12 text-gray-400">
+                      <PhoneOff size={28} className="mb-2 opacity-40" />
+                      <p className="text-sm">No phone number on file</p>
+                    </div>
+                  ) : historyLoading ? (
+                    <div className="flex items-center gap-2 py-8 justify-center text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                      Loading call history…
+                    </div>
+                  ) : !cloudTalkHistory || cloudTalkHistory.calls.length === 0 ? (
+                    <div className="flex flex-col items-center py-12 text-gray-400">
+                      <PhoneOff size={28} className="mb-2 opacity-40" />
+                      <p className="text-sm">No CloudTalk calls found for this number</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs text-gray-400 mb-1">
+                        {cloudTalkHistory.totalCount} total calls
+                      </p>
+                      {cloudTalkHistory.calls.map((call) => {
+                        const isAnswered = call.status === "answered";
+                        const durationSec = call.call_times?.talking_time ?? 0;
+                        const mins = Math.floor(durationSec / 60);
+                        const secs = durationSec % 60;
+                        const b64 = audioData[call.cdr_id];
+                        return (
+                          <div key={call.cdr_id} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                {isAnswered ? (
+                                  <PhoneCall size={13} className="text-green-500 shrink-0 mt-0.5" />
+                                ) : (
+                                  <PhoneMissed size={13} className="text-red-400 shrink-0 mt-0.5" />
+                                )}
+                                <div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={cn(
+                                      "text-xs px-1.5 py-0.5 rounded-full font-medium",
+                                      isAnswered ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+                                    )}>
+                                      {isAnswered ? "Answered" : "Missed"}
+                                    </span>
+                                    {durationSec > 0 && (
+                                      <span className="text-xs text-gray-500">{mins}m {secs}s</span>
+                                    )}
+                                    {call.agent?.name && (
+                                      <span className="text-xs text-gray-500">· {call.agent.name}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    {call.date ? new Date(call.date).toLocaleString("en-GB") : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              {call.recorded && (
+                                <button
+                                  onClick={() => {
+                                    if (b64) {
+                                      setAudioData((prev) => { const n = {...prev}; delete n[call.cdr_id]; return n; });
+                                    } else {
+                                      streamRecordingMutation.mutate({ callId: call.cdr_id });
+                                    }
+                                  }}
+                                  disabled={streamRecordingMutation.isPending}
+                                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium shrink-0 disabled:opacity-50"
+                                >
+                                  {streamRecordingMutation.isPending && !b64 ? (
+                                    <div className="w-3 h-3 border border-blue-400 border-t-blue-700 rounded-full animate-spin" />
+                                  ) : b64 ? (
+                                    <span>Hide</span>
+                                  ) : (
+                                    <span>▶ Play</span>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                            {b64 && (
+                              <audio
+                                controls
+                                className="w-full mt-2 h-8"
+                                src={`data:audio/wav;base64,${b64}`}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Data Privacy */}
+              {centerBottomTab === "privacy" && (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <Lock size={28} className="mb-2 opacity-40" />
+                  <p className="text-sm">Data privacy settings coming soon</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════
+            RIGHT SIDEBAR (~260px)
+        ══════════════════════════════════════════════════ */}
+        <div className="shrink-0 flex flex-col gap-4" style={{ width: "260px" }}>
+
+          {/* ── KPI Cards (2 side by side) ── */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* LTV */}
+            <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col items-center text-center border border-gray-100">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ background: "#e3f2fd" }}>
+                <svg className="w-5 h-5" style={{ color: "#1565c0" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV</p>
+              <p className="font-bold mt-0.5 text-gray-400" style={{ fontSize: "22px" }}>—</p>
+            </div>
+
+            {/* Cycle */}
+            <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col items-center text-center border border-gray-100">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ background: "#e3f2fd" }}>
+                <svg className="w-5 h-5" style={{ color: "#1565c0" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Cycle</p>
+              <p className="font-bold mt-0.5 text-gray-400" style={{ fontSize: "22px" }}>—</p>
+            </div>
+          </div>
+
+          {/* ── Risk Score ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Shield size={18} className="text-gray-600" />
+                <span className="text-sm font-bold text-gray-800">Risk Score</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400">No data yet</p>
+          </div>
+
+          {/* ── Products History ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Package size={18} style={{ color: "#1565c0" }} />
+              <span className="text-sm font-bold" style={{ color: "#1565c0" }}>Products History</span>
+            </div>
+            {contact.trialKit ? (
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#1565c0" }} />
+                    <span className="text-sm text-gray-800">{contact.trialKit}</span>
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: "#1565c0" }}>Current</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No products recorded</p>
             )}
           </div>
-        </main>
+
+          {/* ── Cancellation History ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={18} style={{ color: "#e65100" }} />
+              <span className="text-sm font-bold text-gray-800">Cancellation History</span>
+            </div>
+            <div className="rounded-xl p-3.5" style={{ background: "#fff0ee" }}>
+              <p className="text-xs text-gray-500">No cancellation attempts</p>
+            </div>
+          </div>
+
+          {/* ── Assigned Team ── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <User size={18} className="text-gray-600" />
+              <span className="text-sm font-bold text-gray-800">Assigned Team</span>
+            </div>
+            {contact.agentName ? (
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#e3f2fd" }}>
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow"
+                  style={{ background: "#1565c0" }}
+                >
+                  {getInitials(contact.agentName)}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{contact.agentName}</p>
+                  <p className="text-xs text-gray-500">
+                    {contact.department ? `${contact.department.charAt(0).toUpperCase() + contact.department.slice(1)} Agent` : "Agent"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No agent assigned</p>
+            )}
+          </div>
+
+          {/* ── Call Stats (if notes exist) ── */}
+          {contact.callNotes.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Call Stats</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-gray-50 p-3 text-center">
+                  <p className="text-xl font-bold text-gray-700">{contact.callNotes.length}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Total Calls</p>
+                </div>
+                <div className="rounded-xl bg-green-50 p-3 text-center">
+                  <p className="text-xl font-bold text-green-600">
+                    {contact.callNotes.filter((n) => n.statusAtTime === "sale").length}
+                  </p>
+                  <p className="text-[10px] text-green-500 mt-0.5">Sales</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
       </div>
     </div>
+
+    {/* ─── Email Compose Modal ─────────────────────────────────────────────── */}
+    {emailOpen && (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Compose Email</h3>
+              {contact.email && (
+                <p className="text-xs text-gray-500 mt-0.5">To: <span className="font-medium text-gray-700">{contact.email}</span></p>
+              )}
+            </div>
+            <button onClick={() => setEmailOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+              <X size={16} className="text-gray-500" />
+            </button>
+          </div>
+          <div className="p-5 flex flex-col gap-3">
+            <Input
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              placeholder="Subject"
+              className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+            />
+            <Textarea
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+              placeholder="Write your message here…"
+              className="min-h-[140px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+            />
+          </div>
+          <div className="px-5 pb-5 flex items-center gap-3 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEmailOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!emailSubject.trim()) { toast.error("Please enter a subject"); return; }
+                if (!emailBody.trim()) { toast.error("Please enter a message"); return; }
+                sendEmailMutation.mutate({ contactId, subject: emailSubject.trim(), body: emailBody.trim() });
+              }}
+              disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailBody.trim()}
+              size="sm"
+              className="text-white font-semibold flex items-center gap-2"
+              style={{ background: "#1565c0" }}
+            >
+              <Send size={13} />
+              {sendEmailMutation.isPending ? "Sending…" : "Send Email"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ─── Email Template Picker Modal ─────────────────────────────────────── */}
     {templatePickerOpen && (
@@ -914,7 +1355,7 @@ export default function ContactCard() {
                     disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.htmlBody || createTemplateMutation.isPending}
                     className="w-full px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {createTemplateMutation.isPending ? "Saving…" : "Save Template"}
+                    {createTemplateMutation.isPending ? "Creating…" : "Create Template"}
                   </button>
                 </div>
               )}
