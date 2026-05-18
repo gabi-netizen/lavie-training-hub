@@ -936,6 +936,16 @@ function ContactCard({
                                   <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
                                 )}
                                 <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
+                                {isAdmin && (() => {
+                                  const vis = (() => { try { return JSON.parse((tpl as any).visibility || '{}'); } catch { return { type: 'everyone' }; } })();
+                                  const label = vis.type === 'team' ? (vis.value === 'opening' ? '🟢 Opening' : '🔵 Retention')
+                                    : vis.type === 'agents' ? `👤 ${vis.ids?.length || 0} agents`
+                                    : '🌐 Everyone';
+                                  const color = vis.type === 'team' ? (vis.value === 'opening' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700')
+                                    : vis.type === 'agents' ? 'bg-purple-100 text-purple-700'
+                                    : 'bg-gray-100 text-gray-600';
+                                  return <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${color}`}>{label}</span>;
+                                })()}
                               </button>
                               <div className="absolute top-2 right-2 flex gap-1">
                                 <button
