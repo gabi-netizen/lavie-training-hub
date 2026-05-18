@@ -110,15 +110,10 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
       return;
     }
 
-    // ── Skip system/automated emails (Postmark notifications, etc.) ────────
+    // ── Skip only Postmark's own system emails ────────────────────────────
     const lowerFrom = fromEmail.toLowerCase();
-    if (
-      lowerFrom.includes("postmarkapp.com") ||
-      lowerFrom.includes("mailer-daemon") ||
-      lowerFrom.includes("noreply") ||
-      lowerFrom.includes("no-reply")
-    ) {
-      console.log(`[Postmark Inbound] Skipping system email from ${fromEmail}`);
+    if (lowerFrom.includes("postmarkapp.com")) {
+      console.log(`[Postmark Inbound] Skipping Postmark system email from ${fromEmail}`);
       res.status(200).json({ received: true, skipped: true, reason: "system_email" });
       return;
     }
