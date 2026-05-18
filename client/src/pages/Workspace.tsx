@@ -1324,45 +1324,7 @@ function StripePaymentSection({
         )}
       </div>
 
-      {/* ── Check Payment Status section ── */}
-      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
-        <button
-          type="button"
-          onClick={handleCheckPayment}
-          disabled={checkingPayment}
-          style={{
-            width: "100%",
-            padding: "10px",
-            borderRadius: "8px",
-            border: "2px solid #f59e0b",
-            background: "white",
-            color: "#f59e0b",
-            fontWeight: 600,
-            fontSize: "13px",
-            cursor: checkingPayment ? "not-allowed" : "pointer",
-            opacity: checkingPayment ? 0.6 : 1,
-          }}
-        >
-          {checkingPayment ? "Checking…" : "🔍 Check Payment Status"}
-        </button>
-        {paymentStatus && (
-          <div style={{
-            marginTop: "8px",
-            padding: "10px",
-            borderRadius: "8px",
-            background: paymentStatus.paid ? "#ecfdf5" : "#fef2f2",
-            border: paymentStatus.paid ? "1px solid #10b981" : "1px solid #ef4444",
-            fontSize: "13px",
-            fontWeight: 600,
-            color: paymentStatus.paid ? "#065f46" : "#991b1b",
-            textAlign: "center",
-          }}>
-            {paymentStatus.paid
-              ? `✅ Paid £${paymentStatus.amount}${paymentStatus.paidAt ? " on " + new Date(paymentStatus.paidAt).toLocaleDateString("en-GB") : ""}`
-              : "❌ Not paid yet"}
-          </div>
-        )}
-      </div>
+      {/* ── Check Payment Status section - temporarily hidden ── */}
 
       {clientSecret && customerId && (
         <Elements
