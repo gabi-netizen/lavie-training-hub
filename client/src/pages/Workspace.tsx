@@ -191,20 +191,29 @@ function BrandCheckboxes({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  // value is stored as comma-separated string e.g. "Clinique,Elemis"
-  const selected: string[] = value ? value.split(",").map(s => s.trim()).filter(Boolean) : [];
+  // Local state for draft selection (only saved on "Save" click)
+  const [draft, setDraft] = useState<string[]>([]);
+
+  // Sync draft when popover opens
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setDraft(value ? value.split(",").map(s => s.trim()).filter(Boolean) : []);
+      setSearch("");
+    }
+    setOpen(isOpen);
+  };
 
   const toggle = (brand: string) => {
-    const updated = selected.includes(brand)
-      ? selected.filter(b => b !== brand)
-      : [...selected, brand];
-    onChange(updated.join(","));
+    setDraft(prev =>
+      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+    );
   };
 
   const filtered = CURRENT_BRAND_OPTIONS.filter((o) =>
     o.toLowerCase().includes(search.toLowerCase())
   );
 
+  const selected: string[] = value ? value.split(",").map(s => s.trim()).filter(Boolean) : [];
   const displayText = selected.length === 0
     ? "Select"
     : selected.length <= 2
@@ -212,7 +221,7 @@ function BrandCheckboxes({
       : `${selected.slice(0, 2).join(", ")} +${selected.length - 2}`;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -242,17 +251,17 @@ function BrandCheckboxes({
           />
         </div>
         <div style={{ maxHeight: "220px", overflowY: "auto" }}>
-          {selected.length > 0 && !search.trim() && (
+          {draft.length > 0 && !search.trim() && (
             <button
               type="button"
               className="w-full text-left text-xs px-3 py-1.5 hover:bg-red-50 text-red-500 cursor-pointer border-b border-gray-100"
-              onClick={() => onChange("")}
+              onClick={() => setDraft([])}
             >
               ✕ Clear all
             </button>
           )}
           {filtered.map((brand) => {
-            const isChecked = selected.includes(brand);
+            const isChecked = draft.includes(brand);
             return (
               <label
                 key={brand}
@@ -273,6 +282,19 @@ function BrandCheckboxes({
           {filtered.length === 0 && (
             <div className="text-xs text-gray-400 py-2 text-center">No matches</div>
           )}
+        </div>
+        {/* Save button */}
+        <div className="p-1.5 border-t border-gray-100">
+          <button
+            type="button"
+            className="w-full text-xs font-semibold px-3 py-1.5 rounded bg-violet-600 text-white hover:bg-violet-700 transition-colors cursor-pointer"
+            onClick={() => {
+              onChange(draft.join(","));
+              setOpen(false);
+            }}
+          >
+            ✔ Save
+          </button>
         </div>
       </PopoverContent>
     </Popover>
