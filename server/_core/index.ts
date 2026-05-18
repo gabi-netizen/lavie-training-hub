@@ -15,6 +15,7 @@ import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
+import { ensureBrandsColumn } from "../ensureBrandsColumn";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -189,6 +190,12 @@ async function startServer() {
         console.error("[DB] Error ensuring template visibility column:", err)
       );
     }, 5000);
+    // Ensure brands column exists on contacts
+    setTimeout(() => {
+      ensureBrandsColumn().catch((err) =>
+        console.error("[DB] Error ensuring brands column:", err)
+      );
+    }, 6000);
     // Background: sync any contacts that missed CloudTalk sync during hibernation
     setTimeout(() => {
       syncUnsyncedContactsToCloudTalk().catch((err) =>

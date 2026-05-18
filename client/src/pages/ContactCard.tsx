@@ -574,21 +574,40 @@ export default function ContactCard() {
               </div>
             )}
 
-            {/* Current Product */}
+            {/* Current Brand */}
             <div className={cn("pt-3 border-t border-gray-100", !contact.address && !contact.email && "pt-0 border-t-0")}>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Current Product</p>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#f0f2f5" }}>
-                  <Package size={16} className="text-gray-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {contact.trialKit || contact.leadType || "Not set"}
-                  </p>
-                  {contact.trialKit && (
-                    <p className="text-xs text-gray-400">Starter Kit</p>
-                  )}
-                </div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Current Brand</p>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                {["Estée Lauder", "Clinique", "Lancôme", "Clarins", "Elemis", "L'Occitane", "No.7"].map((brand) => {
+                  const selectedBrands: string[] = (() => {
+                    try { return JSON.parse((contact as any).brands ?? "[]"); } catch { return []; }
+                  })();
+                  const isChecked = selectedBrands.includes(brand);
+                  return (
+                    <label
+                      key={brand}
+                      className={cn(
+                        "flex items-center gap-1.5 cursor-pointer rounded px-1.5 py-1 text-xs select-none transition-colors",
+                        isChecked
+                          ? "bg-violet-50 text-violet-700 font-medium"
+                          : "text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-violet-600 w-3 h-3 shrink-0"
+                        checked={isChecked}
+                        onChange={() => {
+                          const updated = isChecked
+                            ? selectedBrands.filter((b) => b !== brand)
+                            : [...selectedBrands, brand];
+                          updateMutation.mutate({ id: contactId, brands: JSON.stringify(updated) });
+                        }}
+                      />
+                      {brand}
+                    </label>
+                  );
+                })}
               </div>
             </div>
 

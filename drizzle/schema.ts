@@ -188,6 +188,8 @@ export const contacts = mysqlTable("contacts", {
   address: text("address"),
   /** Department: opening or retention. Default opening. */
   department: mysqlEnum("department", ["opening", "retention"]).default("opening").notNull(),
+  /** JSON array of current brand names e.g. ["Clinique","Elemis"] */
+  brands: varchar("brands", { length: 512 }),
   /** Stripe Customer ID — set after successful payment */
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
