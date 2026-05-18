@@ -47,24 +47,47 @@ function wrapEmailHtml(opts: {
   contactName: string;
 }) {
   const headerSection = opts.headerImageUrl
-    ? `<img src="${opts.headerImageUrl}" alt="Lavie Labs" style="max-width:100%;height:auto;max-height:100px;display:block;margin-bottom:16px;" />`
+    ? `<img src="${opts.headerImageUrl}" alt="Lavie Labs" style="width:100%;max-width:600px;height:auto;display:block;margin:0 auto 24px;border-radius:8px;" />`
     : "";
+
+  // Convert plain-text newlines to <br> if body doesn't already contain HTML tags
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(opts.bodyHtml);
+  const formattedBody = hasHtmlTags
+    ? opts.bodyHtml
+    : opts.bodyHtml.replace(/\n/g, "<br>");
 
   return `<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#333333;font-size:15px;line-height:1.6;">
-${headerSection}
-<p style="margin:0 0 14px 0;">Dear ${opts.contactName},</p>
-
-${opts.bodyHtml}
-
-<p style="margin:16px 0 14px 0;">Should you need anything please don't hesitate to respond to this email. Alternatively email <a href="mailto:support@lavielabs.com" style="color:#2b5cab;text-decoration:underline;">support@lavielabs.com</a></p>
-
-<p style="margin:16px 0;text-align:center;">
-  <a href="mailto:support@lavielabs.com" style="display:inline-block;padding:10px 24px;font-size:13px;line-height:16px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:18px;font-weight:bold;background-color:#6f9fea;">Contact Us</a>
-</p>
-
-<p style="margin:14px 0 0 0;">Warm regards,<br/><strong>${opts.agentName}</strong></p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          ${opts.headerImageUrl ? `<tr><td style="padding:0;"><img src="${opts.headerImageUrl}" alt="Lavie Labs" style="width:100%;height:auto;display:block;" /></td></tr>` : ""}
+          <tr>
+            <td style="padding:32px 32px 24px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;">${formattedBody}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#555555;">Should you need anything please don't hesitate to respond to this email. Alternatively email <a href="mailto:support@lavielabs.com" style="color:#2b5cab;text-decoration:underline;">support@lavielabs.com</a></p>
+              <p style="margin:0;font-size:15px;color:#333333;">Warm regards,<br/><strong>${opts.agentName}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e8e8e8;text-align:center;">
+              <a href="mailto:support@lavielabs.com" style="display:inline-block;padding:10px 28px;font-size:13px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:20px;font-weight:bold;background-color:#6f9fea;">Contact Us</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
