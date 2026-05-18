@@ -2543,12 +2543,7 @@ export default function Workspace() {
               >
                 <UserPlus size={13} /> Add Contact
               </button>
-              <button
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg border-2 border-indigo-800 transition-colors"
-                onClick={() => setShowGuide(true)}
-              >
-                📖 How to Use
-              </button>
+
               <div className="ws-dl-stats">
                 <div className="ws-dl-stat">
                   <div className="ws-dl-stat-num">{totalContacts}</div>
@@ -2667,6 +2662,13 @@ export default function Workspace() {
                   onClick={() => setActiveTab("manager")}
                 >
                   <Users size={14} /> Manager View
+                </button>
+                <button
+                  className="ws-mode-btn"
+                  onClick={() => setShowGuide(true)}
+                  style={{ marginLeft: "auto", background: "#4f46e5", color: "#fff", borderRadius: 8, padding: "6px 12px" }}
+                >
+                  📖 How to Use
                 </button>
               </div>
 
