@@ -2396,17 +2396,16 @@ export default function Workspace() {
   }, []);;
 
   // Send a command to the CloudTalk iframe
-  const sendToCloudTalk = useCallback((event: string, properties: Record<string, any> = {}) => {
+  const sendToCloudTalk = useCallback((event: string) => {
     const iframe = document.querySelector<HTMLIFrameElement>('iframe[src*="phone.cloudtalk.io"]');
     if (!iframe?.contentWindow) {
       toast.error("CloudTalk dialler is not open. Please open the phone widget first.");
-      return false;
+      return;
     }
     iframe.contentWindow.postMessage(
-      JSON.stringify({ event, properties }),
+      JSON.stringify({ event, properties: {} }),
       "https://phone.cloudtalk.io"
     );
-    return true;
   }, []);
 
   const handleMute = useCallback(() => {
@@ -2532,20 +2531,8 @@ export default function Workspace() {
 
   const handleAction = (contactId: number, action: string, phone?: string) => {
     if (action === "call") {
-      if (callCooldown) return;
-      const contactObj = (contacts as any[]).find((c) => c.id === contactId);
-      const rawPhone = (contactObj?.phone ?? "").replace(/[\s\-().]/g, "");
-      const phoneNum = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
-      if (!phoneNum || phoneNum === "+") {
-        toast.error("Contact has no phone number");
-        return;
-      }
-      const sent = sendToCloudTalk("dial", { number: phoneNum });
-      if (sent) {
-        toast.success("Dialling...");
-        setCallCooldown(true);
-        setTimeout(() => setCallCooldown(false), 10000);
-      }
+      if (callCooldown || clickToCall.isPending) return;
+      clickToCall.mutate({ contactId });
     } else if (action === "callback") {
       // Open date/time picker modal — do NOT mark done yet
       const contact = (contacts as any[]).find((c) => c.id === contactId);
