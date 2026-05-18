@@ -180,7 +180,7 @@ function AgeCombobox({
 }
 
 // ==========================================
-// BRAND MULTI-SELECT CHECKBOXES COMPONENT
+// BRAND MULTI-SELECT DROPDOWN WITH CHECKBOXES
 // ==========================================
 function BrandCheckboxes({
   value,
@@ -189,6 +189,8 @@ function BrandCheckboxes({
   value: string;
   onChange: (val: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   // value is stored as comma-separated string e.g. "Clinique,Elemis"
   const selected: string[] = value ? value.split(",").map(s => s.trim()).filter(Boolean) : [];
 
@@ -199,30 +201,81 @@ function BrandCheckboxes({
     onChange(updated.join(","));
   };
 
+  const filtered = CURRENT_BRAND_OPTIONS.filter((o) =>
+    o.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const displayText = selected.length === 0
+    ? "Select"
+    : selected.length <= 2
+      ? selected.join(", ")
+      : `${selected.slice(0, 2).join(", ")} +${selected.length - 2}`;
+
   return (
-    <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1">
-      {CURRENT_BRAND_OPTIONS.map((brand) => {
-        const isChecked = selected.includes(brand);
-        return (
-          <label
-            key={brand}
-            className={`flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 text-xs select-none transition-colors ${
-              isChecked
-                ? "bg-violet-50 text-violet-700 font-medium"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <input
-              type="checkbox"
-              className="accent-violet-600 w-3.5 h-3.5 shrink-0 cursor-pointer"
-              checked={isChecked}
-              onChange={() => toggle(brand)}
-            />
-            {brand}
-          </label>
-        );
-      })}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          className="ws-select flex items-center justify-between cursor-pointer text-left"
+          style={{ appearance: "none" }}
+        >
+          <span className={selected.length > 0 ? "text-[#1f2937]" : "text-gray-400"}>
+            {displayText}
+          </span>
+          <ChevronsUpDown size={12} className="text-gray-400 shrink-0 ml-1" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0 bg-white border border-gray-200 shadow-lg rounded-lg"
+        style={{ width: "200px", zIndex: 9999 }}
+        align="start"
+      >
+        <div className="p-1.5 border-b border-gray-100">
+          <input
+            type="text"
+            placeholder="Type brand name..."
+            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:border-blue-400"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div style={{ maxHeight: "220px", overflowY: "auto" }}>
+          {selected.length > 0 && !search.trim() && (
+            <button
+              type="button"
+              className="w-full text-left text-xs px-3 py-1.5 hover:bg-red-50 text-red-500 cursor-pointer border-b border-gray-100"
+              onClick={() => onChange("")}
+            >
+              ✕ Clear all
+            </button>
+          )}
+          {filtered.map((brand) => {
+            const isChecked = selected.includes(brand);
+            return (
+              <label
+                key={brand}
+                className={`flex items-center gap-2 w-full text-left text-xs px-3 py-1.5 cursor-pointer hover:bg-gray-50 ${
+                  isChecked ? "bg-violet-50 font-medium text-violet-700" : "text-gray-700"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="accent-violet-600 w-3.5 h-3.5 shrink-0 cursor-pointer"
+                  checked={isChecked}
+                  onChange={() => toggle(brand)}
+                />
+                {brand}
+              </label>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="text-xs text-gray-400 py-2 text-center">No matches</div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
