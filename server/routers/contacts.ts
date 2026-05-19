@@ -163,6 +163,8 @@ export const contactsRouter = router({
         source: z.string().optional(),
         leadDateFrom: z.string().optional(),
         leadDateTo: z.string().optional(),
+        statusDateFrom: z.string().optional(),
+        statusDateTo: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -187,6 +189,8 @@ export const contactsRouter = router({
         source: z.string().optional(),
         leadDateFrom: z.string().optional(),
         leadDateTo: z.string().optional(),
+        statusDateFrom: z.string().optional(),
+        statusDateTo: z.string().optional(),
         limit: z.number().min(1).max(5000).default(5000),
         offset: z.number().min(0).default(0),
       })

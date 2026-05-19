@@ -224,6 +224,7 @@ const OPENING_STATUSES = [
   { value: "sold", label: "Sold" },
   { value: "not_interested", label: "Not Interested" },
   { value: "no_answer", label: "No Answer" },
+  { value: "skipped", label: "Skipped" },
   { value: "do_not_call", label: "Do Not Call" },
   { value: "done", label: "Done" },
 ] as const;
@@ -261,6 +262,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [filterSource, setFilterSource] = useState("");
   const [filterLeadDateFrom, setFilterLeadDateFrom] = useState("");
   const [filterLeadDateTo, setFilterLeadDateTo] = useState("");
+  const [filterStatusDateFrom, setFilterStatusDateFrom] = useState("");
+  const [filterStatusDateTo, setFilterStatusDateTo] = useState("");
   const [importing, setImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(100);
@@ -288,6 +291,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
     leadDateTo: filterLeadDateTo || undefined,
+    statusDateFrom: filterStatusDateFrom || undefined,
+    statusDateTo: filterStatusDateTo || undefined,
   });
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
@@ -298,6 +303,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
     leadDateTo: filterLeadDateTo || undefined,
+    statusDateFrom: filterStatusDateFrom || undefined,
+    statusDateTo: filterStatusDateTo || undefined,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   });
@@ -467,7 +474,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     });
   };
 
-  const activeFilters = [filterLeadType, filterStatus, filterAgent, filterSource, filterLeadDateFrom, filterLeadDateTo].filter(Boolean).length;
+  const activeFilters = [filterLeadType, filterStatus, filterAgent, filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo].filter(Boolean).length;
 
   // Stats
   const totalContacts = contacts.length;
@@ -633,6 +640,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
               {/* Lead Date range filter */}
               <div className="flex items-center gap-1.5">
+                <span className="text-gray-500 text-xs font-medium">Lead:</span>
                 <input
                   type="date"
                   value={filterLeadDateFrom}
@@ -651,13 +659,34 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   title="Lead Date To"
                 />
               </div>
+              {/* Status Date (updatedAt) range filter */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-500 text-xs font-medium">Action:</span>
+                <input
+                  type="date"
+                  value={filterStatusDateFrom}
+                  onChange={e => { setFilterStatusDateFrom(e.target.value); resetPage(); }}
+                  className="bg-white border border-orange-200 text-gray-700 text-sm h-9 px-2 rounded-md w-[130px] focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="From"
+                  title="Action Date From"
+                />
+                <span className="text-gray-400 text-xs">to</span>
+                <input
+                  type="date"
+                  value={filterStatusDateTo}
+                  onChange={e => { setFilterStatusDateTo(e.target.value); resetPage(); }}
+                  className="bg-white border border-orange-200 text-gray-700 text-sm h-9 px-2 rounded-md w-[130px] focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="To"
+                  title="Action Date To"
+                />
+              </div>
 
               {activeFilters > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
-                  onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}
+                  onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
                 >
                   <X size={13} /> Clear
                 </Button>
@@ -789,12 +818,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <p className="text-sm text-gray-600">Your active filters returned 0 results:</p>
                   <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                     {filterSource && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Source: {filterSource}</span>}
-                    {filterStatus && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Status: {OPENING_STATUSES.find(s => s.value === filterStatus)?.label || (meta?.statuses as string[] || []).find(s => s === filterStatus) || filterStatus}</span>}
+                    {filterStatus && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Status: {OPENING_STATUSES.find(s => s.value === filterStatus)?.label || ((meta?.statuses as unknown as string[]) || []).find(s => s === filterStatus) || filterStatus}</span>}
                     {filterAgent && filterAgent !== 'unassigned' && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: {agentList.find((a: any) => a.email === filterAgent)?.name || filterAgent}</span>}
                     {filterAgent === 'unassigned' && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: Unassigned</span>}
                     {filterLeadType && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Lead Type: {filterLeadType}</span>}
-                    {filterLeadDateFrom && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">From: {filterLeadDateFrom}</span>}
-                    {filterLeadDateTo && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">To: {filterLeadDateTo}</span>}
+                    {filterLeadDateFrom && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Lead From: {filterLeadDateFrom}</span>}
+                    {filterLeadDateTo && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Lead To: {filterLeadDateTo}</span>}
+                    {filterStatusDateFrom && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Action From: {filterStatusDateFrom}</span>}
+                    {filterStatusDateTo && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Action To: {filterStatusDateTo}</span>}
                   </div>
                   <p className="text-xs text-gray-500 mt-2">Try removing one or more filters to see results</p>
                 </div>
@@ -807,7 +838,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 size="sm"
                 variant="outline"
                 className="mt-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
-                onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}
+                onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
               >
                 Clear All Filters
               </Button>

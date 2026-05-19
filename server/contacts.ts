@@ -76,6 +76,8 @@ export async function listContacts({
   source,
   leadDateFrom,
   leadDateTo,
+  statusDateFrom,
+  statusDateTo,
   limit = 50,
   offset = 0,
 }: {
@@ -88,6 +90,8 @@ export async function listContacts({
   source?: string;
   leadDateFrom?: string;
   leadDateTo?: string;
+  statusDateFrom?: string;
+  statusDateTo?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -122,6 +126,12 @@ export async function listContacts({
     toEnd.setHours(23, 59, 59, 999);
     conditions.push(lte(contacts.leadDate, toEnd));
   }
+  if (statusDateFrom) conditions.push(gte(contacts.updatedAt, new Date(statusDateFrom)));
+  if (statusDateTo) {
+    const toEnd = new Date(statusDateTo);
+    toEnd.setHours(23, 59, 59, 999);
+    conditions.push(lte(contacts.updatedAt, toEnd));
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -149,6 +159,8 @@ export async function countContacts({
   source,
   leadDateFrom,
   leadDateTo,
+  statusDateFrom,
+  statusDateTo,
 }: {
   search?: string;
   leadType?: string;
@@ -159,6 +171,8 @@ export async function countContacts({
   source?: string;
   leadDateFrom?: string;
   leadDateTo?: string;
+  statusDateFrom?: string;
+  statusDateTo?: string;
 } = {}) {
   const db = await getDb();
   if (!db) return 0;
@@ -187,6 +201,12 @@ export async function countContacts({
     const toEnd = new Date(leadDateTo);
     toEnd.setHours(23, 59, 59, 999);
     conditions.push(lte(contacts.leadDate, toEnd));
+  }
+  if (statusDateFrom) conditions.push(gte(contacts.updatedAt, new Date(statusDateFrom)));
+  if (statusDateTo) {
+    const toEnd = new Date(statusDateTo);
+    toEnd.setHours(23, 59, 59, 999);
+    conditions.push(lte(contacts.updatedAt, toEnd));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [row] = await db.select({ total: count() }).from(contacts).where(where);
