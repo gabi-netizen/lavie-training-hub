@@ -462,7 +462,7 @@ function buildReplyEmailHtml(opts: {
   agentName: string;
   customerName: string;
 }): string {
-  const HEADER_IMAGE_URL = "https://pub-af7bcbf6a37b4be2a6fb5e3e9a5a8994.r2.dev/Lavie%20Labs%20Email%20Header.png";
+  const HEADER_IMAGE_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663435925457/reKWqPefnHZHXJpv.png";
   const formattedBody = opts.bodyText.replace(/\n/g, "<br>");
 
   return `<!DOCTYPE html>
