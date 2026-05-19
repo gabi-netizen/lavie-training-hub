@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -481,12 +481,11 @@ export default function SupportTickets() {
   const utils = trpc.useUtils();
 
   // View mode: "tickets", "retention", "blocked", or "blockedSubjects"
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects") || "tickets";
-  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects">(initialTab);
+  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | null;
+  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects">(urlTab || "tickets");
   const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects") => {
     setViewModeState(mode);
-    setSearchParams({ tab: mode });
+    window.history.replaceState(null, "", `/support-tickets?tab=${mode}`);
   };
 
   // Filters
