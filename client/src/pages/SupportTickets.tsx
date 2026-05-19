@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,6 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
-  ArrowLeft,
   SlidersHorizontal,
   Package,
   CreditCard,
@@ -36,6 +36,10 @@ import {
   UserCheck,
   Building2,
   Cpu,
+  Reply,
+  Send,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from "lucide-react";
 
 // ─── Category Config ─────────────────────────────────────────────────────────
@@ -65,6 +69,8 @@ const PRIORITY_CONFIG: Record<string, { label: string; dot: string; text: string
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   open: { label: "Open", bg: "bg-blue-100", text: "text-blue-700" },
   in_progress: { label: "In Progress", bg: "bg-amber-100", text: "text-amber-700" },
+  awaiting_response: { label: "Awaiting Response", bg: "bg-purple-100", text: "text-purple-700" },
+  customer_replied: { label: "Customer Replied", bg: "bg-orange-500", text: "text-white" },
   resolved: { label: "Resolved", bg: "bg-green-100", text: "text-green-700" },
   closed: { label: "Closed", bg: "bg-slate-100", text: "text-slate-600" },
 };
@@ -129,6 +135,158 @@ function timeAgo(dateStr: string) {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return formatDate(dateStr);
+}
+
+// ─── Conversation Thread Component ──────────────────────────────────────────
+
+function ConversationThread({ ticketId, originalBody, originalFrom, originalDate }: {
+  ticketId: number;
+  originalBody: string;
+  originalFrom: string;
+  originalDate: string;
+}) {
+  const { data: replies, refetch: refetchReplies } = trpc.tickets.getReplies.useQuery(
+    { ticketId },
+    { refetchOnWindowFocus: false }
+  );
+
+  // Build the full conversation: original message + replies
+  const conversation = useMemo(() => {
+    const items: Array<{
+      id: string;
+      direction: "inbound" | "outbound";
+      body: string;
+      sentBy: string;
+      sentAt: string;
+    }> = [
+      {
+        id: "original",
+        direction: "inbound",
+        body: originalBody || "(no body)",
+        sentBy: originalFrom,
+        sentAt: originalDate,
+      },
+    ];
+
+    if (replies) {
+      for (const reply of replies) {
+        items.push({
+          id: String(reply.id),
+          direction: reply.direction as "inbound" | "outbound",
+          body: reply.body,
+          sentBy: reply.sentBy,
+          sentAt: reply.sentAt,
+        });
+      }
+    }
+
+    return items;
+  }, [replies, originalBody, originalFrom, originalDate]);
+
+  return (
+    <div className="space-y-3">
+      {conversation.map((msg) => (
+        <div
+          key={msg.id}
+          className={`rounded-lg border p-3 ${
+            msg.direction === "outbound"
+              ? "bg-indigo-50 border-indigo-200 ml-6"
+              : "bg-white border-gray-200 mr-6"
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            {msg.direction === "outbound" ? (
+              <ArrowUpRight className="h-3.5 w-3.5 text-indigo-600" />
+            ) : (
+              <ArrowDownLeft className="h-3.5 w-3.5 text-gray-500" />
+            )}
+            <span className={`text-xs font-semibold ${
+              msg.direction === "outbound" ? "text-indigo-700" : "text-gray-700"
+            }`}>
+              {msg.sentBy}
+            </span>
+            <span className="text-xs text-gray-500 ml-auto">
+              {formatDateTime(msg.sentAt)}
+            </span>
+          </div>
+          <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+            {msg.body}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Reply Box Component ────────────────────────────────────────────────────
+
+function ReplyBox({ ticketId, onReplySent }: { ticketId: number; onReplySent: () => void }) {
+  const [showReplyBox, setShowReplyBox] = useState(false);
+  const [replyText, setReplyText] = useState("");
+
+  const replyMutation = trpc.tickets.replyToTicket.useMutation({
+    onSuccess: () => {
+      toast.success("Reply sent successfully");
+      setReplyText("");
+      setShowReplyBox(false);
+      onReplySent();
+    },
+    onError: (e: { message: string }) => {
+      toast.error(`Failed to send reply: ${e.message}`);
+    },
+  });
+
+  if (!showReplyBox) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+        onClick={() => setShowReplyBox(true)}
+      >
+        <Reply className="h-4 w-4" />
+        Reply
+      </Button>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-indigo-200 p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <Reply className="h-4 w-4 text-indigo-600" />
+        <span className="text-sm font-semibold text-indigo-700">Write Reply</span>
+        <button
+          onClick={() => setShowReplyBox(false)}
+          className="ml-auto text-xs text-gray-500 hover:text-gray-700"
+        >
+          Cancel
+        </button>
+      </div>
+      <Textarea
+        value={replyText}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyText(e.target.value)}
+        placeholder="Type your reply to the customer..."
+        className="min-h-[120px] text-sm resize-y"
+        autoFocus
+      />
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">
+          Sent from: Lavie Labs Support &lt;trial@lavielabs.com&gt;
+        </p>
+        <Button
+          size="sm"
+          className="gap-1.5"
+          disabled={!replyText.trim() || replyMutation.isPending}
+          onClick={() => {
+            replyMutation.mutate({ ticketId, replyText: replyText.trim() });
+          }}
+        >
+          <Send className="h-3.5 w-3.5" />
+          {replyMutation.isPending ? "Sending..." : "Send Reply"}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -321,13 +479,15 @@ export default function SupportTickets() {
 
             {/* Status */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-[130px] text-sm">
+              <SelectTrigger className="h-9 w-[150px] text-sm">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="open">Open</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
+                <SelectItem value="customer_replied">Customer Replied</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
@@ -381,13 +541,15 @@ export default function SupportTickets() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-[110px] text-sm">
+              <SelectTrigger className="h-9 w-[140px] text-sm">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="open">Open</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
+                <SelectItem value="customer_replied">Customer Replied</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
@@ -525,23 +687,33 @@ export default function SupportTickets() {
                         )}
                       </div>
 
-                      {/* Email body */}
-                      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
-                          <Mail className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm font-semibold text-gray-900">{ticket.subject}</span>
+                      {/* Conversation Thread */}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <MessageSquare className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-semibold text-gray-700">Conversation</span>
+                          <span className="text-xs text-gray-500">
+                            Re: {ticket.subject}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
-                          <span>From: <strong className="text-gray-800">{ticket.fromName || ticket.fromEmail}</strong></span>
-                          {ticket.fromName && <span>&lt;{ticket.fromEmail}&gt;</span>}
-                        </div>
-                        <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
-                          {ticket.body || "(no body)"}
-                        </div>
+                        <ConversationThread
+                          ticketId={ticket.id}
+                          originalBody={ticket.body}
+                          originalFrom={ticket.fromName || ticket.fromEmail}
+                          originalDate={ticket.receivedAt}
+                        />
+                      </div>
+
+                      {/* Reply Box */}
+                      <div className="mb-4">
+                        <ReplyBox
+                          ticketId={ticket.id}
+                          onReplySent={() => refetch()}
+                        />
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-wrap gap-2 items-end">
+                      <div className="flex flex-wrap gap-2 items-end border-t border-gray-200 pt-4">
                         {/* Status update */}
                         <div>
                           <label className="text-xs font-medium text-gray-600 mb-1 block">Status</label>
@@ -551,12 +723,14 @@ export default function SupportTickets() {
                               updateTicket.mutate({ id: ticket.id, status: val as any })
                             }
                           >
-                            <SelectTrigger className="h-8 w-[130px] text-xs">
+                            <SelectTrigger className="h-8 w-[150px] text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="open">Open</SelectItem>
                               <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
+                              <SelectItem value="customer_replied">Customer Replied</SelectItem>
                               <SelectItem value="resolved">Resolved</SelectItem>
                               <SelectItem value="closed">Closed</SelectItem>
                             </SelectContent>

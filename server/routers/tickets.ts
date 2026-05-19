@@ -8,8 +8,9 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { supportTickets } from "../../drizzle/schema";
-import { eq, and, gte, lte, desc, sql, like } from "drizzle-orm";
+import { supportTickets, supportTicketReplies } from "../../drizzle/schema";
+import { eq, and, gte, lte, desc, asc, sql, like } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import {
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
@@ -145,11 +146,11 @@ export const ticketsRouter = router({
       if (!db) return { tickets: [], total: 0 };
 
       try {
-        // Fetch all tickets (we'll filter in JS for flexibility)
+        // Fetch all tickets ordered by most recently updated first
         let rows = await db
           .select()
           .from(supportTickets)
-          .orderBy(desc(supportTickets.id));
+          .orderBy(desc(supportTickets.updatedAt), desc(supportTickets.id));
 
         if (rows.length === 0) return { tickets: [], total: 0 };
 
@@ -219,12 +220,12 @@ export const ticketsRouter = router({
 
         // Sort
         if (input.sortBy === "oldest") {
-          tickets.sort((a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
+          tickets.sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
         } else if (input.sortBy === "priority") {
           const priorityOrder: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
           tickets.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
         }
-        // Default: newest first (already sorted by desc id)
+        // Default: most recently updated first (already sorted by desc updatedAt)
 
         const total = tickets.length;
 
@@ -291,7 +292,7 @@ export const ticketsRouter = router({
     .input(
       z.object({
         id: z.number(),
-        status: z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
+        status: z.enum(["open", "in_progress", "awaiting_response", "customer_replied", "resolved", "closed"]).optional(),
         assignedTo: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
         category: z.string().optional(),
@@ -327,4 +328,176 @@ export const ticketsRouter = router({
   getCategoryMeta: protectedProcedure.query(() => {
     return CATEGORY_META;
   }),
+
+  /**
+   * Get all replies for a ticket (conversation history).
+   */
+  getReplies: protectedProcedure
+    .input(z.object({ ticketId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      try {
+        const replies = await db
+          .select()
+          .from(supportTicketReplies)
+          .where(eq(supportTicketReplies.ticketId, input.ticketId))
+          .orderBy(asc(supportTicketReplies.sentAt));
+
+        return replies.map((r) => ({
+          id: r.id,
+          ticketId: r.ticketId,
+          direction: r.direction,
+          body: r.body,
+          sentAt: r.sentAt?.toISOString() ?? new Date().toISOString(),
+          sentBy: r.sentBy,
+        }));
+      } catch (err) {
+        console.error("[Tickets] Error fetching replies:", err);
+        return [];
+      }
+    }),
+
+  /**
+   * Reply to a ticket — sends email via Postmark and saves the reply.
+   */
+  replyToTicket: protectedProcedure
+    .input(
+      z.object({
+        ticketId: z.number(),
+        replyText: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Load the ticket
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.id, input.ticketId))
+        .limit(1);
+
+      if (!ticket) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+      }
+
+      const agentName = ctx.user.name ?? "Lavie Labs Support";
+      const toEmail = ticket.fromEmail;
+      const subject = `Re: ${ticket.subject || "(no subject)"}`;
+
+      // Build professional HTML email
+      const htmlBody = buildReplyEmailHtml({
+        bodyText: input.replyText,
+        agentName,
+        customerName: ticket.fromName || toEmail,
+      });
+
+      // Send via Postmark
+      const apiKey = process.env.POSTMARK_API_KEY;
+      if (!apiKey) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK_API_KEY not configured" });
+      }
+
+      try {
+        const response = await fetch("https://api.postmarkapp.com/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Postmark-Server-Token": apiKey,
+          },
+          body: JSON.stringify({
+            From: `Lavie Labs Support <trial@lavielabs.com>`,
+            To: toEmail,
+            Subject: subject,
+            HtmlBody: htmlBody,
+            TextBody: `Hi ${ticket.fromName || ""},\n\n${input.replyText}\n\nWarm regards,\n${agentName}\nLavie Labs Support`,
+            ReplyTo: "trial@lavielabs.com",
+            Tag: "support-ticket-reply",
+            MessageStream: "outbound",
+          }),
+        });
+
+        if (!response.ok) {
+          const errBody = await response.text();
+          console.error("[Tickets] Postmark error:", errBody);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to send email: ${response.status}`,
+          });
+        }
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        console.error("[Tickets] Email send failed:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send email: ${(err as Error).message}`,
+        });
+      }
+
+      // Save the reply
+      await db.insert(supportTicketReplies).values({
+        ticketId: input.ticketId,
+        direction: "outbound",
+        body: input.replyText,
+        sentBy: agentName,
+      });
+
+      // Update ticket status to awaiting_response
+      await db
+        .update(supportTickets)
+        .set({ status: "awaiting_response" })
+        .where(eq(supportTickets.id, input.ticketId));
+
+      return { success: true };
+    }),
 });
+
+// ─── Reply Email HTML Template ──────────────────────────────────────────────
+
+function buildReplyEmailHtml(opts: {
+  bodyText: string;
+  agentName: string;
+  customerName: string;
+}): string {
+  const HEADER_IMAGE_URL = "https://pub-af7bcbf6a37b4be2a6fb5e3e9a5a8994.r2.dev/Lavie%20Labs%20Email%20Header.png";
+  const formattedBody = opts.bodyText.replace(/\n/g, "<br>");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <tr><td style="padding:0;"><img src="${HEADER_IMAGE_URL}" alt="Lavie Labs" style="width:100%;height:auto;display:block;" /></td></tr>
+          <tr>
+            <td style="padding:32px 32px 24px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;">Hi ${opts.customerName.split(" ")[0] || "there"},</p>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;">${formattedBody}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#555555;">Should you need anything please don't hesitate to respond to this email. Alternatively email <a href="mailto:support@lavielabs.com" style="color:#2b5cab;text-decoration:underline;">support@lavielabs.com</a></p>
+              <p style="margin:0;font-size:15px;color:#333333;">Warm regards,<br/><strong>${opts.agentName}</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e8e8e8;text-align:center;">
+              <a href="mailto:support@lavielabs.com" style="display:inline-block;padding:10px 28px;font-size:13px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:20px;font-weight:bold;background-color:#6f9fea;">Contact Us</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}

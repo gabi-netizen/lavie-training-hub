@@ -28,7 +28,7 @@ export type TicketPriority = (typeof TICKET_PRIORITIES)[number];
 export const CUSTOMER_STATUSES = ["existing", "new", "internal", "system"] as const;
 export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
 
-export const TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"] as const;
+export const TICKET_STATUSES = ["open", "in_progress", "awaiting_response", "customer_replied", "resolved", "closed"] as const;
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
 // ─── Category Detection Rules ────────────────────────────────────────────────

@@ -7,6 +7,10 @@
  * Postmark sends a JSON payload with the email content, which we normalize
  * and pass to the same processing pipeline as the Gmail webhook.
  *
+ * Reply-linking: If an inbound email's fromEmail matches an existing ticket's
+ * fromEmail, the email is linked as a reply (direction='inbound') to the most
+ * recent open/awaiting_response ticket from that sender, instead of creating a new ticket.
+ *
  * Postmark Inbound JSON format:
  * {
  *   "FromFull": { "Email": "customer@example.com", "Name": "Jane Doe" },
@@ -21,8 +25,8 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { gmailIncomingEmails, supportTickets } from "../../drizzle/schema";
-import { eq, sql } from "drizzle-orm";
+import { gmailIncomingEmails, supportTickets, supportTicketReplies } from "../../drizzle/schema";
+import { eq, sql, and, inArray, desc } from "drizzle-orm";
 import { categorizeEmail, determineCustomerStatus } from "../emailCategorization";
 
 // ─── Table creation flag (only run once per server lifetime) ─────────────────
@@ -66,13 +70,26 @@ async function ensureTablesExist(db: any) {
         category enum('cancellation_request','shipping_delivery_issue','payment_billing_dispute','address_update','product_feedback','agent_forwarded','system_automated','follow_up_unanswered','subscription_question','general_inquiry') NOT NULL DEFAULT 'general_inquiry',
         priority enum('HIGH','MEDIUM','LOW') NOT NULL DEFAULT 'MEDIUM',
         customerStatus enum('existing','new','internal','system') NOT NULL DEFAULT 'new',
-        ticketStatus enum('open','in_progress','resolved','closed') NOT NULL DEFAULT 'open',
+        ticketStatus enum('open','in_progress','awaiting_response','customer_replied','resolved','closed') NOT NULL DEFAULT 'open',
         assignedTo varchar(256),
         notes text,
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT support_tickets_id PRIMARY KEY(id),
         CONSTRAINT support_tickets_messageId_unique UNIQUE(messageId)
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS support_ticket_replies (
+        id int AUTO_INCREMENT NOT NULL,
+        ticketId int NOT NULL,
+        direction enum('inbound','outbound') NOT NULL,
+        body text NOT NULL,
+        sentAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        sentBy varchar(256) NOT NULL,
+        CONSTRAINT support_ticket_replies_id PRIMARY KEY(id),
+        INDEX idx_ticket_id (ticketId)
       )
     `);
 
@@ -171,62 +188,114 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
       `[Postmark Inbound] Stored email messageId=${messageId} from=${fromEmail} subject="${subject}"`
     );
 
-    // ── Categorization Engine ───────────────────────────────────────────────
-    const { category, priority } = categorizeEmail({
-      fromEmail,
-      fromName: fromName || "",
-      subject: subject || "",
-      bodyText: bodyText || "",
-    });
-
-    // ── Customer Status ────────────────────────────────────────────────────
-    let hasExistingEmails = false;
+    // ── Check if this is a reply to an existing ticket ─────────────────────
+    // Look for an existing ticket from the same sender that is open or awaiting_response
+    let linkedToExistingTicket = false;
     try {
-      const previousEmails = await db
-        .select({ id: gmailIncomingEmails.id })
-        .from(gmailIncomingEmails)
-        .where(eq(gmailIncomingEmails.fromEmail, fromEmail))
-        .limit(2);
-      hasExistingEmails = previousEmails.length > 1;
-    } catch (err) {
-      console.warn("[Postmark Inbound] Error checking existing emails:", err);
+      const existingTickets = await db
+        .select({ id: supportTickets.id, status: supportTickets.status })
+        .from(supportTickets)
+        .where(
+          and(
+            eq(supportTickets.fromEmail, fromEmail),
+            inArray(supportTickets.status, ["open", "in_progress", "awaiting_response"])
+          )
+        )
+        .orderBy(desc(supportTickets.id))
+        .limit(1);
+
+      if (existingTickets.length > 0) {
+        // Link as an inbound reply to the existing ticket
+        const ticketId = existingTickets[0].id;
+
+        await db.insert(supportTicketReplies).values({
+          ticketId,
+          direction: "inbound",
+          body: bodyText ? bodyText.substring(0, 65000) : "(no body)",
+          sentBy: fromName || fromEmail,
+        });
+
+        // Update ticket status to customer_replied and touch updatedAt so it sorts to the top
+        await db
+          .update(supportTickets)
+          .set({ status: "customer_replied" })
+          .where(eq(supportTickets.id, ticketId));
+
+        linkedToExistingTicket = true;
+        console.log(
+          `[Postmark Inbound] Linked as reply to existing ticket #${ticketId} from ${fromEmail}`
+        );
+      }
+    } catch (linkErr) {
+      console.warn("[Postmark Inbound] Error checking for existing ticket:", linkErr);
     }
 
-    const customerStatus = determineCustomerStatus(fromEmail, hasExistingEmails);
-
-    // ── Create Support Ticket ───────────────────────────────────────────────
-    try {
-      await db.insert(supportTickets).values({
-        gmailEmailId: gmailEmailId ?? null,
-        messageId,
+    // ── If not linked to an existing ticket, create a new one ──────────────
+    if (!linkedToExistingTicket) {
+      // ── Categorization Engine ─────────────────────────────────────────────
+      const { category, priority } = categorizeEmail({
         fromEmail,
-        fromName: fromName || null,
-        subject: subject || null,
-        body: bodyText ? bodyText.substring(0, 65000) : null,
-        receivedAt: emailDate ?? new Date(),
+        fromName: fromName || "",
+        subject: subject || "",
+        bodyText: bodyText || "",
+      });
+
+      // ── Customer Status ──────────────────────────────────────────────────
+      let hasExistingEmails = false;
+      try {
+        const previousEmails = await db
+          .select({ id: gmailIncomingEmails.id })
+          .from(gmailIncomingEmails)
+          .where(eq(gmailIncomingEmails.fromEmail, fromEmail))
+          .limit(2);
+        hasExistingEmails = previousEmails.length > 1;
+      } catch (err) {
+        console.warn("[Postmark Inbound] Error checking existing emails:", err);
+      }
+
+      const customerStatus = determineCustomerStatus(fromEmail, hasExistingEmails);
+
+      // ── Create Support Ticket ─────────────────────────────────────────────
+      try {
+        await db.insert(supportTickets).values({
+          gmailEmailId: gmailEmailId ?? null,
+          messageId,
+          fromEmail,
+          fromName: fromName || null,
+          subject: subject || null,
+          body: bodyText ? bodyText.substring(0, 65000) : null,
+          receivedAt: emailDate ?? new Date(),
+          category,
+          priority,
+          customerStatus,
+          status: "open",
+          assignedTo: null,
+          notes: null,
+        });
+
+        console.log(
+          `[Postmark Inbound] Created ticket: category=${category} priority=${priority} customerStatus=${customerStatus}`
+        );
+      } catch (ticketErr) {
+        console.error("[Postmark Inbound] Error creating support ticket:", ticketErr);
+      }
+
+      res.status(200).json({
+        received: true,
+        processed: true,
+        messageId,
         category,
         priority,
         customerStatus,
-        status: "open",
-        assignedTo: null,
-        notes: null,
       });
-
-      console.log(
-        `[Postmark Inbound] Created ticket: category=${category} priority=${priority} customerStatus=${customerStatus}`
-      );
-    } catch (ticketErr) {
-      console.error("[Postmark Inbound] Error creating support ticket:", ticketErr);
+    } else {
+      res.status(200).json({
+        received: true,
+        processed: true,
+        linkedAsReply: true,
+        messageId,
+      });
     }
-
-    res.status(200).json({
-      received: true,
-      processed: true,
-      messageId,
-      category,
-      priority,
-      customerStatus,
-    });
   } catch (err) {
     console.error("[Postmark Inbound] Unhandled error:", err);
     // Always return 200 to prevent Postmark from retrying endlessly

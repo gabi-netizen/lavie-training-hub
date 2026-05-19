@@ -535,7 +535,7 @@ export const supportTickets = mysqlTable("support_tickets", {
   /** Customer status: existing, new, internal, system */
   customerStatus: mysqlEnum("customerStatus", ["existing", "new", "internal", "system"]).default("new").notNull(),
   /** Ticket workflow status */
-  status: mysqlEnum("ticketStatus", ["open", "in_progress", "resolved", "closed"]).default("open").notNull(),
+  status: mysqlEnum("ticketStatus", ["open", "in_progress", "awaiting_response", "customer_replied", "resolved", "closed"]).default("open").notNull(),
   /** Agent assigned to handle this ticket */
   assignedTo: varchar("assignedTo", { length: 256 }),
   /** Internal notes about this ticket */
@@ -644,3 +644,24 @@ export const agentTrialsOverride = mysqlTable("agent_trials_override", {
 ]);
 export type AgentTrialsOverride = typeof agentTrialsOverride.$inferSelect;
 export type InsertAgentTrialsOverride = typeof agentTrialsOverride.$inferInsert;
+
+/**
+ * Support Ticket Replies — conversation thread for each support ticket.
+ * Stores both outbound (agent replies) and inbound (customer follow-ups).
+ */
+export const supportTicketReplies = mysqlTable("support_ticket_replies", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Reference to the parent support ticket */
+  ticketId: int("ticketId").notNull(),
+  /** Direction: 'inbound' (customer) or 'outbound' (agent) */
+  direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
+  /** Reply body text */
+  body: text("body").notNull(),
+  /** When the reply was sent/received */
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  /** Who sent it: agent name for outbound, customer name/email for inbound */
+  sentBy: varchar("sentBy", { length: 256 }).notNull(),
+});
+
+export type SupportTicketReply = typeof supportTicketReplies.$inferSelect;
+export type InsertSupportTicketReply = typeof supportTicketReplies.$inferInsert;
