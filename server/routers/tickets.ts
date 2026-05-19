@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { supportTickets, supportTicketReplies, blockedSenders } from "../../drizzle/schema";
+import { supportTickets, supportTicketReplies, blockedSenders, blockedSubjects } from "../../drizzle/schema";
 import { eq, and, gte, lte, desc, asc, sql, like, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
@@ -566,6 +566,74 @@ export const ticketsRouter = router({
       await db
         .delete(blockedSenders)
         .where(eq(blockedSenders.id, input.id));
+
+      return { success: true };
+    }),
+
+  // ─── Blocked Subjects ──────────────────────────────────────────────────────
+
+  /**
+   * List all blocked subject keywords.
+   */
+  listBlockedSubjects: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+
+    const rows = await db
+      .select()
+      .from(blockedSubjects)
+      .orderBy(desc(blockedSubjects.blockedAt));
+
+    return rows.map((r) => ({
+      id: r.id,
+      keyword: r.keyword,
+      blockedAt: r.blockedAt?.toISOString() ?? new Date().toISOString(),
+      blockedBy: r.blockedBy,
+    }));
+  }),
+
+  /**
+   * Block a subject keyword.
+   */
+  blockSubject: adminProcedure
+    .input(z.object({
+      keyword: z.string().min(1),
+      blockedBy: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const existing = await db
+        .select({ id: blockedSubjects.id })
+        .from(blockedSubjects)
+        .where(eq(blockedSubjects.keyword, input.keyword.toLowerCase()))
+        .limit(1);
+
+      if (existing.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "This subject keyword is already blocked" });
+      }
+
+      await db.insert(blockedSubjects).values({
+        keyword: input.keyword.toLowerCase(),
+        blockedBy: input.blockedBy,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Unblock a subject keyword.
+   */
+  unblockSubject: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db
+        .delete(blockedSubjects)
+        .where(eq(blockedSubjects.id, input.id));
 
       return { success: true };
     }),

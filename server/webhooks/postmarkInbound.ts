@@ -25,7 +25,7 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { gmailIncomingEmails, supportTickets, supportTicketReplies, blockedSenders } from "../../drizzle/schema";
+import { gmailIncomingEmails, supportTickets, supportTicketReplies, blockedSenders, blockedSubjects } from "../../drizzle/schema";
 import { eq, sql, and, or, inArray, desc } from "drizzle-orm";
 import { categorizeEmail, determineCustomerStatus } from "../emailCategorization";
 
@@ -162,6 +162,26 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
     } catch (blockCheckErr) {
       // If the table doesn't exist yet, just continue (first deploy scenario)
       console.warn("[Postmark Inbound] Error checking blocked senders (table may not exist yet):", blockCheckErr);
+    }
+
+    // ── Blocked Subject Check ─────────────────────────────────────────────
+    try {
+      const allBlockedSubjects = await db
+        .select({ keyword: blockedSubjects.keyword })
+        .from(blockedSubjects);
+
+      const subjectLower = (subject ?? "").toLowerCase();
+      const matchedKeyword = allBlockedSubjects.find((bs) =>
+        subjectLower.includes(bs.keyword)
+      );
+
+      if (matchedKeyword) {
+        console.log(`[Postmark Inbound] Subject "${subject}" matches blocked keyword "${matchedKeyword.keyword}" — skipping`);
+        res.status(200).json({ received: true, skipped: true, reason: "blocked_subject", keyword: matchedKeyword.keyword });
+        return;
+      }
+    } catch (subjectCheckErr) {
+      console.warn("[Postmark Inbound] Error checking blocked subjects (table may not exist yet):", subjectCheckErr);
     }
 
     // ── Deduplication ──────────────────────────────────────────────────────

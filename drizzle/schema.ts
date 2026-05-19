@@ -682,3 +682,17 @@ export const blockedSenders = mysqlTable("blocked_senders", {
 
 export type BlockedSender = typeof blockedSenders.$inferSelect;
 export type InsertBlockedSender = typeof blockedSenders.$inferInsert;
+
+// ─── Blocked Subjects ──────────────────────────────────────────────────────────
+export const blockedSubjects = mysqlTable("blocked_subjects", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Keyword/phrase to match in subject line (case-insensitive contains) */
+  keyword: varchar("keyword", { length: 500 }).notNull().unique(),
+  /** Timestamp when the rule was created */
+  blockedAt: timestamp("blockedAt").defaultNow().notNull(),
+  /** Name of the agent who created this rule */
+  blockedBy: varchar("blockedBy", { length: 256 }).notNull(),
+});
+
+export type BlockedSubject = typeof blockedSubjects.$inferSelect;
+export type InsertBlockedSubject = typeof blockedSubjects.$inferInsert;

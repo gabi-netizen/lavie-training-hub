@@ -371,14 +371,92 @@ function BlockedSendersSection() {
   );
 }
 
+// ─── Blocked Subjects Management Section ────────────────────────────────────
+
+function BlockedSubjectsSection() {
+  const utils = trpc.useUtils();
+  const { data: blockedList, isLoading } = trpc.tickets.listBlockedSubjects.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  const unblockMutation = trpc.tickets.unblockSubject.useMutation({
+    onSuccess: () => {
+      toast.success("Subject keyword unblocked");
+      utils.tickets.listBlockedSubjects.invalidate();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
+        <span className="ml-2 text-sm text-gray-600">Loading blocked subjects...</span>
+      </div>
+    );
+  }
+
+  if (!blockedList || blockedList.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+          <ShieldOff className="h-7 w-7 text-gray-400" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-800 mb-1">No blocked subjects</h3>
+        <p className="text-sm text-gray-600 max-w-sm">
+          When you block a subject keyword from a ticket, it will appear here. Emails with matching subjects will not generate new tickets.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm text-gray-600 mb-3">
+        {blockedList.length} blocked subject{blockedList.length !== 1 ? "s" : ""}. Emails whose subject contains these keywords are silently dropped.
+      </div>
+      {blockedList.map((item) => (
+        <div
+          key={item.id}
+          className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3"
+        >
+          <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+            <Ban className="h-4 w-4 text-orange-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">"{item.keyword}"</p>
+            <p className="text-xs text-gray-500">
+              Blocked by {item.blockedBy} on {formatDate(item.blockedAt)}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs h-7 gap-1 text-green-700 border-green-200 hover:bg-green-50"
+            disabled={unblockMutation.isPending}
+            onClick={() => {
+              if (window.confirm(`Unblock subject keyword "${item.keyword}"? Emails with this subject will create tickets again.`)) {
+                unblockMutation.mutate({ id: item.id });
+              }
+            }}
+          >
+            <ShieldOff className="h-3 w-3" />
+            Unblock
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function SupportTickets() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  // View mode: "tickets" or "blocked"
-  const [viewMode, setViewMode] = useState<"tickets" | "blocked">("tickets");
+  // View mode: "tickets", "blocked", or "blockedSubjects"
+  const [viewMode, setViewMode] = useState<"tickets" | "blocked" | "blockedSubjects">("tickets");
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -470,6 +548,14 @@ export default function SupportTickets() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  const blockSubjectMutation = trpc.tickets.blockSubject.useMutation({
+    onSuccess: () => {
+      toast.success("Subject keyword blocked. Future emails with this subject will be dropped.");
+      utils.tickets.listBlockedSubjects.invalidate();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const tickets = ticketsData?.tickets ?? [];
   const total = ticketsData?.total ?? 0;
 
@@ -483,6 +569,21 @@ export default function SupportTickets() {
         email,
         blockedBy: user?.name || user?.email || "Unknown Agent",
       });
+    }
+  };
+
+  const handleBlockSubject = (subject: string) => {
+    const keyword = window.prompt(
+      `Block emails by subject keyword.\n\nThe current subject is:\n"${subject}"\n\nEnter the keyword/phrase to block (case-insensitive):`,
+      subject
+    );
+    if (keyword && keyword.trim()) {
+      if (window.confirm(`Block all future emails whose subject contains:\n"${keyword.trim()}"\n\nAre you sure?`)) {
+        blockSubjectMutation.mutate({
+          keyword: keyword.trim(),
+          blockedBy: user?.name || user?.email || "Unknown Agent",
+        });
+      }
     }
   };
 
@@ -523,7 +624,20 @@ export default function SupportTickets() {
               >
                 <span className="flex items-center gap-1">
                   <Ban className="h-3 w-3" />
-                  Blocked
+                  Senders
+                </span>
+              </button>
+              <button
+                onClick={() => setViewMode("blockedSubjects")}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === "blockedSubjects"
+                    ? "bg-orange-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <Ban className="h-3 w-3" />
+                  Subjects
                 </span>
               </button>
             </div>
@@ -553,6 +667,22 @@ export default function SupportTickets() {
               Emails from blocked senders are silently dropped by the inbound webhook. No ticket is created and Postmark receives a 200 OK response.
             </p>
             <BlockedSendersSection />
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Subjects View */}
+      {viewMode === "blockedSubjects" && (
+        <div className="px-3 sm:px-6 py-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Ban className="h-5 w-5 text-orange-500" />
+              <h2 className="text-lg font-bold text-gray-900">Blocked Subjects</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Emails whose subject contains any of these keywords will be silently dropped. The match is case-insensitive.
+            </p>
+            <BlockedSubjectsSection />
           </div>
         </div>
       )}
@@ -1064,6 +1194,20 @@ export default function SupportTickets() {
                               >
                                 <Ban className="h-3 w-3" />
                                 Block Sender
+                              </Button>
+                            </div>
+                            {/* Block Subject Button */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"
+                                disabled={blockSubjectMutation.isPending}
+                                onClick={() => handleBlockSubject(ticket.subject || "")}
+                              >
+                                <Ban className="h-3 w-3" />
+                                Block Subject
                               </Button>
                             </div>
                           </div>
