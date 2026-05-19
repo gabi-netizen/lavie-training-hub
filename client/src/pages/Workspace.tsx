@@ -2319,6 +2319,7 @@ export default function Workspace() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [localDoneItems, setLocalDoneItems] = useState<Record<number, string>>({});
+  const [listFilter, setListFilter] = useState<string>("active");
 
   const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager">("pitch");
   const managerMode = activeTab === "manager";
@@ -2613,10 +2614,31 @@ export default function Workspace() {
     }
   }, [contacts, activeId]);
 
+  // Filter contacts based on listFilter dropdown
+  const filteredContacts = useMemo(() => {
+    if (listFilter === "active") {
+      return (contacts as any[]).filter((c) => !doneItems[c.id]);
+    } else if (listFilter === "all") {
+      return contacts as any[];
+    } else if (listFilter === "skipped") {
+      return (contacts as any[]).filter((c) => doneItems[c.id] === "Skip");
+    } else if (listFilter === "sold") {
+      return (contacts as any[]).filter((c) => doneItems[c.id] === "Sold");
+    } else if (listFilter === "done") {
+      return (contacts as any[]).filter((c) => doneItems[c.id] === "Done");
+    } else if (listFilter === "no") {
+      return (contacts as any[]).filter((c) => doneItems[c.id] === "No");
+    } else if (listFilter === "callback") {
+      return (contacts as any[]).filter((c) => doneItems[c.id] === "Callback");
+    }
+    return contacts as any[];
+  }, [contacts, doneItems, listFilter]);
   // Stats
   const totalContacts = contacts.length;
+  const activeCount = (contacts as any[]).filter((c) => !doneItems[c.id]).length;
   const doneCount = Object.keys(doneItems).length;
   const soldCount = Object.values(doneItems).filter((s) => s === "Sold").length;
+  const skippedCount = Object.values(doneItems).filter((s) => s === "Skip").length;
 
   return (
     <div className="ws-layout">
@@ -2649,25 +2671,41 @@ export default function Workspace() {
                 </div>
               </div>
             </div>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1f2937]" />
-              <input
-                className="ws-dl-search"
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1f2937]" />
+                <input
+                  className="ws-dl-search"
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <select
+                value={listFilter}
+                onChange={(e) => setListFilter(e.target.value)}
+                className="text-xs font-semibold px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-800 cursor-pointer focus:outline-none focus:border-indigo-400"
+                style={{ minWidth: "90px" }}
+              >
+                <option value="active">Active ({activeCount})</option>
+                <option value="all">All ({totalContacts})</option>
+                <option value="skipped">Skipped ({skippedCount})</option>
+                <option value="sold">Sold ({soldCount})</option>
+                <option value="done">Done ({Object.values(doneItems).filter((s) => s === "Done").length})</option>
+                <option value="no">No ({Object.values(doneItems).filter((s) => s === "No").length})</option>
+                <option value="callback">Callback ({Object.values(doneItems).filter((s) => s === "Callback").length})</option>
+              </select>
             </div>
           </div>
 
           <div className="ws-dl-items">
-            {contacts.map((contact: any, idx: number) => {
+            {filteredContacts.map((contact: any, idx: number) => {
               // Overdue callbacks are always unlocked (interactive) regardless of doneItems
               const isOverdueCallback = (callbacksDue as any[]).some((c) => c.id === contact.id);
               const isSkipped = doneItems[contact.id] === "Skip";
               const isDone = isOverdueCallback ? false : (!!doneItems[contact.id] && !isSkipped);
-              const prevContact = contacts[idx - 1];
-              const nextContact = contacts[idx + 1];
+              const prevContact = filteredContacts[idx - 1];
+              const nextContact = filteredContacts[idx + 1];
               return (
                 <div key={contact.id} id={`ws-contact-${contact.id}`}>
                   <ContactCard
@@ -2938,7 +2976,7 @@ export default function Workspace() {
                   <button type="button" onClick={() => {
                     // Toggle custom mode - clear date to show picker
                     setCallbackDateTime("T" + (selectedTime || ""));
-                  }} style={quickBtnStyle(isCustomDate)}>Custom</button>
+                  }} style={quickBtnStyle(!!isCustomDate)}>Custom</button>
                 </div>
                 {/* Custom date picker - shown when Custom is selected or date doesn't match quick buttons */}
                 {(isCustomDate || (!selectedDate && callbackDateTime.startsWith("T"))) && (
