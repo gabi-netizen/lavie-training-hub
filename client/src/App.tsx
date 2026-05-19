@@ -54,6 +54,33 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
+/** Wraps a component so admins and retention team members can access it. */
+function AdminOrRetentionRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      window.location.href = "/sign-in";
+      return;
+    }
+    // Allow admins and retention team members
+    if (user.role !== "admin" && user.team !== "retention") {
+      navigate("/training");
+    }
+  }, [loading, user, navigate]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+    </div>
+  );
+  if (!user || (user.role !== "admin" && user.team !== "retention")) return null;
+
+  return <Component />;
+}
+
 /** Redirects the URL to /ai-coach?tab=X then renders CallCoach */
 function TabRedirect({ tab }: { tab: string }) {
   useEffect(() => {
@@ -108,9 +135,9 @@ function Router() {
           {() => <AdminRoute component={ManagerDashboard} />}
         </Route>
 
-        {/* Support Tickets — admin only */}
+        {/* Support Tickets — admin + retention agents */}
         <Route path={"/support-tickets"}>
-          {() => <AdminRoute component={SupportTickets} />}
+          {() => <AdminOrRetentionRoute component={SupportTickets} />}
         </Route>
 
         {/* Users Management — admin only */}

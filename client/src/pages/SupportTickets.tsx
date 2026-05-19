@@ -44,6 +44,7 @@ import {
   Ban,
   ShieldOff,
   Trash2,
+  Users,
 } from "lucide-react";
 
 // ─── Category Config ─────────────────────────────────────────────────────────
@@ -85,6 +86,23 @@ const CUSTOMER_STATUS_CONFIG: Record<string, { label: string; bg: string; text: 
   internal: { label: "Internal", bg: "bg-indigo-100", text: "text-indigo-600", icon: Building2 },
   system: { label: "System", bg: "bg-slate-100", text: "text-slate-600", icon: Cpu },
 };
+
+// ─── Agent Badge Config ─────────────────────────────────────────────────────
+
+const AGENT_BADGE_CONFIG: Record<string, { bg: string; text: string }> = {
+  Guy: { bg: "bg-violet-100", text: "text-violet-700" },
+  James: { bg: "bg-teal-100", text: "text-teal-700" },
+  Rob: { bg: "bg-rose-100", text: "text-rose-700" },
+};
+
+// ─── Retention email → display name mapping (for reply box) ─────────────────
+const RETENTION_EMAIL_DISPLAY: Record<string, string> = {
+  "guy@lavielabs.com": "Guy Eli <guy@lavielabs.com>",
+  "james.h@lavielabs.com": "James Huxley <james.h@lavielabs.com>",
+  "rob.c@lavielabs.com": "Rob Chizdik <rob.c@lavielabs.com>",
+};
+
+const RETENTION_EMAILS = ["guy@lavielabs.com", "james.h@lavielabs.com", "rob.c@lavielabs.com"];
 
 function getCategoryConfig(cat: string) {
   return CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.general_inquiry;
@@ -224,7 +242,7 @@ function ConversationThread({ ticketId, originalBody, originalFrom, originalDate
 
 // ─── Reply Box Component ────────────────────────────────────────────────────
 
-function ReplyBox({ ticketId, onReplySent }: { ticketId: number; onReplySent: () => void }) {
+function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onReplySent: () => void; recipient?: string | null }) {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyText, setReplyText] = useState("");
 
@@ -239,6 +257,12 @@ function ReplyBox({ ticketId, onReplySent }: { ticketId: number; onReplySent: ()
       toast.error(`Failed to send reply: ${e.message}`);
     },
   });
+
+  // Determine the "Sent from" display
+  const isRetentionTicket = recipient && RETENTION_EMAILS.includes(recipient);
+  const sentFromDisplay = isRetentionTicket
+    ? RETENTION_EMAIL_DISPLAY[recipient!] || recipient
+    : "Lavie Labs Support <trial@lavielabs.com>";
 
   if (!showReplyBox) {
     return (
@@ -275,7 +299,7 @@ function ReplyBox({ ticketId, onReplySent }: { ticketId: number; onReplySent: ()
       />
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          Sent from: Lavie Labs Support &lt;trial@lavielabs.com&gt;
+          Sent from: {sentFromDisplay}
         </p>
         <Button
           size="sm"
@@ -455,8 +479,8 @@ export default function SupportTickets() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  // View mode: "tickets", "blocked", or "blockedSubjects"
-  const [viewMode, setViewMode] = useState<"tickets" | "blocked" | "blockedSubjects">("tickets");
+  // View mode: "tickets", "retention", "blocked", or "blockedSubjects"
+  const [viewMode, setViewMode] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects">("tickets");
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -491,6 +515,9 @@ export default function SupportTickets() {
     }
   };
 
+  // Determine recipientType based on viewMode
+  const recipientType = viewMode === "retention" ? "retention" : "support";
+
   // Data
   const {
     data: ticketsData,
@@ -505,14 +532,18 @@ export default function SupportTickets() {
       dateRange,
       search: search || undefined,
       perPage: 200,
+      recipientType,
     },
     { refetchOnWindowFocus: false, refetchInterval: 60_000 }
   );
 
-  const { data: stats } = trpc.tickets.getStats.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    refetchInterval: 60_000,
-  });
+  const { data: stats } = trpc.tickets.getStats.useQuery(
+    { recipientType },
+    {
+      refetchOnWindowFocus: false,
+      refetchInterval: 60_000,
+    }
+  );
 
   const updateTicket = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
@@ -587,6 +618,8 @@ export default function SupportTickets() {
     }
   };
 
+  const isAdmin = user?.role === "admin";
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -605,7 +638,7 @@ export default function SupportTickets() {
             {/* View mode toggle */}
             <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
               <button
-                onClick={() => setViewMode("tickets")}
+                onClick={() => { setViewMode("tickets"); setSelectedIds(new Set()); setExpandedId(null); }}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                   viewMode === "tickets"
                     ? "bg-indigo-600 text-white"
@@ -615,31 +648,48 @@ export default function SupportTickets() {
                 Tickets
               </button>
               <button
-                onClick={() => setViewMode("blocked")}
+                onClick={() => { setViewMode("retention"); setSelectedIds(new Set()); setExpandedId(null); }}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === "blocked"
-                    ? "bg-red-600 text-white"
+                  viewMode === "retention"
+                    ? "bg-emerald-600 text-white"
                     : "bg-white text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 <span className="flex items-center gap-1">
-                  <Ban className="h-3 w-3" />
-                  Senders
+                  <Users className="h-3 w-3" />
+                  Retention
                 </span>
               </button>
-              <button
-                onClick={() => setViewMode("blockedSubjects")}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === "blockedSubjects"
-                    ? "bg-orange-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <span className="flex items-center gap-1">
-                  <Ban className="h-3 w-3" />
-                  Subjects
-                </span>
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setViewMode("blocked")}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      viewMode === "blocked"
+                        ? "bg-red-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Ban className="h-3 w-3" />
+                      Senders
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("blockedSubjects")}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      viewMode === "blockedSubjects"
+                        ? "bg-orange-600 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Ban className="h-3 w-3" />
+                      Subjects
+                    </span>
+                  </button>
+                </>
+              )}
             </div>
             <Button
               variant="outline"
@@ -687,8 +737,8 @@ export default function SupportTickets() {
         </div>
       )}
 
-      {/* Tickets View */}
-      {viewMode === "tickets" && (
+      {/* Tickets View (both "tickets" and "retention" modes) */}
+      {(viewMode === "tickets" || viewMode === "retention") && (
         <>
           {/* Stats Row */}
           <div className="px-3 sm:px-6 py-4">
@@ -904,68 +954,72 @@ export default function SupportTickets() {
                 <p className="text-sm text-gray-600 max-w-sm">
                   {search || categoryFilter !== "all" || priorityFilter !== "all" || statusFilter !== "all"
                     ? "Try adjusting your filters or search query."
+                    : viewMode === "retention"
+                    ? "Retention tickets will appear here when emails arrive at guy@, james.h@, or rob.c@lavielabs.com."
                     : "Tickets will appear here when emails arrive at support@lavielabs.com."}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 {/* Bulk Action Bar */}
-                <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === tickets.length && tickets.length > 0}
-                    onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                  />
-                  {selectedIds.size > 0 ? (
-                    <>
-                      <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
-                      <div className="flex items-center gap-2 ml-auto">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7"
-                          onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "resolved" })}
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Resolve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7"
-                          onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "closed" })}
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Close
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete ${selectedIds.size} ticket(s)? This cannot be undone.`)) {
-                              bulkDelete.mutate({ ticketIds: Array.from(selectedIds) });
-                            }
-                          }}
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Delete
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-xs h-7 text-gray-500"
-                          onClick={() => setSelectedIds(new Set())}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-xs text-gray-500">Select tickets for bulk actions</span>
-                  )}
-                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === tickets.length && tickets.length > 0}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    {selectedIds.size > 0 ? (
+                      <>
+                        <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7"
+                            onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "resolved" })}
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Resolve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7"
+                            onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "closed" })}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Close
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete ${selectedIds.size} ticket(s)? This cannot be undone.`)) {
+                                bulkDelete.mutate({ ticketIds: Array.from(selectedIds) });
+                              }
+                            }}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-7 text-gray-500"
+                            onClick={() => setSelectedIds(new Set())}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-500">Select tickets for bulk actions</span>
+                    )}
+                  </div>
+                )}
 
                 {tickets.map((ticket: any) => {
                   const catCfg = getCategoryConfig(ticket.category);
@@ -975,6 +1029,7 @@ export default function SupportTickets() {
                   const CatIcon = catCfg.icon;
                   const CustIcon = custCfg.icon;
                   const isExpanded = expandedId === ticket.id;
+                  const agentBadge = ticket.agentLabel ? AGENT_BADGE_CONFIG[ticket.agentLabel] : null;
 
                   return (
                     <div
@@ -987,15 +1042,17 @@ export default function SupportTickets() {
                         className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
                       >
                         {/* Checkbox */}
-                        <div className="shrink-0">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(ticket.id)}
-                            onClick={(e) => toggleSelect(ticket.id, e)}
-                            onChange={() => {}}
-                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </div>
+                        {isAdmin && (
+                          <div className="shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(ticket.id)}
+                              onClick={(e) => toggleSelect(ticket.id, e)}
+                              onChange={() => {}}
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </div>
+                        )}
 
                         {/* Priority dot */}
                         <div className="shrink-0">
@@ -1007,6 +1064,13 @@ export default function SupportTickets() {
                           <CatIcon className="h-3 w-3" />
                           <span className="hidden sm:inline">{catCfg.label}</span>
                         </div>
+
+                        {/* Agent badge (retention tab only) */}
+                        {viewMode === "retention" && agentBadge && ticket.agentLabel && (
+                          <div className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${agentBadge.bg} ${agentBadge.text}`}>
+                            {ticket.agentLabel}
+                          </div>
+                        )}
 
                         {/* Subject + From */}
                         <div className="flex-1 min-w-0">
@@ -1073,6 +1137,14 @@ export default function SupportTickets() {
                                 <span className="text-xs text-gray-800">{ticket.assignedTo}</span>
                               </div>
                             )}
+                            {viewMode === "retention" && ticket.agentLabel && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-medium text-gray-600">Agent:</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${agentBadge?.bg || "bg-gray-100"} ${agentBadge?.text || "text-gray-700"}`}>
+                                  {ticket.agentLabel}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Conversation Thread */}
@@ -1097,6 +1169,7 @@ export default function SupportTickets() {
                             <ReplyBox
                               ticketId={ticket.id}
                               onReplySent={() => refetch()}
+                              recipient={ticket.recipient}
                             />
                           </div>
 
@@ -1182,34 +1255,38 @@ export default function SupportTickets() {
                               </div>
                             </div>
 
-                            {/* Block Sender Button */}
-                            <div>
-                              <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                                disabled={blockSenderMutation.isPending}
-                                onClick={() => handleBlockSender(ticket.fromEmail)}
-                              >
-                                <Ban className="h-3 w-3" />
-                                Block Sender
-                              </Button>
-                            </div>
-                            {/* Block Subject Button */}
-                            <div>
-                              <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"
-                                disabled={blockSubjectMutation.isPending}
-                                onClick={() => handleBlockSubject(ticket.subject || "")}
-                              >
-                                <Ban className="h-3 w-3" />
-                                Block Subject
-                              </Button>
-                            </div>
+                            {/* Block Sender Button (admin only) */}
+                            {isAdmin && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                  disabled={blockSenderMutation.isPending}
+                                  onClick={() => handleBlockSender(ticket.fromEmail)}
+                                >
+                                  <Ban className="h-3 w-3" />
+                                  Block Sender
+                                </Button>
+                              </div>
+                            )}
+                            {/* Block Subject Button (admin only) */}
+                            {isAdmin && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  disabled={blockSubjectMutation.isPending}
+                                  onClick={() => handleBlockSubject(ticket.subject || "")}
+                                >
+                                  <Ban className="h-3 w-3" />
+                                  Block Subject
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

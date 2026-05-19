@@ -4,6 +4,10 @@
  * Provides CRUD operations for the email-based support ticket system.
  * Tickets are auto-created by the Gmail webhook + categorization engine.
  * This router exposes them to the Command Centre UI.
+ *
+ * Retention tab: Tickets where recipient is one of the retention agent emails
+ * (guy@lavielabs.com, james.h@lavielabs.com, rob.c@lavielabs.com) are shown
+ * in the Retention tab. Non-admin retention agents only see their own tickets.
  */
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
@@ -23,6 +27,35 @@ import {
   type CustomerStatus,
 } from "../emailCategorization";
 
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+/** Retention agent email addresses */
+const RETENTION_EMAILS = [
+  "guy@lavielabs.com",
+  "james.h@lavielabs.com",
+  "rob.c@lavielabs.com",
+];
+
+/** Support email addresses */
+const SUPPORT_EMAILS = [
+  "support@lavielabs.com",
+  "trial@lavielabs.com",
+];
+
+/** Agent name → email mapping */
+const AGENT_EMAIL_MAP: Record<string, string> = {
+  "Guy Eli": "guy@lavielabs.com",
+  "James Huxley": "james.h@lavielabs.com",
+  "Rob Chizdik": "rob.c@lavielabs.com",
+};
+
+/** Email → agent display name mapping */
+const EMAIL_AGENT_MAP: Record<string, string> = {
+  "guy@lavielabs.com": "Guy",
+  "james.h@lavielabs.com": "James",
+  "rob.c@lavielabs.com": "Rob",
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function buildEmptyStats() {
@@ -38,94 +71,123 @@ function buildEmptyStats() {
   };
 }
 
+/** Determine which retention email belongs to a user (by name match) */
+function getUserRetentionEmail(userName: string | null | undefined): string | null {
+  if (!userName) return null;
+  const lower = userName.toLowerCase();
+  for (const [agentName, email] of Object.entries(AGENT_EMAIL_MAP)) {
+    if (lower === agentName.toLowerCase() || lower.includes(agentName.split(" ")[0].toLowerCase())) {
+      return email;
+    }
+  }
+  return null;
+}
+
 // ─── Router ──────────────────────────────────────────────────────────────────
 
 export const ticketsRouter = router({
   /**
    * Get ticket stats — counts by category, priority, status.
    */
-  getStats: protectedProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) return buildEmptyStats();
+  getStats: protectedProcedure
+    .input(
+      z.object({
+        recipientType: z.enum(["support", "retention"]).optional(),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return buildEmptyStats();
 
-    try {
-      const rows = await db
-        .select({
-          category: supportTickets.category,
-          priority: supportTickets.priority,
-          status: supportTickets.status,
-          customerStatus: supportTickets.customerStatus,
-          updatedAt: supportTickets.updatedAt,
-        })
-        .from(supportTickets);
+      try {
+        const rows = await db
+          .select({
+            category: supportTickets.category,
+            priority: supportTickets.priority,
+            status: supportTickets.status,
+            customerStatus: supportTickets.customerStatus,
+            updatedAt: supportTickets.updatedAt,
+            recipient: supportTickets.recipient,
+          })
+          .from(supportTickets);
 
-      if (rows.length === 0) return buildEmptyStats();
+        if (rows.length === 0) return buildEmptyStats();
 
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const byCategory: Record<string, number> = {};
-      const byPriority: Record<string, number> = {};
-      const byStatus: Record<string, number> = {};
-      const byCustomerStatus: Record<string, number> = {};
-      let totalOpen = 0;
-      let highPriority = 0;
-      let awaitingResponse = 0;
-      let resolvedToday = 0;
-
-      for (const row of rows) {
-        // By category
-        byCategory[row.category] = (byCategory[row.category] || 0) + 1;
-        // By priority
-        byPriority[row.priority] = (byPriority[row.priority] || 0) + 1;
-        // By status
-        byStatus[row.status] = (byStatus[row.status] || 0) + 1;
-        // By customer status
-        byCustomerStatus[row.customerStatus] = (byCustomerStatus[row.customerStatus] || 0) + 1;
-
-        // Open tickets
-        if (row.status === "open" || row.status === "in_progress") {
-          totalOpen++;
+        // Filter by recipient type if specified
+        let filteredRows = rows;
+        const recipientType = input?.recipientType;
+        if (recipientType === "retention") {
+          filteredRows = rows.filter((r) => r.recipient && RETENTION_EMAILS.includes(r.recipient));
+        } else if (recipientType === "support") {
+          filteredRows = rows.filter((r) => !r.recipient || SUPPORT_EMAILS.includes(r.recipient) || !RETENTION_EMAILS.includes(r.recipient));
         }
 
-        // High priority (open only)
-        if (row.priority === "HIGH" && (row.status === "open" || row.status === "in_progress")) {
-          highPriority++;
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const byCategory: Record<string, number> = {};
+        const byPriority: Record<string, number> = {};
+        const byStatus: Record<string, number> = {};
+        const byCustomerStatus: Record<string, number> = {};
+        let totalOpen = 0;
+        let highPriority = 0;
+        let awaitingResponse = 0;
+        let resolvedToday = 0;
+
+        for (const row of filteredRows) {
+          // By category
+          byCategory[row.category] = (byCategory[row.category] || 0) + 1;
+          // By priority
+          byPriority[row.priority] = (byPriority[row.priority] || 0) + 1;
+          // By status
+          byStatus[row.status] = (byStatus[row.status] || 0) + 1;
+          // By customer status
+          byCustomerStatus[row.customerStatus] = (byCustomerStatus[row.customerStatus] || 0) + 1;
+
+          // Open tickets
+          if (row.status === "open" || row.status === "in_progress") {
+            totalOpen++;
+          }
+
+          // High priority (open only)
+          if (row.priority === "HIGH" && (row.status === "open" || row.status === "in_progress")) {
+            highPriority++;
+          }
+
+          // Awaiting response = open tickets that are not in_progress
+          if (row.status === "open") {
+            awaitingResponse++;
+          }
+
+          // Resolved today
+          if (
+            (row.status === "resolved" || row.status === "closed") &&
+            row.updatedAt &&
+            new Date(row.updatedAt).getTime() >= todayStart.getTime()
+          ) {
+            resolvedToday++;
+          }
         }
 
-        // Awaiting response = open tickets that are not in_progress
-        if (row.status === "open") {
-          awaitingResponse++;
-        }
-
-        // Resolved today
-        if (
-          (row.status === "resolved" || row.status === "closed") &&
-          row.updatedAt &&
-          new Date(row.updatedAt).getTime() >= todayStart.getTime()
-        ) {
-          resolvedToday++;
-        }
+        return {
+          totalOpen,
+          highPriority,
+          awaitingResponse,
+          resolvedToday,
+          byCategory,
+          byPriority,
+          byStatus,
+          byCustomerStatus,
+        };
+      } catch (err) {
+        console.error("[Tickets] Error fetching stats:", err);
+        return buildEmptyStats();
       }
-
-      return {
-        totalOpen,
-        highPriority,
-        awaitingResponse,
-        resolvedToday,
-        byCategory,
-        byPriority,
-        byStatus,
-        byCustomerStatus,
-      };
-    } catch (err) {
-      console.error("[Tickets] Error fetching stats:", err);
-      return buildEmptyStats();
-    }
-  }),
+    }),
 
   /**
    * List all tickets with filters.
+   * Supports recipientType filter: "support" (default) or "retention"
    */
   getTickets: protectedProcedure
     .input(
@@ -139,9 +201,10 @@ export const ticketsRouter = router({
         search: z.string().optional(),
         dateRange: z.enum(["today", "7days", "30days", "all"]).default("all"),
         sortBy: z.enum(["newest", "oldest", "priority"]).default("newest"),
+        recipientType: z.enum(["support", "retention"]).default("support"),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return { tickets: [], total: 0 };
 
@@ -153,6 +216,25 @@ export const ticketsRouter = router({
           .orderBy(desc(supportTickets.updatedAt), desc(supportTickets.id));
 
         if (rows.length === 0) return { tickets: [], total: 0 };
+
+        // Filter by recipient type
+        if (input.recipientType === "retention") {
+          rows = rows.filter((r) => r.recipient && RETENTION_EMAILS.includes(r.recipient));
+
+          // Non-admin retention agents only see their own tickets
+          if (ctx.user.role !== "admin") {
+            const userEmail = getUserRetentionEmail(ctx.user.name);
+            if (userEmail) {
+              rows = rows.filter((r) => r.recipient === userEmail);
+            } else {
+              // User is not a retention agent — show nothing
+              return { tickets: [], total: 0 };
+            }
+          }
+        } else {
+          // "support" mode: show tickets where recipient is support/trial or NULL (old tickets)
+          rows = rows.filter((r) => !r.recipient || !RETENTION_EMAILS.includes(r.recipient));
+        }
 
         // Map to frontend-friendly format
         let tickets = rows.map((row) => ({
@@ -172,6 +254,8 @@ export const ticketsRouter = router({
           status: row.status as TicketStatus,
           assignedTo: row.assignedTo,
           notes: row.notes,
+          recipient: row.recipient ?? null,
+          agentLabel: row.recipient ? (EMAIL_AGENT_MAP[row.recipient] ?? null) : null,
           createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
           updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
         }));
@@ -276,6 +360,8 @@ export const ticketsRouter = router({
           status: row.status as TicketStatus,
           assignedTo: row.assignedTo,
           notes: row.notes,
+          recipient: row.recipient ?? null,
+          agentLabel: row.recipient ? (EMAIL_AGENT_MAP[row.recipient] ?? null) : null,
           createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
           updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
         };
@@ -361,6 +447,8 @@ export const ticketsRouter = router({
 
   /**
    * Reply to a ticket — sends email via Postmark and saves the reply.
+   * For retention tickets, sends FROM the agent's email address.
+   * For support tickets, sends FROM trial@lavielabs.com.
    */
   replyToTicket: protectedProcedure
     .input(
@@ -388,6 +476,17 @@ export const ticketsRouter = router({
       const toEmail = ticket.fromEmail;
       const subject = `Re: ${ticket.subject || "(no subject)"}`;
 
+      // Determine the From address based on the ticket's recipient
+      let fromAddress = `Lavie Labs Support <trial@lavielabs.com>`;
+      let replyToAddress = "trial@lavielabs.com";
+
+      if (ticket.recipient && RETENTION_EMAILS.includes(ticket.recipient)) {
+        // Retention ticket — send from the agent's email
+        const agentDisplayName = EMAIL_AGENT_MAP[ticket.recipient] ?? agentName;
+        fromAddress = `${agentName} <${ticket.recipient}>`;
+        replyToAddress = ticket.recipient;
+      }
+
       // Build professional HTML email
       const htmlBody = buildReplyEmailHtml({
         bodyText: input.replyText,
@@ -409,12 +508,12 @@ export const ticketsRouter = router({
             "X-Postmark-Server-Token": apiKey,
           },
           body: JSON.stringify({
-            From: `Lavie Labs Support <trial@lavielabs.com>`,
+            From: fromAddress,
             To: toEmail,
             Subject: subject,
             HtmlBody: htmlBody,
-            TextBody: `Hi ${ticket.fromName || ""},\n\n${input.replyText}\n\nWarm regards,\n${agentName}\nLavie Labs Support`,
-            ReplyTo: "trial@lavielabs.com",
+            TextBody: `Hi ${(ticket.fromName || "").split(" ")[0] || "there"},\n\n${input.replyText}\n\nWarm regards,\n${agentName}\nLavie Labs`,
+            ReplyTo: replyToAddress,
             Tag: "support-ticket-reply",
             MessageStream: "outbound",
           }),
@@ -422,7 +521,7 @@ export const ticketsRouter = router({
 
         if (!response.ok) {
           const errBody = await response.text();
-          console.error("[Tickets] Postmark error:", errBody);
+          console.error("[Tickets] Postmark error:", response.status, errBody);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to send email: ${response.status}`,

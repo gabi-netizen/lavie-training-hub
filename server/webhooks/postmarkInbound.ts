@@ -19,6 +19,8 @@
  *   "HtmlBody": "<div>Hi, I have a question…</div>",
  *   "MessageID": "73e6d360-66eb-11e1-8e72-a8904824019b",
  *   "Date": "Fri, 1 Aug 2014 16:45:32 -04:00",
+ *   "OriginalRecipient": "guy@lavielabs.com",
+ *   "ToFull": [{ "Email": "guy@lavielabs.com", "Name": "" }],
  *   ...
  * }
  */
@@ -50,6 +52,7 @@ async function ensureTablesExist(db: any) {
         status enum('received','processed','error') NOT NULL DEFAULT 'received',
         errorMessage text,
         rawPayload text,
+        recipient varchar(320),
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT gmail_incoming_emails_id PRIMARY KEY(id),
@@ -73,6 +76,7 @@ async function ensureTablesExist(db: any) {
         ticketStatus enum('open','in_progress','awaiting_response','customer_replied','resolved','closed') NOT NULL DEFAULT 'open',
         assignedTo varchar(256),
         notes text,
+        recipient varchar(320),
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT support_tickets_id PRIMARY KEY(id),
@@ -119,6 +123,19 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
     const bodyText: string | undefined = payload?.TextBody ?? payload?.StrippedTextReply ?? "";
     const bodyHtml: string | undefined = payload?.HtmlBody ?? "";
     const dateStr: string | undefined = payload?.Date;
+
+    // ── Extract recipient (which address the email was sent TO) ──────────────
+    // Use OriginalRecipient first, fallback to ToFull[0].Email
+    let recipient: string | null = null;
+    if (payload?.OriginalRecipient) {
+      recipient = String(payload.OriginalRecipient).toLowerCase().trim();
+    } else if (payload?.ToFull && Array.isArray(payload.ToFull) && payload.ToFull.length > 0) {
+      recipient = String(payload.ToFull[0].Email).toLowerCase().trim();
+    } else if (payload?.To) {
+      // Fallback: parse the To field
+      const toMatch = String(payload.To).match(/<([^>]+)>/);
+      recipient = toMatch ? toMatch[1].toLowerCase().trim() : String(payload.To).toLowerCase().trim();
+    }
 
     if (!messageId || !fromEmail) {
       console.warn("[Postmark Inbound] Missing required fields (MessageID, FromFull.Email)");
@@ -218,12 +235,13 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
       emailDate,
       status: "processed",
       rawPayload: JSON.stringify(payload).substring(0, 65000),
+      recipient,
     });
 
     const gmailEmailId = (insertResult as any).insertId;
 
     console.log(
-      `[Postmark Inbound] Stored email messageId=${messageId} from=${fromEmail} subject="${subject}"`
+      `[Postmark Inbound] Stored email messageId=${messageId} from=${fromEmail} to=${recipient} subject="${subject}"`
     );
 
     // ── Check if this is a reply to an existing ticket ─────────────────────
@@ -314,10 +332,11 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
           status: "open",
           assignedTo: null,
           notes: null,
+          recipient,
         });
 
         console.log(
-          `[Postmark Inbound] Created ticket: category=${category} priority=${priority} customerStatus=${customerStatus}`
+          `[Postmark Inbound] Created ticket: category=${category} priority=${priority} customerStatus=${customerStatus} recipient=${recipient}`
         );
       } catch (ticketErr) {
         console.error("[Postmark Inbound] Error creating support ticket:", ticketErr);
@@ -330,6 +349,7 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
         category,
         priority,
         customerStatus,
+        recipient,
       });
     } else {
       res.status(200).json({

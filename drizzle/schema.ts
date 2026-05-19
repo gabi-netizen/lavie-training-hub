@@ -489,6 +489,8 @@ export const gmailIncomingEmails = mysqlTable("gmail_incoming_emails", {
   errorMessage: text("errorMessage"),
   /** Raw JSON payload from the webhook for debugging */
   rawPayload: text("rawPayload"),
+  /** Which address the email was sent TO (e.g. "guy@lavielabs.com", "support@lavielabs.com") */
+  recipient: varchar("recipient", { length: 320 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -540,6 +542,8 @@ export const supportTickets = mysqlTable("support_tickets", {
   assignedTo: varchar("assignedTo", { length: 256 }),
   /** Internal notes about this ticket */
   notes: text("notes"),
+  /** Which address the email was sent TO (e.g. "guy@lavielabs.com", "support@lavielabs.com") */
+  recipient: varchar("recipient", { length: 320 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
