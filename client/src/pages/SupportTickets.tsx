@@ -643,7 +643,7 @@ export default function SupportTickets() {
 
                     {/* Date */}
                     <span className="hidden lg:block shrink-0 text-xs text-gray-600 w-20 text-right">
-                      {timeAgo(ticket.receivedAt)}
+                      {timeAgo(ticket.updatedAt)}
                     </span>
 
                     {/* Expand icon */}
