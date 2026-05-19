@@ -26,7 +26,7 @@
 import type { Request, Response } from "express";
 import { getDb } from "../db";
 import { gmailIncomingEmails, supportTickets, supportTicketReplies } from "../../drizzle/schema";
-import { eq, sql, and, inArray, desc } from "drizzle-orm";
+import { eq, sql, and, or, inArray, desc } from "drizzle-orm";
 import { categorizeEmail, determineCustomerStatus } from "../emailCategorization";
 
 // ─── Table creation flag (only run once per server lifetime) ─────────────────
@@ -189,7 +189,8 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
     );
 
     // ── Check if this is a reply to an existing ticket ─────────────────────
-    // Look for an existing ticket from the same sender that is open or awaiting_response
+    // Look for an existing ticket from the same sender (any non-resolved status).
+    // This links by customer email regardless of which address they sent to.
     let linkedToExistingTicket = false;
     try {
       const existingTickets = await db
@@ -198,7 +199,7 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
         .where(
           and(
             eq(supportTickets.fromEmail, fromEmail),
-            inArray(supportTickets.status, ["open", "in_progress", "awaiting_response"])
+            inArray(supportTickets.status, ["open", "in_progress", "awaiting_response", "customer_replied"])
           )
         )
         .orderBy(desc(supportTickets.id))
