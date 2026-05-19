@@ -25,7 +25,7 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { gmailIncomingEmails, supportTickets, supportTicketReplies } from "../../drizzle/schema";
+import { gmailIncomingEmails, supportTickets, supportTicketReplies, blockedSenders } from "../../drizzle/schema";
 import { eq, sql, and, or, inArray, desc } from "drizzle-orm";
 import { categorizeEmail, determineCustomerStatus } from "../emailCategorization";
 
@@ -145,6 +145,24 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
 
     // ── Ensure tables exist ────────────────────────────────────────────────
     await ensureTablesExist(db);
+
+    // ── Blocked Sender Check ──────────────────────────────────────────────
+    try {
+      const blockedRow = await db
+        .select({ id: blockedSenders.id })
+        .from(blockedSenders)
+        .where(eq(blockedSenders.email, fromEmail.toLowerCase()))
+        .limit(1);
+
+      if (blockedRow.length > 0) {
+        console.log(`[Postmark Inbound] Sender ${fromEmail} is blocked — skipping`);
+        res.status(200).json({ received: true, skipped: true, reason: "blocked_sender" });
+        return;
+      }
+    } catch (blockCheckErr) {
+      // If the table doesn't exist yet, just continue (first deploy scenario)
+      console.warn("[Postmark Inbound] Error checking blocked senders (table may not exist yet):", blockCheckErr);
+    }
 
     // ── Deduplication ──────────────────────────────────────────────────────
     const existingEmail = await db

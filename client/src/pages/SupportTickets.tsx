@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,9 @@ import {
   Send,
   ArrowUpRight,
   ArrowDownLeft,
+  Ban,
+  ShieldOff,
+  Trash2,
 } from "lucide-react";
 
 // ─── Category Config ─────────────────────────────────────────────────────────
@@ -289,9 +293,93 @@ function ReplyBox({ ticketId, onReplySent }: { ticketId: number; onReplySent: ()
   );
 }
 
+// ─── Blocked Senders Management Section ─────────────────────────────────────
+
+function BlockedSendersSection() {
+  const utils = trpc.useUtils();
+  const { data: blockedList, isLoading } = trpc.tickets.listBlockedSenders.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  const unblockMutation = trpc.tickets.unblockSender.useMutation({
+    onSuccess: () => {
+      toast.success("Sender unblocked");
+      utils.tickets.listBlockedSenders.invalidate();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
+        <span className="ml-2 text-sm text-gray-600">Loading blocked senders...</span>
+      </div>
+    );
+  }
+
+  if (!blockedList || blockedList.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+          <ShieldOff className="h-7 w-7 text-gray-400" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-800 mb-1">No blocked senders</h3>
+        <p className="text-sm text-gray-600 max-w-sm">
+          When you block a sender from a ticket, their email will appear here. Blocked senders will not generate new tickets.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm text-gray-600 mb-3">
+        {blockedList.length} blocked sender{blockedList.length !== 1 ? "s" : ""}. Emails from these addresses are silently dropped.
+      </div>
+      {blockedList.map((item) => (
+        <div
+          key={item.id}
+          className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3"
+        >
+          <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+            <Ban className="h-4 w-4 text-red-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{item.email}</p>
+            <p className="text-xs text-gray-500">
+              Blocked by {item.blockedBy} on {formatDate(item.blockedAt)}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs h-7 gap-1 text-green-700 border-green-200 hover:bg-green-50"
+            disabled={unblockMutation.isPending}
+            onClick={() => {
+              if (window.confirm(`Unblock ${item.email}? They will be able to create tickets again.`)) {
+                unblockMutation.mutate({ id: item.id });
+              }
+            }}
+          >
+            <ShieldOff className="h-3 w-3" />
+            Unblock
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function SupportTickets() {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+
+  // View mode: "tickets" or "blocked"
+  const [viewMode, setViewMode] = useState<"tickets" | "blocked">("tickets");
+
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -374,12 +462,29 @@ export default function SupportTickets() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  const blockSenderMutation = trpc.tickets.blockSender.useMutation({
+    onSuccess: () => {
+      toast.success("Sender blocked. Future emails from this address will be dropped.");
+      utils.tickets.listBlockedSenders.invalidate();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const tickets = ticketsData?.tickets ?? [];
   const total = ticketsData?.total ?? 0;
 
   const activeFilterCount = [categoryFilter, priorityFilter, statusFilter, dateRange]
     .filter((v) => v !== "all")
     .length;
+
+  const handleBlockSender = (email: string) => {
+    if (window.confirm(`Are you sure you want to block "${email}"?\n\nFuture emails from this address will be silently dropped and no ticket will be created.`)) {
+      blockSenderMutation.mutate({
+        email,
+        blockedBy: user?.name || user?.email || "Unknown Agent",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -396,6 +501,32 @@ export default function SupportTickets() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
+              <button
+                onClick={() => setViewMode("tickets")}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === "tickets"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Tickets
+              </button>
+              <button
+                onClick={() => setViewMode("blocked")}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === "blocked"
+                    ? "bg-red-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <Ban className="h-3 w-3" />
+                  Blocked
+                </span>
+              </button>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -410,506 +541,542 @@ export default function SupportTickets() {
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div className="px-3 sm:px-6 py-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* Total Open */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-              <Inbox className="h-5 w-5 text-blue-600" />
+      {/* Blocked Senders View */}
+      {viewMode === "blocked" && (
+        <div className="px-3 sm:px-6 py-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Ban className="h-5 w-5 text-red-500" />
+              <h2 className="text-lg font-bold text-gray-900">Blocked Senders</h2>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalOpen ?? 0}</p>
-              <p className="text-xs text-gray-600 font-medium">Open Tickets</p>
-            </div>
-          </div>
-          {/* High Priority */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{stats?.highPriority ?? 0}</p>
-              <p className="text-xs text-gray-600 font-medium">High Priority</p>
-            </div>
-          </div>
-          {/* Awaiting Response */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-              <Clock className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-amber-600">{stats?.awaitingResponse ?? 0}</p>
-              <p className="text-xs text-gray-600 font-medium">Awaiting Response</p>
-            </div>
-          </div>
-          {/* Resolved Today */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats?.resolvedToday ?? 0}</p>
-              <p className="text-xs text-gray-600 font-medium">Resolved Today</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
-        <div className="flex items-center gap-2.5">
-          {/* Search */}
-          <div className="relative w-52 shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="Search tickets..."
-              value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-              className="pl-8 h-9 text-sm w-full"
-            />
-          </div>
-
-          {/* Mobile filter toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="sm:hidden h-9 px-3 gap-1.5 text-sm shrink-0"
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="bg-blue-600 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-
-          {/* Desktop filters */}
-          <div className="hidden sm:flex items-center gap-2">
-            {/* Category */}
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 w-[160px] text-sm">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>
-                    {cfg.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Priority */}
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="h-9 w-[120px] text-sm">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="LOW">Low</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Status */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-[150px] text-sm">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
-                <SelectItem value="customer_replied">Customer Replied</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Date Range */}
-            <Select value={dateRange} onValueChange={(v) => setDateRange(v as any)}>
-              <SelectTrigger className="h-9 w-[120px] text-sm">
-                <SelectValue placeholder="Date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="30days">Last 30 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Result count */}
-          <span className="text-xs text-gray-600 ml-auto whitespace-nowrap">
-            {total} ticket{total !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {/* Mobile filters (collapsible) */}
-        {showMobileFilters && (
-          <div className="sm:hidden flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 w-[140px] text-sm">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>
-                    {cfg.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="h-9 w-[110px] text-sm">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="LOW">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-[140px] text-sm">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
-                <SelectItem value="customer_replied">Customer Replied</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={dateRange} onValueChange={(v) => setDateRange(v as any)}>
-              <SelectTrigger className="h-9 w-[110px] text-sm">
-                <SelectValue placeholder="Date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="30days">Last 30 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      {/* Ticket List */}
-      <div className="px-3 sm:px-6 py-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="h-6 w-6 text-gray-400 animate-spin" />
-            <span className="ml-2 text-gray-600">Loading tickets...</span>
-          </div>
-        ) : tickets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <Inbox className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-1">No tickets found</h3>
-            <p className="text-sm text-gray-600 max-w-sm">
-              {search || categoryFilter !== "all" || priorityFilter !== "all" || statusFilter !== "all"
-                ? "Try adjusting your filters or search query."
-                : "Tickets will appear here when emails arrive at support@lavielabs.com."}
+            <p className="text-sm text-gray-600 mb-4">
+              Emails from blocked senders are silently dropped by the inbound webhook. No ticket is created and Postmark receives a 200 OK response.
             </p>
+            <BlockedSendersSection />
           </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Bulk Action Bar */}
-            <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <input
-                type="checkbox"
-                checked={selectedIds.size === tickets.length && tickets.length > 0}
-                onChange={toggleSelectAll}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-              />
-              {selectedIds.size > 0 ? (
-                <>
-                  <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs h-7"
-                      onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "resolved" })}
-                    >
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Resolve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs h-7"
-                      onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "closed" })}
-                    >
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Close
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete ${selectedIds.size} ticket(s)? This cannot be undone.`)) {
-                          bulkDelete.mutate({ ticketIds: Array.from(selectedIds) });
-                        }
-                      }}
-                    >
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs h-7 text-gray-500"
-                      onClick={() => setSelectedIds(new Set())}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <span className="text-xs text-gray-500">Select tickets for bulk actions</span>
-              )}
+        </div>
+      )}
+
+      {/* Tickets View */}
+      {viewMode === "tickets" && (
+        <>
+          {/* Stats Row */}
+          <div className="px-3 sm:px-6 py-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Total Open */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Inbox className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.totalOpen ?? 0}</p>
+                  <p className="text-xs text-gray-600 font-medium">Open Tickets</p>
+                </div>
+              </div>
+              {/* High Priority */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-red-600">{stats?.highPriority ?? 0}</p>
+                  <p className="text-xs text-gray-600 font-medium">High Priority</p>
+                </div>
+              </div>
+              {/* Awaiting Response */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-600">{stats?.awaitingResponse ?? 0}</p>
+                  <p className="text-xs text-gray-600 font-medium">Awaiting Response</p>
+                </div>
+              </div>
+              {/* Resolved Today */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-600">{stats?.resolvedToday ?? 0}</p>
+                  <p className="text-xs text-gray-600 font-medium">Resolved Today</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
+            <div className="flex items-center gap-2.5">
+              {/* Search */}
+              <div className="relative w-52 shrink-0">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Search tickets..."
+                  value={search}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                  className="pl-8 h-9 text-sm w-full"
+                />
+              </div>
+
+              {/* Mobile filter toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="sm:hidden h-9 px-3 gap-1.5 text-sm shrink-0"
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-blue-600 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              {/* Desktop filters */}
+              <div className="hidden sm:flex items-center gap-2">
+                {/* Category */}
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-9 w-[160px] text-sm">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
+                      <SelectItem key={key} value={key}>
+                        {cfg.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Priority */}
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger className="h-9 w-[120px] text-sm">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="LOW">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Status */}
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-9 w-[150px] text-sm">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
+                    <SelectItem value="customer_replied">Customer Replied</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Date Range */}
+                <Select value={dateRange} onValueChange={(v) => setDateRange(v as any)}>
+                  <SelectTrigger className="h-9 w-[120px] text-sm">
+                    <SelectValue placeholder="Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Result count */}
+              <span className="text-xs text-gray-600 ml-auto whitespace-nowrap">
+                {total} ticket{total !== 1 ? "s" : ""}
+              </span>
             </div>
 
-            {tickets.map((ticket: any) => {
-              const catCfg = getCategoryConfig(ticket.category);
-              const priCfg = getPriorityConfig(ticket.priority);
-              const statusCfg = getStatusConfig(ticket.status);
-              const custCfg = getCustomerStatusConfig(ticket.customerStatus);
-              const CatIcon = catCfg.icon;
-              const CustIcon = custCfg.icon;
-              const isExpanded = expandedId === ticket.id;
+            {/* Mobile filters (collapsible) */}
+            {showMobileFilters && (
+              <div className="sm:hidden flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-9 w-[140px] text-sm">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
+                      <SelectItem key={key} value={key}>
+                        {cfg.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger className="h-9 w-[110px] text-sm">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="LOW">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-9 w-[140px] text-sm">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
+                    <SelectItem value="customer_replied">Customer Replied</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={dateRange} onValueChange={(v) => setDateRange(v as any)}>
+                  <SelectTrigger className="h-9 w-[110px] text-sm">
+                    <SelectValue placeholder="Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
 
-              return (
-                <div
-                  key={ticket.id}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all"
-                >
-                  {/* Ticket Row */}
-                  <div
-                    onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
-                    className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    {/* Checkbox */}
-                    <div className="shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(ticket.id)}
-                        onClick={(e) => toggleSelect(ticket.id, e)}
-                        onChange={() => {}}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Priority dot */}
-                    <div className="shrink-0">
-                      <div className={`w-2.5 h-2.5 rounded-full ${priCfg.dot}`} title={priCfg.label} />
-                    </div>
-
-                    {/* Category badge */}
-                    <div className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${catCfg.bg} ${catCfg.text} flex items-center gap-1`}>
-                      <CatIcon className="h-3 w-3" />
-                      <span className="hidden sm:inline">{catCfg.label}</span>
-                    </div>
-
-                    {/* Subject + From */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {ticket.subject}
-                      </p>
-                      <p className="text-xs text-gray-600 truncate">
-                        {ticket.fromName ? `${ticket.fromName} <${ticket.fromEmail}>` : ticket.fromEmail}
-                      </p>
-                    </div>
-
-                    {/* Customer status badge */}
-                    <div className={`hidden md:flex shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${custCfg.bg} ${custCfg.text} items-center gap-1`}>
-                      <CustIcon className="h-3 w-3" />
-                      {custCfg.label}
-                    </div>
-
-                    {/* Status badge */}
-                    <div className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}>
-                      {statusCfg.label}
-                    </div>
-
-                    {/* Date */}
-                    <span className="hidden lg:block shrink-0 text-xs text-gray-600 w-20 text-right">
-                      {timeAgo(ticket.updatedAt)}
-                    </span>
-
-                    {/* Expand icon */}
-                    <div className="shrink-0">
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded Detail */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 px-4 py-4 bg-gray-50">
-                      {/* Meta row */}
-                      <div className="flex flex-wrap gap-3 mb-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-gray-600">Priority:</span>
-                          <span className={`flex items-center gap-1 text-xs font-semibold ${priCfg.text}`}>
-                            <span className={`w-2 h-2 rounded-full ${priCfg.dot}`} />
-                            {priCfg.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-gray-600">Received:</span>
-                          <span className="text-xs text-gray-800">{formatDateTime(ticket.receivedAt)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-gray-600">Customer:</span>
-                          <span className={`flex items-center gap-1 text-xs font-medium ${custCfg.text}`}>
-                            <CustIcon className="h-3 w-3" />
-                            {custCfg.label}
-                          </span>
-                        </div>
-                        {ticket.assignedTo && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-medium text-gray-600">Assigned:</span>
-                            <span className="text-xs text-gray-800">{ticket.assignedTo}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Conversation Thread */}
-                      <div className="mb-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <MessageSquare className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm font-semibold text-gray-700">Conversation</span>
-                          <span className="text-xs text-gray-500">
-                            Re: {ticket.subject}
-                          </span>
-                        </div>
-                        <ConversationThread
-                          ticketId={ticket.id}
-                          originalBody={ticket.body}
-                          originalFrom={ticket.fromName || ticket.fromEmail}
-                          originalDate={ticket.receivedAt}
-                        />
-                      </div>
-
-                      {/* Reply Box */}
-                      <div className="mb-4">
-                        <ReplyBox
-                          ticketId={ticket.id}
-                          onReplySent={() => refetch()}
-                        />
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-wrap gap-2 items-end border-t border-gray-200 pt-4">
-                        {/* Status update */}
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">Status</label>
-                          <Select
-                            value={ticket.status}
-                            onValueChange={(val) =>
-                              updateTicket.mutate({ id: ticket.id, status: val as any })
+          {/* Ticket List */}
+          <div className="px-3 sm:px-6 py-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <RefreshCw className="h-6 w-6 text-gray-400 animate-spin" />
+                <span className="ml-2 text-gray-600">Loading tickets...</span>
+              </div>
+            ) : tickets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <Inbox className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">No tickets found</h3>
+                <p className="text-sm text-gray-600 max-w-sm">
+                  {search || categoryFilter !== "all" || priorityFilter !== "all" || statusFilter !== "all"
+                    ? "Try adjusting your filters or search query."
+                    : "Tickets will appear here when emails arrive at support@lavielabs.com."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Bulk Action Bar */}
+                <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === tickets.length && tickets.length > 0}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  {selectedIds.size > 0 ? (
+                    <>
+                      <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "resolved" })}
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Resolve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "closed" })}
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Close
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete ${selectedIds.size} ticket(s)? This cannot be undone.`)) {
+                              bulkDelete.mutate({ ticketIds: Array.from(selectedIds) });
                             }
-                          >
-                            <SelectTrigger className="h-8 w-[150px] text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
-                              <SelectItem value="customer_replied">Customer Replied</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                              <SelectItem value="closed">Closed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Assign */}
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">Assign to</label>
-                          <Select
-                            value={ticket.assignedTo || "unassigned"}
-                            onValueChange={(val) =>
-                              updateTicket.mutate({
-                                id: ticket.id,
-                                assignedTo: val === "unassigned" ? null : val,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="h-8 w-[120px] text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              <SelectItem value="Diane">Diane</SelectItem>
-                              <SelectItem value="Gabriel">Gabriel</SelectItem>
-                              <SelectItem value="Guy">Guy</SelectItem>
-                              <SelectItem value="James">James</SelectItem>
-                              <SelectItem value="Rob">Rob</SelectItem>
-                              <SelectItem value="Wendy">Wendy</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Notes */}
-                        <div className="flex-1 min-w-[200px]">
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
-                          <div className="flex gap-1.5">
-                            <Input
-                              value={editingNotes[ticket.id] ?? ticket.notes ?? ""}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                setEditingNotes((prev) => ({ ...prev, [ticket.id]: e.target.value }))
-                              }
-                              placeholder="Add a note..."
-                              className="h-8 text-xs flex-1"
-                            />
-                            <Button
-                              size="sm"
-                              className="h-8 px-3 text-xs"
-                              disabled={
-                                (editingNotes[ticket.id] ?? ticket.notes ?? "") === (ticket.notes ?? "")
-                              }
-                              onClick={() => {
-                                updateTicket.mutate({
-                                  id: ticket.id,
-                                  notes: editingNotes[ticket.id] ?? "",
-                                });
-                              }}
-                            >
-                              Save
-                            </Button>
-                          </div>
-                        </div>
+                          }}
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-7 text-gray-500"
+                          onClick={() => setSelectedIds(new Set())}
+                        >
+                          Cancel
+                        </Button>
                       </div>
-                    </div>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">Select tickets for bulk actions</span>
                   )}
                 </div>
-              );
-            })}
+
+                {tickets.map((ticket: any) => {
+                  const catCfg = getCategoryConfig(ticket.category);
+                  const priCfg = getPriorityConfig(ticket.priority);
+                  const statusCfg = getStatusConfig(ticket.status);
+                  const custCfg = getCustomerStatusConfig(ticket.customerStatus);
+                  const CatIcon = catCfg.icon;
+                  const CustIcon = custCfg.icon;
+                  const isExpanded = expandedId === ticket.id;
+
+                  return (
+                    <div
+                      key={ticket.id}
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all"
+                    >
+                      {/* Ticket Row */}
+                      <div
+                        onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
+                        className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        {/* Checkbox */}
+                        <div className="shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(ticket.id)}
+                            onClick={(e) => toggleSelect(ticket.id, e)}
+                            onChange={() => {}}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Priority dot */}
+                        <div className="shrink-0">
+                          <div className={`w-2.5 h-2.5 rounded-full ${priCfg.dot}`} title={priCfg.label} />
+                        </div>
+
+                        {/* Category badge */}
+                        <div className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${catCfg.bg} ${catCfg.text} flex items-center gap-1`}>
+                          <CatIcon className="h-3 w-3" />
+                          <span className="hidden sm:inline">{catCfg.label}</span>
+                        </div>
+
+                        {/* Subject + From */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {ticket.subject}
+                          </p>
+                          <p className="text-xs text-gray-600 truncate">
+                            {ticket.fromName ? `${ticket.fromName} <${ticket.fromEmail}>` : ticket.fromEmail}
+                          </p>
+                        </div>
+
+                        {/* Customer status badge */}
+                        <div className={`hidden md:flex shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${custCfg.bg} ${custCfg.text} items-center gap-1`}>
+                          <CustIcon className="h-3 w-3" />
+                          {custCfg.label}
+                        </div>
+
+                        {/* Status badge */}
+                        <div className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}>
+                          {statusCfg.label}
+                        </div>
+
+                        {/* Date */}
+                        <span className="hidden lg:block shrink-0 text-xs text-gray-600 w-20 text-right">
+                          {timeAgo(ticket.updatedAt)}
+                        </span>
+
+                        {/* Expand icon */}
+                        <div className="shrink-0">
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Expanded Detail */}
+                      {isExpanded && (
+                        <div className="border-t border-gray-100 px-4 py-4 bg-gray-50">
+                          {/* Meta row */}
+                          <div className="flex flex-wrap gap-3 mb-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-gray-600">Priority:</span>
+                              <span className={`flex items-center gap-1 text-xs font-semibold ${priCfg.text}`}>
+                                <span className={`w-2 h-2 rounded-full ${priCfg.dot}`} />
+                                {priCfg.label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-gray-600">Received:</span>
+                              <span className="text-xs text-gray-800">{formatDateTime(ticket.receivedAt)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-gray-600">Customer:</span>
+                              <span className={`flex items-center gap-1 text-xs font-medium ${custCfg.text}`}>
+                                <CustIcon className="h-3 w-3" />
+                                {custCfg.label}
+                              </span>
+                            </div>
+                            {ticket.assignedTo && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-medium text-gray-600">Assigned:</span>
+                                <span className="text-xs text-gray-800">{ticket.assignedTo}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Conversation Thread */}
+                          <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <MessageSquare className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm font-semibold text-gray-700">Conversation</span>
+                              <span className="text-xs text-gray-500">
+                                Re: {ticket.subject}
+                              </span>
+                            </div>
+                            <ConversationThread
+                              ticketId={ticket.id}
+                              originalBody={ticket.body}
+                              originalFrom={ticket.fromName || ticket.fromEmail}
+                              originalDate={ticket.receivedAt}
+                            />
+                          </div>
+
+                          {/* Reply Box */}
+                          <div className="mb-4">
+                            <ReplyBox
+                              ticketId={ticket.id}
+                              onReplySent={() => refetch()}
+                            />
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-wrap gap-2 items-end border-t border-gray-200 pt-4">
+                            {/* Status update */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">Status</label>
+                              <Select
+                                value={ticket.status}
+                                onValueChange={(val) =>
+                                  updateTicket.mutate({ id: ticket.id, status: val as any })
+                                }
+                              >
+                                <SelectTrigger className="h-8 w-[150px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="open">Open</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
+                                  <SelectItem value="customer_replied">Customer Replied</SelectItem>
+                                  <SelectItem value="resolved">Resolved</SelectItem>
+                                  <SelectItem value="closed">Closed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Assign */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">Assign to</label>
+                              <Select
+                                value={ticket.assignedTo || "unassigned"}
+                                onValueChange={(val) =>
+                                  updateTicket.mutate({
+                                    id: ticket.id,
+                                    assignedTo: val === "unassigned" ? null : val,
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="h-8 w-[120px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                                  <SelectItem value="Diane">Diane</SelectItem>
+                                  <SelectItem value="Gabriel">Gabriel</SelectItem>
+                                  <SelectItem value="Guy">Guy</SelectItem>
+                                  <SelectItem value="James">James</SelectItem>
+                                  <SelectItem value="Rob">Rob</SelectItem>
+                                  <SelectItem value="Wendy">Wendy</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Notes */}
+                            <div className="flex-1 min-w-[200px]">
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
+                              <div className="flex gap-1.5">
+                                <Input
+                                  value={editingNotes[ticket.id] ?? ticket.notes ?? ""}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    setEditingNotes((prev) => ({ ...prev, [ticket.id]: e.target.value }))
+                                  }
+                                  placeholder="Add a note..."
+                                  className="h-8 text-xs flex-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-3 text-xs"
+                                  disabled={
+                                    (editingNotes[ticket.id] ?? ticket.notes ?? "") === (ticket.notes ?? "")
+                                  }
+                                  onClick={() => {
+                                    updateTicket.mutate({
+                                      id: ticket.id,
+                                      notes: editingNotes[ticket.id] ?? "",
+                                    });
+                                  }}
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Block Sender Button */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                disabled={blockSenderMutation.isPending}
+                                onClick={() => handleBlockSender(ticket.fromEmail)}
+                              >
+                                <Ban className="h-3 w-3" />
+                                Block Sender
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

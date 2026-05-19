@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { supportTickets, supportTicketReplies } from "../../drizzle/schema";
+import { supportTickets, supportTicketReplies, blockedSenders } from "../../drizzle/schema";
 import { eq, and, gte, lte, desc, asc, sql, like, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
@@ -499,6 +499,75 @@ export const ticketsRouter = router({
         .delete(supportTickets)
         .where(inArray(supportTickets.id, input.ticketIds));
       return { success: true, count: input.ticketIds.length };
+    }),
+
+  // ─── Blocked Senders ────────────────────────────────────────────────────────
+
+  /**
+   * List all blocked senders.
+   */
+  listBlockedSenders: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+
+    const rows = await db
+      .select()
+      .from(blockedSenders)
+      .orderBy(desc(blockedSenders.blockedAt));
+
+    return rows.map((r) => ({
+      id: r.id,
+      email: r.email,
+      blockedAt: r.blockedAt?.toISOString() ?? new Date().toISOString(),
+      blockedBy: r.blockedBy,
+    }));
+  }),
+
+  /**
+   * Block a sender email address.
+   */
+  blockSender: adminProcedure
+    .input(z.object({
+      email: z.string().email(),
+      blockedBy: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Check if already blocked
+      const existing = await db
+        .select({ id: blockedSenders.id })
+        .from(blockedSenders)
+        .where(eq(blockedSenders.email, input.email.toLowerCase()))
+        .limit(1);
+
+      if (existing.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "This sender is already blocked" });
+      }
+
+      await db.insert(blockedSenders).values({
+        email: input.email.toLowerCase(),
+        blockedBy: input.blockedBy,
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Unblock a sender (remove from blocked list).
+   */
+  unblockSender: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db
+        .delete(blockedSenders)
+        .where(eq(blockedSenders.id, input.id));
+
+      return { success: true };
     }),
 });
 

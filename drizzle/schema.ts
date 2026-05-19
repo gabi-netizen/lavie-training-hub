@@ -665,3 +665,20 @@ export const supportTicketReplies = mysqlTable("support_ticket_replies", {
 
 export type SupportTicketReply = typeof supportTicketReplies.$inferSelect;
 export type InsertSupportTicketReply = typeof supportTicketReplies.$inferInsert;
+
+/**
+ * Blocked Senders — emails that should be silently dropped by the inbound webhook.
+ * When an email arrives from a blocked sender, no ticket is created.
+ */
+export const blockedSenders = mysqlTable("blocked_senders", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The email address to block */
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  /** Timestamp when the sender was blocked */
+  blockedAt: timestamp("blockedAt").defaultNow().notNull(),
+  /** Name of the agent who blocked this sender */
+  blockedBy: varchar("blockedBy", { length: 256 }).notNull(),
+});
+
+export type BlockedSender = typeof blockedSenders.$inferSelect;
+export type InsertBlockedSender = typeof blockedSenders.$inferInsert;
