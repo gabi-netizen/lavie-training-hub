@@ -189,46 +189,50 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
     );
 
     // ── Check if this is a reply to an existing ticket ─────────────────────
-    // Look for an existing ticket from the same sender (any non-resolved status).
-    // This links by customer email regardless of which address they sent to.
+    // Only link to existing ticket if subject starts with "Re:" (customer replied to our email).
+    // Otherwise always create a new ticket.
+    const isReply = (subject || "").trim().toLowerCase().startsWith("re:");
     let linkedToExistingTicket = false;
-    try {
-      const existingTickets = await db
-        .select({ id: supportTickets.id, status: supportTickets.status })
-        .from(supportTickets)
-        .where(
-          and(
-            eq(supportTickets.fromEmail, fromEmail),
-            inArray(supportTickets.status, ["open", "in_progress", "awaiting_response", "customer_replied"])
+
+    if (isReply) {
+      try {
+        const existingTickets = await db
+          .select({ id: supportTickets.id, status: supportTickets.status })
+          .from(supportTickets)
+          .where(
+            and(
+              eq(supportTickets.fromEmail, fromEmail),
+              inArray(supportTickets.status, ["open", "in_progress", "awaiting_response", "customer_replied"])
+            )
           )
-        )
-        .orderBy(desc(supportTickets.id))
-        .limit(1);
+          .orderBy(desc(supportTickets.id))
+          .limit(1);
 
-      if (existingTickets.length > 0) {
-        // Link as an inbound reply to the existing ticket
-        const ticketId = existingTickets[0].id;
+        if (existingTickets.length > 0) {
+          // Link as an inbound reply to the existing ticket
+          const ticketId = existingTickets[0].id;
 
-        await db.insert(supportTicketReplies).values({
-          ticketId,
-          direction: "inbound",
-          body: bodyText ? bodyText.substring(0, 65000) : "(no body)",
-          sentBy: fromName || fromEmail,
-        });
+          await db.insert(supportTicketReplies).values({
+            ticketId,
+            direction: "inbound",
+            body: bodyText ? bodyText.substring(0, 65000) : "(no body)",
+            sentBy: fromName || fromEmail,
+          });
 
-        // Update ticket status to customer_replied and touch updatedAt so it sorts to the top
-        await db
-          .update(supportTickets)
-          .set({ status: "customer_replied" })
-          .where(eq(supportTickets.id, ticketId));
+          // Update ticket status to customer_replied and touch updatedAt so it sorts to the top
+          await db
+            .update(supportTickets)
+            .set({ status: "customer_replied" })
+            .where(eq(supportTickets.id, ticketId));
 
-        linkedToExistingTicket = true;
-        console.log(
-          `[Postmark Inbound] Linked as reply to existing ticket #${ticketId} from ${fromEmail}`
-        );
+          linkedToExistingTicket = true;
+          console.log(
+            `[Postmark Inbound] Linked as reply to existing ticket #${ticketId} from ${fromEmail}`
+          );
+        }
+      } catch (linkErr) {
+        console.warn("[Postmark Inbound] Error checking for existing ticket:", linkErr);
       }
-    } catch (linkErr) {
-      console.warn("[Postmark Inbound] Error checking for existing ticket:", linkErr);
     }
 
     // ── If not linked to an existing ticket, create a new one ──────────────
