@@ -9,7 +9,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { supportTickets, supportTicketReplies } from "../../drizzle/schema";
-import { eq, and, gte, lte, desc, asc, sql, like } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, sql, like, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
   TICKET_CATEGORIES,
@@ -452,6 +452,53 @@ export const ticketsRouter = router({
         .where(eq(supportTickets.id, input.ticketId));
 
       return { success: true };
+    }),
+
+  // ─── Bulk Operations ──────────────────────────────────────────────────────
+
+  bulkUpdateStatus: adminProcedure
+    .input(z.object({
+      ticketIds: z.array(z.number()).min(1),
+      status: z.enum(['open', 'in_progress', 'awaiting_response', 'customer_replied', 'resolved', 'closed']),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db!
+        .update(supportTickets)
+        .set({ status: input.status })
+        .where(inArray(supportTickets.id, input.ticketIds));
+      return { success: true, count: input.ticketIds.length };
+    }),
+
+  bulkAssign: adminProcedure
+    .input(z.object({
+      ticketIds: z.array(z.number()).min(1),
+      assignedTo: z.string().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db!
+        .update(supportTickets)
+        .set({ assignedTo: input.assignedTo })
+        .where(inArray(supportTickets.id, input.ticketIds));
+      return { success: true, count: input.ticketIds.length };
+    }),
+
+  bulkDelete: adminProcedure
+    .input(z.object({
+      ticketIds: z.array(z.number()).min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      // Delete replies first (foreign key)
+      await db!
+        .delete(supportTicketReplies)
+        .where(inArray(supportTicketReplies.ticketId, input.ticketIds));
+      // Delete tickets
+      await db!
+        .delete(supportTickets)
+        .where(inArray(supportTickets.id, input.ticketIds));
+      return { success: true, count: input.ticketIds.length };
     }),
 });
 

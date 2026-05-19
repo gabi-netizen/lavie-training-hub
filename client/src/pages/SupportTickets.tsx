@@ -304,6 +304,27 @@ export default function SupportTickets() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
 
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const toggleSelect = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === tickets.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tickets.map((t: any) => t.id)));
+    }
+  };
+
   // Data
   const {
     data: ticketsData,
@@ -330,6 +351,24 @@ export default function SupportTickets() {
   const updateTicket = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
       toast.success("Ticket updated");
+      refetch();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const bulkUpdateStatus = trpc.tickets.bulkUpdateStatus.useMutation({
+    onSuccess: (data: { count: number }) => {
+      toast.success(`${data.count} tickets updated`);
+      setSelectedIds(new Set());
+      refetch();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const bulkDelete = trpc.tickets.bulkDelete.useMutation({
+    onSuccess: (data: { count: number }) => {
+      toast.success(`${data.count} tickets deleted`);
+      setSelectedIds(new Set());
       refetch();
     },
     onError: (e: { message: string }) => toast.error(e.message),
@@ -590,6 +629,64 @@ export default function SupportTickets() {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Bulk Action Bar */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === tickets.length && tickets.length > 0}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              {selectedIds.size > 0 ? (
+                <>
+                  <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7"
+                      onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "resolved" })}
+                    >
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Resolve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7"
+                      onClick={() => bulkUpdateStatus.mutate({ ticketIds: Array.from(selectedIds), status: "closed" })}
+                    >
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Close
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${selectedIds.size} ticket(s)? This cannot be undone.`)) {
+                          bulkDelete.mutate({ ticketIds: Array.from(selectedIds) });
+                        }
+                      }}
+                    >
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs h-7 text-gray-500"
+                      onClick={() => setSelectedIds(new Set())}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <span className="text-xs text-gray-500">Select tickets for bulk actions</span>
+              )}
+            </div>
+
             {tickets.map((ticket: any) => {
               const catCfg = getCategoryConfig(ticket.category);
               const priCfg = getPriorityConfig(ticket.priority);
@@ -605,10 +702,21 @@ export default function SupportTickets() {
                   className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all"
                 >
                   {/* Ticket Row */}
-                  <button
+                  <div
                     onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
-                    className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
                   >
+                    {/* Checkbox */}
+                    <div className="shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(ticket.id)}
+                        onClick={(e) => toggleSelect(ticket.id, e)}
+                        onChange={() => {}}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </div>
+
                     {/* Priority dot */}
                     <div className="shrink-0">
                       <div className={`w-2.5 h-2.5 rounded-full ${priCfg.dot}`} title={priCfg.label} />
@@ -654,7 +762,7 @@ export default function SupportTickets() {
                         <ChevronDown className="h-4 w-4 text-gray-400" />
                       )}
                     </div>
-                  </button>
+                  </div>
 
                   {/* Expanded Detail */}
                   {isExpanded && (
