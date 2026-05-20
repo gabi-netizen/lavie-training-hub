@@ -2978,6 +2978,8 @@ export default function CallCoach() {
   };
 
   const [selectedId, setSelectedId] = useState<number | null>(getAnalysisIdFromUrl);
+  // Track whether we arrived with an analysisId in URL (came from another page like Call Center Dashboard)
+  const [cameFromExternal] = useState<boolean>(getAnalysisIdFromUrl() !== null);
 
   // Read tab from URL query param (?tab=team etc.)
   const getTabFromUrl = (): TabId => {
@@ -3031,7 +3033,7 @@ export default function CallCoach() {
         <div className="max-w-3xl mx-auto">
           <AnalysisReport
             analysisId={selectedId}
-            onBack={() => setSelectedId(null)}
+            onBack={() => { if (cameFromExternal && window.history.length > 1) { window.history.back(); } else { setSelectedId(null); } }}
             onDeleted={() => { setSelectedId(null); setActiveTab("my-calls"); }}
           />
         </div>
