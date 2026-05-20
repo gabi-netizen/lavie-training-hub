@@ -50,6 +50,7 @@ const DATE_RANGES = [
   { value: "last_3_months", label: "Last 3 Months" },
   { value: "this_year", label: "This Year" },
   { value: "previous_month", label: "Previous Month" },
+  { value: "custom", label: "Custom" },
 ];
 
 // ─── Call type options ───────────────────────────────────────────────────────
@@ -72,6 +73,8 @@ const DEFAULT_FILTERS = {
   search: "",
   durationMin: undefined as number | undefined,
   durationMax: undefined as number | undefined,
+  customFrom: undefined as string | undefined,
+  customTo: undefined as string | undefined,
 };
 
 // ─── URL Filter Persistence ──────────────────────────────────────────────────
@@ -87,6 +90,8 @@ function getFiltersFromUrl(): typeof DEFAULT_FILTERS {
     search: params.get("search") || "",
     durationMin: params.get("durationMin") ? Number(params.get("durationMin")) : undefined,
     durationMax: params.get("durationMax") ? Number(params.get("durationMax")) : undefined,
+    customFrom: params.get("customFrom") || undefined,
+    customTo: params.get("customTo") || undefined,
   };
 }
 
@@ -101,6 +106,10 @@ function syncFiltersToUrl(filters: typeof DEFAULT_FILTERS) {
   if (filters.search) params.set("search", filters.search);
   if (filters.durationMin) params.set("durationMin", String(filters.durationMin));
   if (filters.durationMax) params.set("durationMax", String(filters.durationMax));
+  if (filters.dateRange === "custom") {
+    if (filters.customFrom) params.set("customFrom", filters.customFrom);
+    if (filters.customTo) params.set("customTo", filters.customTo);
+  }
   const qs = params.toString();
   const newUrl = qs ? `/call-center-dashboard?${qs}` : "/call-center-dashboard";
   window.history.replaceState(null, "", newUrl);
@@ -372,11 +381,13 @@ export default function CallCenterDashboard() {
     search: filters.search || undefined,
     durationMin: filters.durationMin,
     durationMax: filters.durationMax,
+    customFrom: filters.dateRange === "custom" ? filters.customFrom : undefined,
+    customTo: filters.dateRange === "custom" ? filters.customTo : undefined,
   });
 
   const { data: stats } = trpc.dashboard.getDashboardStats.useQuery({ tab: activeTab });
 
-  const totalPages = callsData ? Math.ceil(callsData.totalCount / PAGE_SIZE) : 1;
+  const totalPages = callsData ? Math.ceil(callsData.totalCount / PAGE_SIZE) : 0;
 
   // ─── Sync Calls mutation ──────────────────────────────────────────────────
   const syncCallsMutation = trpc.dashboard.syncCalls.useMutation({
@@ -544,6 +555,30 @@ export default function CallCenterDashboard() {
               ))}
             </select>
           </div>
+
+          {/* Custom Date Inputs — shown only when "Custom" is selected */}
+          {draft.dateRange === "custom" && (
+            <>
+              <div className="flex flex-col items-center gap-1.5">
+                <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">From</label>
+                <input
+                  type="date"
+                  value={draft.customFrom ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, customFrom: e.target.value || undefined }))}
+                  className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+                />
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">To</label>
+                <input
+                  type="date"
+                  value={draft.customTo ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, customTo: e.target.value || undefined }))}
+                  className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors"
+                />
+              </div>
+            </>
+          )}
 
           {/* Call Type */}
           <div className="flex flex-col items-center gap-1.5">

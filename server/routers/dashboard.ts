@@ -11,7 +11,7 @@ import {
 } from "../callAnalysis";
 
 // ─── Date range helper ───────────────────────────────────────────────────────
-function getDateRange(range: string): { from: Date; to: Date } {
+function getDateRange(range: string, customFrom?: string, customTo?: string): { from: Date; to: Date } {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
@@ -50,6 +50,16 @@ function getDateRange(range: string): { from: Date; to: Date } {
       const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       return { from: prevMonthStart, to: prevMonthEnd };
+    }
+    case "custom": {
+      // Parse ISO date strings (YYYY-MM-DD) as local-time boundaries
+      const from = customFrom
+        ? new Date(`${customFrom}T00:00:00`)
+        : new Date(2020, 0, 1);
+      const to = customTo
+        ? new Date(`${customTo}T23:59:59.999`)
+        : endOfDay;
+      return { from, to };
     }
     default:
       // Default to all time — very wide range
@@ -241,6 +251,8 @@ export const dashboardRouter = router({
         scoreMin: z.number().min(0).max(100).optional(),
         scoreMax: z.number().min(0).max(100).optional(),
         dateRange: z.string().optional(),
+        customFrom: z.string().optional(),
+        customTo: z.string().optional(),
         callType: z.string().optional(),
         search: z.string().optional(),
         durationMin: z.number().min(0).optional(),
@@ -251,7 +263,7 @@ export const dashboardRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const { page, limit, tab, agentId, team, scoreMin, scoreMax, dateRange, callType, search, durationMin, durationMax } = input;
+      const { page, limit, tab, agentId, team, scoreMin, scoreMax, dateRange, customFrom, customTo, callType, search, durationMin, durationMax } = input;
       const offset = (page - 1) * limit;
 
       // Build WHERE conditions
@@ -293,7 +305,7 @@ export const dashboardRouter = router({
 
       // Date range
       if (dateRange && dateRange !== "all") {
-        const { from, to } = getDateRange(dateRange);
+        const { from, to } = getDateRange(dateRange, customFrom, customTo);
         conditions.push(gte(callAnalyses.createdAt, from));
         conditions.push(lte(callAnalyses.createdAt, to));
       }
