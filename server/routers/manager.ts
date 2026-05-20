@@ -197,6 +197,7 @@ export const managerRouter = router({
           statusChangedAt: row.statusChangedAt ?? null,
           lastTransactionDate: row.lastTransactionDate ?? null,
           lastShipmentDate: row.lastShipmentDate ?? null,
+          createdAt: row.createdAt ? row.createdAt.toISOString() : null,
         };
       });
 

@@ -1015,6 +1015,7 @@ export default function ManagerDashboard() {
                             {badge.label}
                           </span>
                           <span className="text-[10px] text-gray-800">{formatDate(leadDate)}</span>
+                          <span className="text-[10px] text-gray-500">{lead.createdAt ? new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
                         </div>
                       </div>
                       {lead.email && (
@@ -1218,6 +1219,9 @@ export default function ManagerDashboard() {
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
                       Date
                     </th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
+                      Time In
+                    </th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-48">
                       Lead Type
                     </th>
@@ -1378,6 +1382,10 @@ export default function ManagerDashboard() {
                           {/* Date */}
                           <td className="px-2 py-3 text-sm text-gray-800 whitespace-nowrap">
                             {formatDate(leadDate)}
+                          </td>
+                          {/* Time In */}
+                          <td className="px-2 py-3 text-sm text-gray-500 whitespace-nowrap">
+                            {lead.createdAt ? new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—"}
                           </td>
                           {/* Lead Type */}
                           <td className="px-2 py-3">
