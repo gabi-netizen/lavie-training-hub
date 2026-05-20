@@ -74,6 +74,38 @@ const DEFAULT_FILTERS = {
   durationMax: undefined as number | undefined,
 };
 
+// ─── URL Filter Persistence ──────────────────────────────────────────────────
+function getFiltersFromUrl(): typeof DEFAULT_FILTERS {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    agentId: params.get("agentId") ? Number(params.get("agentId")) : undefined,
+    team: (params.get("team") as "opening" | "retention" | undefined) || undefined,
+    scoreMin: params.get("scoreMin") ? Number(params.get("scoreMin")) : 0,
+    scoreMax: params.get("scoreMax") ? Number(params.get("scoreMax")) : 100,
+    dateRange: params.get("dateRange") || "today",
+    callType: params.get("callType") || "all",
+    search: params.get("search") || "",
+    durationMin: params.get("durationMin") ? Number(params.get("durationMin")) : undefined,
+    durationMax: params.get("durationMax") ? Number(params.get("durationMax")) : undefined,
+  };
+}
+
+function syncFiltersToUrl(filters: typeof DEFAULT_FILTERS) {
+  const params = new URLSearchParams();
+  if (filters.agentId) params.set("agentId", String(filters.agentId));
+  if (filters.team) params.set("team", filters.team);
+  if (filters.scoreMin !== 0) params.set("scoreMin", String(filters.scoreMin));
+  if (filters.scoreMax !== 100) params.set("scoreMax", String(filters.scoreMax));
+  if (filters.dateRange !== "today") params.set("dateRange", filters.dateRange);
+  if (filters.callType !== "all") params.set("callType", filters.callType);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.durationMin) params.set("durationMin", String(filters.durationMin));
+  if (filters.durationMax) params.set("durationMax", String(filters.durationMax));
+  const qs = params.toString();
+  const newUrl = qs ? `/call-center-dashboard?${qs}` : "/call-center-dashboard";
+  window.history.replaceState(null, "", newUrl);
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatDuration(seconds: number | null): string {
   if (!seconds || seconds <= 0) return "00:00:00";
@@ -252,20 +284,22 @@ export default function CallCenterDashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Filter state (applied)
-  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+  const [filters, setFilters] = useState(getFiltersFromUrl);
 
   // Filter state (draft — before Apply)
-  const [draft, setDraft] = useState({ ...DEFAULT_FILTERS });
+  const [draft, setDraft] = useState(getFiltersFromUrl);
 
   const applyFilters = useCallback(() => {
     setFilters({ ...draft });
     setPage(1);
+    syncFiltersToUrl(draft);
   }, [draft]);
 
   const resetFilters = useCallback(() => {
     setDraft({ ...DEFAULT_FILTERS });
     setFilters({ ...DEFAULT_FILTERS });
     setPage(1);
+    syncFiltersToUrl(DEFAULT_FILTERS);
   }, []);
 
   // Helper to apply filters programmatically from summary cards
@@ -274,6 +308,7 @@ export default function CallCenterDashboard() {
     setDraft(newFilters);
     setFilters(newFilters);
     setPage(1);
+    syncFiltersToUrl(newFilters);
   }, []);
 
   // ─── Audio playback ───────────────────────────────────────────────────────
