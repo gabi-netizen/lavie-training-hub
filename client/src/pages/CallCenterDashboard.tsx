@@ -581,8 +581,7 @@ export default function CallCenterDashboard() {
               <option value="0-1">Under 1 min</option>
               <option value="1-5">1–5 min</option>
               <option value="5-15">5–15 min</option>
-              <option value="15-30">15–30 min</option>
-              <option value="30-999">Over 30 min</option>
+              <option value="15-999">15+ min</option>
             </select>
           </div>
 
