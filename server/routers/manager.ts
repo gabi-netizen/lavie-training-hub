@@ -11,6 +11,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts } from "../../drizzle/schema";
 import { eq, like, or, and, desc, sql } from "drizzle-orm";
+import { stripHtml } from "../utils/stripHtml";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ export const managerRouter = router({
           assignmentId: row.id,
           assignedAgent: row.assignedAgent ?? null,
           workStatus: row.workStatus ?? "new",
-          managerNote: row.managerNote ?? null,
+          managerNote: row.managerNote ? stripHtml(row.managerNote) : null,
           agentNote: row.agentNote ?? null,
           attemptCount: row.attemptCount ?? 0,
           noAnswerCount: row.noAnswerCount ?? 0,
@@ -604,14 +605,15 @@ export const managerRouter = router({
         urgencyScore: z.number().default(50),
         assignedAgent: z.string().nullable().optional(),
         managerNote: z.string().optional(),
+        customerNote: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-
       const subscriptionId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
+      // Accept either managerNote or customerNote (n8n may send either field name)
+      const rawNote = input.customerNote ?? input.managerNote;
       await db.insert(leadAssignments).values({
         subscriptionId,
         customerName: input.customerName,
@@ -626,7 +628,7 @@ export const managerRouter = router({
         assignedAgent: input.assignedAgent || null,
         assignedAt: input.assignedAgent ? Date.now() : null,
         workStatus: input.assignedAgent ? "assigned" : "new",
-        managerNote: input.managerNote || null,
+        managerNote: rawNote ? stripHtml(rawNote) : null,
         eventDate: new Date().toISOString().split("T")[0],
       });
 
@@ -668,6 +670,7 @@ export const managerRouter = router({
             eventDate: z.string().optional(),
             billingStatus: z.string().optional(),
             cyclesCompleted: z.number().default(0),
+            customerNote: z.string().optional(),
           })
         ),
       })
@@ -711,6 +714,7 @@ export const managerRouter = router({
             billingStatus: lead.billingStatus || null,
             cyclesCompleted: lead.cyclesCompleted,
             workStatus: "new",
+            managerNote: lead.customerNote ? stripHtml(lead.customerNote) : null,
           });
           inserted++;
         } catch (e) {
