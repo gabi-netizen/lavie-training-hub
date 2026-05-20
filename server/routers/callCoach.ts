@@ -233,7 +233,7 @@ export const callCoachRouter = router({
       .select({ id: users.id, name: users.name, email: users.email, role: users.role, team: users.team, active: users.active })
       .from(users)
       .orderBy(users.name);
-    const filtered = rows.filter(r => r.name && r.email && r.role !== "admin" && r.active);
+    const filtered = rows.filter(r => r.name && r.email && r.active && r.team);
     // Deduplicate by email — keep the first (lowest id) for each email
     const seen = new Set<string>();
     return filtered.filter(r => {

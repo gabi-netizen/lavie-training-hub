@@ -80,6 +80,7 @@ export default function Users() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
+  const [newUserTeam, setNewUserTeam] = useState<"opening" | "retention" | "">("opening");
   const [emailError, setEmailError] = useState("");
 
   const utils = trpc.useUtils();
@@ -132,6 +133,7 @@ export default function Users() {
     setNewUserName("");
     setNewUserEmail("");
     setNewUserRole("user");
+    setNewUserTeam("opening");
     setEmailError("");
   }
 
@@ -151,6 +153,7 @@ export default function Users() {
       name: newUserName.trim() || undefined,
       email: newUserEmail.trim(),
       role: newUserRole,
+      team: newUserTeam || undefined,
     });
   }
 
@@ -454,6 +457,19 @@ export default function Users() {
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-user-team">Team</Label>
+              <Select value={newUserTeam || "__none__"} onValueChange={(val) => setNewUserTeam(val === "__none__" ? "" : val as "opening" | "retention")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No team</SelectItem>
+                  <SelectItem value="opening">Opening</SelectItem>
+                  <SelectItem value="retention">Retention</SelectItem>
                 </SelectContent>
               </Select>
             </div>
