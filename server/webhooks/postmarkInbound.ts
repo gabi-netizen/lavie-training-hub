@@ -125,17 +125,61 @@ export async function handlePostmarkInbound(req: Request, res: Response) {
     const dateStr: string | undefined = payload?.Date;
 
     // ── Extract recipient (which address the email was sent TO) ──────────────
-    // Use OriginalRecipient first, fallback to ToFull[0].Email
+    //
+    // IMPORTANT: Google Admin routing rules forward emails to Postmark by
+    // rewriting the envelope recipient to the Postmark inbound hash address
+    // (e.g. 60279a08618aaae34810f19f8a3cebd4@inbound.postmarkapp.com).
+    // As a result, payload.OriginalRecipient contains the Postmark hash, NOT
+    // the original lavielabs.com address.
+    //
+    // The original recipient is preserved in the To / Cc header fields
+    // (payload.ToFull / payload.CcFull), so we scan those for a known
+    // lavielabs.com address instead.
+    //
+    // Priority order:
+    //   1. First lavielabs.com address found in ToFull
+    //   2. First lavielabs.com address found in CcFull
+    //   3. First address in ToFull (non-Postmark)
+    //   4. Parsed To string
+
     let recipient: string | null = null;
-    if (payload?.OriginalRecipient) {
-      recipient = String(payload.OriginalRecipient).toLowerCase().trim();
-    } else if (payload?.ToFull && Array.isArray(payload.ToFull) && payload.ToFull.length > 0) {
-      recipient = String(payload.ToFull[0].Email).toLowerCase().trim();
+
+    // Helper: extract all emails from a ToFull/CcFull array
+    const extractEmails = (arr: any[]): string[] =>
+      arr
+        .map((e: any) => String(e?.Email ?? "").toLowerCase().trim())
+        .filter(Boolean);
+
+    const toEmails: string[] = payload?.ToFull && Array.isArray(payload.ToFull)
+      ? extractEmails(payload.ToFull)
+      : [];
+    const ccEmails: string[] = payload?.CcFull && Array.isArray(payload.CcFull)
+      ? extractEmails(payload.CcFull)
+      : [];
+
+    // 1. Prefer a known lavielabs.com address from To
+    const lavieToEmail = toEmails.find((e) => e.endsWith("@lavielabs.com"));
+    // 2. Then from Cc
+    const lavieCcEmail = ccEmails.find((e) => e.endsWith("@lavielabs.com"));
+    // 3. First non-Postmark To address
+    const firstNonPostmarkTo = toEmails.find((e) => !e.includes("postmarkapp.com"));
+
+    if (lavieToEmail) {
+      recipient = lavieToEmail;
+    } else if (lavieCcEmail) {
+      recipient = lavieCcEmail;
+    } else if (firstNonPostmarkTo) {
+      recipient = firstNonPostmarkTo;
     } else if (payload?.To) {
-      // Fallback: parse the To field
+      // Last-resort: parse the raw To string
       const toMatch = String(payload.To).match(/<([^>]+)>/);
       recipient = toMatch ? toMatch[1].toLowerCase().trim() : String(payload.To).toLowerCase().trim();
     }
+
+    console.log(
+      `[Postmark Inbound] Resolved recipient=${recipient} ` +
+      `(OriginalRecipient was: ${payload?.OriginalRecipient ?? "(none)"})`
+    );
 
     if (!messageId || !fromEmail) {
       console.warn("[Postmark Inbound] Missing required fields (MessageID, FromFull.Email)");
