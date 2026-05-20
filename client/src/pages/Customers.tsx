@@ -632,7 +632,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 <SelectContent className="bg-white border-gray-200 max-h-64">
                   <SelectItem value="__all__" className="text-gray-700 text-sm">All agents</SelectItem>
                   <SelectItem value="unassigned" className="text-gray-800 text-sm">Unassigned</SelectItem>
-                  {agentList.map((a: any) => (
+                  {agentList.filter((a: any) => a.team === "opening").map((a: any) => (
                     <SelectItem key={a.id} value={a.email ?? `agent-${a.id}`} className="text-gray-800 text-sm">{a.name ?? `Agent #${a.id}`}</SelectItem>
                   ))}
                 </SelectContent>
@@ -730,7 +730,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 <SelectContent className="bg-white border-gray-200 max-h-64">
                   <SelectItem value="__all__" className="text-gray-700 text-sm">All agents</SelectItem>
                   <SelectItem value="unassigned" className="text-gray-800 text-sm">Unassigned</SelectItem>
-                  {agentList.map((a: any) => (
+                  {agentList.filter((a: any) => a.team === "retention").map((a: any) => (
                     <SelectItem key={a.id} value={a.email ?? `agent-${a.id}`} className="text-gray-800 text-sm">{a.name ?? `Agent #${a.id}`}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1115,7 +1115,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <SelectValue placeholder="Choose an agent…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {agentList.map((agent: any) => (
+                  {agentList.filter((agent: any) => agent.team === department).map((agent: any) => (
                     <SelectItem key={agent.id} value={String(agent.id)}>
                       <div className="flex flex-col">
                         <span className="font-medium">{agent.name}</span>
