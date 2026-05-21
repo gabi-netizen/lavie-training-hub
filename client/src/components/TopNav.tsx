@@ -40,12 +40,10 @@ const CALLS_ITEMS_ADMIN = [
 const AI_COACH_ITEMS_AGENT = [
   { tab: "upload", label: "Upload Call", icon: Upload },
   { tab: "my-calls", label: "Agent View", icon: Users },
-  { tab: "team", label: "Team", icon: Users },
 ];
 const AI_COACH_ITEMS_ADMIN = [
   { tab: "upload", label: "Upload Call", icon: Upload },
   { tab: "my-calls", label: "Agent View", icon: Users },
-  { tab: "team", label: "Team", icon: Users },
   { tab: "performance", label: "Performance", icon: TrendingUp },
   { tab: "manager", label: "Manager View", icon: BarChart3 },
   { tab: "ai-feedback", label: "What Winners Do", icon: Sparkles },
