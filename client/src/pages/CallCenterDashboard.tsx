@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   UserMinus,
   UserPlus,
-  Clock,
   Play,
   Pause,
   MoreVertical,
@@ -735,19 +734,23 @@ export default function CallCenterDashboard() {
             </div>
           </div>
 
-          {/* Card 4: Pending Analysis */}
+          {/* Card 4: Total Calls */}
           <div
-            onClick={() => applyCardFilter({ dateRange: "this_year", scoreMin: 0, scoreMax: 100 })}
-            className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start gap-3.5"
           >
             <div className="w-11 h-11 rounded-[10px] bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0">
-              <Clock size={22} />
+              <Phone size={22} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[28px] font-bold text-blue-600 leading-tight">{stats?.pendingCount ?? 0}</div>
-              <div className="text-[13px] text-gray-600 mt-0.5">Pending Analysis</div>
-              <div className="text-[11.5px] text-gray-600 mt-1.5">Calls still being processed by AI</div>
-              <div className="text-[11px] text-blue-500 font-semibold mt-2 hover:underline">Check status →</div>
+              <div className="text-[28px] font-bold text-blue-600 leading-tight">
+                {callsLoading ? (
+                  <span className="inline-block w-8 h-7 bg-blue-200 rounded animate-pulse" />
+                ) : (
+                  (callsData?.totalCount ?? 0).toLocaleString()
+                )}
+              </div>
+              <div className="text-[13px] text-gray-600 mt-0.5">Total Calls</div>
+              <div className="text-[11.5px] text-gray-600 mt-1.5">Matching current filters</div>
             </div>
           </div>
         </div>
