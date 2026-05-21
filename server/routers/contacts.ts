@@ -724,7 +724,8 @@ export const contactsRouter = router({
     .mutation(async ({ input }) => {
       const { contactId, name, email } = input;
 
-      const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "f8d7dddf-68c1-4621-8881-13923bb57b7f";
+      const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || process.env.POSTMARK_API_KEY;
+      if (!POSTMARK_TOKEN) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK token not configured" });
       const PAYMENT_LINK = "https://buy.stripe.com/cNi3cvgcR4879BDgSSb3q0r";
       const TEMPLATE_ID = 45041782;
 
