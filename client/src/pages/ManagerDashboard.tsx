@@ -41,17 +41,24 @@ function stripHtml(text: string | null | undefined): string {
   let clean = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
   // Remove HTML tags
   clean = clean.replace(/<[^>]*>/g, " ");
+  // Remove CSS selector blocks: div.zm_XXXX, #x_XXXXMessageViewBody, a[x-apple-data-detectors], etc.
+  clean = clean.replace(/div\.zm_[\w_.-]+/g, "");
+  clean = clean.replace(/#x_\w+/g, "");
+  clean = clean.replace(/a\[x-apple-data-detectors\]/g, "");
+  clean = clean.replace(/\[x-apple-data-detectors\]/g, "");
   // Remove [data-...] attribute selectors
   clean = clean.replace(/\[data-[^\]]*\]/g, "");
   // Remove .x_NNNNReadMsgBody, .x_NNNNExternalClass, #x_NNNNoutlook patterns
   clean = clean.replace(/[.#]x_[\w]+/g, "");
-  // Remove ReadMsgBody, ExternalClass standalone
+  // Remove ReadMsgBody, ExternalClass, MessageViewBody standalone
   clean = clean.replace(/ReadMsgBody/g, "");
   clean = clean.replace(/ExternalClass/g, "");
+  clean = clean.replace(/MessageViewBody/g, "");
   // Remove CSS blocks { ... }
   clean = clean.replace(/\{[^}]*\}/g, "");
-  // Remove div.zm_..., css-skikae, apple-link patterns
-  clean = clean.replace(/div\.[\w_.-]+/g, "");
+  // Remove div.XXX, table, td, th, img, sup, p as CSS selectors (standalone words followed by comma or space)
+  clean = clean.replace(/\b(div|table|td|th|img|sup|span|font)\s*[,]/g, "");
+  // Remove css-skikae, apple-link patterns
   clean = clean.replace(/css-[\w]+/g, "");
   clean = clean.replace(/apple-link/g, "");
   // Remove remaining CSS selectors (a, img, p, span, font, td, etc.)
@@ -60,6 +67,10 @@ function stripHtml(text: string | null | undefined): string {
   clean = clean.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#?\w+;/g, " ");
   // Remove orphaned CSS-like tokens (color:, font-size:, etc.)
   clean = clean.replace(/[\w-]+\s*:\s*[^;,]+[;,]/g, "");
+  // Remove soft hyphens and zero-width spaces
+  clean = clean.replace(/[\u00AD\u200B\u200C\u200D\uFEFF]/g, "");
+  // Remove sequences of ͏­ (invisible Unicode chars)
+  clean = clean.replace(/[\u034F\u00AD]+/g, "");
   // Collapse multiple spaces/newlines and trim
   clean = clean.replace(/[,;]+\s*/g, " ");
   clean = clean.replace(/\s+/g, " ").trim();
@@ -1407,11 +1418,8 @@ export default function ManagerDashboard() {
                                       <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5 group-open:rotate-180 transition-transform" />
                                     </div>
                                   </summary>
-                                  <div className="mt-2 p-3 bg-white border border-gray-200 rounded-lg max-h-[400px] overflow-y-auto w-[350px] shadow-lg">
-                                    <div
-                                      className="text-sm text-gray-800 prose prose-sm max-w-none"
-                                      dangerouslySetInnerHTML={{ __html: lead.managerNote }}
-                                    />
+                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[280px]">
+                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
                                   </div>
                                 </details>
                               );
