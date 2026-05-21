@@ -640,7 +640,7 @@ export const dashboardRouter = router({
           avgScore: Number(a.avgScore),
           callCount: Number(a.callCount),
         }))
-        .sort((a, b) => b.avgScore - a.avgScore || b.callCount - a.callCount);
+        .sort((a, b) => b.callCount - a.callCount || b.avgScore - a.avgScore);
     }),
 
   /**

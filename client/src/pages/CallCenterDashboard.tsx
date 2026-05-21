@@ -709,7 +709,7 @@ export default function CallCenterDashboard() {
             {!topPerformers || topPerformers.length === 0 ? (
               <div className="text-[12.5px] text-gray-400 italic pl-1">No agents with 75+ score calls in this period.</div>
             ) : (
-              <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
                 {topPerformers.map((agent) => (
                   <div
                     key={agent.userId}
@@ -724,7 +724,7 @@ export default function CallCenterDashboard() {
                     </div>
                     <span className="text-[13px] font-semibold text-gray-800 flex-1 truncate">{agent.name}</span>
                     <span className="text-[12px] font-bold text-green-700 tabular-nums">{agent.avgScore} avg</span>
-                    <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
+                    <span className="text-[12px] font-semibold text-gray-700 tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
                   </div>
                 ))}
               </div>
