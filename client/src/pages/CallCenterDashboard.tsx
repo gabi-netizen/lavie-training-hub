@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   AlertTriangle,
-  UserMinus,
   UserPlus,
   Play,
   Pause,
@@ -386,6 +385,16 @@ export default function CallCenterDashboard() {
 
   const { data: stats } = trpc.dashboard.getDashboardStats.useQuery({ tab: activeTab });
 
+  const { data: topPerformers } = trpc.dashboard.getTopPerformers.useQuery({
+    tab: activeTab,
+    agentId: filters.agentId,
+    team: filters.team,
+    dateRange: filters.dateRange,
+    callType: filters.callType !== "all" ? filters.callType : undefined,
+    customFrom: filters.dateRange === "custom" ? filters.customFrom : undefined,
+    customTo: filters.dateRange === "custom" ? filters.customTo : undefined,
+  });
+
   const totalPages = callsData ? Math.ceil(callsData.totalCount / PAGE_SIZE) : 0;
 
   // ─── Sync Calls mutation ──────────────────────────────────────────────────
@@ -668,70 +677,40 @@ export default function CallCenterDashboard() {
             </div>
           </div>
 
-          {/* Card 2: Weakest Agent Today */}
-          <div
-            onClick={() => {
-              if (stats?.weakestAgent?.userId) {
-                applyCardFilter({ agentId: stats.weakestAgent.userId, dateRange: "today" });
-              }
-            }}
-            className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <div className="w-11 h-11 rounded-[10px] bg-amber-100 text-amber-500 flex items-center justify-center flex-shrink-0">
-              <UserMinus size={22} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[28px] font-bold text-amber-600 leading-tight">
-                {stats?.weakestAgent?.avgScore ?? "—"}
-                {stats?.weakestAgent && <span className="text-sm font-medium text-amber-700 ml-1">avg</span>}
+          {/* Card 2+3 replacement: Top Performers (spans 2 columns) */}
+          <div className="xl:col-span-2 bg-green-50 border border-green-200 rounded-xl p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-[10px] bg-green-100 text-green-500 flex items-center justify-center flex-shrink-0">
+                <UserPlus size={22} />
               </div>
-              <div className="text-[13px] text-gray-600 mt-0.5">Weakest Agent Today</div>
-              {stats?.weakestAgent && (
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                    style={{ background: getAvatarColor(stats.weakestAgent.name) }}
-                  >
-                    {getInitials(stats.weakestAgent.name)}
-                  </div>
-                  <span className="text-[13px] font-semibold text-amber-800">{stats.weakestAgent.name}</span>
-                </div>
-              )}
-              <div className="text-[11px] text-blue-500 font-semibold mt-2 hover:underline">Review coaching plan →</div>
-            </div>
-          </div>
-
-          {/* Card 3: Strongest Agent Today */}
-          <div
-            onClick={() => {
-              if (stats?.strongestAgent?.userId) {
-                applyCardFilter({ agentId: stats.strongestAgent.userId, dateRange: "today" });
-              }
-            }}
-            className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <div className="w-11 h-11 rounded-[10px] bg-green-100 text-green-500 flex items-center justify-center flex-shrink-0">
-              <UserPlus size={22} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[28px] font-bold text-green-600 leading-tight">
-                {stats?.strongestAgent?.avgScore ?? "—"}
-                {stats?.strongestAgent && <span className="text-sm font-medium text-green-700 ml-1">avg</span>}
+              <div>
+                <div className="text-[15px] font-bold text-green-800 leading-tight">Top Performers</div>
+                <div className="text-[11.5px] text-gray-500 mt-0.5">Agents with calls scoring 75+ · current filters</div>
               </div>
-              <div className="text-[13px] text-gray-600 mt-0.5">Strongest Agent Today</div>
-              {stats?.strongestAgent && (
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                    style={{ background: getAvatarColor(stats.strongestAgent.name) }}
-                  >
-                    {getInitials(stats.strongestAgent.name)}
-                  </div>
-                  <span className="text-[13px] font-semibold text-green-800">{stats.strongestAgent.name}</span>
-                </div>
-              )}
-              <div className="text-[11px] text-blue-500 font-semibold mt-2 hover:underline">View performance →</div>
             </div>
+            {!topPerformers || topPerformers.length === 0 ? (
+              <div className="text-[12.5px] text-gray-400 italic pl-1">No agents with 75+ score calls in this period.</div>
+            ) : (
+              <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-1">
+                {topPerformers.map((agent) => (
+                  <div
+                    key={agent.userId}
+                    onClick={() => applyCardFilter({ agentId: agent.userId, dateRange: filters.dateRange, customFrom: filters.customFrom, customTo: filters.customTo })}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/70 hover:bg-white border border-green-100 hover:border-green-300 cursor-pointer transition-colors"
+                  >
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                      style={{ background: getAvatarColor(agent.name) }}
+                    >
+                      {getInitials(agent.name)}
+                    </div>
+                    <span className="text-[13px] font-semibold text-gray-800 flex-1 truncate">{agent.name}</span>
+                    <span className="text-[12px] font-bold text-green-700 tabular-nums">{agent.avgScore} avg</span>
+                    <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Card 4: Total Calls */}

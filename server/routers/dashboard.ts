@@ -539,6 +539,111 @@ export const dashboardRouter = router({
     }),
 
   /**
+   * getTopPerformers — returns agents with calls scoring 75+ respecting current filters.
+   */
+  getTopPerformers: protectedProcedure
+    .input(
+      z.object({
+        tab: z.enum(["opening", "retention", "all"]).default("all"),
+        agentId: z.number().optional(),
+        team: z.enum(["opening", "retention"]).optional(),
+        dateRange: z.string().optional(),
+        customFrom: z.string().optional(),
+        customTo: z.string().optional(),
+        callType: z.string().optional(),
+      }).optional()
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const tab = input?.tab ?? "all";
+      const dateRange = input?.dateRange ?? "today";
+      const customFrom = input?.customFrom;
+      const customTo = input?.customTo;
+
+      // Build conditions
+      const conditions: any[] = [];
+
+      // Tab filter
+      if (tab === "opening") {
+        conditions.push(inArray(callAnalyses.callType, OPENING_CALL_TYPES as any));
+      } else if (tab === "retention") {
+        conditions.push(inArray(callAnalyses.callType, RETENTION_CALL_TYPES as any));
+      }
+
+      // Agent filter
+      if (input?.agentId) {
+        conditions.push(eq(callAnalyses.userId, input.agentId));
+      }
+
+      // Team filter
+      if (input?.team) {
+        const teamUsers = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.team, input.team));
+        const teamUserIds = teamUsers.map((u) => u.id);
+        if (teamUserIds.length > 0) {
+          conditions.push(inArray(callAnalyses.userId, teamUserIds));
+        } else {
+          return [];
+        }
+      }
+
+      // Call type filter
+      if (input?.callType && input.callType !== "all") {
+        if (input.callType === "retention") {
+          conditions.push(inArray(callAnalyses.callType, RETENTION_CALL_TYPES as any));
+        } else {
+          conditions.push(eq(callAnalyses.callType, input.callType as any));
+        }
+      }
+
+      // Date range
+      const { from, to } = getDateRange(dateRange, customFrom, customTo);
+      conditions.push(gte(callAnalyses.createdAt, from));
+      conditions.push(lte(callAnalyses.createdAt, to));
+
+      // Only done calls with score >= 75
+      conditions.push(eq(callAnalyses.status, "done"));
+      conditions.push(gte(callAnalyses.overallScore, 75));
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Aggregate by agent
+      const agentStats = await db
+        .select({
+          userId: callAnalyses.userId,
+          avgScore: sql<number>`ROUND(AVG(${callAnalyses.overallScore}))`,
+          callCount: sql<number>`count(*)`,
+        })
+        .from(callAnalyses)
+        .where(whereClause)
+        .groupBy(callAnalyses.userId);
+
+      if (agentStats.length === 0) return [];
+
+      // Fetch names
+      const agentUserIds = agentStats.map((a) => a.userId).filter((id): id is number => id !== null);
+      const agentUsers = await db
+        .select({ id: users.id, name: users.name })
+        .from(users)
+        .where(inArray(users.id, agentUserIds));
+      const userNameMap = new Map(agentUsers.map((u) => [u.id, u.name ?? "Unknown"]));
+
+      return agentStats
+        .filter((a) => a.userId !== null)
+        .map((a) => ({
+          userId: a.userId as number,
+          name: userNameMap.get(a.userId as number) ?? "Unknown",
+          avgScore: Number(a.avgScore),
+          callCount: Number(a.callCount),
+        }))
+        .sort((a, b) => b.avgScore - a.avgScore || b.callCount - a.callCount);
+    }),
+
+  /**
    * getAgentsList — returns list of agents for the dropdown filter.
    */
   getAgentsList: protectedProcedure.query(async () => {
