@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   UserPlus,
+  ArrowLeft,
   Play,
   Pause,
   MoreVertical,
@@ -496,18 +497,35 @@ export default function CallCenterDashboard() {
           {/* Agent */}
           <div className="flex flex-col items-center gap-1.5">
             <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Agent</label>
-            <select
-              value={draft.agentId ?? ""}
-              onChange={(e) => setDraft((d) => ({ ...d, agentId: e.target.value ? Number(e.target.value) : undefined }))}
-              className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[150px] transition-colors"
-            >
-              <option value="">All Agents</option>
-              {agentsList?.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={draft.agentId ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, agentId: e.target.value ? Number(e.target.value) : undefined }))}
+                className="h-[38px] px-3 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-w-[150px] transition-colors"
+              >
+                <option value="">All Agents</option>
+                {agentsList?.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+              {draft.agentId && (
+                <button
+                  onClick={() => {
+                    setDraft((d) => ({ ...d, agentId: undefined }));
+                    setFilters((f) => ({ ...f, agentId: undefined }));
+                    setPage(1);
+                    syncFiltersToUrl({ ...filters, agentId: undefined });
+                  }}
+                  title="Back to All Agents"
+                  className="flex items-center gap-1 h-[38px] px-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 text-xs font-semibold hover:bg-blue-100 hover:border-blue-400 transition-colors whitespace-nowrap"
+                >
+                  <ArrowLeft size={13} strokeWidth={2.5} />
+                  All Agents
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Team */}
