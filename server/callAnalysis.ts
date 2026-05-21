@@ -35,8 +35,9 @@ A sale is CLOSED and "closingAttempted" = true AND the call counts as a successf
 1. The rep takes card details directly on the call (standard method)
 2. The rep sends a payment form/link to the customer AND the customer confirms they have filled it in / will fill it in
 3. The customer mentions they already filled in the form/link before or during the call
-Do NOT penalise a rep for using the form/link method — it is an equally valid and approved payment route.
-If the transcript contains phrases like "I'll send you a link", "fill in the form", "I've filled it in", "sent you the form", "payment link" — treat this as a closing attempt. If the customer confirms completion, treat it as a successful close.
+4. The customer pays via Google Pay or Apple Pay (treat as equivalent to card payment)
+Do NOT penalise a rep for using the form/link method or Google Pay/Apple Pay — these are equally valid and approved payment routes.
+If the transcript contains phrases like "I'll send you a link", "fill in the form", "I've filled it in", "sent you the form", "payment link", "paid with Apple Pay", "used Google Pay", "payment went through", "it's done", "I've paid", "done, paid through Google Pay", "I used my Apple Pay", "it went through", "paying with Apple Pay", "paying with Google Pay" — treat this as a closing attempt. If the customer confirms completion or payment, treat it as a successful close.
 `;
 
 // ─── TRANSCRIBE WITH DEEPGRAM ─────────────────────────────────────────────────
