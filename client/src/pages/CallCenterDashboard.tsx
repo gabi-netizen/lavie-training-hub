@@ -713,7 +713,7 @@ export default function CallCenterDashboard() {
                 {topPerformers.map((agent, idx) => (
                   <div
                     key={agent.userId}
-                    onClick={() => applyCardFilter({ agentId: agent.userId, dateRange: filters.dateRange, customFrom: filters.customFrom, customTo: filters.customTo })}
+                    onClick={() => applyCardFilter({ agentId: agent.userId, scoreMin: 75, dateRange: filters.dateRange, customFrom: filters.customFrom, customTo: filters.customTo })}
                     className="flex items-center gap-2.5 px-3 py-3 rounded-lg bg-white/70 hover:bg-white border border-green-100 hover:border-green-300 cursor-pointer transition-colors shadow-sm"
                   >
                     <span className="text-[13px] font-bold text-green-800 w-6 flex-shrink-0">#{idx + 1}</span>
