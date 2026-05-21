@@ -696,36 +696,36 @@ export default function CallCenterDashboard() {
           </div>
 
           {/* Card 2+3 replacement: Top Performers (spans 2 columns) */}
-          <div className="xl:col-span-2 bg-green-50 border border-green-200 rounded-xl p-5 flex flex-col gap-3">
+          <div className="xl:col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-3 shadow-xl">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-[10px] bg-green-100 text-green-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 rounded-[10px] bg-gray-800 text-green-400 flex items-center justify-center flex-shrink-0 border border-gray-700">
                 <UserPlus size={22} />
               </div>
               <div>
-                <div className="text-[15px] font-bold text-green-800 leading-tight">Top Performers</div>
-                <div className="text-[11.5px] text-gray-500 mt-0.5">Agents with calls scoring 75+ · current filters</div>
+                <div className="text-[15px] font-bold text-white leading-tight">Top Performers</div>
+                <div className="text-[11.5px] text-gray-400 mt-0.5">Agents with calls scoring 75+ · current filters</div>
               </div>
             </div>
             {!topPerformers || topPerformers.length === 0 ? (
-              <div className="text-[12.5px] text-gray-400 italic pl-1">No agents with 75+ score calls in this period.</div>
+              <div className="text-[12.5px] text-gray-500 italic pl-1">No agents with 75+ score calls in this period.</div>
             ) : (
-              <div className="flex flex-col gap-4 max-h-[280px] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-4 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
                 {topPerformers.map((agent, idx) => (
                   <div
                     key={agent.userId}
                     onClick={() => applyCardFilter({ agentId: agent.userId, scoreMin: 75, dateRange: filters.dateRange, customFrom: filters.customFrom, customTo: filters.customTo })}
-                    className="flex items-center gap-2.5 px-3 py-3 rounded-lg bg-white/70 hover:bg-white border border-green-100 hover:border-green-300 cursor-pointer transition-colors shadow-sm"
+                    className="flex items-center gap-2.5 px-3 py-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 cursor-pointer transition-all shadow-sm group"
                   >
-                    <span className="text-[13px] font-bold text-green-800 w-6 flex-shrink-0">#{idx + 1}</span>
+                    <span className="text-[13px] font-bold text-green-400 w-6 flex-shrink-0">#{idx + 1}</span>
                     <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ring-1 ring-gray-700"
                       style={{ background: getAvatarColor(agent.name) }}
                     >
                       {getInitials(agent.name)}
                     </div>
-                    <span className="text-[16px] font-bold text-gray-900 flex-1 truncate">{agent.name}</span>
-                    <span className="text-[12px] font-bold text-green-600/70 tabular-nums mr-1">{agent.avgScore} avg</span>
-                    <span className="text-[16px] font-bold text-green-700 tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
+                    <span className="text-[16px] font-bold text-gray-100 flex-1 truncate group-hover:text-white">{agent.name}</span>
+                    <span className="text-[12px] font-bold text-gray-400 tabular-nums mr-1">{agent.avgScore} avg</span>
+                    <span className="text-[16px] font-bold text-green-400 tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
                   </div>
                 ))}
               </div>
