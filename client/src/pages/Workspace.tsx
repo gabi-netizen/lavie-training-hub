@@ -3170,11 +3170,15 @@ export default function Workspace() {
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📞 Making a Call</h3>
                 <ol style={{ paddingLeft: 20, margin: 0 }}>
-                  <li>Click the green <strong>"Call Now"</strong> button</li>
+                  <li>Click the <strong>"Call"</strong> button</li>
                   <li>Your CloudTalk phone will ring — pick up!</li>
                   <li>Once you answer, the system connects you to the customer</li>
                   <li>Follow the script stages on the right panel</li>
                 </ol>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>⏭️ Next Button</h3>
+                <p>Click <strong>"Next"</strong> to move to the next contact in your list. If a call is currently ringing, it will automatically end the call and move you forward.</p>
               </div>
 
               <div>
