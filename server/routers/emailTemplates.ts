@@ -4,40 +4,41 @@ import { getDb } from "../db";
 import { emailTemplates, emailLogs, contacts } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { sendViaGmail } from "../gmailTransport";
 
-// Postmark send helper
-async function sendViaPostmark(opts: {
-  from: string;
-  to: string;
-  subject: string;
-  htmlBody: string;
-  replyTo?: string;
-}) {
-  const apiKey = process.env.POSTMARK_API_KEY;
-  if (!apiKey) throw new Error("POSTMARK_API_KEY not configured");
-
-  const res = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": apiKey,
-    },
-    body: JSON.stringify({
-      From: opts.from,
-      To: opts.to,
-      Subject: opts.subject,
-      HtmlBody: opts.htmlBody,
-      ReplyTo: opts.replyTo ?? opts.from,
-      MessageStream: "outbound",
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Postmark error: ${res.status} ${err}`);
-  }
-  return res.json() as Promise<{ MessageID: string }>;
-}
+// ─── DEPRECATED: Postmark send helper (kept for reference) ───────────────────
+// async function sendViaPostmark(opts: {
+//   from: string;
+//   to: string;
+//   subject: string;
+//   htmlBody: string;
+//   replyTo?: string;
+// }) {
+//   const apiKey = process.env.POSTMARK_API_KEY;
+//   if (!apiKey) throw new Error("POSTMARK_API_KEY not configured");
+//
+//   const res = await fetch("https://api.postmarkapp.com/email", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//       "X-Postmark-Server-Token": apiKey,
+//     },
+//     body: JSON.stringify({
+//       From: opts.from,
+//       To: opts.to,
+//       Subject: opts.subject,
+//       HtmlBody: opts.htmlBody,
+//       ReplyTo: opts.replyTo ?? opts.from,
+//       MessageStream: "outbound",
+//     }),
+//   });
+//
+//   if (!res.ok) {
+//     const err = await res.text();
+//     throw new Error(`Postmark error: ${res.status} ${err}`);
+//   }
+//   return res.json() as Promise<{ MessageID: string }>;
+// }
 
 /** Wrap email body in a professional HTML layout with optional header image + footer */
 function wrapEmailHtml(opts: {
@@ -294,11 +295,11 @@ export const emailTemplatesRouter = router({
             contactName: contact.name || firstName,
           });
 
-      // Send via Postmark
+      // Send via Gmail SMTP (replaced Postmark 2024-05)
       const fromAddress = `${agentName} <trial@lavielabs.com>`;
       let postmarkMessageId: string | null = null;
       try {
-        const result = await sendViaPostmark({
+        const result = await sendViaGmail({
           from: fromAddress,
           to: contact.email,
           subject: resolvedSubject,

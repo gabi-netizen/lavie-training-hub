@@ -1,5 +1,5 @@
 /**
- * Postmark Email Helper
+ * Gmail SMTP Email Helper (migrated from Postmark 2024-05)
  * Handles all transactional emails for Lavie Labs:
  * - Payment confirmations
  * - Callback reminders (to agents)
@@ -7,9 +7,12 @@
  * - New contact assigned notifications
  */
 
-import { ENV } from "./_core/env";
+import { sendViaGmail } from "./gmailTransport";
 
-const POSTMARK_API_URL = "https://api.postmarkapp.com/email";
+// ─── DEPRECATED: Postmark constants (kept for reference) ───
+// import { ENV } from "./_core/env";
+// const POSTMARK_API_URL = "https://api.postmarkapp.com/email";
+
 const FROM_EMAIL = "trial@lavielabs.com";
 const FROM_NAME = "Lavie Labs";
 
@@ -23,44 +26,59 @@ interface SendEmailOptions {
 }
 
 async function sendEmail(options: SendEmailOptions): Promise<boolean> {
-  const apiKey = ENV.postmarkApiKey;
-  if (!apiKey) {
-    console.error("[Email] POSTMARK_API_KEY not set");
-    return false;
-  }
-
   try {
-    const response = await fetch(POSTMARK_API_URL, {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "X-Postmark-Server-Token": apiKey,
-      },
-      body: JSON.stringify({
-        From: `${FROM_NAME} <${FROM_EMAIL}>`,
-        To: options.to,
-        Subject: options.subject,
-        HtmlBody: options.htmlBody,
-        TextBody: options.textBody ?? options.subject,
-        ReplyTo: options.replyTo,
-        Tag: options.tag ?? "transactional",
-        MessageStream: "outbound",
-      }),
+    await sendViaGmail({
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      to: options.to,
+      subject: options.subject,
+      htmlBody: options.htmlBody,
+      textBody: options.textBody,
+      replyTo: options.replyTo,
     });
-
-    if (!response.ok) {
-      const error = await response.json() as { Message: string };
-      console.error("[Email] Postmark error:", error.Message);
-      return false;
-    }
-
     return true;
   } catch (err) {
     console.error("[Email] Failed to send:", err);
     return false;
   }
 }
+
+// ─── DEPRECATED: Original Postmark sendEmail (kept for reference) ───
+// async function sendEmail(options: SendEmailOptions): Promise<boolean> {
+//   const apiKey = ENV.postmarkApiKey;
+//   if (!apiKey) {
+//     console.error("[Email] POSTMARK_API_KEY not set");
+//     return false;
+//   }
+//   try {
+//     const response = await fetch(POSTMARK_API_URL, {
+//       method: "POST",
+//       headers: {
+//         "Accept": "application/json",
+//         "Content-Type": "application/json",
+//         "X-Postmark-Server-Token": apiKey,
+//       },
+//       body: JSON.stringify({
+//         From: `${FROM_NAME} <${FROM_EMAIL}>`,
+//         To: options.to,
+//         Subject: options.subject,
+//         HtmlBody: options.htmlBody,
+//         TextBody: options.textBody ?? options.subject,
+//         ReplyTo: options.replyTo,
+//         Tag: options.tag ?? "transactional",
+//         MessageStream: "outbound",
+//       }),
+//     });
+//     if (!response.ok) {
+//       const error = await response.json() as { Message: string };
+//       console.error("[Email] Postmark error:", error.Message);
+//       return false;
+//     }
+//     return true;
+//   } catch (err) {
+//     console.error("[Email] Failed to send:", err);
+//     return false;
+//   }
+// }
 
 // ─── Email Templates ──────────────────────────────────────────────────────────
 
@@ -255,8 +273,8 @@ export async function sendImportSummary(options: {
 
 /**
  * Send an email from an agent to a customer contact.
- * The From address is trial+[agentSlug]@lavielabs.com so replies
- * route back through trial@lavielabs.com → Zoho Desk.
+ * The From address is trial@lavielabs.com so replies
+ * route back through trial@lavielabs.com.
  */
 export async function sendEmailToContact(options: {
   agentName: string;
@@ -267,12 +285,6 @@ export async function sendEmailToContact(options: {
   body: string;
   replyTo?: string;
 }): Promise<boolean> {
-  const apiKey = ENV.postmarkApiKey;
-  if (!apiKey) {
-    console.error("[Email] POSTMARK_API_KEY not set");
-    return false;
-  }
-
   const fromAddress = `${options.agentName} at Lavie Labs <trial@lavielabs.com>`;
   const replyToAddress = options.replyTo ?? "trial@lavielabs.com";
 
@@ -313,36 +325,29 @@ export async function sendEmailToContact(options: {
 </html>`;
 
   try {
-    const response = await fetch(POSTMARK_API_URL, {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "X-Postmark-Server-Token": apiKey,
-      },
-      body: JSON.stringify({
-        From: fromAddress,
-        To: options.contactEmail,
-        Subject: options.subject,
-        HtmlBody: htmlBody,
-        TextBody: `Hi ${options.contactName},\n\n${options.body}\n\n-- ${options.agentName}, Lavie Labs`,
-        ReplyTo: replyToAddress,
-        Tag: "agent-to-contact",
-        MessageStream: "outbound",
-      }),
+    await sendViaGmail({
+      from: fromAddress,
+      to: options.contactEmail,
+      subject: options.subject,
+      htmlBody,
+      textBody: `Hi ${options.contactName},\n\n${options.body}\n\n-- ${options.agentName}, Lavie Labs`,
+      replyTo: replyToAddress,
     });
-
-    if (!response.ok) {
-      const error = await response.json() as { Message: string };
-      console.error("[Email] Postmark error (agent email):", error.Message);
-      return false;
-    }
     return true;
   } catch (err) {
     console.error("[Email] Failed to send agent email:", err);
     return false;
   }
 }
+
+// ─── DEPRECATED: Original Postmark sendEmailToContact (kept for reference) ───
+// export async function sendEmailToContact(options: { ... }): Promise<boolean> {
+//   const apiKey = ENV.postmarkApiKey;
+//   if (!apiKey) { console.error("[Email] POSTMARK_API_KEY not set"); return false; }
+//   const fromAddress = `${options.agentName} at Lavie Labs <trial@lavielabs.com>`;
+//   const response = await fetch(POSTMARK_API_URL, { ... });
+//   ...
+// }
 
 /**
  * General notification to admin (e.g. deal closed, important event)

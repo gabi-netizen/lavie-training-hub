@@ -26,6 +26,7 @@ import {
   type TicketStatus,
   type CustomerStatus,
 } from "../emailCategorization";
+import { sendViaGmail } from "../gmailTransport";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -494,39 +495,16 @@ export const ticketsRouter = router({
         customerName: ticket.fromName || toEmail,
       });
 
-      // Send via Postmark
-      const apiKey = process.env.POSTMARK_API_KEY;
-      if (!apiKey) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK_API_KEY not configured" });
-      }
-
+      // Send via Gmail SMTP (replaced Postmark 2024-05)
       try {
-        const response = await fetch("https://api.postmarkapp.com/email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Postmark-Server-Token": apiKey,
-          },
-          body: JSON.stringify({
-            From: fromAddress,
-            To: toEmail,
-            Subject: subject,
-            HtmlBody: htmlBody,
-            TextBody: `Hi ${(ticket.fromName || "").split(" ")[0] || "there"},\n\n${input.replyText}\n\nWarm regards,\n${agentName}\nLavie Labs`,
-            ReplyTo: replyToAddress,
-            Tag: "support-ticket-reply",
-            MessageStream: "outbound",
-          }),
+        await sendViaGmail({
+          from: fromAddress,
+          to: toEmail,
+          subject,
+          htmlBody,
+          textBody: `Hi ${(ticket.fromName || "").split(" ")[0] || "there"},\n\n${input.replyText}\n\nWarm regards,\n${agentName}\nLavie Labs`,
+          replyTo: replyToAddress,
         });
-
-        if (!response.ok) {
-          const errBody = await response.text();
-          console.error("[Tickets] Postmark error:", response.status, errBody);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to send email: ${response.status}`,
-          });
-        }
       } catch (err) {
         if (err instanceof TRPCError) throw err;
         console.error("[Tickets] Email send failed:", err);
@@ -535,6 +513,15 @@ export const ticketsRouter = router({
           message: `Failed to send email: ${(err as Error).message}`,
         });
       }
+
+      // ─── DEPRECATED: Postmark version (kept for reference) ───
+      // const apiKey = process.env.POSTMARK_API_KEY;
+      // if (!apiKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK_API_KEY not configured" });
+      // const response = await fetch("https://api.postmarkapp.com/email", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json", "X-Postmark-Server-Token": apiKey },
+      //   body: JSON.stringify({ From: fromAddress, To: toEmail, Subject: subject, HtmlBody: htmlBody, ... }),
+      // });
 
       // Save the reply
       await db.insert(supportTicketReplies).values({

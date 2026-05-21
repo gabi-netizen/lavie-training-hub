@@ -32,6 +32,7 @@ import {
   sendAdminAlert,
   sendEmailToContact,
 } from "../email";
+import { sendViaGmail } from "../gmailTransport";
 import {
   syncContactToAC,
   updateContactStatus as updateACStatus,
@@ -712,7 +713,7 @@ export const contactsRouter = router({
       return { success: true };
     }),
 
-  // ─── Send Payment Email via Postmark ─────────────────────────────────────
+  // ─── Send Payment Email via Gmail SMTP (replaced Postmark 2024-05) ─────────
   sendPaymentEmail: protectedProcedure
     .input(
       z.object({
@@ -724,32 +725,55 @@ export const contactsRouter = router({
     .mutation(async ({ input }) => {
       const { contactId, name, email } = input;
 
-      const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || process.env.POSTMARK_API_KEY;
-      if (!POSTMARK_TOKEN) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK token not configured" });
       const PAYMENT_LINK = "https://buy.stripe.com/cNi3cvgcR4879BDgSSb3q0r";
-      const TEMPLATE_ID = 45041782;
 
-      const res = await fetch("https://api.postmarkapp.com/email/withTemplate", {
-        method: "POST",
-        headers: {
-          "X-Postmark-Server-Token": POSTMARK_TOKEN,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          From: "trial@lavielabs.com",
-          To: email,
-          TemplateId: TEMPLATE_ID,
-          TemplateModel: {
-            name: name,
-            payment_link: PAYMENT_LINK,
-          },
-        }),
-      });
+      // Build HTML email body (replaces Postmark template)
+      const htmlBody = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="padding:32px 32px 24px;">
+              <h2 style="margin:0 0 16px;color:#333;">Your Secure Payment Link</h2>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333;">Hi ${name},</p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#333;">Please use the secure link below to complete your payment:</p>
+              <p style="text-align:center;margin:0 0 24px;">
+                <a href="${PAYMENT_LINK}" style="display:inline-block;padding:14px 32px;font-size:15px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;background-color:#0F1923;">Complete Payment</a>
+              </p>
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#555;">If you have any questions, please don't hesitate to reply to this email or contact us at <a href="mailto:support@lavielabs.com" style="color:#2b5cab;">support@lavielabs.com</a>.</p>
+              <p style="margin:0;font-size:15px;color:#333;">Warm regards,<br/><strong>Lavie Labs</strong></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
-      if (!res.ok) {
-        const err = await res.text();
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to send email: " + err });
+      try {
+        await sendViaGmail({
+          from: "Lavie Labs <trial@lavielabs.com>",
+          to: email,
+          subject: "Your Secure Payment Link from Lavi\u00E9 Labs",
+          htmlBody,
+        });
+      } catch (err) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to send email: " + (err as Error).message });
       }
+
+      // ─── DEPRECATED Postmark version (kept for reference) ───
+      // const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || process.env.POSTMARK_API_KEY;
+      // if (!POSTMARK_TOKEN) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK token not configured" });
+      // const TEMPLATE_ID = 45041782;
+      // const res = await fetch("https://api.postmarkapp.com/email/withTemplate", { ... });
 
       return { success: true };
     }),
