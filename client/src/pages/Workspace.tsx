@@ -2551,9 +2551,12 @@ export default function Workspace() {
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
     } else if (action === "sold" || action === "no" || action === "skip" || action === "done") {
-      // If skip is pressed while a call is ringing/active, hang up first
-      if (action === "skip") {
-        sendToCloudTalk("hangup");
+      // If skip/next is pressed while a call is ringing/active, hang up silently
+      if (action === "skip" && callActive) {
+        const iframe = document.querySelector<HTMLIFrameElement>('iframe[src*="phone.cloudtalk.io"]');
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(JSON.stringify({ event: "hangup", properties: {} }), "https://phone.cloudtalk.io");
+        }
       }
       const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : action === "done" ? "Done" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
