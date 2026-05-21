@@ -709,12 +709,12 @@ export default function CallCenterDashboard() {
             {!topPerformers || topPerformers.length === 0 ? (
               <div className="text-[12.5px] text-gray-400 italic pl-1">No agents with 75+ score calls in this period.</div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-4 max-h-[220px] overflow-y-auto pr-1">
                 {topPerformers.map((agent) => (
                   <div
                     key={agent.userId}
                     onClick={() => applyCardFilter({ agentId: agent.userId, dateRange: filters.dateRange, customFrom: filters.customFrom, customTo: filters.customTo })}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/70 hover:bg-white border border-green-100 hover:border-green-300 cursor-pointer transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-3 rounded-lg bg-white/70 hover:bg-white border border-green-100 hover:border-green-300 cursor-pointer transition-colors shadow-sm"
                   >
                     <div
                       className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
