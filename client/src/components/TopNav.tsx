@@ -83,9 +83,15 @@ export default function TopNav() {
   const aiCoachRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === "admin";
+  const isAcademy = user?.team === "academy";
   const callsItems = isAdmin ? CALLS_ITEMS_ADMIN : CALLS_ITEMS_AGENT;
   const aiCoachItems = isAdmin ? AI_COACH_ITEMS_ADMIN : AI_COACH_ITEMS_AGENT;
-  const mobileItems = isAdmin ? MOBILE_NAV_ITEMS_ADMIN : MOBILE_NAV_ITEMS_AGENT;
+  const mobileItems = isAcademy
+    ? [
+        { path: "/workspace", label: "Workspace", icon: LayoutDashboard, highlight: true },
+        { path: "/training", label: "Training", icon: BookOpen },
+      ]
+    : isAdmin ? MOBILE_NAV_ITEMS_ADMIN : MOBILE_NAV_ITEMS_AGENT;
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -146,6 +152,41 @@ export default function TopNav() {
         {/* Nav tabs */}
         <div className="flex items-center gap-1">
 
+          {/* Academy users: show only Workspace and Training */}
+          {isAcademy ? (
+            <>
+              {/* Workspace */}
+              <Link href={WORKSPACE_ITEM.path}>
+                <button
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
+                    location === WORKSPACE_ITEM.path
+                      ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                      : "text-white hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <LayoutDashboard size={14} />
+                  Workspace
+                </button>
+              </Link>
+
+              {/* Training */}
+              <Link href={TRAINING_ITEM.path}>
+                <button
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
+                    location === TRAINING_ITEM.path
+                      ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                      : "text-white hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <BookOpen size={14} />
+                  Training
+                </button>
+              </Link>
+            </>
+          ) : (
+            <>
           {/* Call Center Dashboard — standalone top-level tab */}
           <Link href={DASHBOARD_ITEM.path}>
             <button
@@ -317,6 +358,8 @@ export default function TopNav() {
               </div>
             )}
           </div>
+            </>
+          )}
 
         </div>
 

@@ -51,7 +51,7 @@ interface UserRow {
   email: string | null;
   role: "user" | "admin";
   active: boolean;
-  team: "opening" | "retention" | null;
+  team: "opening" | "retention" | "academy" | null;
   createdAt: Date;
   lastSignedIn: Date;
 }
@@ -64,6 +64,7 @@ const ROLE_BADGE: Record<string, string> = {
 const TEAM_BADGE: Record<string, string> = {
   opening: "bg-blue-100 text-blue-800 border-blue-200",
   retention: "bg-amber-100 text-amber-800 border-amber-200",
+  academy: "bg-green-100 text-green-800 border-green-200",
 };
 
 function isValidEmail(email: string): boolean {
@@ -81,14 +82,14 @@ export default function Users() {
   const [editTarget, setEditTarget] = useState<UserRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"user" | "admin">("user");
-  const [editTeam, setEditTeam] = useState<"opening" | "retention" | "">("opening");
+  const [editTeam, setEditTeam] = useState<"opening" | "retention" | "academy" | "">("opening");
 
   // Add User modal state
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
-  const [newUserTeam, setNewUserTeam] = useState<"opening" | "retention" | "">("opening");
+  const [newUserTeam, setNewUserTeam] = useState<"opening" | "retention" | "academy" | "">("opening");
   const [emailError, setEmailError] = useState("");
 
   const utils = trpc.useUtils();
@@ -362,7 +363,7 @@ export default function Users() {
                                 TEAM_BADGE[u.team]
                               )}
                             >
-                              {u.team}
+                              {u.team === "academy" ? "Academy" : u.team === "opening" ? "Opening" : u.team === "retention" ? "Retention" : u.team}
                             </span>
                           ) : (
                             <span className="text-gray-400">—</span>
@@ -491,7 +492,7 @@ export default function Users() {
             </div>
             <div className="space-y-2">
               <Label>Team</Label>
-              <Select value={editTeam || "__none__"} onValueChange={(val) => setEditTeam(val === "__none__" ? "" : val as "opening" | "retention")}>
+              <Select value={editTeam || "__none__"} onValueChange={(val) => setEditTeam(val === "__none__" ? "" : val as "opening" | "retention" | "academy")}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
@@ -499,6 +500,7 @@ export default function Users() {
                   <SelectItem value="__none__">No team</SelectItem>
                   <SelectItem value="opening">Opening</SelectItem>
                   <SelectItem value="retention">Retention</SelectItem>
+                  <SelectItem value="academy">Academy</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -570,7 +572,7 @@ export default function Users() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-user-team">Team</Label>
-              <Select value={newUserTeam || "__none__"} onValueChange={(val) => setNewUserTeam(val === "__none__" ? "" : val as "opening" | "retention")}>
+              <Select value={newUserTeam || "__none__"} onValueChange={(val) => setNewUserTeam(val === "__none__" ? "" : val as "opening" | "retention" | "academy")}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
@@ -578,6 +580,7 @@ export default function Users() {
                   <SelectItem value="__none__">No team</SelectItem>
                   <SelectItem value="opening">Opening</SelectItem>
                   <SelectItem value="retention">Retention</SelectItem>
+                  <SelectItem value="academy">Academy</SelectItem>
                 </SelectContent>
               </Select>
             </div>

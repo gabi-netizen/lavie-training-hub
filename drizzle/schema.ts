@@ -22,8 +22,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   /** CloudTalk Agent ID for click-to-call (e.g. 178617) */
   cloudtalkAgentId: varchar("cloudtalkAgentId", { length: 32 }),
-  /** Team assignment: 'opening' or 'retention'. Null = unassigned / admin */
-  team: mysqlEnum("team", ["opening", "retention"]),
+  /** Team assignment: 'opening', 'retention', or 'academy'. Null = unassigned / admin */
+  team: mysqlEnum("team", ["opening", "retention", "academy"]),
   /** Whether the user account is active. Disabled users cannot log in. */
   active: boolean("active").default(true).notNull(),
 });

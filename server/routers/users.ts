@@ -82,7 +82,7 @@ export const usersRouter = router({
         name: z.string().optional(),
         email: z.string().email(),
         role: z.enum(["user", "admin"]),
-        team: z.enum(["opening", "retention"]).optional(),
+        team: z.enum(["opening", "retention", "academy"]).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -130,7 +130,7 @@ export const usersRouter = router({
         userId: z.number(),
         name: z.string().optional(),
         role: z.enum(["user", "admin"]).optional(),
-        team: z.enum(["opening", "retention"]).nullable().optional(),
+        team: z.enum(["opening", "retention", "academy"]).nullable().optional(),
       })
     )
     .mutation(async ({ input }) => {
