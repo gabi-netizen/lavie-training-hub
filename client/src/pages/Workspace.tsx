@@ -2798,10 +2798,19 @@ export default function Workspace() {
                 >
                   <Users size={14} /> Manager View
                 </button>
+                <a
+                  href="https://dashboard.stripe.com/payments?status%5B%5D=successful&amount%5Bgte%5D=495&amount%5Blte%5D=495"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ws-mode-btn"
+                  style={{ marginLeft: "auto", background: "#635bff", color: "#fff", borderRadius: 8, padding: "6px 12px", textDecoration: "none", fontSize: 14 }}
+                >
+                  💳 £4.95 Payments
+                </a>
                 <button
                   className="ws-mode-btn"
                   onClick={() => setShowGuide(true)}
-                  style={{ marginLeft: "auto", background: "#4f46e5", color: "#fff", borderRadius: 8, padding: "6px 12px" }}
+                  style={{ background: "#4f46e5", color: "#fff", borderRadius: 8, padding: "6px 12px" }}
                 >
                   📖 How to Use
                 </button>
