@@ -41,13 +41,12 @@ function stripHtml(text: string | null | undefined): string {
   let clean = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
   // Remove HTML tags
   clean = clean.replace(/<[^>]*>/g, " ");
-  // Remove CSS selector blocks: div.zm_XXXX, #x_XXXXMessageViewBody, a[x-apple-data-detectors], etc.
-  clean = clean.replace(/div\.zm_[\w_.-]+/g, "");
-  clean = clean.replace(/#x_\w+/g, "");
-  clean = clean.replace(/a\[x-apple-data-detectors\]/g, "");
-  clean = clean.replace(/\[x-apple-data-detectors\]/g, "");
+  // Remove entire CSS selector lines: div.zm_XXXX..., #x_XXXX..., a[...], [style*=...] etc.
+  clean = clean.replace(/(?:div\.zm_|#x_|\.[a-z])[\w_.:-]*(?:\s+[\w_.#\[\]=*"':,-]+)*/gi, "");
+  // Remove a[x-apple-data-detectors] and similar attribute selectors
+  clean = clean.replace(/\w*\[[^\]]*\]/g, "");
   // Remove [data-...] attribute selectors
-  clean = clean.replace(/\[data-[^\]]*\]/g, "");
+  clean = clean.replace(/\[[^\]]*\]/g, "");
   // Remove .x_NNNNReadMsgBody, .x_NNNNExternalClass, #x_NNNNoutlook patterns
   clean = clean.replace(/[.#]x_[\w]+/g, "");
   // Remove ReadMsgBody, ExternalClass, MessageViewBody standalone
@@ -56,22 +55,20 @@ function stripHtml(text: string | null | undefined): string {
   clean = clean.replace(/MessageViewBody/g, "");
   // Remove CSS blocks { ... }
   clean = clean.replace(/\{[^}]*\}/g, "");
-  // Remove div.XXX, table, td, th, img, sup, p as CSS selectors (standalone words followed by comma or space)
-  clean = clean.replace(/\b(div|table|td|th|img|sup|span|font)\s*[,]/g, "");
+  // Remove standalone CSS element selectors (a, div, table, td, th, img, sup, p, span, font)
+  clean = clean.replace(/\b(div|table|td|th|img|sup|span|font|a)\b\s*[,]/g, "");
   // Remove css-skikae, apple-link patterns
   clean = clean.replace(/css-[\w]+/g, "");
   clean = clean.replace(/apple-link/g, "");
-  // Remove remaining CSS selectors (a, img, p, span, font, td, etc.)
-  clean = clean.replace(/\b(a|img)\s+\./g, "");
   // Remove &nbsp; and other HTML entities
   clean = clean.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#?\w+;/g, " ");
-  // Remove orphaned CSS-like tokens (color:, font-size:, etc.)
+  // Remove orphaned CSS-like tokens (color:, font-size:, word-break:, etc.)
   clean = clean.replace(/[\w-]+\s*:\s*[^;,]+[;,]/g, "");
-  // Remove soft hyphens and zero-width spaces
-  clean = clean.replace(/[\u00AD\u200B\u200C\u200D\uFEFF]/g, "");
-  // Remove sequences of ͏­ (invisible Unicode chars)
-  clean = clean.replace(/[\u034F\u00AD]+/g, "");
-  // Collapse multiple spaces/newlines and trim
+  // Remove soft hyphens, zero-width spaces, and invisible Unicode chars
+  clean = clean.replace(/[\u00AD\u200B\u200C\u200D\uFEFF\u034F]+/g, "");
+  // Remove isolated dots and hashes from leftover selectors
+  clean = clean.replace(/\s[.#]\s/g, " ");
+  // Collapse multiple spaces/newlines, commas, semicolons and trim
   clean = clean.replace(/[,;]+\s*/g, " ");
   clean = clean.replace(/\s+/g, " ").trim();
   return clean;
