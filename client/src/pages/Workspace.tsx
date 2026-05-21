@@ -2551,8 +2551,8 @@ export default function Workspace() {
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
     } else if (action === "sold" || action === "no" || action === "skip" || action === "done") {
-      // If skip/next is pressed while a call is ringing/active, hang up silently
-      if (action === "skip" && callActive) {
+      // If next is pressed, silently end any active/ringing call
+      if (action === "skip") {
         const iframe = document.querySelector<HTMLIFrameElement>('iframe[src*="phone.cloudtalk.io"]');
         if (iframe?.contentWindow) {
           iframe.contentWindow.postMessage(JSON.stringify({ event: "hangup", properties: {} }), "https://phone.cloudtalk.io");
