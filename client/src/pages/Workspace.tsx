@@ -2551,6 +2551,10 @@ export default function Workspace() {
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
     } else if (action === "sold" || action === "no" || action === "skip" || action === "done") {
+      // If skip is pressed while a call is ringing/active, hang up first
+      if (action === "skip") {
+        sendToCloudTalk("hangup");
+      }
       const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : action === "done" ? "Done" : "Skip";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB and clear any scheduled callback
