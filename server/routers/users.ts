@@ -122,6 +122,46 @@ export const usersRouter = router({
     }),
 
   /**
+   * Update a user's name, role, and team — admin only.
+   */
+  updateUser: adminProcedure
+    .input(
+      z.object({
+        userId: z.number(),
+        name: z.string().optional(),
+        role: z.enum(["user", "admin"]).optional(),
+        team: z.enum(["opening", "retention"]).nullable().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const [target] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, input.userId))
+        .limit(1);
+
+      if (!target) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const updates: Record<string, any> = {};
+      if (input.name !== undefined) updates.name = input.name || null;
+      if (input.role !== undefined) updates.role = input.role;
+      if (input.team !== undefined) updates.team = input.team;
+
+      if (Object.keys(updates).length > 0) {
+        await db.update(users).set(updates).where(eq(users.id, input.userId));
+      }
+
+      return { success: true };
+    }),
+
+  /**
    * Delete a user permanently — admin only.
    * Prevents admins from deleting themselves.
    */

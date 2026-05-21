@@ -38,6 +38,7 @@ import {
   UserX,
   Search,
   UserPlus,
+  Pencil,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
@@ -74,6 +75,13 @@ export default function Users() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+
+  // Edit User modal state
+  const [editUserOpen, setEditUserOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserRow | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState<"user" | "admin">("user");
+  const [editTeam, setEditTeam] = useState<"opening" | "retention" | "">("opening");
 
   // Add User modal state
   const [addUserOpen, setAddUserOpen] = useState(false);
@@ -117,6 +125,18 @@ export default function Users() {
     },
   });
 
+  const updateUserMutation = trpc.users.updateUser.useMutation({
+    onSuccess: () => {
+      utils.users.getUsers.invalidate();
+      toast.success("User updated successfully");
+      setEditUserOpen(false);
+      setEditTarget(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update user");
+    },
+  });
+
   const addUserMutation = trpc.users.addUser.useMutation({
     onSuccess: () => {
       utils.users.getUsers.invalidate();
@@ -127,6 +147,24 @@ export default function Users() {
       toast.error(err.message || "Failed to add user");
     },
   });
+
+  function openEditModal(u: UserRow) {
+    setEditTarget(u);
+    setEditName(u.name || "");
+    setEditRole(u.role);
+    setEditTeam(u.team || "");
+    setEditUserOpen(true);
+  }
+
+  function handleEditSubmit() {
+    if (!editTarget) return;
+    updateUserMutation.mutate({
+      userId: editTarget.id,
+      name: editName.trim() || undefined,
+      role: editRole,
+      team: editTeam ? editTeam : null,
+    });
+  }
 
   function resetAddUserForm() {
     setAddUserOpen(false);
@@ -362,16 +400,27 @@ export default function Users() {
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={isSelf || deleteMutation.isPending}
-                            onClick={() => setDeleteTarget(u as UserRow)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            title={isSelf ? "You cannot delete yourself" : "Delete user"}
-                          >
-                            <Trash2 size={14} />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(u as UserRow)}
+                              className="text-gray-500 hover:text-indigo-700 hover:bg-indigo-50"
+                              title="Edit user"
+                            >
+                              <Pencil size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={isSelf || deleteMutation.isPending}
+                              onClick={() => setDeleteTarget(u as UserRow)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title={isSelf ? "You cannot delete yourself" : "Delete user"}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -409,6 +458,65 @@ export default function Users() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editUserOpen} onOpenChange={(open) => { if (!open) { setEditUserOpen(false); setEditTarget(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details. Changes will reflect in Contacts page dropdowns.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                placeholder="Full name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editRole} onValueChange={(val) => setEditRole(val as "user" | "admin")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Team</Label>
+              <Select value={editTeam || "__none__"} onValueChange={(val) => setEditTeam(val === "__none__" ? "" : val as "opening" | "retention")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No team</SelectItem>
+                  <SelectItem value="opening">Opening</SelectItem>
+                  <SelectItem value="retention">Retention</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditUserOpen(false); setEditTarget(null); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={updateUserMutation.isPending}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add User Dialog */}
       <Dialog open={addUserOpen} onOpenChange={(open) => { if (!open) resetAddUserForm(); }}>
