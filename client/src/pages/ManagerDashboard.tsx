@@ -1407,8 +1407,11 @@ export default function ManagerDashboard() {
                                       <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5 group-open:rotate-180 transition-transform" />
                                     </div>
                                   </summary>
-                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[280px]">
-                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
+                                  <div className="mt-2 p-3 bg-white border border-gray-200 rounded-lg max-h-[400px] overflow-y-auto w-[350px] shadow-lg">
+                                    <div
+                                      className="text-sm text-gray-800 prose prose-sm max-w-none"
+                                      dangerouslySetInnerHTML={{ __html: lead.managerNote }}
+                                    />
                                   </div>
                                 </details>
                               );
