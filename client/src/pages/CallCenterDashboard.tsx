@@ -725,7 +725,7 @@ export default function CallCenterDashboard() {
                     </div>
                     <span className="text-[16px] font-bold text-white flex-1 truncate">{agent.name}</span>
                     <span className="text-[16px] font-bold text-white tabular-nums mr-1">{agent.avgScore} avg</span>
-                    <span className="text-[16px] font-bold text-white tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
+                    <span className="text-[16px] font-bold text-green-400 tabular-nums whitespace-nowrap">{agent.callCount} call{agent.callCount !== 1 ? "s" : ""}</span>
                   </div>
                 ))}
               </div>
