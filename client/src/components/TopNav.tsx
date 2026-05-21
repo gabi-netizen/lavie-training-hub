@@ -152,10 +152,10 @@ export default function TopNav() {
           <Link href={DASHBOARD_ITEM.path}>
             <button
               className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                 dashboardActive
                   ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  : "text-white hover:text-white hover:bg-white/10"
               )}
             >
               <LayoutDashboard size={14} />
@@ -168,10 +168,10 @@ export default function TopNav() {
             <button
               onClick={() => { setCallsOpen((v) => !v); setAiCoachOpen(false); }}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                 callsActive
                   ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  : "text-white hover:text-white hover:bg-white/10"
               )}
             >
               <Phone size={14} />
@@ -207,10 +207,10 @@ export default function TopNav() {
           <Link href={WORKSPACE_ITEM.path}>
             <button
               className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                 location === WORKSPACE_ITEM.path
                   ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  : "text-white hover:text-white hover:bg-white/10"
               )}
             >
               <LayoutDashboard size={14} />
@@ -222,10 +222,10 @@ export default function TopNav() {
           <Link href={TRAINING_ITEM.path}>
             <button
               className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                 location === TRAINING_ITEM.path
                   ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  : "text-white hover:text-white hover:bg-white/10"
               )}
             >
               <BookOpen size={14} />
@@ -238,10 +238,10 @@ export default function TopNav() {
             <Link href={COMMAND_CENTRE_ITEM.path}>
               <button
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                   location === COMMAND_CENTRE_ITEM.path
                     ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                    : "text-white/80 hover:text-white hover:bg-white/10"
+                    : "text-white hover:text-white hover:bg-white/10"
                 )}
               >
                 <Shield size={14} />
@@ -254,10 +254,10 @@ export default function TopNav() {
             <Link href={SUPPORT_TICKETS_ITEM.path}>
               <button
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                   location === SUPPORT_TICKETS_ITEM.path
                     ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                    : "text-white/80 hover:text-white hover:bg-white/10"
+                    : "text-white hover:text-white hover:bg-white/10"
                 )}
               >
                 <Mail size={14} />
@@ -270,10 +270,10 @@ export default function TopNav() {
           <Link href={OPENING_DASHBOARD_ITEM.path}>
             <button
               className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                 location === OPENING_DASHBOARD_ITEM.path
                   ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  : "text-white hover:text-white hover:bg-white/10"
               )}
             >
               <Phone size={14} />
@@ -285,10 +285,10 @@ export default function TopNav() {
             <button
               onClick={() => { setAiCoachOpen((v) => !v); setCallsOpen(false); }}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
                 aiCoachActive
                   ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  : "text-white hover:text-white hover:bg-white/10"
               )}
             >
               <Mic size={14} />
