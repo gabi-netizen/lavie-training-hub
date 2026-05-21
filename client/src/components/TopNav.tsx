@@ -132,14 +132,14 @@ export default function TopNav() {
   return (
     <>
       {/* Desktop top nav */}
-      <nav className="hidden md:flex items-center justify-between px-6 py-0 bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm" style={{ minHeight: 56 }}>
+      <nav className="hidden md:flex items-center justify-between px-6 py-0 border-b border-blue-600 sticky top-0 z-50 shadow-sm" style={{ minHeight: 56, background: '#2196c9' }}>
         {/* Logo — always links to the default landing page */}
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer select-none">
-            <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold bg-indigo-600 text-white">
+            <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold bg-white text-blue-600">
               L
             </div>
-            <span className="font-bold text-sm tracking-wide text-indigo-600" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <span className="font-bold text-sm tracking-wide text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               LAVIÉ LABS
             </span>
           </div>
@@ -154,8 +154,8 @@ export default function TopNav() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 dashboardActive
-                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                  ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               )}
             >
               <LayoutDashboard size={14} />
@@ -170,8 +170,8 @@ export default function TopNav() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 callsActive
-                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                  ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               )}
             >
               <Phone size={14} />
@@ -209,8 +209,8 @@ export default function TopNav() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 location === WORKSPACE_ITEM.path
-                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                  ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               )}
             >
               <LayoutDashboard size={14} />
@@ -224,8 +224,8 @@ export default function TopNav() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 location === TRAINING_ITEM.path
-                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                  ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               )}
             >
               <BookOpen size={14} />
@@ -240,8 +240,8 @@ export default function TopNav() {
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                   location === COMMAND_CENTRE_ITEM.path
-                    ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                    : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                    ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
                 )}
               >
                 <Shield size={14} />
@@ -256,8 +256,8 @@ export default function TopNav() {
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                   location === SUPPORT_TICKETS_ITEM.path
-                    ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                    : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                    ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
                 )}
               >
                 <Mail size={14} />
@@ -272,8 +272,8 @@ export default function TopNav() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 location === OPENING_DASHBOARD_ITEM.path
-                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                  ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               )}
             >
               <Phone size={14} />
@@ -287,8 +287,8 @@ export default function TopNav() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-medium",
                 aiCoachActive
-                  ? "text-indigo-600 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                  : "text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                  ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               )}
             >
               <Mic size={14} />
@@ -327,14 +327,14 @@ export default function TopNav() {
           {isAuthenticated ? (
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors"
             >
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-100 text-indigo-600">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-white/20 text-white">
                 {initials}
               </div>
-              <span className="text-sm text-gray-700 max-w-[100px] truncate">{user?.name}</span>
-              {isAdmin && <ShieldCheck size={12} className="text-indigo-500" />}
-              <ChevronDown size={12} className="text-gray-800" />
+              <span className="text-sm text-white max-w-[100px] truncate">{user?.name}</span>
+              {isAdmin && <ShieldCheck size={12} className="text-white/70" />}
+              <ChevronDown size={12} className="text-white/70" />
             </button>
           ) : (
             <a
