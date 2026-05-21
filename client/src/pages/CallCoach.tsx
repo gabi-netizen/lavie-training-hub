@@ -2962,7 +2962,7 @@ function WhatWinnersDo() {
 }
 
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
-const VALID_TABS = ["upload", "my-calls", "leaderboard", "team", "performance", "manager", "feedback", "ai-feedback"] as const;
+const VALID_TABS = ["upload", "my-calls", "leaderboard", "performance", "manager", "feedback", "ai-feedback"] as const;
 type TabId = typeof VALID_TABS[number];
 
 export default function CallCoach() {
@@ -3064,7 +3064,6 @@ export default function CallCoach() {
         )}
         {activeTab === "my-calls" && <MyCalls onSelect={setSelectedId} isAdmin={isAdmin} />}
         {activeTab === "leaderboard" && <Leaderboard />}
-        {activeTab === "team" && <TeamDashboard />}
         {activeTab === "performance" && isAdmin && <CallTypePerformance />}
         {activeTab === "manager" && isAdmin && <ManagerDashboard onSelect={setSelectedId} />}
         {activeTab === "feedback" && isAdmin && <FeedbackReview />}
