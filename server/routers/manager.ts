@@ -668,21 +668,13 @@ export const managerRouter = router({
       let deleted = 0;
       for (const id of input.ids) {
         // Delete call attempts for this lead first (FK safety)
-        const lead = await db
-          .select({ subscriptionId: leadAssignments.subscriptionId })
-          .from(leadAssignments)
-          .where(eq(leadAssignments.id, id))
-          .limit(1);
-
-        if (lead.length > 0) {
-          await db
-            .delete(callAttempts)
-            .where(eq(callAttempts.subscriptionId, lead[0].subscriptionId));
-          await db
-            .delete(leadAssignments)
-            .where(eq(leadAssignments.id, id));
-          deleted++;
-        }
+        // Using raw SQL because DB column is 'leadId' but Drizzle schema has 'subscriptionId'
+        await db.execute(sql`DELETE FROM call_attempts WHERE leadId = ${id}`);
+        // Delete the lead itself
+        await db
+          .delete(leadAssignments)
+          .where(eq(leadAssignments.id, id));
+        deleted++;
       }
 
       return { success: true, deleted };
