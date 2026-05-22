@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +44,7 @@ import {
   Inbox,
   Pencil,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -368,6 +370,7 @@ function CustomerMessageEditor({
 export default function ManagerDashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const [, navigate] = useLocation();
 
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("all");
@@ -1092,9 +1095,19 @@ export default function ManagerDashboard() {
                             )}
                           </button>
                           <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">
-                              {lead.customerName}
-                            </p>
+                            {lead.contactId ? (
+                              <button
+                                onClick={() => navigate(`/contacts/${lead.contactId}`)}
+                                className="font-semibold text-indigo-600 hover:text-indigo-800 text-sm truncate flex items-center gap-1"
+                              >
+                                {lead.customerName}
+                                <ExternalLink className="h-3 w-3 shrink-0" />
+                              </button>
+                            ) : (
+                              <p className="font-semibold text-gray-900 text-sm truncate">
+                                {lead.customerName}
+                              </p>
+                            )}
                             {lead.phone && (
                               <a
                                 href={`tel:${lead.phone}`}
