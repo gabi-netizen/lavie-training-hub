@@ -1397,16 +1397,27 @@ export default function ManagerDashboard() {
                               </a>
                             )}
                           </td>
-                          {/* Email — compact, smaller font, truncate */}
+                          {/* Email — click navigates to contact card */}
                           <td className="px-2 py-3">
-                            <a
-                              href={`mailto:${lead.email}`}
-                              title={lead.email}
-                              className="flex items-center gap-1 text-xs text-gray-800 hover:text-blue-700 hover:underline truncate max-w-[130px]"
-                            >
-                              <Mail className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{lead.email}</span>
-                            </a>
+                            {lead.contactId ? (
+                              <button
+                                onClick={() => navigate(`/contacts/${lead.contactId}`)}
+                                title={lead.email}
+                                className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline truncate max-w-[160px] font-medium"
+                              >
+                                <Mail className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{lead.email}</span>
+                                <ExternalLink className="h-3 w-3 shrink-0" />
+                              </button>
+                            ) : (
+                              <span
+                                title={lead.email}
+                                className="flex items-center gap-1 text-xs text-gray-800 truncate max-w-[130px]"
+                              >
+                                <Mail className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{lead.email}</span>
+                              </span>
+                            )}
                           </td>
                           {/* Agent — prominent dropdown with visible border */}
                           <td className="px-2 py-3">
