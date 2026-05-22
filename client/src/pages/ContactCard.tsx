@@ -136,6 +136,11 @@ export default function ContactCard() {
     { enabled: !!contactId }
   );
 
+  const { data: zohoData } = trpc.contacts.getZohoBillingData.useQuery(
+    { email: contact?.email ?? "" },
+    { enabled: !!contact?.email }
+  );
+
   const updateMutation = trpc.contacts.update.useMutation({
     onSuccess: () => refetch(),
   });
@@ -453,7 +458,7 @@ export default function ContactCard() {
               <p className="text-xs mt-0.5 text-center" style={{ color: "rgba(255,255,255,0.7)" }}>
                 Customer since{" "}
                 <span style={{ color: "#f5a623", fontWeight: 600 }}>
-                  {formatMonthYear(contact.createdAt)}
+                  {zohoData?.trialStartDate ? formatMonthYear(zohoData.trialStartDate) : formatMonthYear(contact.createdAt)}
                 </span>
               </p>
 
@@ -468,7 +473,7 @@ export default function ContactCard() {
                   <Phone size={14} />
                   {clickToCallMutation.isPending
                     ? "Calling…"
-                    : contact.phone || "No phone"}
+                    : contact.phone || zohoData?.phone || "No phone"}
                 </button>
                 <button
                   onClick={() => {
@@ -1265,34 +1270,88 @@ export default function ContactCard() {
         ══════════════════════════════════════════════════ */}
         <div className="shrink-0 flex flex-col gap-4" style={{ width: "260px" }}>
 
-          {/* ── KPI Cards (2 side by side) ── */}
+          {/* ── KPI Cards (LTV Plan / LTV Paid / Cycle) ── */}
           <div className="grid grid-cols-2 gap-3">
-            {/* LTV */}
+            {/* LTV Plan */}
             <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col items-center text-center border border-gray-100">
               <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ background: "#e3f2fd" }}>
                 <svg className="w-5 h-5" style={{ color: "#1565c0" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV</p>
-              <p className={`font-bold mt-0.5 ${retentionTotalSpend > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
-                {retentionTotalSpend > 0 ? `£${retentionTotalSpend.toFixed(2)}` : "—"}
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV Plan</p>
+              <p className={`font-bold mt-0.5 ${(zohoData?.ltvPlan || retentionTotalSpend) > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "20px" }}>
+                {zohoData?.ltvPlan ? `£${zohoData.ltvPlan.toFixed(2)}` : retentionTotalSpend > 0 ? `£${retentionTotalSpend.toFixed(2)}` : "—"}
               </p>
             </div>
 
-            {/* Cycle */}
+            {/* LTV Paid */}
             <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col items-center text-center border border-gray-100">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ background: "#e3f2fd" }}>
-                <svg className="w-5 h-5" style={{ color: "#1565c0" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ background: "#e8f5e9" }}>
+                <svg className="w-5 h-5" style={{ color: "#2e7d32" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Cycle</p>
-              <p className={`font-bold mt-0.5 ${retentionMaxCycle > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
-                {retentionMaxCycle > 0 ? retentionMaxCycle : "—"}
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV Paid</p>
+              <p className={`font-bold mt-0.5 ${zohoData?.ltvPaid ? "text-green-700" : "text-gray-400"}`} style={{ fontSize: "20px" }}>
+                {zohoData?.ltvPaid ? `£${zohoData.ltvPaid.toFixed(2)}` : "—"}
               </p>
             </div>
           </div>
+
+          {/* ── Cycle + Monthly Amount ── */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Cycle */}
+            <div className="bg-white rounded-2xl shadow-sm p-3.5 flex flex-col items-center text-center border border-gray-100">
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Cycle</p>
+              <p className={`font-bold mt-0.5 ${(zohoData?.billingCycleCount || retentionMaxCycle) > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
+                {zohoData?.billingCycleCount ? zohoData.billingCycleCount : retentionMaxCycle > 0 ? retentionMaxCycle : "—"}
+              </p>
+            </div>
+
+            {/* Monthly Amount */}
+            <div className="bg-white rounded-2xl shadow-sm p-3.5 flex flex-col items-center text-center border border-gray-100">
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Monthly</p>
+              <p className={`font-bold mt-0.5 ${zohoData?.monthlyAmount ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
+                {zohoData?.monthlyAmount ? `£${zohoData.monthlyAmount.toFixed(2)}` : "—"}
+              </p>
+            </div>
+          </div>
+
+          {/* ── Subscription Status + Next Billing ── */}
+          {zohoData?.found && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <div className="flex flex-col gap-2.5">
+                {zohoData.subscriptionStatus && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Status</span>
+                    <span className={cn(
+                      "text-xs font-semibold px-2.5 py-0.5 rounded-full",
+                      zohoData.subscriptionStatus === "live" ? "bg-green-100 text-green-700" :
+                      zohoData.subscriptionStatus === "cancelled" ? "bg-red-100 text-red-700" :
+                      zohoData.subscriptionStatus === "non_renewing" ? "bg-amber-100 text-amber-700" :
+                      zohoData.subscriptionStatus === "expired" ? "bg-gray-100 text-gray-700" :
+                      "bg-blue-100 text-blue-700"
+                    )}>
+                      {zohoData.subscriptionStatus.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                )}
+                {zohoData.nextBillingDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Next Billing</span>
+                    <span className="text-xs font-medium text-gray-700">{formatDate(zohoData.nextBillingDate)}</span>
+                  </div>
+                )}
+                {zohoData.cancellationDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Cancelled</span>
+                    <span className="text-xs font-medium text-red-600">{formatDate(zohoData.cancellationDate)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── Risk Score ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -1311,8 +1370,17 @@ export default function ContactCard() {
               <Package size={18} style={{ color: "#1565c0" }} />
               <span className="text-sm font-bold" style={{ color: "#1565c0" }}>Products History</span>
             </div>
-            {(retentionPlans.length > 0 || contact.trialKit) ? (
+            {(zohoData?.planName || retentionPlans.length > 0 || contact.trialKit) ? (
               <div className="flex flex-col gap-2.5">
+                {zohoData?.planName && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#4caf50" }} />
+                      <span className="text-sm text-gray-800">{zohoData.planName}</span>
+                    </div>
+                    <span className="text-xs font-semibold text-green-600">Zoho</span>
+                  </div>
+                )}
                 {contact.trialKit && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

@@ -46,6 +46,7 @@ import { getDb } from "../db";
 import { users, leadAssignments } from "../../drizzle/schema";
 import { eq, or } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
+import { getZohoBillingDataByEmail } from "../zohoBilling";
 
 // Admin email for notifications
 const ADMIN_EMAIL = "gabriel@lavielabs.com";
@@ -893,5 +894,13 @@ export const contactsRouter = router({
       }));
 
       return { leads };
+    }),
+
+  // ─── Get live Zoho Billing data for a contact by email ──────────────────
+  getZohoBillingData: protectedProcedure
+    .input(z.object({ email: z.string() }))
+    .query(async ({ input }) => {
+      if (!input.email) return { found: false } as any;
+      return getZohoBillingDataByEmail(input.email);
     }),
 });
