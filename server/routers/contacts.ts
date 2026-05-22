@@ -43,7 +43,7 @@ import {
 import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncContactToCloudTalk } from "../cloudtalk";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users } from "../../drizzle/schema";
+import { users, leadAssignments } from "../../drizzle/schema";
 import { eq, or } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
 
@@ -855,5 +855,43 @@ export const contactsRouter = router({
       }
 
       return { paid: false, amount: null, currency: null, paidAt: null };
+    }),
+
+  // ─── Get retention data from lead_assignments linked to a contact ───────────
+  getRetentionData: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { leads: [] };
+
+      const rows = await db
+        .select()
+        .from(leadAssignments)
+        .where(eq(leadAssignments.contactId, input.contactId));
+
+      const leads = rows.map((row) => ({
+        id: row.id,
+        subscriptionId: row.subscriptionId,
+        customerName: row.customerName ?? null,
+        email: row.email ?? null,
+        phone: row.phone ?? null,
+        totalSpend: row.totalSpend ?? 0,
+        cyclesCompleted: row.cyclesCompleted ?? 0,
+        planName: row.planName ?? null,
+        leadType: row.leadType ?? null,
+        leadCategory: row.leadCategory ?? null,
+        managerNote: row.managerNote ?? null,
+        agentNote: row.agentNote ?? null,
+        billingStatus: row.billingStatus ?? null,
+        assignedAgent: row.assignedAgent ?? null,
+        workStatus: row.workStatus ?? null,
+        eventDate: row.eventDate ?? null,
+        cancelledAt: row.cancelledAt ?? null,
+        monthlyAmount: row.monthlyAmount ?? 0,
+        createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+        updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+      }));
+
+      return { leads };
     }),
 });

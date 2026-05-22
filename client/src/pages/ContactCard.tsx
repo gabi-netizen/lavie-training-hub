@@ -131,6 +131,11 @@ export default function ContactCard() {
     { enabled: !!contactId }
   );
 
+  const { data: retentionData } = trpc.contacts.getRetentionData.useQuery(
+    { contactId },
+    { enabled: !!contactId }
+  );
+
   const updateMutation = trpc.contacts.update.useMutation({
     onSuccess: () => refetch(),
   });
@@ -339,6 +344,15 @@ export default function ContactCard() {
   // Callback time display
   const callbackDisplay = contact.callbackAt
     ? new Date(contact.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })
+    : null;
+
+  // ─── Retention data computed values ─────────────────────────────────────────
+  const retentionLeads = retentionData?.leads ?? [];
+  const retentionTotalSpend = retentionLeads.reduce((sum, l) => sum + (l.totalSpend || 0), 0);
+  const retentionMaxCycle = retentionLeads.reduce((max, l) => Math.max(max, l.cyclesCompleted || 0), 0);
+  const retentionPlans = Array.from(new Set(retentionLeads.map((l) => l.planName).filter(Boolean))) as string[];
+  const retentionLatestLead = retentionLeads.length > 0
+    ? retentionLeads.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())[0]
     : null;
 
   return (
@@ -845,19 +859,20 @@ export default function ContactCard() {
               {/* History tab */}
               {centerTopTab === "history" && (
                 <div className="flex flex-col">
-                  {contact.callNotes.length === 0 ? (
+                  {contact.callNotes.length === 0 && retentionLeads.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                       <PhoneOff size={36} className="mb-3 opacity-50" />
                       <p className="text-sm font-medium">No call notes yet</p>
                       <p className="text-xs mt-1">Click "+ Add Entry" to log your first call</p>
                     </div>
                   ) : (
-                    contact.callNotes.map((note, idx) => {
+                    <>
+                    {contact.callNotes.map((note, idx) => {
                       const outcome = NOTE_OUTCOMES[note.statusAtTime ?? "other"] ?? NOTE_OUTCOMES.other;
                       const agentInitials = note.agentName
                         ? note.agentName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
                         : "??";
-                      const isLast = idx === contact.callNotes.length - 1;
+                      const isLast = idx === contact.callNotes.length - 1 && retentionLeads.length === 0;
                       return (
                         <div key={note.id} className="flex gap-3">
                           {/* Timeline dot + line */}
@@ -916,7 +931,83 @@ export default function ContactCard() {
                           </div>
                         </div>
                       );
-                    })
+                    })}
+
+                    {/* Retention lead entries */}
+                    {retentionLeads.length > 0 && (
+                      <>
+                        {contact.callNotes.length > 0 && (
+                          <div className="border-t border-gray-200 my-4 pt-4">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Retention Leads</p>
+                          </div>
+                        )}
+                        {retentionLeads.map((lead, idx) => {
+                          const isLast = idx === retentionLeads.length - 1;
+                          const agentInitials = lead.assignedAgent
+                            ? lead.assignedAgent.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+                            : "RT";
+                          return (
+                            <div key={`retention-${lead.id}`} className="flex gap-3">
+                              <div className="flex flex-col items-center" style={{ width: "20px" }}>
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 bg-orange-400" />
+                                {!isLast && (
+                                  <div className="w-0.5 bg-gray-200 mt-1 flex-1" style={{ minHeight: "24px" }} />
+                                )}
+                              </div>
+                              <div className={cn("flex-1", !isLast && "pb-6")}>
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 shadow"
+                                    style={{ background: "#e65100" }}
+                                  >
+                                    {agentInitials}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-800 leading-snug">
+                                      {lead.leadType || "Retention Lead"}
+                                      {lead.planName && ` — ${lead.planName}`}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                      <span className="w-1.5 h-1.5 rounded-full inline-block bg-orange-400" />
+                                      <span className="text-xs text-gray-500">{lead.createdAt ? formatDate(lead.createdAt) : "—"}</span>
+                                      {lead.assignedAgent && (
+                                        <>
+                                          <span className="text-gray-300 text-xs">&bull;</span>
+                                          <span className="text-xs">
+                                            by <span className="font-medium text-orange-600">{lead.assignedAgent}</span>
+                                          </span>
+                                        </>
+                                      )}
+                                      {lead.workStatus && (
+                                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700">
+                                          {lead.workStatus.replace(/_/g, " ")}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {lead.managerNote && (
+                                      <p className="text-xs text-gray-600 mt-2 leading-relaxed italic">
+                                        Customer: "{lead.managerNote.length > 200 ? lead.managerNote.slice(0, 200) + "…" : lead.managerNote}"
+                                      </p>
+                                    )}
+                                    {lead.agentNote && (
+                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                        Agent note: {lead.agentNote}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
+                                      {lead.totalSpend > 0 && <span>£{lead.totalSpend.toFixed(2)} spent</span>}
+                                      {lead.cyclesCompleted > 0 && <span>Cycle {lead.cyclesCompleted}</span>}
+                                      {lead.billingStatus && <span>{lead.billingStatus}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                    </>
                   )}
                 </div>
               )}
@@ -941,10 +1032,54 @@ export default function ContactCard() {
 
               {/* Notes tab */}
               {centerTopTab === "notes" && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                  <FileText size={36} className="mb-3 opacity-40" />
-                  <p className="text-sm font-medium">Notes</p>
-                  <p className="text-xs mt-1">Use the History tab to view and add call notes</p>
+                <div>
+                  {retentionLeads.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                      <FileText size={36} className="mb-3 opacity-40" />
+                      <p className="text-sm font-medium">Notes</p>
+                      <p className="text-xs mt-1">No retention notes available</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      {retentionLeads.filter((l) => l.managerNote || l.agentNote).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                          <FileText size={36} className="mb-3 opacity-40" />
+                          <p className="text-sm font-medium">No notes</p>
+                          <p className="text-xs mt-1">No manager or agent notes on retention leads</p>
+                        </div>
+                      ) : (
+                        retentionLeads
+                          .filter((l) => l.managerNote || l.agentNote)
+                          .map((lead) => (
+                            <div key={`note-${lead.id}`} className="rounded-xl border border-gray-200 p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-gray-700">
+                                  {lead.leadType || "Retention Lead"}
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  {lead.createdAt ? formatDate(lead.createdAt) : ""}
+                                </span>
+                              </div>
+                              {lead.managerNote && (
+                                <div className="mb-2">
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Customer Message</p>
+                                  <p className="text-sm text-gray-700 leading-relaxed">{lead.managerNote}</p>
+                                </div>
+                              )}
+                              {lead.agentNote && (
+                                <div className={lead.managerNote ? "pt-2 border-t border-gray-100" : ""}>
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Agent Note</p>
+                                  <p className="text-sm text-gray-700 leading-relaxed">{lead.agentNote}</p>
+                                </div>
+                              )}
+                              {lead.assignedAgent && (
+                                <p className="text-[10px] text-gray-400 mt-2">Assigned to: {lead.assignedAgent}</p>
+                              )}
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1140,7 +1275,9 @@ export default function ContactCard() {
                 </svg>
               </div>
               <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV</p>
-              <p className="font-bold mt-0.5 text-gray-400" style={{ fontSize: "22px" }}>—</p>
+              <p className={`font-bold mt-0.5 ${retentionTotalSpend > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
+                {retentionTotalSpend > 0 ? `£${retentionTotalSpend.toFixed(2)}` : "—"}
+              </p>
             </div>
 
             {/* Cycle */}
@@ -1151,7 +1288,9 @@ export default function ContactCard() {
                 </svg>
               </div>
               <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Cycle</p>
-              <p className="font-bold mt-0.5 text-gray-400" style={{ fontSize: "22px" }}>—</p>
+              <p className={`font-bold mt-0.5 ${retentionMaxCycle > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
+                {retentionMaxCycle > 0 ? retentionMaxCycle : "—"}
+              </p>
             </div>
           </div>
 
@@ -1172,15 +1311,26 @@ export default function ContactCard() {
               <Package size={18} style={{ color: "#1565c0" }} />
               <span className="text-sm font-bold" style={{ color: "#1565c0" }}>Products History</span>
             </div>
-            {contact.trialKit ? (
+            {(retentionPlans.length > 0 || contact.trialKit) ? (
               <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#1565c0" }} />
-                    <span className="text-sm text-gray-800">{contact.trialKit}</span>
+                {contact.trialKit && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#1565c0" }} />
+                      <span className="text-sm text-gray-800">{contact.trialKit}</span>
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color: "#1565c0" }}>Current</span>
                   </div>
-                  <span className="text-xs font-semibold" style={{ color: "#1565c0" }}>Current</span>
-                </div>
+                )}
+                {retentionPlans.map((plan) => (
+                  <div key={plan} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full inline-block bg-gray-400" />
+                      <span className="text-sm text-gray-700">{plan}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">Retention</span>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-xs text-gray-400">No products recorded</p>
@@ -1193,9 +1343,37 @@ export default function ContactCard() {
               <AlertTriangle size={18} style={{ color: "#e65100" }} />
               <span className="text-sm font-bold text-gray-800">Cancellation History</span>
             </div>
-            <div className="rounded-xl p-3.5" style={{ background: "#fff0ee" }}>
-              <p className="text-xs text-gray-500">No cancellation attempts</p>
-            </div>
+            {retentionLeads.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {retentionLeads.map((lead) => (
+                  <div key={lead.id} className="rounded-xl p-3" style={{ background: "#fff0ee" }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-gray-700">
+                        {lead.leadType || "Unknown type"}
+                      </span>
+                      {lead.billingStatus && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
+                          {lead.billingStatus}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      {lead.createdAt ? formatDate(lead.createdAt) : "—"}
+                      {lead.monthlyAmount > 0 && ` · £${lead.monthlyAmount.toFixed(2)}/mo`}
+                    </p>
+                    {lead.managerNote && (
+                      <p className="text-[11px] text-gray-600 mt-1.5 leading-relaxed italic">
+                        "{lead.managerNote.length > 120 ? lead.managerNote.slice(0, 120) + "…" : lead.managerNote}"
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl p-3.5" style={{ background: "#fff0ee" }}>
+                <p className="text-xs text-gray-500">No cancellation attempts</p>
+              </div>
+            )}
           </div>
 
           {/* ── Assigned Team ── */}
@@ -1204,24 +1382,28 @@ export default function ContactCard() {
               <User size={18} className="text-gray-600" />
               <span className="text-sm font-bold text-gray-800">Assigned Team</span>
             </div>
-            {contact.agentName ? (
-              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#e3f2fd" }}>
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow"
-                  style={{ background: "#1565c0" }}
-                >
-                  {getInitials(contact.agentName)}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{contact.agentName}</p>
-                  <p className="text-xs text-gray-500">
-                    {contact.department ? `${contact.department.charAt(0).toUpperCase() + contact.department.slice(1)} Agent` : "Agent"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">No agent assigned</p>
-            )}
+            {(() => {
+              const displayAgent = retentionLatestLead?.assignedAgent || contact.agentName;
+              if (displayAgent) {
+                return (
+                  <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#e3f2fd" }}>
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow"
+                      style={{ background: "#1565c0" }}
+                    >
+                      {getInitials(displayAgent)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{displayAgent}</p>
+                      <p className="text-xs text-gray-500">
+                        {contact.department ? `${contact.department.charAt(0).toUpperCase() + contact.department.slice(1)} Agent` : "Retention Agent"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return <p className="text-xs text-gray-400">No agent assigned</p>;
+            })()}
           </div>
 
           {/* ── Call Stats (if notes exist) ── */}
