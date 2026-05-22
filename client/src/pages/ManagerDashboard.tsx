@@ -969,15 +969,15 @@ export default function ManagerDashboard() {
 
       {/* Bulk action toolbar */}
       {selectedIds.size > 0 && (
-        <div className="bg-blue-600 text-white px-6 py-2 flex items-center gap-3 text-sm shadow-md">
+        <div className="bg-blue-50 border border-blue-200 text-gray-800 px-6 py-2 flex items-center gap-3 text-sm rounded-md mx-4 mt-2">
           <CheckSquare className="h-4 w-4" />
           <span className="font-medium">
             {selectedIds.size} lead{selectedIds.size > 1 ? "s" : ""} selected
           </span>
           <div className="flex items-center gap-2 ml-4">
-            <span className="text-blue-200 text-sm">Assign to:</span>
+            <span className="text-gray-500 text-sm">Assign to:</span>
             <Select value={bulkAgent} onValueChange={setBulkAgent}>
-              <SelectTrigger className="h-8 w-32 text-sm bg-blue-500 border-blue-400 text-white">
+              <SelectTrigger className="h-8 w-32 text-sm bg-white border-gray-300 text-gray-800">
                 <SelectValue placeholder="Choose agent..." />
               </SelectTrigger>
               <SelectContent>
@@ -995,7 +995,7 @@ export default function ManagerDashboard() {
             </Select>
             <Button
               size="sm"
-              className="h-8 px-3 text-sm bg-white text-blue-700 hover:bg-blue-50 font-semibold"
+              className="h-8 px-3 text-sm bg-blue-600 text-white hover:bg-blue-700 font-semibold rounded"
               disabled={!bulkAgent || bulkAssign.isPending}
               onClick={handleBulkAssign}
             >
@@ -1014,7 +1014,7 @@ export default function ManagerDashboard() {
             </Button>
           )}
           <button
-            className="ml-auto text-blue-200 hover:text-white"
+            className="ml-auto text-gray-400 hover:text-gray-700"
             onClick={() => setSelectedIds(new Set())}
           >
             <X className="h-4 w-4" />
