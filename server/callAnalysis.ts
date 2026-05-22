@@ -1240,6 +1240,7 @@ export async function updateCallAnalysisStatus(
     cancelReason: string;
     wordTimestamps: string;
     callType: "cold_call" | "follow_up" | "live_sub" | "pre_cycle_cancelled" | "pre_cycle_decline" | "end_of_instalment" | "from_cat" | "other" | "opening" | "retention_win_back" | "instalment_decline";
+    closeStatus: "closed" | "not_closed" | "follow_up";
   }>
 )
 {
@@ -1430,6 +1431,7 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
     if (report.upsellAttempted !== undefined && report.upsellAttempted !== null) savePayload.upsellAttempted = report.upsellAttempted;
     if (report.upsellSucceeded !== undefined && report.upsellSucceeded !== null) savePayload.upsellSucceeded = report.upsellSucceeded;
     if (report.cancelReason) savePayload.cancelReason = report.cancelReason;
+    if (report.closingAttempted) (savePayload as any).closeStatus = "closed";
     // If AI classified the retention call type, update callType in DB
     if (callType === "other" && report.retentionCallType && report.retentionCallType !== "other") {
       (savePayload as any).callType = report.retentionCallType;
