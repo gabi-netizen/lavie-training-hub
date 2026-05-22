@@ -110,6 +110,80 @@ function buildStats(leads: any[]) {
   };
 }
 
+// ─── Auto-link helper ────────────────────────────────────────────────────────
+
+/**
+ * For each lead in `rows` that has no contactId, find or create a contact and
+ * write the contactId back to lead_assignments. Runs fire-and-forget.
+ */
+async function autoLinkLeadsToContacts(
+  db: Awaited<ReturnType<typeof getDb>>,
+  rows: (typeof leadAssignments.$inferSelect)[]
+) {
+  if (!db) return;
+
+  const unlinked = rows.filter((r) => !r.contactId && (r.email || r.phone));
+  if (unlinked.length === 0) return;
+
+  for (const lead of unlinked) {
+    try {
+      let existingContact: { id: number } | undefined;
+
+      // 1. Match by email
+      if (lead.email) {
+        const byEmail = await db
+          .select({ id: contacts.id })
+          .from(contacts)
+          .where(eq(contacts.email, lead.email))
+          .limit(1);
+        existingContact = byEmail[0];
+      }
+
+      // 2. Fall back to phone
+      if (!existingContact && lead.phone) {
+        const normalizedPhone = lead.phone.replace(/[\s\-().+]/g, "");
+        const byPhone = await db
+          .select({ id: contacts.id })
+          .from(contacts)
+          .where(
+            or(
+              like(contacts.phone, `%${normalizedPhone}%`),
+              like(contacts.phone, `%${lead.phone}%`)
+            )
+          )
+          .limit(1);
+        existingContact = byPhone[0];
+      }
+
+      if (existingContact) {
+        await db
+          .update(leadAssignments)
+          .set({ contactId: existingContact.id })
+          .where(eq(leadAssignments.id, lead.id));
+      } else {
+        // Create a new contact and link it
+        const [result] = await db.insert(contacts).values({
+          name: lead.customerName || "Unknown",
+          email: lead.email || null,
+          phone: lead.phone || null,
+          department: "retention",
+          leadType: lead.leadType || null,
+          status: "new",
+        });
+        const newContactId = (result as any).insertId as number;
+        if (newContactId) {
+          await db
+            .update(leadAssignments)
+            .set({ contactId: newContactId })
+            .where(eq(leadAssignments.id, lead.id));
+        }
+      }
+    } catch (e) {
+      console.error(`[autoLink] Error linking lead ${lead.id}:`, e);
+    }
+  }
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const managerRouter = router({
@@ -142,6 +216,12 @@ export const managerRouter = router({
       if (rows.length === 0) {
         return { leads: [], total: 0, stats: buildEmptyStats() };
       }
+
+      // Auto-link any unlinked leads to contacts (fire-and-forget, non-blocking)
+      // Runs in the background every time the Command Centre loads
+      autoLinkLeadsToContacts(db, rows).catch((err) =>
+        console.error("[getLeads] Auto-link error:", err)
+      );
 
       // Map DB rows to the lead shape the frontend expects
       let leads = rows.map((row) => {
