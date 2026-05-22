@@ -1095,19 +1095,9 @@ export default function ManagerDashboard() {
                             )}
                           </button>
                           <div className="min-w-0">
-                            {lead.contactId ? (
-                              <button
-                                onClick={() => navigate(`/contacts/${lead.contactId}`)}
-                                className="font-semibold text-indigo-600 hover:text-indigo-800 text-sm truncate flex items-center gap-1"
-                              >
-                                {lead.customerName}
-                                <ExternalLink className="h-3 w-3 shrink-0" />
-                              </button>
-                            ) : (
-                              <p className="font-semibold text-gray-900 text-sm truncate">
-                                {lead.customerName}
-                              </p>
-                            )}
+                            <p className="font-semibold text-gray-900 text-sm truncate">
+                              {lead.customerName}
+                            </p>
                             {lead.phone && (
                               <a
                                 href={`tel:${lead.phone}`}
@@ -1139,13 +1129,21 @@ export default function ManagerDashboard() {
                         </div>
                       </div>
                       {lead.email && (
-                        <a
-                          href={`mailto:${lead.email}`}
-                          className="flex items-center gap-1 text-xs text-gray-800 mt-1.5 truncate"
-                        >
-                          <Mail className="h-3 w-3 shrink-0" />
-                          {lead.email}
-                        </a>
+                        lead.contactId ? (
+                          <button
+                            onClick={() => navigate(`/contacts/${lead.contactId}`)}
+                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-1.5 truncate"
+                          >
+                            <Mail className="h-3 w-3 shrink-0" />
+                            {lead.email}
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-gray-800 mt-1.5 truncate">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            {lead.email}
+                          </span>
+                        )
                       )}
                     </div>
                     {/* Card body — agent + status */}
