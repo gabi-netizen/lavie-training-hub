@@ -1038,7 +1038,7 @@ export default function ManagerDashboard() {
                             </span>
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 text-gray-500"
+                              className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
                               title="Edit lead type"
                             >
                               <Pencil className="h-3 w-3" />
@@ -1457,7 +1457,7 @@ export default function ManagerDashboard() {
                                 </span>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+                                  className="p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
                                   title="Edit lead type"
                                 >
                                   <Pencil className="h-3 w-3" />
