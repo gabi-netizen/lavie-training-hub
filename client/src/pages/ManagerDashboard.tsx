@@ -30,6 +30,7 @@ import {
   Clock,
   CalendarPlus,
   Inbox,
+  Pencil,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,6 +93,17 @@ function getLeadTypeBadge(
   };
   return map[leadType] || { bg: "bg-gray-200", text: "text-gray-700", label: leadType, rowTint: "bg-white" };
 }
+
+// All available lead types for the edit dropdown
+const LEAD_TYPE_OPTIONS = [
+  "Cat to Rob",
+  "Pre-Cycle-Cancelled",
+  "Cancel Live Sub (Cycle 1)",
+  "Cancel Live Sub (Cycle 2+)",
+  "Hot Lead",
+  "Pre-Cycle-Decline",
+  "Decline Live Sub",
+];
 
 // Lead Status — derived from assignedAgent (read-only badge)
 const LEAD_STATUS_OPTIONS = [
@@ -356,6 +368,7 @@ export default function ManagerDashboard() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAgent, setBulkAgent] = useState<string>("");
+  const [editingLeadType, setEditingLeadType] = useState<string | null>(null);
 
   const {
     data: leadsData,
@@ -1017,11 +1030,20 @@ export default function ManagerDashboard() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badge.bg} ${badge.text}`}
-                          >
-                            {badge.label}
-                          </span>
+                          <div className="flex items-center gap-1 group">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badge.bg} ${badge.text}`}
+                            >
+                              {badge.label}
+                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 text-gray-500"
+                              title="Edit lead type"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          </div>
                           <span className="text-[10px] text-gray-800">{formatDate(leadDate)}</span>
                           <span className="text-[10px] text-gray-500">{lead.createdAt ? new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
                         </div>
@@ -1397,11 +1419,51 @@ export default function ManagerDashboard() {
                           </td>
                           {/* Lead Type */}
                           <td className="px-2 py-3">
-                            <span
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
-                            >
-                              {badge.label}
-                            </span>
+                            {editingLeadType === lead.subscriptionId ? (
+                              <Select
+                                value={lead.leadType ?? ""}
+                                onValueChange={(v) => {
+                                  assignLead.mutate({
+                                    subscriptionId: lead.subscriptionId,
+                                    leadType: v,
+                                  });
+                                  setEditingLeadType(null);
+                                }}
+                                open
+                                onOpenChange={(open) => { if (!open) setEditingLeadType(null); }}
+                              >
+                                <SelectTrigger className="h-7 text-xs w-[180px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {LEAD_TYPE_OPTIONS.map((lt) => {
+                                    const b = getLeadTypeBadge(lt, 0);
+                                    return (
+                                      <SelectItem key={lt} value={lt}>
+                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${b.bg} ${b.text}`}>
+                                          {b.label}
+                                        </span>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="flex items-center gap-1 group">
+                                <span
+                                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
+                                >
+                                  {badge.label}
+                                </span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+                                  title="Edit lead type"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
                           </td>
                           {/* Customer Note — expandable */}
                           <td className="px-2 py-3">
