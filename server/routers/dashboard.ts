@@ -475,6 +475,7 @@ export const dashboardRouter = router({
       // 2 & 3. Weakest and strongest agent today
       const agentStatsToday = await db
         .select({
+          repName: callAnalyses.repName,
           userId: callAnalyses.userId,
           avgScore: sql<number>`ROUND(AVG(${callAnalyses.overallScore}))`,
           callCount: sql<number>`count(*)`,
@@ -489,23 +490,17 @@ export const dashboardRouter = router({
             sql`${callAnalyses.overallScore} IS NOT NULL`,
           )
         )
-        .groupBy(callAnalyses.userId);
+        .groupBy(callAnalyses.repName);
 
       let weakestAgent: { name: string; avgScore: number; userId: number } | null = null;
       let strongestAgent: { name: string; avgScore: number; userId: number } | null = null;
 
       if (agentStatsToday.length > 0) {
-        const agentUserIds = agentStatsToday.map((a) => a.userId);
-        const agentUsers = await db
-          .select({ id: users.id, name: users.name })
-          .from(users)
-          .where(inArray(users.id, agentUserIds));
-        const userNameMap = new Map(agentUsers.map((u) => [u.id, u.name ?? "Unknown"]));
-
         const sorted = agentStatsToday
+          .filter((a) => a.repName && a.repName.trim() !== "")
           .map((a) => ({
-            userId: a.userId,
-            name: userNameMap.get(a.userId) ?? "Unknown",
+            userId: a.userId ?? 0,
+            name: a.repName ?? "Unknown",
             avgScore: Number(a.avgScore),
           }))
           .sort((a, b) => a.avgScore - b.avgScore);
@@ -611,32 +606,25 @@ export const dashboardRouter = router({
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-      // Aggregate by agent
+      // Aggregate by agent using repName directly from call_analyses
       const agentStats = await db
         .select({
+          repName: callAnalyses.repName,
           userId: callAnalyses.userId,
           avgScore: sql<number>`ROUND(AVG(${callAnalyses.overallScore}))`,
           callCount: sql<number>`count(*)`,
         })
         .from(callAnalyses)
         .where(whereClause)
-        .groupBy(callAnalyses.userId);
+        .groupBy(callAnalyses.repName);
 
       if (agentStats.length === 0) return [];
 
-      // Fetch names
-      const agentUserIds = agentStats.map((a) => a.userId).filter((id): id is number => id !== null);
-      const agentUsers = await db
-        .select({ id: users.id, name: users.name })
-        .from(users)
-        .where(inArray(users.id, agentUserIds));
-      const userNameMap = new Map(agentUsers.map((u) => [u.id, u.name ?? "Unknown"]));
-
       return agentStats
-        .filter((a) => a.userId !== null)
+        .filter((a) => a.repName && a.repName.trim() !== "")
         .map((a) => ({
-          userId: a.userId as number,
-          name: userNameMap.get(a.userId as number) ?? "Unknown",
+          userId: a.userId ?? 0,
+          name: a.repName ?? "Unknown",
           avgScore: Number(a.avgScore),
           callCount: Number(a.callCount),
         }))
