@@ -9,7 +9,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 import {
   RefreshCw,
   Search,
@@ -31,6 +42,7 @@ import {
   CalendarPlus,
   Inbox,
   Pencil,
+  Trash2,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -354,6 +366,9 @@ function CustomerMessageEditor({
 // Main Dashboard Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ManagerDashboard() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState("all");
@@ -369,6 +384,7 @@ export default function ManagerDashboard() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAgent, setBulkAgent] = useState<string>("");
   const [editingLeadType, setEditingLeadType] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const {
     data: leadsData,
@@ -408,6 +424,29 @@ export default function ManagerDashboard() {
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
+
+  const bulkDeleteLeads = trpc.manager.bulkDeleteLeads.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.deleted} lead${data.deleted !== 1 ? "s" : ""} deleted`);
+      setSelectedIds(new Set());
+      refetch();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    // Collect the numeric DB IDs (assignmentId) for the selected leads
+    const idsToDelete = leads
+      .filter((l: any) => selectedIds.has(l.subscriptionId))
+      .map((l: any) => l.assignmentId as number)
+      .filter((id: number) => typeof id === "number" && !isNaN(id));
+    if (idsToDelete.length === 0) {
+      toast.error("Could not resolve lead IDs");
+      return;
+    }
+    bulkDeleteLeads.mutate({ ids: idsToDelete });
+  };
 
   const { data: workloadData } = trpc.manager.getAgentWorkload.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -963,6 +1002,17 @@ export default function ManagerDashboard() {
               {bulkAssign.isPending ? "Assigning..." : "Assign"}
             </Button>
           </div>
+          {isAdmin && (
+            <Button
+              size="sm"
+              className="h-8 px-3 text-sm bg-red-600 hover:bg-red-700 text-white font-semibold gap-1.5 ml-2"
+              disabled={bulkDeleteLeads.isPending}
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {bulkDeleteLeads.isPending ? "Deleting..." : `Delete Selected (${selectedIds.size})`}
+            </Button>
+          )}
           <button
             className="ml-auto text-blue-200 hover:text-white"
             onClick={() => setSelectedIds(new Set())}
@@ -971,6 +1021,33 @@ export default function ManagerDashboard() {
           </button>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to permanently delete{" "}
+              <strong>{selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}</strong> from the
+              database. This action cannot be undone and will also remove all associated call
+              history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                handleDeleteSelected();
+              }}
+            >
+              Yes, delete {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Table / Cards */}
       <div className="p-2 sm:p-3">

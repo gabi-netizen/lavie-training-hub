@@ -652,6 +652,43 @@ export const managerRouter = router({
     }),
 
   /**
+   * Bulk delete leads by list of DB IDs (primary key).
+   * Admin only.
+   */
+  bulkDeleteLeads: adminProcedure
+    .input(
+      z.object({
+        ids: z.array(z.number()).min(1, "At least one ID required"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      let deleted = 0;
+      for (const id of input.ids) {
+        // Delete call attempts for this lead first (FK safety)
+        const lead = await db
+          .select({ subscriptionId: leadAssignments.subscriptionId })
+          .from(leadAssignments)
+          .where(eq(leadAssignments.id, id))
+          .limit(1);
+
+        if (lead.length > 0) {
+          await db
+            .delete(callAttempts)
+            .where(eq(callAttempts.subscriptionId, lead[0].subscriptionId));
+          await db
+            .delete(leadAssignments)
+            .where(eq(leadAssignments.id, id));
+          deleted++;
+        }
+      }
+
+      return { success: true, deleted };
+    }),
+
+  /**
    * Import leads from CSV data (array of lead objects).
    */
   importLeads: adminProcedure
