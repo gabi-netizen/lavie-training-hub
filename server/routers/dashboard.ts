@@ -475,12 +475,13 @@ export const dashboardRouter = router({
       // 2 & 3. Weakest and strongest agent today
       const agentStatsToday = await db
         .select({
-          repName: callAnalyses.repName,
           userId: callAnalyses.userId,
           avgScore: sql<number>`ROUND(AVG(${callAnalyses.overallScore}))`,
           callCount: sql<number>`count(*)`,
+          displayName: sql<string>`COALESCE(MAX(${users.name}), MAX(${callAnalyses.repName}), 'Unknown')`,
         })
         .from(callAnalyses)
+        .leftJoin(users, eq(users.id, callAnalyses.userId))
         .where(
           and(
             ...tabConditions,
@@ -490,17 +491,17 @@ export const dashboardRouter = router({
             sql`${callAnalyses.overallScore} IS NOT NULL`,
           )
         )
-        .groupBy(callAnalyses.repName);
+        .groupBy(callAnalyses.userId);
 
       let weakestAgent: { name: string; avgScore: number; userId: number } | null = null;
       let strongestAgent: { name: string; avgScore: number; userId: number } | null = null;
 
       if (agentStatsToday.length > 0) {
         const sorted = agentStatsToday
-          .filter((a) => a.repName && a.repName.trim() !== "")
+          .filter((a) => a.userId !== null)
           .map((a) => ({
             userId: a.userId ?? 0,
-            name: a.repName ?? "Unknown",
+            name: a.displayName,
             avgScore: Number(a.avgScore),
           }))
           .sort((a, b) => a.avgScore - b.avgScore);
@@ -609,22 +610,23 @@ export const dashboardRouter = router({
       // Aggregate by agent using repName directly from call_analyses
       const agentStats = await db
         .select({
-          repName: callAnalyses.repName,
           userId: callAnalyses.userId,
           avgScore: sql<number>`ROUND(AVG(${callAnalyses.overallScore}))`,
           callCount: sql<number>`count(*)`,
+          displayName: sql<string>`COALESCE(MAX(${users.name}), MAX(${callAnalyses.repName}), 'Unknown')`,
         })
         .from(callAnalyses)
+        .leftJoin(users, eq(users.id, callAnalyses.userId))
         .where(whereClause)
-        .groupBy(callAnalyses.repName);
+        .groupBy(callAnalyses.userId);
 
       if (agentStats.length === 0) return [];
 
       return agentStats
-        .filter((a) => a.repName && a.repName.trim() !== "")
+        .filter((a) => a.userId !== null)
         .map((a) => ({
-          userId: a.userId ?? 0,
-          name: a.repName ?? "Unknown",
+          userId: a.userId as number,
+          name: a.displayName,
           avgScore: Number(a.avgScore),
           callCount: Number(a.callCount),
         }))
