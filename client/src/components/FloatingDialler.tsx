@@ -62,8 +62,8 @@ export default function FloatingDialler() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // Show for all logged-in users
-  if (!user) return null;
+  // Only show for admins — MUST be after all hooks
+  if (user && user.role !== "admin") return null;
 
   return (
     <div
