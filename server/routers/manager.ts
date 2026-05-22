@@ -9,8 +9,8 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts } from "../../drizzle/schema";
-import { eq, like, or, and, desc, sql } from "drizzle-orm";
+import { leadAssignments, callAttempts, contacts } from "../../drizzle/schema";
+import { eq, like, or, and, desc, sql, isNull } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -197,6 +197,7 @@ export const managerRouter = router({
           statusChangedAt: row.statusChangedAt ?? null,
           lastTransactionDate: row.lastTransactionDate ?? null,
           lastShipmentDate: row.lastShipmentDate ?? null,
+          contactId: row.contactId ?? null,
           createdAt: row.createdAt ? row.createdAt.toISOString() : null,
         };
       });
@@ -755,6 +756,97 @@ export const managerRouter = router({
 
       return { success: true, inserted, skipped };
     }),
+
+  /**
+   * Link all unlinked leads to contacts.
+   * For each lead_assignment where contactId IS NULL:
+   *   - Look up contacts by email (or phone)
+   *   - If found → set contactId
+   *   - If not found → create a new contact with department="retention" and link it
+   */
+  linkLeadsToContacts: adminProcedure.mutation(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    // Find all leads without a contactId
+    const unlinkedLeads = await db
+      .select()
+      .from(leadAssignments)
+      .where(isNull(leadAssignments.contactId));
+
+    let linked = 0;
+    let created = 0;
+    let skipped = 0;
+
+    for (const lead of unlinkedLeads) {
+      // Skip leads with no email and no phone — can't match
+      if (!lead.email && !lead.phone) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        // Try to find existing contact by email first, then phone
+        let existingContact: { id: number } | undefined;
+
+        if (lead.email) {
+          const byEmail = await db
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(eq(contacts.email, lead.email))
+            .limit(1);
+          existingContact = byEmail[0];
+        }
+
+        if (!existingContact && lead.phone) {
+          const normalizedPhone = lead.phone.replace(/[\s\-().+]/g, "");
+          const byPhone = await db
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(
+              or(
+                like(contacts.phone, `%${normalizedPhone}%`),
+                like(contacts.phone, `%${lead.phone}%`)
+              )
+            )
+            .limit(1);
+          existingContact = byPhone[0];
+        }
+
+        if (existingContact) {
+          // Link existing contact
+          await db
+            .update(leadAssignments)
+            .set({ contactId: existingContact.id })
+            .where(eq(leadAssignments.id, lead.id));
+          linked++;
+        } else {
+          // Create new contact and link it
+          const [result] = await db.insert(contacts).values({
+            name: lead.customerName || "Unknown",
+            email: lead.email || null,
+            phone: lead.phone || null,
+            department: "retention",
+            leadType: lead.leadType || null,
+            status: "new",
+          });
+          const newContactId = (result as any).insertId as number;
+          if (newContactId) {
+            await db
+              .update(leadAssignments)
+              .set({ contactId: newContactId })
+              .where(eq(leadAssignments.id, lead.id));
+            created++;
+          }
+        }
+      } catch (e) {
+        console.error(`[linkLeadsToContacts] Error processing lead ${lead.id}:`, e);
+        skipped++;
+      }
+    }
+
+    return { success: true, linked, created, skipped, total: unlinkedLeads.length };
+  }),
 
   /**
    * Get constants for UI dropdowns.
