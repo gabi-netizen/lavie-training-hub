@@ -1356,7 +1356,7 @@ function StripePaymentSection({
             opacity: emailLoading ? 0.6 : 1,
           }}
         >
-          {emailLoading ? "Sending…" : emailSent ? "✉️ Email Sent!" : "✉️ Send Payment Link to Customer"}
+          {emailLoading ? "Sending…" : emailSent ? "✉️ Email Sent!" : "✉️ Send Google/Apple Pay"}
         </button>
         {emailSent && (
           <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "6px", textAlign: "center" }}>
