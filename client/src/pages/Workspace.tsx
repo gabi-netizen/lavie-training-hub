@@ -2323,7 +2323,18 @@ export default function Workspace() {
 
   const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager">("pitch");
   const managerMode = activeTab === "manager";
-  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(() => {
+    const saved = localStorage.getItem('ws_selectedAgentId');
+    return saved ? Number(saved) : null;
+  });
+  // Persist selectedAgentId to localStorage
+  useEffect(() => {
+    if (selectedAgentId !== null) {
+      localStorage.setItem('ws_selectedAgentId', String(selectedAgentId));
+    } else {
+      localStorage.removeItem('ws_selectedAgentId');
+    }
+  }, [selectedAgentId]);
 
   // Fetch all users (for manager view agent filtering)
   const { data: allUsersWs } = trpc.pitch.allUsers.useQuery(undefined, { enabled: true });
