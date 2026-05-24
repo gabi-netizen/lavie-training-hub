@@ -648,8 +648,8 @@ export const contactsRouter = router({
 
   // ─── Get ALL scheduled callbacks (future + overdue) for the current agent ──
   allCallbacks: protectedProcedure.query(async ({ ctx }) => {
-    // Non-admin agents only see their own callbacks
-    const agentEmail = ctx.user.role !== 'admin' ? (ctx.user.email ?? undefined) : undefined;
+    // Everyone sees only their own callbacks (by email)
+    const agentEmail = ctx.user.email ?? undefined;
     return getAllCallbacks(agentEmail);
   }),
 
