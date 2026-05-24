@@ -361,15 +361,19 @@ export async function importContacts(rows: CsvContactRow[], department: string =
 }
 
 // ─── Get Contacts Due for Callback ────────────────────────────────────────────
-export async function getCallbacksDue() {
+export async function getCallbacksDue(agentEmail?: string) {
   const db = await getDb();
   if (!db) return [];
   const now = new Date();
   // Return contacts where callbackAt is in the past (overdue) and status is still 'working'
+  const conditions = [lte(contacts.callbackAt, now)];
+  if (agentEmail) {
+    conditions.push(eq(contacts.agentEmail, agentEmail));
+  }
   return db
     .select()
     .from(contacts)
-    .where(lte(contacts.callbackAt, now))
+    .where(and(...conditions))
     .orderBy(contacts.callbackAt);
 }
 

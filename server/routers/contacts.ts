@@ -642,8 +642,10 @@ export const contactsRouter = router({
     }),
 
   // ─── Get overdue callbacks (callbackAt <= now) ────────────────────────────
-  callbacksDue: protectedProcedure.query(async () => {
-    return getCallbacksDue();
+  callbacksDue: protectedProcedure.query(async ({ ctx }) => {
+    // Everyone sees only their own overdue callbacks
+    const agentEmail = ctx.user.email ?? undefined;
+    return getCallbacksDue(agentEmail);
   }),
 
   // ─── Get ALL scheduled callbacks (future + overdue) for the current agent ──
