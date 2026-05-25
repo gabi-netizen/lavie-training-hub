@@ -321,10 +321,19 @@ function EditableField({
   const [previousVal, setPreviousVal] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const prevValueRef = useRef(value);
   useEffect(() => {
-    setCurrentVal(value);
-    // Clear the revert button when the contact changes (value prop resets)
-    setPreviousVal(null);
+    // If the value prop changed because we saved (currentVal already matches),
+    // just sync without clearing previousVal.
+    // Only clear previousVal when switching to a different contact (value differs from currentVal).
+    if (value !== prevValueRef.current) {
+      if (value !== currentVal) {
+        // Contact changed or external update — clear revert
+        setPreviousVal(null);
+      }
+      setCurrentVal(value);
+      prevValueRef.current = value;
+    }
   }, [value]);
 
   const startEdit = () => {
