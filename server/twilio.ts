@@ -3,14 +3,19 @@
  * Uses Twilio Content API for templates and Messages API for sending.
  */
 
-// ─── Credentials from environment ────────────────────────────────────────────
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
-const TWILIO_API_KEY_SID = process.env.TWILIO_API_KEY_SID || "";
-const TWILIO_API_KEY_SECRET = process.env.TWILIO_API_KEY_SECRET || "";
-const TWILIO_WHATSAPP_FROM = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298";
+// ─── Credentials from environment (read lazily at call time) ─────────────────
+function getConfig() {
+  return {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || "",
+    apiKeySid: process.env.TWILIO_API_KEY_SID || "",
+    apiKeySecret: process.env.TWILIO_API_KEY_SECRET || "",
+    whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298",
+  };
+}
 
 function getTwilioAuthHeader(): string {
-  const credentials = Buffer.from(`${TWILIO_API_KEY_SID}:${TWILIO_API_KEY_SECRET}`).toString("base64");
+  const { apiKeySid, apiKeySecret } = getConfig();
+  const credentials = Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString("base64");
   return `Basic ${credentials}`;
 }
 
@@ -34,10 +39,13 @@ export interface TwilioSendResult {
 
 // ─── List WhatsApp templates from Twilio Content API ─────────────────────────
 export async function listWhatsAppTemplates(): Promise<TwilioTemplate[]> {
-  if (!TWILIO_API_KEY_SID || !TWILIO_API_KEY_SECRET) {
-    console.error("[Twilio] Missing API Key credentials");
+  const { apiKeySid, apiKeySecret } = getConfig();
+  if (!apiKeySid || !apiKeySecret) {
+    console.error("[Twilio] Missing API Key credentials. SID:", apiKeySid ? "set" : "EMPTY", "SECRET:", apiKeySecret ? "set" : "EMPTY");
     return [];
   }
+
+  console.log("[Twilio] Fetching templates from Content API...");
 
   const res = await fetch("https://content.twilio.com/v1/Content", {
     method: "GET",
@@ -45,7 +53,6 @@ export async function listWhatsAppTemplates(): Promise<TwilioTemplate[]> {
       Authorization: getTwilioAuthHeader(),
       "Content-Type": "application/json",
     },
-    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
@@ -55,6 +62,7 @@ export async function listWhatsAppTemplates(): Promise<TwilioTemplate[]> {
   }
 
   const data = await res.json();
+  console.log(`[Twilio] Found ${(data.contents || []).length} templates`);
   // The Content API returns { contents: [...] }
   return (data.contents || []).map((item: any) => ({
     sid: item.sid,
@@ -71,10 +79,12 @@ export async function sendWhatsAppMessage(opts: {
   to: string; // E.164 phone number (e.g. +447xxxxxxxxx)
   contentSid: string; // Template SID from Content API
 }): Promise<TwilioSendResult> {
-  if (!TWILIO_ACCOUNT_SID) {
+  const { accountSid, apiKeySid, apiKeySecret, whatsappFrom } = getConfig();
+
+  if (!accountSid) {
     throw new Error("TWILIO_ACCOUNT_SID not configured");
   }
-  if (!TWILIO_API_KEY_SID || !TWILIO_API_KEY_SECRET) {
+  if (!apiKeySid || !apiKeySecret) {
     throw new Error("Twilio API Key credentials not configured");
   }
 
@@ -82,10 +92,10 @@ export async function sendWhatsAppMessage(opts: {
     ? opts.to
     : `whatsapp:${opts.to}`;
 
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
 
   const body = new URLSearchParams({
-    From: TWILIO_WHATSAPP_FROM,
+    From: whatsappFrom,
     To: toWhatsApp,
     ContentSid: opts.contentSid,
   });
@@ -97,7 +107,6 @@ export async function sendWhatsAppMessage(opts: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: body.toString(),
-    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
