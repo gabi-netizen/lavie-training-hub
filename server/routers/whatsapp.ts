@@ -7,7 +7,9 @@ import { normalisePhone } from "../contacts";
 
 export const whatsappRouter = router({
   // ─── List available WhatsApp templates from Twilio Content API ─────────────
-  // Filters by user team: Opening sees "OP:" templates, Retention sees "RT:", no team sees all.
+  // Opening: only "op_" or "OP:" prefixed templates
+  // Retention: "rt_" or "RT:" prefixed + any template without a known prefix (legacy)
+  // No team: sees everything
   templates: protectedProcedure.query(async ({ ctx }) => {
     try {
       const templates = await listWhatsAppTemplates();
@@ -18,17 +20,27 @@ export const whatsappRouter = router({
         return templates;
       }
 
-            // Filter by prefix based on team (supports both "OP:" and "op_" naming)
-      const prefixesMap: Record<string, string[]> = {
-        opening: ["OP:", "op_"],
-        retention: ["RT:", "rt_"],
-        academy: ["OP:", "op_"], // Academy sees Opening templates by default
-      };
-      const prefixes = prefixesMap[userTeam];
-      if (!prefixes) return templates;
-      return templates.filter((t) =>
-        prefixes.some((p) => t.friendly_name.startsWith(p))
-      );
+      const allKnownPrefixes = ["op_", "OP:", "rt_", "RT:"];
+      const hasKnownPrefix = (name: string) =>
+        allKnownPrefixes.some((p) => name.startsWith(p));
+
+      if (userTeam === "opening" || userTeam === "academy") {
+        // Opening/Academy: only templates explicitly tagged for opening
+        return templates.filter((t) =>
+          t.friendly_name.startsWith("op_") || t.friendly_name.startsWith("OP:")
+        );
+      }
+
+      if (userTeam === "retention") {
+        // Retention: rt_ prefixed + legacy templates (no prefix)
+        return templates.filter((t) =>
+          t.friendly_name.startsWith("rt_") ||
+          t.friendly_name.startsWith("RT:") ||
+          !hasKnownPrefix(t.friendly_name)
+        );
+      }
+
+      return templates;
     } catch (err) {
       console.error("[WhatsApp] Failed to fetch templates:", err);
       throw new TRPCError({
