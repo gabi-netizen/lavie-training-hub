@@ -18,16 +18,17 @@ export const whatsappRouter = router({
         return templates;
       }
 
-      // Filter by prefix based on team
-      const prefixMap: Record<string, string> = {
-        opening: "OP:",
-        retention: "RT:",
-        academy: "OP:", // Academy sees Opening templates by default
+            // Filter by prefix based on team (supports both "OP:" and "op_" naming)
+      const prefixesMap: Record<string, string[]> = {
+        opening: ["OP:", "op_"],
+        retention: ["RT:", "rt_"],
+        academy: ["OP:", "op_"], // Academy sees Opening templates by default
       };
-      const prefix = prefixMap[userTeam];
-      if (!prefix) return templates;
-
-      return templates.filter((t) => t.friendly_name.startsWith(prefix));
+      const prefixes = prefixesMap[userTeam];
+      if (!prefixes) return templates;
+      return templates.filter((t) =>
+        prefixes.some((p) => t.friendly_name.startsWith(p))
+      );
     } catch (err) {
       console.error("[WhatsApp] Failed to fetch templates:", err);
       throw new TRPCError({
