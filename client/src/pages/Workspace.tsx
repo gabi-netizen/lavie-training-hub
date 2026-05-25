@@ -2569,7 +2569,7 @@ export default function Workspace() {
           iframe.contentWindow.postMessage(JSON.stringify({ event: "hangup", properties: {} }), "https://phone.cloudtalk.io");
         }
       }
-      const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : action === "done" ? "Done" : "Skip";
+      const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : action === "done" ? "Done" : "N/A";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
       // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];
@@ -2681,7 +2681,7 @@ export default function Workspace() {
                 </div>
                 <div className="ws-dl-stat">
                   <div className="ws-dl-stat-num">{doneCount}</div>
-                  <div className="ws-dl-stat-label">Done</div>
+                  <div className="ws-dl-stat-label">N/I</div>
                 </div>
                 <div className="ws-dl-stat">
                   <div className="ws-dl-stat-num" style={{ color: "#16a34a" }}>{soldCount}</div>
@@ -2707,9 +2707,9 @@ export default function Workspace() {
               >
                 <option value="active">Active ({activeCount})</option>
                 <option value="all">All ({totalContacts})</option>
-                <option value="skipped">Skipped ({skippedCount})</option>
+                <option value="skipped">N/A ({skippedCount})</option>
                 <option value="sold">Sold ({soldCount})</option>
-                <option value="done">Done ({Object.values(doneItems).filter((s) => s === "Done").length})</option>
+                <option value="done">Not Interested ({Object.values(doneItems).filter((s) => s === "Done").length})</option>
                 <option value="no">No ({Object.values(doneItems).filter((s) => s === "No").length})</option>
                 <option value="callback">Callback ({Object.values(doneItems).filter((s) => s === "Callback").length})</option>
               </select>
