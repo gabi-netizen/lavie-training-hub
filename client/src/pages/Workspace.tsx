@@ -1067,7 +1067,7 @@ function ContactCard({
             <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
             <button className="ws-btn ws-btn-done" onClick={() => onAction("done")}>Not Interested</button>
-            <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Next</button>
+            <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>N/A</button>
           </div>
 
           {/* Take Payment + Send Email Template dropdown — 50/50 */}
