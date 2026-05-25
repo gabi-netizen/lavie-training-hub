@@ -20,8 +20,10 @@ const stripeTestPromise = loadStripe(STRIPE_TEST_PK);
 import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronLeft, ChevronDown, CreditCard, Search,
-  Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus, ChevronsUpDown
+  Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus, ChevronsUpDown,
+  MessageCircle
 } from "lucide-react";
+import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import {
   Popover,
   PopoverContent,
@@ -2620,6 +2622,9 @@ export default function Workspace() {
   // How to Use guide modal
   const [showGuide, setShowGuide] = useState(false);
 
+  // WhatsApp Chat panel
+  const [showWhatsAppChat, setShowWhatsAppChat] = useState(false);
+
   // Click-to-call mutation
   const [callCooldown, setCallCooldown] = useState(false);
   const clickToCall = trpc.contacts.clickToCall.useMutation({
@@ -2955,6 +2960,13 @@ export default function Workspace() {
                 >
                   💳 £4.95 Payments
                 </a>
+                <button
+                  className="ws-mode-btn"
+                  onClick={() => setShowWhatsAppChat(true)}
+                  style={{ background: "#25d366", color: "#fff", borderRadius: 8, padding: "6px 12px", display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  <MessageCircle size={14} /> WhatsApp Chat
+                </button>
                 <button
                   className="ws-mode-btn"
                   onClick={() => setShowGuide(true)}
@@ -3301,6 +3313,9 @@ export default function Workspace() {
       )}
 
       {/* ── How to Use Guide Modal ── */}
+      {/* WhatsApp Chat Panel */}
+      <WhatsAppChatPanel open={showWhatsAppChat} onClose={() => setShowWhatsAppChat(false)} />
+
       {showGuide && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>

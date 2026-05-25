@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { listWhatsAppTemplates, sendWhatsAppMessage } from "../twilio";
+import { listWhatsAppTemplates, sendWhatsAppMessage, sendWhatsAppFreeText } from "../twilio";
 import { getContact } from "../contacts";
 import { normalisePhone } from "../contacts";
 import { getDb } from "../db";
@@ -365,5 +365,92 @@ export const whatsappRouter = router({
         .where(whereClause!);
 
       return { success: true };
+    }),
+
+  // ─── Send free-text WhatsApp reply (within 24h conversation window) ─────────
+  sendFreeText: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        body: z.string().min(1).max(4096),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { contactId, body } = input;
+
+      // Get the contact
+      const contact = await getContact(contactId);
+      if (!contact) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Contact not found",
+        });
+      }
+
+      if (!contact.phone) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Contact does not have a phone number",
+        });
+      }
+
+      // Normalise the phone number to E.164
+      const normalisedPhone = normalisePhone(contact.phone);
+      if (!normalisedPhone) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Could not normalise contact phone number",
+        });
+      }
+
+      const e164Phone = normalisedPhone.startsWith("+")
+        ? normalisedPhone
+        : `+${normalisedPhone}`;
+
+      try {
+        const result = await sendWhatsAppFreeText({
+          to: e164Phone,
+          body,
+        });
+
+        console.log(
+          `[WhatsApp] Free-text sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${result.sid}`
+        );
+
+        // Save outbound message to DB
+        const db = await getDb();
+        if (db) {
+          try {
+            const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
+
+            await db.insert(whatsappMessages).values({
+              contactId,
+              direction: "outbound",
+              body,
+              templateName: null,
+              sentByUserId: ctx.user.id,
+              fromNumber,
+              toNumber: e164Phone,
+              twilioMessageSid: result.sid,
+              status: "sent",
+              isRead: true,
+            });
+          } catch (dbErr) {
+            console.error("[WhatsApp] Failed to save free-text message to DB:", dbErr);
+          }
+        }
+
+        return {
+          success: true,
+          messageSid: result.sid,
+          status: result.status,
+        };
+      } catch (err) {
+        console.error("[WhatsApp] Free-text send error:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send WhatsApp message: ${(err as Error).message}`,
+        });
+      }
     }),
 });

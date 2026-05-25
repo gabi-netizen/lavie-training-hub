@@ -129,3 +129,54 @@ export async function sendWhatsAppMessage(opts: {
     date_created: data.date_created,
   };
 }
+
+// ─── Send free-text WhatsApp message (within 24h conversation window) ───────
+export async function sendWhatsAppFreeText(opts: {
+  to: string; // E.164 phone number (e.g. +447xxxxxxxxx)
+  body: string; // Free-text message body
+}): Promise<TwilioSendResult> {
+  const { accountSid, authToken, whatsappFrom } = getConfig();
+
+  if (!accountSid) {
+    throw new Error("TWILIO_ACCOUNT_SID not configured");
+  }
+  if (!authToken) {
+    throw new Error("TWILIO_AUTH_TOKEN not configured");
+  }
+
+  const toWhatsApp = opts.to.startsWith("whatsapp:")
+    ? opts.to
+    : `whatsapp:${opts.to}`;
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+
+  const body = new URLSearchParams({
+    From: whatsappFrom,
+    To: toWhatsApp,
+    Body: opts.body,
+  });
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: getTwilioAuthHeader(),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error(`[Twilio] Free-text Messages API error: ${res.status} ${errText}`);
+    throw new Error(`Twilio Messages API error: ${res.status} — ${errText}`);
+  }
+
+  const data = await res.json();
+  return {
+    sid: data.sid,
+    status: data.status,
+    to: data.to,
+    from: data.from,
+    date_created: data.date_created,
+  };
+}
