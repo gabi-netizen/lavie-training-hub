@@ -62,8 +62,9 @@ export const whatsappRouter = router({
         : `+${normalisedPhone}`;
 
       // Build content variables: {{1}} = customer first name, {{2}} = agent first name
+      // Use contact.agentName (the assigned agent) not ctx.user (the logged-in user)
       const customerFirstName = (contact.name ?? "").split(" ")[0] || "there";
-      const agentFirstName = (ctx.user.name ?? "").split(" ")[0] || "Lavie Labs";
+      const agentFirstName = (contact.agentName ?? ctx.user.name ?? "").split(" ")[0] || "Lavie Labs";
 
       try {
         const result = await sendWhatsAppMessage({
