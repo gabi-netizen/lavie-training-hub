@@ -1,13 +1,13 @@
 /**
  * WhatsApp Chat Panel — slide-out overlay with conversation list + message view.
- * Features: read receipts, 24h window timer, date separators, search, emoji picker.
+ * Features: read receipts, 24h window timer, date separators, search, emoji picker,
+ *           template picker when 24h window expires.
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { X, Send, MessageCircle, ArrowLeft, Search, Smile } from "lucide-react";
+import { X, Send, MessageCircle, ArrowLeft, Search, Smile, ChevronDown } from "lucide-react";
 
 // ─── Common Emojis Grid ─────────────────────────────────────────────────────
 const COMMON_EMOJIS = [
@@ -76,16 +76,13 @@ interface WhatsAppChatPanelProps {
 }
 
 export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
-  const { user } = useAuth();
-  // Managers (no team) can reply in any conversation regardless of 24h window ownership
-  const isManager = !user?.team;
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch conversations list
   const { data: conversations, refetch: refetchConversations } =
@@ -103,6 +100,11 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
         refetchInterval: open && selectedContactId !== null ? 5000 : false,
       }
     );
+
+  // Fetch templates (for expired-window re-engagement)
+  const { data: templates } = trpc.whatsapp.templates.useQuery(undefined, {
+    enabled: open && selectedContactId !== null,
+  });
 
   // Mark as read mutation
   const markAsRead = trpc.whatsapp.markAsRead.useMutation({
@@ -127,11 +129,25 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
     },
   });
 
+  // Send template mutation (re-opens conversation window)
+  const sendTemplate = trpc.whatsapp.send.useMutation({
+    onSuccess: () => {
+      setShowTemplates(false);
+      refetchMessages();
+      refetchConversations();
+      toast.success("Template sent — conversation window re-opened ✅");
+    },
+    onError: (err) => toast.error(`Failed to send template: ${err.message}`),
+  });
+
   // When selecting a conversation, mark as read
   useEffect(() => {
     if (selectedContactId !== null && open) {
       markAsRead.mutate({ contactId: selectedContactId });
     }
+    // Reset template picker when switching conversations
+    setShowTemplates(false);
+    setShowEmoji(false);
   }, [selectedContactId, open]);
 
   // Auto-scroll to bottom when messages change or conversation opens
@@ -149,6 +165,7 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
   }, [selectedContactId]);
 
   // ─── 24h Window Calculation ────────────────────────────────────────────────
+  // Applies to ALL users (managers and agents) — this is a Meta/WhatsApp API rule.
   const lastInboundTime = useMemo(() => {
     if (!messages) return null;
     const inboundMessages = messages.filter((m: any) => m.direction === "inbound");
@@ -157,21 +174,14 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
     return new Date(latest.createdAt);
   }, [messages]);
 
-  const [windowStatus, setWindowStatus] = useState({ expired: false, label: "" });
+  const [windowStatus, setWindowStatus] = useState({ expired: true, label: "" });
 
   useEffect(() => {
-    const update = () => {
-      // Managers can always reply — bypass the 24h window restriction
-      if (isManager) {
-        setWindowStatus({ expired: false, label: "Manager — no window restriction" });
-        return;
-      }
-      setWindowStatus(getTimeRemaining(lastInboundTime));
-    };
+    const update = () => setWindowStatus(getTimeRemaining(lastInboundTime));
     update();
     const interval = setInterval(update, 30000); // Update every 30s
     return () => clearInterval(interval);
-  }, [lastInboundTime, isManager]);
+  }, [lastInboundTime]);
 
   // ─── Filtered Conversations ────────────────────────────────────────────────
   const filteredConversations = useMemo(() => {
@@ -253,7 +263,7 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {selectedContactId !== null && (
               <button
-                onClick={() => { setSelectedContactId(null); setShowEmoji(false); }}
+                onClick={() => { setSelectedContactId(null); setShowEmoji(false); setShowTemplates(false); }}
                 style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}
               >
                 <ArrowLeft size={20} />
@@ -382,7 +392,6 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#ece5dd", minWidth: 0 }}>
               {/* Messages area */}
               <div
-                ref={messagesContainerRef}
                 style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 4 }}
               >
                 {!messages || messages.length === 0 ? (
@@ -395,13 +404,11 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
                     const msgDate = new Date(msg.createdAt);
                     const time = msgDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-                    // Date separator
                     const prevMsg = idx > 0 ? messages[idx - 1] : null;
                     const showDateSep = !prevMsg || !isSameDay(msgDate, new Date(prevMsg.createdAt));
 
                     return (
                       <div key={msg.id}>
-                        {/* Date separator */}
                         {showDateSep && (
                           <div style={{ display: "flex", justifyContent: "center", margin: "12px 0 8px" }}>
                             <span style={{ background: "#e2dfd7", color: "#54656f", fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 8 }}>
@@ -409,8 +416,6 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
                             </span>
                           </div>
                         )}
-
-                        {/* Message bubble */}
                         <div style={{ display: "flex", justifyContent: isOutbound ? "flex-end" : "flex-start", marginBottom: 2 }}>
                           <div
                             style={{
@@ -445,86 +450,164 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* 24h window timer + Input area */}
+              {/* Bottom input area */}
               <div style={{ borderTop: "1px solid #e5e7eb", background: "#f0f2f5" }}>
-                {/* Timer bar — hidden for managers who have no window restriction */}
-                {messages && messages.length > 0 && !isManager && (
-                  <div style={{ padding: "4px 16px", fontSize: 11, color: windowStatus.expired ? "#dc2626" : "#16a34a", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: windowStatus.expired ? "#dc2626" : "#22c55e" }} />
-                    {windowStatus.expired
-                      ? "24h window expired. Send a template to re-engage."
-                      : `Messaging window: ${windowStatus.label}`}
-                  </div>
-                )}
 
-                {/* Emoji picker */}
-                {showEmoji && (
-                  <div style={{ padding: "8px 16px", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4 }}>
-                      {COMMON_EMOJIS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => insertEmoji(emoji)}
-                          style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", padding: 4, borderRadius: 6, transition: "background 0.1s" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                {windowStatus.expired ? (
+                  /* ── Expired window UI ── */
+                  <div style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px" }}>
+                      <span style={{ fontSize: 13, color: "#92400e", fontWeight: 500 }}>
+                        ⏰ 24h window expired — send a template to re-open the conversation
+                      </span>
+                      <button
+                        onClick={() => setShowTemplates(!showTemplates)}
+                        disabled={sendTemplate.isPending}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          background: "#16a34a",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "7px 14px",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          flexShrink: 0,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{ flexShrink: 0 }}>
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        Send Template <ChevronDown size={13} />
+                      </button>
                     </div>
-                  </div>
-                )}
 
-                {/* Input row */}
-                <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                  <button
-                    onClick={() => setShowEmoji(!showEmoji)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: showEmoji ? "#25d366" : "#8696a0", padding: 4, display: "flex", alignItems: "center" }}
-                  >
-                    <Smile size={22} />
-                  </button>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={windowStatus.expired ? "24h window expired — send a template" : "Type a message..."}
-                    disabled={sendFreeText.isPending || windowStatus.expired}
-                    style={{
-                      flex: 1,
-                      padding: "10px 16px",
-                      borderRadius: 24,
-                      border: "none",
-                      background: "#fff",
-                      fontSize: 14,
-                      outline: "none",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-                      opacity: windowStatus.expired ? 0.6 : 1,
-                    }}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!messageText.trim() || sendFreeText.isPending || windowStatus.expired}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      background: messageText.trim() && !sendFreeText.isPending && !windowStatus.expired ? "#075e54" : "#ccc",
-                      border: "none",
-                      color: "#fff",
-                      cursor: messageText.trim() && !sendFreeText.isPending && !windowStatus.expired ? "pointer" : "not-allowed",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    <Send size={18} />
-                  </button>
-                </div>
+                    {/* Template dropdown */}
+                    {showTemplates && (
+                      <div style={{ marginTop: 8, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", maxHeight: 240, overflowY: "auto" }}>
+                        {!templates || templates.length === 0 ? (
+                          <div style={{ padding: "16px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
+                            No templates available
+                          </div>
+                        ) : (
+                          templates.map((tpl: any) => (
+                            <button
+                              key={tpl.sid}
+                              onClick={() => {
+                                if (sendTemplate.isPending) return;
+                                sendTemplate.mutate({
+                                  contactId: selectedContactId!,
+                                  contentSid: tpl.sid,
+                                  templateName: tpl.friendly_name,
+                                });
+                              }}
+                              disabled={sendTemplate.isPending}
+                              style={{
+                                display: "block",
+                                width: "100%",
+                                textAlign: "left",
+                                padding: "10px 14px",
+                                border: "none",
+                                borderBottom: "1px solid #f3f4f6",
+                                background: "transparent",
+                                cursor: sendTemplate.isPending ? "not-allowed" : "pointer",
+                                fontSize: 13,
+                                color: "#1f2937",
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = "#f0fdf4"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                            >
+                              <span style={{ fontWeight: 600, color: "#16a34a" }}>{tpl.friendly_name}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* ── Active window UI ── */
+                  <>
+                    {/* Timer bar */}
+                    {messages && messages.length > 0 && (
+                      <div style={{ padding: "4px 16px", fontSize: 11, color: "#16a34a", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
+                        {`Messaging window: ${windowStatus.label}`}
+                      </div>
+                    )}
+
+                    {/* Emoji picker */}
+                    {showEmoji && (
+                      <div style={{ padding: "8px 16px", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4 }}>
+                          {COMMON_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => insertEmoji(emoji)}
+                              style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", padding: 4, borderRadius: 6, transition: "background 0.1s" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Input row */}
+                    <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        onClick={() => setShowEmoji(!showEmoji)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: showEmoji ? "#25d366" : "#8696a0", padding: 4, display: "flex", alignItems: "center" }}
+                      >
+                        <Smile size={22} />
+                      </button>
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type a message..."
+                        disabled={sendFreeText.isPending}
+                        style={{
+                          flex: 1,
+                          padding: "10px 16px",
+                          borderRadius: 24,
+                          border: "none",
+                          background: "#fff",
+                          fontSize: 14,
+                          outline: "none",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                        }}
+                      />
+                      <button
+                        onClick={handleSend}
+                        disabled={!messageText.trim() || sendFreeText.isPending}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "50%",
+                          background: messageText.trim() && !sendFreeText.isPending ? "#075e54" : "#ccc",
+                          border: "none",
+                          color: "#fff",
+                          cursor: messageText.trim() && !sendFreeText.isPending ? "pointer" : "not-allowed",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          transition: "background 0.15s",
+                        }}
+                      >
+                        <Send size={18} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
