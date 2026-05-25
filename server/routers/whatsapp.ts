@@ -7,10 +7,27 @@ import { normalisePhone } from "../contacts";
 
 export const whatsappRouter = router({
   // ─── List available WhatsApp templates from Twilio Content API ─────────────
-  templates: protectedProcedure.query(async () => {
+  // Filters by user team: Opening sees "OP:" templates, Retention sees "RT:", no team sees all.
+  templates: protectedProcedure.query(async ({ ctx }) => {
     try {
       const templates = await listWhatsAppTemplates();
-      return templates;
+      const userTeam = ctx.user.team; // "opening" | "retention" | "academy" | null
+
+      if (!userTeam) {
+        // No team (admin/unassigned) — show all templates
+        return templates;
+      }
+
+      // Filter by prefix based on team
+      const prefixMap: Record<string, string> = {
+        opening: "OP:",
+        retention: "RT:",
+        academy: "OP:", // Academy sees Opening templates by default
+      };
+      const prefix = prefixMap[userTeam];
+      if (!prefix) return templates;
+
+      return templates.filter((t) => t.friendly_name.startsWith(prefix));
     } catch (err) {
       console.error("[WhatsApp] Failed to fetch templates:", err);
       throw new TRPCError({
