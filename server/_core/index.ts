@@ -138,6 +138,19 @@ async function startServer() {
     });
   });
 
+  app.get("/api/debug-twilio", (_req, res) => {
+    const sid = process.env.TWILIO_ACCOUNT_SID ?? "";
+    const keySid = process.env.TWILIO_API_KEY_SID ?? "";
+    const keySecret = process.env.TWILIO_API_KEY_SECRET ?? "";
+    const from = process.env.TWILIO_WHATSAPP_FROM ?? "";
+    res.json({
+      TWILIO_ACCOUNT_SID: sid ? sid.substring(0, 6) + "..." : "NOT SET",
+      TWILIO_API_KEY_SID: keySid ? keySid.substring(0, 6) + "..." : "NOT SET",
+      TWILIO_API_KEY_SECRET: keySecret ? "set (" + keySecret.length + " chars)" : "NOT SET",
+      TWILIO_WHATSAPP_FROM: from || "NOT SET (will use default)",
+    });
+  });
+
   // ─── Standalone Payment Page ───────────────────────────────────────────────
   // Pure HTML/JS page — no React, no tRPC, no Clerk auth.
   // HTML is inlined as a TS string (via payment-html.ts) so esbuild bundles it
