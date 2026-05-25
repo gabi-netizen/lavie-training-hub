@@ -61,10 +61,18 @@ export const whatsappRouter = router({
         ? normalisedPhone
         : `+${normalisedPhone}`;
 
+      // Build content variables: {{1}} = customer first name, {{2}} = agent first name
+      const customerFirstName = (contact.name ?? "").split(" ")[0] || "there";
+      const agentFirstName = (ctx.user.name ?? "").split(" ")[0] || "Lavie Labs";
+
       try {
         const result = await sendWhatsAppMessage({
           to: e164Phone,
           contentSid,
+          contentVariables: {
+            "1": customerFirstName,
+            "2": agentFirstName,
+          },
         });
 
         console.log(

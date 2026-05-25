@@ -78,6 +78,7 @@ export async function listWhatsAppTemplates(): Promise<TwilioTemplate[]> {
 export async function sendWhatsAppMessage(opts: {
   to: string; // E.164 phone number (e.g. +447xxxxxxxxx)
   contentSid: string; // Template SID from Content API
+  contentVariables?: Record<string, string>; // Template variables (e.g. {"1": "John", "2": "Rob"})
 }): Promise<TwilioSendResult> {
   const { accountSid, authToken, whatsappFrom } = getConfig();
 
@@ -99,6 +100,10 @@ export async function sendWhatsAppMessage(opts: {
     To: toWhatsApp,
     ContentSid: opts.contentSid,
   });
+
+  if (opts.contentVariables) {
+    body.append("ContentVariables", JSON.stringify(opts.contentVariables));
+  }
 
   const res = await fetch(url, {
     method: "POST",
