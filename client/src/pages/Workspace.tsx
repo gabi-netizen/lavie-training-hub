@@ -1066,7 +1066,7 @@ function ContactCard({
             <button className="ws-btn ws-btn-call" onClick={() => onAction("call")} disabled={isCallPending} style={isCallPending ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{isCallPending ? "Calling…" : "Call"}</button>
             <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
             <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
-            <button className="ws-btn ws-btn-done" onClick={() => onAction("done")}>Done</button>
+            <button className="ws-btn ws-btn-done" onClick={() => onAction("done")}>Not Interested</button>
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>Next</button>
           </div>
 
