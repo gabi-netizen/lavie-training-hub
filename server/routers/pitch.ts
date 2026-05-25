@@ -38,7 +38,7 @@ export const pitchRouter = router({
     const db = await getDb();
     if (!db) return [];
     return db
-      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role, team: users.team })
       .from(users)
       .where(eq(users.active, true));
   }),

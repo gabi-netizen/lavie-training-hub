@@ -443,6 +443,7 @@ function ContactCard({
   onDelete,
   onPrev,
   onNext,
+  viewingAgentTeam,
 }: {
   contact: Contact;
   isActive: boolean;
@@ -457,6 +458,7 @@ function ContactCard({
   onDelete?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
+  viewingAgentTeam?: string | null;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -1157,7 +1159,19 @@ function ContactCard({
                 <p style={{ fontSize: 12, color: '#6b7280' }}>No WhatsApp templates found in Twilio</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {whatsappTemplates.map((tpl) => (
+                  {whatsappTemplates.filter((tpl) => {
+                    // Client-side filter: in Manager View, show only templates matching the viewed agent's team
+                    if (!viewingAgentTeam) return true; // no team = show all
+                    const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
+                    const hasPrefix = allPrefixes.some((p) => tpl.friendly_name.startsWith(p));
+                    if (viewingAgentTeam === "opening" || viewingAgentTeam === "academy") {
+                      return tpl.friendly_name.startsWith("op_") || tpl.friendly_name.startsWith("OP:");
+                    }
+                    if (viewingAgentTeam === "retention") {
+                      return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                    }
+                    return true;
+                  }).map((tpl) => (
                     <button
                       key={tpl.sid}
                       onClick={() => {
@@ -2461,6 +2475,15 @@ export default function Workspace() {
     return agent?.email ?? undefined;
   }, [managerMode, selectedAgentId, allUsersWs, user?.email]);
 
+  // Determine the team of the agent being viewed (for WhatsApp template filtering)
+  const viewingAgentTeam = useMemo(() => {
+    if (managerMode && selectedAgentId && allUsersWs) {
+      const agent = allUsersWs.find((u: any) => u.id === selectedAgentId);
+      return (agent as any)?.team ?? null;
+    }
+    return null; // Not in manager mode or no agent selected
+  }, [managerMode, selectedAgentId, allUsersWs]);
+
   // ── Callback scheduler modal state ──
   const [callbackModal, setCallbackModal] = useState<{ contactId: number; contactName: string } | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
@@ -2863,6 +2886,7 @@ export default function Workspace() {
                     onAction={(action) => handleAction(contact.id, action, contact.phone)}
                     onFieldChange={(field, value) => handleFieldChange(contact.id, field, value)}
                     isCallPending={clickToCall.isPending || callCooldown}
+                    viewingAgentTeam={viewingAgentTeam}
                     onDelete={() => {
                       const currentIndex = contacts.findIndex((c: any) => c.id === contact.id);
                       const nextContact = contacts[currentIndex + 1] ?? contacts[currentIndex - 1];
