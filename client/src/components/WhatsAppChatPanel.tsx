@@ -20,17 +20,19 @@ const COMMON_EMOJIS = [
 // ─── Check Mark SVGs ─────────────────────────────────────────────────────────
 function SingleCheck({ color = "#8696a0" }: { color?: string }) {
   return (
-    <svg width="16" height="11" viewBox="0 0 16 11" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M11.071 0.929L4.5 7.5L1.929 4.929" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M1 5L4.5 8.5L13 1" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 function DoubleCheck({ color = "#8696a0" }: { color?: string }) {
   return (
-    <svg width="20" height="11" viewBox="0 0 20 11" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M14.071 0.929L7.5 7.5L4.929 4.929" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M18.071 0.929L11.5 7.5L10.5 6.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <svg width="20" height="10" viewBox="0 0 20 10" fill="none" style={{ flexShrink: 0 }}>
+      {/* First check */}
+      <path d="M1 5L4.5 8.5L13 1" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Second check (offset right) */}
+      <path d="M7 5L10.5 8.5L19 1" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -92,14 +94,19 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
     });
 
   // Fetch messages for selected contact
-  const { data: messages, refetch: refetchMessages } =
-    trpc.whatsapp.messages.useQuery(
-      { contactId: selectedContactId },
-      {
-        enabled: open && selectedContactId !== null,
-        refetchInterval: open && selectedContactId !== null ? 5000 : false,
-      }
-    );
+  const {
+    data: messages,
+    refetch: refetchMessages,
+    isLoading: messagesLoading,
+    error: messagesError,
+  } = trpc.whatsapp.messages.useQuery(
+    { contactId: selectedContactId },
+    {
+      enabled: open && selectedContactId !== null,
+      refetchInterval: open && selectedContactId !== null ? 5000 : false,
+      retry: 1,
+    }
+  );
 
   // Fetch templates (for expired-window re-engagement)
   const { data: templates } = trpc.whatsapp.templates.useQuery(undefined, {
@@ -394,7 +401,15 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
               <div
                 style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 4 }}
               >
-                {!messages || messages.length === 0 ? (
+                {messagesLoading ? (
+                  <div style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: 40 }}>
+                    Loading messages…
+                  </div>
+                ) : messagesError ? (
+                  <div style={{ textAlign: "center", color: "#dc2626", fontSize: 13, padding: 40 }}>
+                    Error loading messages: {messagesError.message}
+                  </div>
+                ) : !messages || messages.length === 0 ? (
                   <div style={{ textAlign: "center", color: "#6b7280", fontSize: 13, padding: 40 }}>
                     No messages yet
                   </div>
@@ -432,13 +447,16 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
                             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 3, marginTop: 3 }}>
                               <span style={{ fontSize: 11, color: "#667781" }}>{time}</span>
                               {isOutbound && (
-                                msg.status === "read"
-                                  ? <DoubleCheck color="#53bdeb" />
-                                  : msg.status === "delivered"
-                                  ? <DoubleCheck color="#8696a0" />
-                                  : msg.status === "failed"
-                                  ? <span style={{ fontSize: 11, color: "#dc2626" }}>!</span>
-                                  : <SingleCheck color="#8696a0" />
+                                <span style={{ fontSize: 12, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
+                                  {msg.status === "read"
+                                    ? <DoubleCheck color="#53bdeb" />
+                                    : msg.status === "delivered"
+                                    ? <DoubleCheck color="#8696a0" />
+                                    : msg.status === "failed"
+                                    ? <span style={{ color: "#dc2626", fontWeight: 700 }}>✗</span>
+                                    : <SingleCheck color="#8696a0" />
+                                  }
+                                </span>
                               )}
                             </div>
                           </div>
