@@ -1,21 +1,21 @@
 /**
  * Twilio WhatsApp integration helpers.
  * Uses Twilio Content API for templates and Messages API for sending.
+ * Auth: Account SID + Auth Token (Basic auth).
  */
 
 // ─── Credentials from environment (read lazily at call time) ─────────────────
 function getConfig() {
   return {
     accountSid: process.env.TWILIO_ACCOUNT_SID || "",
-    apiKeySid: process.env.TWILIO_API_KEY_SID || "",
-    apiKeySecret: process.env.TWILIO_API_KEY_SECRET || "",
+    authToken: process.env.TWILIO_AUTH_TOKEN || "",
     whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298",
   };
 }
 
 function getTwilioAuthHeader(): string {
-  const { apiKeySid, apiKeySecret } = getConfig();
-  const credentials = Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString("base64");
+  const { accountSid, authToken } = getConfig();
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
   return `Basic ${credentials}`;
 }
 
@@ -39,9 +39,9 @@ export interface TwilioSendResult {
 
 // ─── List WhatsApp templates from Twilio Content API ─────────────────────────
 export async function listWhatsAppTemplates(): Promise<TwilioTemplate[]> {
-  const { apiKeySid, apiKeySecret } = getConfig();
-  if (!apiKeySid || !apiKeySecret) {
-    console.error("[Twilio] Missing API Key credentials. SID:", apiKeySid ? "set" : "EMPTY", "SECRET:", apiKeySecret ? "set" : "EMPTY");
+  const { accountSid, authToken } = getConfig();
+  if (!accountSid || !authToken) {
+    console.error("[Twilio] Missing credentials. ACCOUNT_SID:", accountSid ? "set" : "EMPTY", "AUTH_TOKEN:", authToken ? "set" : "EMPTY");
     return [];
   }
 
@@ -79,13 +79,13 @@ export async function sendWhatsAppMessage(opts: {
   to: string; // E.164 phone number (e.g. +447xxxxxxxxx)
   contentSid: string; // Template SID from Content API
 }): Promise<TwilioSendResult> {
-  const { accountSid, apiKeySid, apiKeySecret, whatsappFrom } = getConfig();
+  const { accountSid, authToken, whatsappFrom } = getConfig();
 
   if (!accountSid) {
     throw new Error("TWILIO_ACCOUNT_SID not configured");
   }
-  if (!apiKeySid || !apiKeySecret) {
-    throw new Error("Twilio API Key credentials not configured");
+  if (!authToken) {
+    throw new Error("TWILIO_AUTH_TOKEN not configured");
   }
 
   const toWhatsApp = opts.to.startsWith("whatsapp:")

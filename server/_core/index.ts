@@ -140,14 +140,13 @@ async function startServer() {
 
   app.get("/api/debug-twilio", async (_req, res) => {
     const sid = process.env.TWILIO_ACCOUNT_SID ?? "";
-    const keySid = process.env.TWILIO_API_KEY_SID ?? "";
-    const keySecret = process.env.TWILIO_API_KEY_SECRET ?? "";
+    const authToken = process.env.TWILIO_AUTH_TOKEN ?? "";
     const from = process.env.TWILIO_WHATSAPP_FROM ?? "";
 
     // Also try calling Twilio Content API directly
     let apiResult = "not tested";
     try {
-      const credentials = Buffer.from(`${keySid}:${keySecret}`).toString("base64");
+      const credentials = Buffer.from(`${sid}:${authToken}`).toString("base64");
       const r = await fetch("https://content.twilio.com/v1/Content", {
         method: "GET",
         headers: {
@@ -168,8 +167,7 @@ async function startServer() {
 
     res.json({
       TWILIO_ACCOUNT_SID: sid ? sid.substring(0, 6) + "..." : "NOT SET",
-      TWILIO_API_KEY_SID: keySid ? keySid.substring(0, 6) + "..." : "NOT SET",
-      TWILIO_API_KEY_SECRET: keySecret ? "set (" + keySecret.length + " chars)" : "NOT SET",
+      TWILIO_AUTH_TOKEN: authToken ? "set (" + authToken.length + " chars)" : "NOT SET",
       TWILIO_WHATSAPP_FROM: from || "NOT SET (will use default)",
       apiResult,
     });
