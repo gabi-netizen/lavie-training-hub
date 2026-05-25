@@ -138,16 +138,40 @@ async function startServer() {
     });
   });
 
-  app.get("/api/debug-twilio", (_req, res) => {
+  app.get("/api/debug-twilio", async (_req, res) => {
     const sid = process.env.TWILIO_ACCOUNT_SID ?? "";
     const keySid = process.env.TWILIO_API_KEY_SID ?? "";
     const keySecret = process.env.TWILIO_API_KEY_SECRET ?? "";
     const from = process.env.TWILIO_WHATSAPP_FROM ?? "";
+
+    // Also try calling Twilio Content API directly
+    let apiResult = "not tested";
+    try {
+      const credentials = Buffer.from(`${keySid}:${keySecret}`).toString("base64");
+      const r = await fetch("https://content.twilio.com/v1/Content", {
+        method: "GET",
+        headers: {
+          "Authorization": `Basic ${credentials}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (r.ok) {
+        const data = await r.json();
+        apiResult = `OK - ${(data.contents || []).length} templates`;
+      } else {
+        const errText = await r.text().catch(() => "");
+        apiResult = `ERROR ${r.status}: ${errText.substring(0, 200)}`;
+      }
+    } catch (e: any) {
+      apiResult = `EXCEPTION: ${e.message}`;
+    }
+
     res.json({
       TWILIO_ACCOUNT_SID: sid ? sid.substring(0, 6) + "..." : "NOT SET",
       TWILIO_API_KEY_SID: keySid ? keySid.substring(0, 6) + "..." : "NOT SET",
       TWILIO_API_KEY_SECRET: keySecret ? "set (" + keySecret.length + " chars)" : "NOT SET",
       TWILIO_WHATSAPP_FROM: from || "NOT SET (will use default)",
+      apiResult,
     });
   });
 
