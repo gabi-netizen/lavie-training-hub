@@ -423,6 +423,7 @@ function ContactCard({
   const [payOpen, setPayOpen] = useState(false);
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
   const [emailDropOpen, setEmailDropOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [autoSelectFormTemplate, setAutoSelectFormTemplate] = useState(false);
   const emailDropRef = useRef<HTMLDivElement>(null);
 
@@ -530,6 +531,20 @@ function ContactCard({
       setSelectedTemplateId(null);
     },
     onError: (err) => toast.error(`Failed to send: ${err.message}`),
+  });
+
+  // ─── WhatsApp ─────────────────────────────────────────────────────────────
+  const { data: whatsappTemplates, isLoading: waTemplatesLoading } = trpc.whatsapp.templates.useQuery(
+    undefined,
+    { enabled: whatsappOpen }
+  );
+
+  const sendWhatsAppMutation = trpc.whatsapp.send.useMutation({
+    onSuccess: () => {
+      toast.success("WhatsApp message sent ✅");
+      setWhatsappOpen(false);
+    },
+    onError: (err) => toast.error(`WhatsApp failed: ${err.message}`),
   });
 
   const initials = contact.name
@@ -1070,8 +1085,8 @@ function ContactCard({
             <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>N/A</button>
           </div>
 
-          {/* Take Payment + Send Email Template dropdown — 50/50 */}
-          <div className="ws-btn-pair">
+          {/* Take Payment + Send Email + Send WhatsApp — 3 buttons */}
+          <div className="ws-btn-pair" style={{ flexWrap: 'wrap' }}>
             <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)}>
               Take Payment
             </button>
@@ -1081,7 +1096,66 @@ function ContactCard({
             >
               Send Email
             </button>
+            <button
+              className="ws-btn-whatsapp ws-btn-pair-item"
+              onClick={() => setWhatsappOpen(!whatsappOpen)}
+            >
+              Send WhatsApp
+            </button>
           </div>
+
+          {/* WhatsApp Template Picker */}
+          {whatsappOpen && (
+            <div className="ws-pay-box" style={{ borderColor: '#25D366' }}>
+              <div className="ws-pay-title" style={{ color: '#128C7E' }}>
+                <span>📱</span> Send WhatsApp Template
+              </div>
+              {!contact.phone ? (
+                <p style={{ fontSize: 12, color: '#dc2626' }}>⚠ No phone number on file</p>
+              ) : waTemplatesLoading ? (
+                <p style={{ fontSize: 12, color: '#6b7280' }}>Loading templates…</p>
+              ) : !whatsappTemplates || whatsappTemplates.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#6b7280' }}>No WhatsApp templates found in Twilio</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {whatsappTemplates.map((tpl) => (
+                    <button
+                      key={tpl.sid}
+                      onClick={() => {
+                        if (sendWhatsAppMutation.isPending) return;
+                        sendWhatsAppMutation.mutate({ contactId: contact.id, contentSid: tpl.sid });
+                      }}
+                      disabled={sendWhatsAppMutation.isPending}
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        border: '1.5px solid #d1d5db',
+                        borderRadius: 6,
+                        background: sendWhatsAppMutation.isPending ? '#f3f4f6' : '#fff',
+                        cursor: sendWhatsAppMutation.isPending ? 'not-allowed' : 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={(e) => { if (!sendWhatsAppMutation.isPending) (e.target as HTMLElement).style.borderColor = '#25D366'; }}
+                      onMouseLeave={(e) => { (e.target as HTMLElement).style.borderColor = '#d1d5db'; }}
+                    >
+                      {tpl.friendly_name}
+                      <span style={{ display: 'block', fontSize: 10, color: '#9ca3af', fontWeight: 400, marginTop: 2 }}>
+                        {tpl.language || 'en'} • Click to send
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => setWhatsappOpen(false)}
+                style={{ marginTop: 8, fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Close
+              </button>
+            </div>
+          )}
 
           {payOpen && (
             <StripePaymentSection
