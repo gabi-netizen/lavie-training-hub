@@ -641,6 +641,20 @@
 }
 .ws-btn-email:hover { background: #fef3c7; }
 
+/* WhatsApp Template button */
+.ws-btn-whatsapp {
+  padding: 10px;
+  border: 2px solid #25D366;
+  border-radius: 8px;
+  background: #e8fdf0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #128C7E;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ws-btn-whatsapp:hover { background: #d4f8e4; }
+
 /* Take Payment */
 .ws-btn-pay {
   width: 100%;
