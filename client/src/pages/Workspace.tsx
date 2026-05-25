@@ -318,34 +318,55 @@ function EditableField({
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState(value);
   const [currentVal, setCurrentVal] = useState(value);
+  const [previousVal, setPreviousVal] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCurrentVal(value);
+    // Clear the revert button when the contact changes (value prop resets)
+    setPreviousVal(null);
   }, [value]);
 
   const startEdit = () => {
+    // Store the current displayed value as the "previous" value before editing
+    setPreviousVal(currentVal);
     setEditVal(currentVal);
     setEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const save = () => {
+    const savedFrom = currentVal;
     setCurrentVal(editVal);
     onSave(editVal);
     setEditing(false);
+    // Only keep the revert button if the value actually changed
+    if (editVal === savedFrom) {
+      setPreviousVal(null);
+    }
   };
 
   const cancel = () => {
+    // Cancelled without saving — discard the stored previous value
+    setPreviousVal(null);
     setEditing(false);
+  };
+
+  const revertToPrevious = () => {
+    if (previousVal === null) return;
+    setCurrentVal(previousVal);
+    onSave(previousVal);
+    setPreviousVal(null);
   };
 
   const resetToOriginal = () => {
     setCurrentVal(originalValue);
     onSave(originalValue);
+    setPreviousVal(null);
   };
 
   const isChanged = currentVal !== originalValue;
+  const hasRevert = previousVal !== null && previousVal !== currentVal;
 
   return (
     <div className="ws-detail-row">
@@ -373,6 +394,15 @@ function EditableField({
       ) : (
         <>
           <span className="ws-detail-text">{currentVal || "—"}</span>
+          {hasRevert && (
+            <span
+              className="ws-detail-revert"
+              onClick={revertToPrevious}
+              title={`Revert to: ${previousVal}`}
+            >
+              <RotateCcw size={12} />
+            </span>
+          )}
           <span className="ws-detail-edit" onClick={startEdit}>
             <Pencil size={12} />
           </span>
