@@ -702,3 +702,36 @@ export const blockedSubjects = mysqlTable("blocked_subjects", {
 
 export type BlockedSubject = typeof blockedSubjects.$inferSelect;
 export type InsertBlockedSubject = typeof blockedSubjects.$inferInsert;
+
+// ─── WhatsApp Messages ──────────────────────────────────────────────────────────
+/**
+ * WhatsApp messages table — stores all inbound and outbound WhatsApp messages.
+ * Used for the agent inbox/conversation view and message history tracking.
+ */
+export const whatsappMessages = mysqlTable("whatsapp_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Contact this message belongs to (nullable — inbound may not match a contact yet) */
+  contactId: int("contactId"),
+  /** Message direction: inbound (customer → us) or outbound (us → customer) */
+  direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
+  /** Message body text content */
+  body: text("body"),
+  /** Template name used (only for outbound template messages) */
+  templateName: text("templateName"),
+  /** Agent who sent/owns this conversation (nullable for unmatched inbound) */
+  sentByUserId: int("sentByUserId"),
+  /** Sender's phone number (E.164 format) */
+  fromNumber: text("fromNumber").notNull(),
+  /** Recipient's phone number (E.164 format) */
+  toNumber: text("toNumber").notNull(),
+  /** Twilio Message SID for tracking */
+  twilioMessageSid: text("twilioMessageSid"),
+  /** Message delivery status */
+  status: mysqlEnum("messageStatus", ["sent", "delivered", "read", "failed", "received"]).default("sent").notNull(),
+  /** Whether the agent has read this message (for inbox unread indicators) */
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
+export type InsertWhatsappMessage = typeof whatsappMessages.$inferInsert;

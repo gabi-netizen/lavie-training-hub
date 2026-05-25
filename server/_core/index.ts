@@ -12,6 +12,7 @@ import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { handleGmailWebhook } from "../webhooks/gmail";
 import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
+import { handleWhatsAppIncoming } from "../webhooks/whatsappIncoming";
 import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
@@ -87,6 +88,11 @@ async function startServer() {
   // ─── Postmark Inbound Webhook ─────────────────────────────────────────────
   // Postmark pushes inbound emails here when trial@lavielabs.com receives mail
   app.post("/api/webhooks/postmark-inbound", handlePostmarkInbound);
+
+  // ─── WhatsApp Incoming Webhook ─────────────────────────────────────────────
+  // Twilio sends POST requests here when a WhatsApp message is received.
+  // Must be registered BEFORE tRPC middleware.
+  app.post("/api/whatsapp/incoming", handleWhatsAppIncoming);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
   // Public endpoint — called by the payment page to initiate a Stripe payment.
