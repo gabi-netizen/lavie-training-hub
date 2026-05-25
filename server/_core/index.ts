@@ -13,6 +13,7 @@ import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
 import { handleGmailWebhook } from "../webhooks/gmail";
 import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { handleWhatsAppIncoming } from "../webhooks/whatsappIncoming";
+import { handleWhatsAppStatus } from "../webhooks/whatsappStatus";
 import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
@@ -95,6 +96,11 @@ async function startServer() {
   // parsed as form fields (Body, From, To, MessageSid, etc.).
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/whatsapp/incoming", handleWhatsAppIncoming);
+
+  // ─── WhatsApp Status Callback Webhook ─────────────────────────────────────────
+  // Twilio sends delivery/read status updates here (sent → delivered → read).
+  // Must be registered BEFORE tRPC middleware.
+  app.post("/api/whatsapp/status", handleWhatsAppStatus);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
   // Public endpoint — called by the payment page to initiate a Stripe payment.

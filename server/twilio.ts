@@ -146,6 +146,7 @@ export async function sendWhatsAppMessage(opts: {
     From: whatsappFrom,
     To: toWhatsApp,
     ContentSid: opts.contentSid,
+    StatusCallback: "https://lavie-training-hub-production.up.railway.app/api/whatsapp/status",
   });
 
   if (opts.contentVariables) {
@@ -201,6 +202,7 @@ export async function sendWhatsAppFreeText(opts: {
     From: whatsappFrom,
     To: toWhatsApp,
     Body: opts.body,
+    StatusCallback: "https://lavie-training-hub-production.up.railway.app/api/whatsapp/status",
   });
 
   const res = await fetch(url, {
