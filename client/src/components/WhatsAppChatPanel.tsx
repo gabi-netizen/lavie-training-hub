@@ -5,6 +5,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { X, Send, MessageCircle, ArrowLeft, Search, Smile } from "lucide-react";
 
@@ -75,6 +76,9 @@ interface WhatsAppChatPanelProps {
 }
 
 export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
+  const { user } = useAuth();
+  // Managers (no team) can reply in any conversation regardless of 24h window ownership
+  const isManager = !user?.team;
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,14 +157,21 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
     return new Date(latest.createdAt);
   }, [messages]);
 
-  const [windowStatus, setWindowStatus] = useState({ expired: true, label: "" });
+  const [windowStatus, setWindowStatus] = useState({ expired: false, label: "" });
 
   useEffect(() => {
-    const update = () => setWindowStatus(getTimeRemaining(lastInboundTime));
+    const update = () => {
+      // Managers can always reply — bypass the 24h window restriction
+      if (isManager) {
+        setWindowStatus({ expired: false, label: "Manager — no window restriction" });
+        return;
+      }
+      setWindowStatus(getTimeRemaining(lastInboundTime));
+    };
     update();
     const interval = setInterval(update, 30000); // Update every 30s
     return () => clearInterval(interval);
-  }, [lastInboundTime]);
+  }, [lastInboundTime, isManager]);
 
   // ─── Filtered Conversations ────────────────────────────────────────────────
   const filteredConversations = useMemo(() => {
@@ -436,8 +447,8 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
 
               {/* 24h window timer + Input area */}
               <div style={{ borderTop: "1px solid #e5e7eb", background: "#f0f2f5" }}>
-                {/* Timer bar */}
-                {messages && messages.length > 0 && (
+                {/* Timer bar — hidden for managers who have no window restriction */}
+                {messages && messages.length > 0 && !isManager && (
                   <div style={{ padding: "4px 16px", fontSize: 11, color: windowStatus.expired ? "#dc2626" : "#16a34a", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: windowStatus.expired ? "#dc2626" : "#22c55e" }} />
                     {windowStatus.expired
