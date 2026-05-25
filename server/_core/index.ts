@@ -90,7 +90,9 @@ async function startServer() {
   app.post("/api/webhooks/postmark-inbound", handlePostmarkInbound);
 
   // ─── WhatsApp Incoming Webhook ─────────────────────────────────────────────
-  // Twilio sends POST requests here when a WhatsApp message is received.
+  // Twilio sends application/x-www-form-urlencoded POST requests here.
+  // Registered AFTER express.urlencoded() (line above) so req.body is correctly
+  // parsed as form fields (Body, From, To, MessageSid, etc.).
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/whatsapp/incoming", handleWhatsAppIncoming);
 

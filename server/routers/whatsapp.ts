@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { listWhatsAppTemplates, sendWhatsAppMessage, sendWhatsAppFreeText } from "../twilio";
+import { listWhatsAppTemplates, sendWhatsAppMessage, sendWhatsAppFreeText, fetchTemplateBody } from "../twilio";
 import { getContact } from "../contacts";
 import { normalisePhone } from "../contacts";
 import { getDb } from "../db";
@@ -118,13 +118,19 @@ export const whatsappRouter = router({
         const db = await getDb();
         if (db) {
           try {
+            // Fetch the actual template body text (with variables substituted)
+            const resolvedBody = await fetchTemplateBody(contentSid, {
+              "1": customerFirstName,
+              "2": agentFirstName,
+            });
+
             // The "from" number is our Twilio WhatsApp number (strip whatsapp: prefix)
             const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
 
             await db.insert(whatsappMessages).values({
               contactId,
               direction: "outbound",
-              body: templateName ? `[Template: ${templateName}]` : "[Template message]",
+              body: resolvedBody,
               templateName: templateName || contentSid,
               sentByUserId: ctx.user.id,
               fromNumber,
@@ -134,7 +140,7 @@ export const whatsappRouter = router({
               isRead: true, // Outbound messages are always "read"
             });
 
-            console.log(`[WhatsApp] Outbound message saved to DB — contact #${contactId}, SID: ${result.sid}`);
+            console.log(`[WhatsApp] Outbound message saved to DB — contact #${contactId}, SID: ${result.sid}, body: "${resolvedBody.substring(0, 60)}..."`);
           } catch (dbErr) {
             // Don't fail the send if DB save fails — the message was already sent
             console.error("[WhatsApp] Failed to save outbound message to DB:", dbErr);

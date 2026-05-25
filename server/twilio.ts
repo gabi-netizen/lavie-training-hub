@@ -74,6 +74,53 @@ export async function listWhatsAppTemplates(): Promise<TwilioTemplate[]> {
   }));
 }
 
+// ─── Fetch template body text from Twilio Content API ───────────────────────
+/**
+ * Fetches the body text of a specific template by Content SID.
+ * Substitutes {{1}} and {{2}} with the provided variables.
+ * Falls back to the friendly_name if body cannot be resolved.
+ */
+export async function fetchTemplateBody(
+  contentSid: string,
+  variables?: Record<string, string>
+): Promise<string> {
+  try {
+    const res = await fetch(`https://content.twilio.com/v1/Content/${contentSid}`, {
+      method: "GET",
+      headers: {
+        Authorization: getTwilioAuthHeader(),
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      console.warn(`[Twilio] Could not fetch template body for ${contentSid}: ${res.status}`);
+      return `[Template: ${contentSid}]`;
+    }
+
+    const data = await res.json();
+    const types = data.types || {};
+
+    // Try common template type keys in order of preference
+    const body: string =
+      types["twilio/text"]?.body ||
+      types["twilio/quick-reply"]?.body ||
+      types["twilio/call-to-action"]?.body ||
+      types["twilio/card"]?.body ||
+      data.friendly_name ||
+      `[Template: ${contentSid}]`;
+
+    // Substitute {{1}}, {{2}}, etc. with provided variables
+    if (variables) {
+      return body.replace(/\{\{(\d+)\}\}/g, (_match: string, key: string) => variables[key] ?? _match);
+    }
+    return body;
+  } catch (err) {
+    console.warn(`[Twilio] Error fetching template body for ${contentSid}:`, err);
+    return `[Template: ${contentSid}]`;
+  }
+}
+
 // ─── Send WhatsApp message via Twilio Messages API ───────────────────────────
 export async function sendWhatsAppMessage(opts: {
   to: string; // E.164 phone number (e.g. +447xxxxxxxxx)
