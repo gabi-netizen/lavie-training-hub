@@ -59,6 +59,10 @@ export function normalisePhone(raw: string | null | undefined): string | undefin
   if (/^7\d{9}$/.test(p)) return `+44${p}`;
   // UK: starts with 447 (no +) → +447...
   if (/^447\d{9}$/.test(p)) return `+${p}`;
+  // Israel: starts with 05 (10 digits) → +9725...
+  if (/^05\d{8}$/.test(p)) return `+972${p.slice(1)}`;
+  // Israel: starts with 972 (no +) → +972...
+  if (/^972\d{8,9}$/.test(p)) return `+${p}`;
   // Already E.164
   if (p.startsWith("+")) return p;
   // Fallback: return cleaned digits
