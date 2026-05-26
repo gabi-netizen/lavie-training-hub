@@ -735,3 +735,23 @@ export const whatsappMessages = mysqlTable("whatsapp_messages", {
 
 export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
 export type InsertWhatsappMessage = typeof whatsappMessages.$inferInsert;
+
+// ─── WhatsApp Conversation Assignments ────────────────────────────────────────
+/**
+ * WhatsApp conversation assignments — tracks which agent is assigned to each conversation.
+ * Each contact can only have ONE active assignment (latest record wins).
+ * Managers can reassign conversations between agents.
+ */
+export const whatsappConversationAssignments = mysqlTable("whatsapp_conversation_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Contact (conversation) being assigned */
+  contactId: int("contactId").notNull(),
+  /** The agent this conversation is assigned to */
+  assignedUserId: int("assignedUserId").notNull(),
+  /** The manager who made the assignment */
+  assignedByUserId: int("assignedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WhatsappConversationAssignment = typeof whatsappConversationAssignments.$inferSelect;
+export type InsertWhatsappConversationAssignment = typeof whatsappConversationAssignments.$inferInsert;

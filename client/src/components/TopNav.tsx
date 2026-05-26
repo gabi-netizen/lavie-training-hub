@@ -20,6 +20,7 @@ import {
   Sparkles,
   Shield,
   Mail,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -55,6 +56,7 @@ const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDas
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
+const WHATSAPP_CONTROL_ITEM = { path: "/whatsapp-control", label: "WhatsApp Control", icon: MessageSquare };
 const OPENING_DASHBOARD_ITEM = { path: "/opening-dashboard", label: "Opening", icon: Phone };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)
@@ -83,6 +85,7 @@ export default function TopNav() {
   const aiCoachRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === "admin";
+  const isManager = !user?.team; // Managers have no team assigned
   const isAcademy = user?.team === "academy";
   const callsItems = isAdmin ? CALLS_ITEMS_ADMIN : CALLS_ITEMS_AGENT;
   const aiCoachItems = isAdmin ? AI_COACH_ITEMS_ADMIN : AI_COACH_ITEMS_AGENT;
@@ -301,6 +304,22 @@ export default function TopNav() {
               >
                 <Mail size={14} />
                 Support Tickets
+              </button>
+            </Link>
+          )}
+          {/* WhatsApp Control — managers only (users with no team) */}
+          {isManager && (
+            <Link href={WHATSAPP_CONTROL_ITEM.path}>
+              <button
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
+                  location === WHATSAPP_CONTROL_ITEM.path
+                    ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                    : "text-white hover:text-white hover:bg-white/10"
+                )}
+              >
+                <MessageSquare size={14} />
+                WhatsApp Control
               </button>
             </Link>
           )}

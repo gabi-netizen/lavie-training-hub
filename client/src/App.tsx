@@ -20,6 +20,7 @@ import ManagerDashboard from "./pages/ManagerDashboard";
 import SupportTickets from "@/pages/SupportTickets";
 import UsersPage from "@/pages/Users";
 import OpeningDashboard from "@/pages/OpeningDashboard";
+import WhatsAppControl from "@/pages/WhatsAppControl";
 import SharedCallView from "./pages/SharedCallView";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
@@ -81,6 +82,33 @@ function AdminOrRetentionRoute({ component: Component }: { component: React.Comp
   return <Component />;
 }
 
+/** Wraps a component so only managers (users with no team) can access it. */
+function ManagerRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      window.location.href = "/sign-in";
+      return;
+    }
+    // Only users with no team (managers) can access
+    if (user.team !== null) {
+      navigate("/workspace");
+    }
+  }, [loading, user, navigate]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+    </div>
+  );
+  if (!user || user.team !== null) return null;
+
+  return <Component />;
+}
+
 /** Redirects the URL to /ai-coach?tab=X then renders CallCoach */
 function TabRedirect({ tab }: { tab: string }) {
   useEffect(() => {
@@ -138,6 +166,11 @@ function Router() {
         {/* Support Tickets — admin + retention agents */}
         <Route path={"/support-tickets"}>
           {() => <AdminOrRetentionRoute component={SupportTickets} />}
+        </Route>
+
+        {/* WhatsApp Control — managers only (users with no team) */}
+        <Route path={"/whatsapp-control"}>
+          {() => <ManagerRoute component={WhatsAppControl} />}
         </Route>
 
         {/* Users Management — admin only */}

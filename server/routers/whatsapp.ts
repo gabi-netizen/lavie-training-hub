@@ -5,7 +5,7 @@ import { listWhatsAppTemplates, sendWhatsAppMessage, sendWhatsAppFreeText, fetch
 import { getContact } from "../contacts";
 import { normalisePhone } from "../contacts";
 import { getDb } from "../db";
-import { whatsappMessages, contacts } from "../../drizzle/schema";
+import { whatsappMessages, contacts, users, whatsappConversationAssignments } from "../../drizzle/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 
 export const whatsappRouter = router({
@@ -163,7 +163,9 @@ export const whatsappRouter = router({
 
   // ─── Conversations: list contacts with WhatsApp messages ───────────────────
   // Returns contacts grouped with latest message and unread count.
-  // Agents see only their own conversations; admins see all.
+  // Managers (no team) see ALL conversations.
+  // Agents (with team) see conversations assigned to them, OR conversations where
+  // they are the sentByUserId and no assignment exists.
   conversations: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) {
@@ -174,24 +176,65 @@ export const whatsappRouter = router({
     const seesAll = !ctx.user.team;
     const userId = ctx.user.id;
 
-    // Get all messages, grouped by contactId, with latest message info
-    // Strategy: fetch all distinct contactIds from whatsapp_messages,
-    // then for each get the latest message and unread count
-    let messagesQuery = db
+    // Get all distinct contactIds from whatsapp_messages
+    const allMessages = await db
       .select({
         contactId: whatsappMessages.contactId,
       })
       .from(whatsappMessages);
 
-    // Team-assigned users only see conversations assigned to them
-    if (!seesAll) {
-      messagesQuery = messagesQuery.where(eq(whatsappMessages.sentByUserId, userId)) as any;
+    // Get unique contactIds (including null for unmatched messages)
+    const allContactIds = Array.from(new Set(allMessages.map((m) => m.contactId)));
+
+    if (allContactIds.length === 0) {
+      return [];
     }
 
-    const allMessages = await messagesQuery;
+    // If agent (has team), filter to only conversations assigned to them or owned by them
+    let contactIds = allContactIds;
+    if (!seesAll) {
+      // Get all assignments (latest per contact)
+      const assignments = await db
+        .select({
+          contactId: whatsappConversationAssignments.contactId,
+          assignedUserId: whatsappConversationAssignments.assignedUserId,
+          id: whatsappConversationAssignments.id,
+        })
+        .from(whatsappConversationAssignments)
+        .orderBy(desc(whatsappConversationAssignments.createdAt));
 
-    // Get unique contactIds (including null for unmatched messages)
-    const contactIds = Array.from(new Set(allMessages.map((m) => m.contactId)));
+      // Build a map of contactId → latest assignedUserId
+      const assignmentMap = new Map<number | null, number>();
+      for (const a of assignments) {
+        if (!assignmentMap.has(a.contactId)) {
+          assignmentMap.set(a.contactId, a.assignedUserId);
+        }
+      }
+
+      // Filter contactIds: include if assigned to this user, OR if no assignment and sentByUserId matches
+      const agentMessages = await db
+        .select({
+          contactId: whatsappMessages.contactId,
+        })
+        .from(whatsappMessages)
+        .where(eq(whatsappMessages.sentByUserId, userId));
+
+      const agentContactIds = new Set(agentMessages.map((m) => m.contactId));
+
+      contactIds = allContactIds.filter((cId) => {
+        if (cId === null) {
+          // Unmatched messages — only show if agent sent them and no assignment
+          return agentContactIds.has(null);
+        }
+        const assignedTo = assignmentMap.get(cId);
+        if (assignedTo !== undefined) {
+          // Has an assignment — only show if assigned to this user
+          return assignedTo === userId;
+        }
+        // No assignment — fall back to sentByUserId logic
+        return agentContactIds.has(cId);
+      });
+    }
 
     if (contactIds.length === 0) {
       return [];
@@ -206,18 +249,13 @@ export const whatsappRouter = router({
         ? eq(whatsappMessages.contactId, contactId)
         : sql`${whatsappMessages.contactId} IS NULL`;
 
-      let latestMsgQuery = db
+      const [latestMessage] = await db
         .select()
         .from(whatsappMessages)
-        .where(
-          !seesAll
-            ? and(whereClause, eq(whatsappMessages.sentByUserId, userId))
-            : whereClause
-        )
+        .where(whereClause)
         .orderBy(desc(whatsappMessages.createdAt))
         .limit(1);
 
-      const [latestMessage] = await latestMsgQuery;
       if (!latestMessage) continue;
 
       // Count unread inbound messages
@@ -236,11 +274,7 @@ export const whatsappRouter = router({
       const [unreadResult] = await db
         .select({ count: count() })
         .from(whatsappMessages)
-        .where(
-          !seesAll
-            ? and(unreadConditions!, eq(whatsappMessages.sentByUserId, userId))
-            : unreadConditions
-        );
+        .where(unreadConditions);
 
       const unreadCount = unreadResult?.count ?? 0;
 
@@ -302,19 +336,14 @@ export const whatsappRouter = router({
       }
 
       const { contactId } = input;
-      // Users with a team only see their own messages; users without a team see all
-      const seesAll = !ctx.user.team;
-      const userId = ctx.user.id;
 
+      // All users can see messages for a conversation they have access to
+      // (access control is handled at the conversations level)
       let whereClause;
       if (contactId !== null) {
-        whereClause = seesAll
-          ? eq(whatsappMessages.contactId, contactId)
-          : and(eq(whatsappMessages.contactId, contactId), eq(whatsappMessages.sentByUserId, userId));
+        whereClause = eq(whatsappMessages.contactId, contactId);
       } else {
-        whereClause = seesAll
-          ? sql`${whatsappMessages.contactId} IS NULL`
-          : and(sql`${whatsappMessages.contactId} IS NULL`, eq(whatsappMessages.sentByUserId, userId));
+        whereClause = sql`${whatsappMessages.contactId} IS NULL`;
       }
 
       const messages = await db
@@ -340,29 +369,20 @@ export const whatsappRouter = router({
       }
 
       const { contactId } = input;
-      // Users with a team only mark their own messages as read; users without a team can mark all
-      const seesAll = !ctx.user.team;
-      const userId = ctx.user.id;
 
       let whereClause;
       if (contactId !== null) {
-        const baseConditions = and(
+        whereClause = and(
           eq(whatsappMessages.contactId, contactId),
           eq(whatsappMessages.direction, "inbound"),
           eq(whatsappMessages.isRead, false)
         );
-        whereClause = seesAll
-          ? baseConditions
-          : and(baseConditions, eq(whatsappMessages.sentByUserId, userId));
       } else {
-        const baseConditions = and(
+        whereClause = and(
           sql`${whatsappMessages.contactId} IS NULL`,
           eq(whatsappMessages.direction, "inbound"),
           eq(whatsappMessages.isRead, false)
         );
-        whereClause = seesAll
-          ? baseConditions
-          : and(baseConditions, eq(whatsappMessages.sentByUserId, userId));
       }
 
       await db
@@ -458,5 +478,121 @@ export const whatsappRouter = router({
           message: `Failed to send WhatsApp message: ${(err as Error).message}`,
         });
       }
+    }),
+
+  // ─── Assign Conversation: assign a WhatsApp conversation to an agent ───────
+  assignConversation: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        assignedUserId: z.number(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      // Only managers (users without a team) can assign conversations
+      if (ctx.user.team !== null) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only managers can assign conversations",
+        });
+      }
+
+      const { contactId, assignedUserId } = input;
+
+      // Verify the target user exists
+      const [targetUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, assignedUserId))
+        .limit(1);
+
+      if (!targetUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Target user not found",
+        });
+      }
+
+      // Create a new assignment record (latest one wins)
+      await db.insert(whatsappConversationAssignments).values({
+        contactId,
+        assignedUserId,
+        assignedByUserId: ctx.user.id,
+      });
+
+      console.log(
+        `[WhatsApp] Conversation for contact #${contactId} assigned to user #${assignedUserId} by ${ctx.user.name ?? ctx.user.email}`
+      );
+
+      return { success: true };
+    }),
+
+  // ─── Get Agents: list all users for the assign dropdown ────────────────────
+  getAgents: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    }
+
+    const allUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        team: users.team,
+        active: users.active,
+      })
+      .from(users)
+      .where(eq(users.active, true));
+
+    // Return all active users with a name
+    return allUsers
+      .filter((u) => u.name)
+      .map((u) => ({
+        id: u.id,
+        name: u.name!,
+        team: u.team,
+      }));
+  }),
+
+  // ─── Get Assignment: get current assignment for a contact ──────────────────
+  getAssignment: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const [assignment] = await db
+        .select({
+          id: whatsappConversationAssignments.id,
+          contactId: whatsappConversationAssignments.contactId,
+          assignedUserId: whatsappConversationAssignments.assignedUserId,
+          assignedByUserId: whatsappConversationAssignments.assignedByUserId,
+          createdAt: whatsappConversationAssignments.createdAt,
+        })
+        .from(whatsappConversationAssignments)
+        .where(eq(whatsappConversationAssignments.contactId, input.contactId))
+        .orderBy(desc(whatsappConversationAssignments.createdAt))
+        .limit(1);
+
+      if (!assignment) return null;
+
+      // Get the assigned user's name
+      const [assignedUser] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, assignment.assignedUserId))
+        .limit(1);
+
+      return {
+        ...assignment,
+        assignedUserName: assignedUser?.name ?? "Unknown",
+      };
     }),
 });
