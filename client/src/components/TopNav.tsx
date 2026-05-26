@@ -307,22 +307,6 @@ export default function TopNav() {
               </button>
             </Link>
           )}
-          {/* WhatsApp Control — managers only (users with no team) */}
-          {isManager && (
-            <Link href={WHATSAPP_CONTROL_ITEM.path}>
-              <button
-                className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
-                  location === WHATSAPP_CONTROL_ITEM.path
-                    ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
-                    : "text-white hover:text-white hover:bg-white/10"
-                )}
-              >
-                <MessageSquare size={14} />
-                WhatsApp Control
-              </button>
-            </Link>
-          )}
 
           {/* Opening Dashboard — visible to all authenticated users */}
           <Link href={OPENING_DASHBOARD_ITEM.path}>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, lazy, Suspense } from "react";
 
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -46,7 +46,9 @@ import {
   ShieldOff,
   Trash2,
   Users,
+  MessageCircle,
 } from "lucide-react";
+const WhatsAppControl = lazy(() => import("@/pages/WhatsAppControl"));
 
 // ─── Category Config ─────────────────────────────────────────────────────────
 
@@ -484,13 +486,14 @@ export default function SupportTickets() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  // View mode: "tickets", "retention", "blocked", or "blockedSubjects"
-  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | null;
-  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects">(urlTab || "tickets");
-  const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects") => {
+  // View mode: "tickets", "retention", "blocked", "blockedSubjects", or "whatsapp"
+  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | null;
+  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp">(urlTab || "tickets");
+  const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp") => {
     setViewModeState(mode);
     window.history.replaceState(null, "", `/support-tickets?tab=${mode}`);
   };
+  const isManager = !user?.team; // Managers have no team assigned
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -670,6 +673,21 @@ export default function SupportTickets() {
                   Retention
                 </span>
               </button>
+              {isManager && (
+                <button
+                  onClick={() => setViewMode("whatsapp")}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    viewMode === "whatsapp"
+                      ? "bg-green-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <MessageCircle className="h-3 w-3" />
+                    WhatsApp Control
+                  </span>
+                </button>
+              )}
               {isAdmin && (
                 <>
                   <button
@@ -747,6 +765,14 @@ export default function SupportTickets() {
         </div>
       )}
 
+      {/* WhatsApp Control View */}
+      {viewMode === "whatsapp" && (
+        <div className="px-0 py-0" style={{ height: "calc(100vh - 140px)" }}>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><p className="text-gray-500">Loading WhatsApp Control...</p></div>}>
+            <WhatsAppControl />
+          </Suspense>
+        </div>
+      )}
       {/* Tickets View (both "tickets" and "retention" modes) */}
       {(viewMode === "tickets" || viewMode === "retention") && (
         <>
