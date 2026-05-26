@@ -465,8 +465,8 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
           ))}
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
+      <div className="flex items-center gap-3">
+        <p className="text-xs text-black font-medium">
           Sent from: {sentFromDisplay}
         </p>
         <Button
