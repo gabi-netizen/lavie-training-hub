@@ -495,6 +495,17 @@ export default function SupportTickets() {
   };
   const isManager = !user?.team; // Managers have no team assigned
 
+  // Fetch unread WhatsApp messages count for the badge
+  const { data: whatsappConversations } = trpc.whatsapp.conversations.useQuery(undefined, {
+    enabled: isManager,
+    refetchInterval: 10_000, // Poll every 10s
+    refetchOnWindowFocus: false,
+  });
+  const whatsappUnreadCount = useMemo(() => {
+    if (!whatsappConversations) return 0;
+    return whatsappConversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+  }, [whatsappConversations]);
+
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -676,15 +687,20 @@ export default function SupportTickets() {
               {isManager && (
                 <button
                   onClick={() => setViewMode("whatsapp")}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`relative px-3 py-1.5 text-xs font-medium transition-colors ${
                     viewMode === "whatsapp"
                       ? "bg-green-600 text-white"
-                      : "bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
+                      : "bg-green-100 text-green-800 hover:bg-green-200"
+                  } ${whatsappUnreadCount > 0 && viewMode !== "whatsapp" ? "animate-pulse" : ""}`}
                 >
                   <span className="flex items-center gap-1">
                     <MessageCircle className="h-3 w-3" />
                     WhatsApp Control
+                    {whatsappUnreadCount > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-green-600 text-white text-[10px] font-bold">
+                        {whatsappUnreadCount}
+                      </span>
+                    )}
                   </span>
                 </button>
               )}
