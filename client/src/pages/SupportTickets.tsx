@@ -470,7 +470,7 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
         </p>
         <Button
           size="sm"
-          className="gap-1.5"
+          className="gap-1.5 bg-purple-800 hover:bg-purple-900 text-white font-bold shadow-md"
           disabled={!replyText.trim() || replyMutation.isPending}
           onClick={() => {
             replyMutation.mutate({
