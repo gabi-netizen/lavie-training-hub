@@ -687,11 +687,7 @@ export default function SupportTickets() {
               {isManager && (
                 <button
                   onClick={() => setViewMode("whatsapp")}
-                  className={`relative px-3 py-1.5 text-xs font-medium transition-colors ${
-                    viewMode === "whatsapp"
-                      ? "bg-green-600 text-white"
-                      : "bg-green-100 text-green-800 hover:bg-green-200"
-                  } ${whatsappUnreadCount > 0 && viewMode !== "whatsapp" ? "animate-pulse" : ""}`}
+                  className={`relative px-3 py-1.5 text-xs font-medium transition-colors bg-green-700 text-white hover:bg-green-800 ${whatsappUnreadCount > 0 && viewMode !== "whatsapp" ? "animate-pulse" : ""}`}
                 >
                   <span className="flex items-center gap-1">
                     <MessageCircle className="h-3 w-3" />
