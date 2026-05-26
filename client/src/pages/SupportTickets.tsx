@@ -1373,21 +1373,19 @@ export default function SupportTickets() {
                               <span className="text-xs text-gray-500">
                                 Re: {ticket.subject}
                               </span>
+                              <div className="ml-auto">
+                                <ReplyBox
+                                  ticketId={ticket.id}
+                                  onReplySent={() => refetch()}
+                                  recipient={ticket.recipient}
+                                />
+                              </div>
                             </div>
                             <ConversationThread
                               ticketId={ticket.id}
                               originalBody={ticket.body}
                               originalFrom={ticket.fromName || ticket.fromEmail}
                               originalDate={ticket.receivedAt}
-                            />
-                          </div>
-
-                          {/* Reply Box */}
-                          <div className="mb-4">
-                            <ReplyBox
-                              ticketId={ticket.id}
-                              onReplySent={() => refetch()}
-                              recipient={ticket.recipient}
                             />
                           </div>
 
