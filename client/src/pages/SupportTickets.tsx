@@ -51,7 +51,6 @@ import {
   X,
   FileText,
   BookOpen,
-  ChevronDown,
 } from "lucide-react";
 const WhatsAppControl = lazy(() => import("@/pages/WhatsAppControl"));
 
@@ -678,7 +677,7 @@ export default function SupportTickets() {
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [dateRange, setDateRange] = useState<"today" | "7days" | "30days" | "all">("all");
   const [search, setSearch] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -783,9 +782,9 @@ export default function SupportTickets() {
   const tickets = ticketsData?.tickets ?? [];
   const total = ticketsData?.total ?? 0;
 
-  const activeFilterCount = [categoryFilter, priorityFilter, statusFilter, dateRange]
+  const activeFilterCount = [categoryFilter, priorityFilter, dateRange]
     .filter((v) => v !== "all")
-    .length;
+    .length + (statusFilter !== "all" && statusFilter !== "active" ? 1 : 0);
 
   const handleBlockSender = (email: string) => {
     if (window.confirm(`Are you sure you want to block "${email}"?\n\nFuture emails from this address will be silently dropped and no ticket will be created.`)) {
@@ -1171,7 +1170,7 @@ export default function SupportTickets() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-1">No tickets found</h3>
                 <p className="text-sm text-gray-600 max-w-sm">
-                  {search || categoryFilter !== "all" || priorityFilter !== "all" || statusFilter !== "all"
+                  {search || categoryFilter !== "all" || priorityFilter !== "all" || (statusFilter !== "all" && statusFilter !== "active")
                     ? "Try adjusting your filters or search query."
                     : viewMode === "retention"
                     ? "Retention tickets will appear here when emails arrive at guy@, james.h@, or rob.c@lavielabs.com."
