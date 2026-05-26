@@ -19,8 +19,10 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { users, contacts, contactCallNotes, callAnalyses } from "../../drizzle/schema";
-import { eq, or, like } from "drizzle-orm";
+import { users, contacts, contactCallNotes, callAnalyses, whatsappMessages } from "../../drizzle/schema";
+import { eq, or, like, and, gte } from "drizzle-orm";
+import { sendWhatsAppMessage } from "../twilio";
+import { normalisePhone } from "../contacts";
 import { storagePut } from "../storage";
 import {
   createCallAnalysisRecord,
@@ -325,7 +327,87 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
       call?.startedAt ||
       call?.created_at;
 
-    console.log(`[CloudTalk Webhook] Call ID: ${callId}, Agent: ${agentId}, Phone: ${callerPhone}, Recording: ${recordingUrl ? "YES" : "NO"}`);
+    console.log(`[CloudTalk Webhook] Call ID: ${callId}, Agent: ${agentId}, Phone: ${callerPhone}, Recording: ${recordingUrl ? "YES" : "NO"}, Duration: ${callDuration}`);
+
+    // ── WhatsApp auto-send for short/unanswered calls (Opening team only) ────
+    const durationSeconds = parseInt(String(callDuration || "0"), 10);
+    if (durationSeconds < 30 && callerPhone) {
+      // Fire-and-forget: attempt WhatsApp send without blocking the main flow
+      (async () => {
+        try {
+          // Find the agent to check their team
+          const waAgent = agentId
+            ? await findUserByCloudtalkAgentId(String(agentId))
+            : null;
+
+          // Only Opening team (not retention)
+          if (waAgent && (waAgent as any).team === "retention") {
+            console.log(`[WhatsApp-NA] Skipping — agent #${waAgent.id} is Retention`);
+            return;
+          }
+
+          const e164Phone = normalisePhone(String(callerPhone));
+          if (!e164Phone) {
+            console.log(`[WhatsApp-NA] Skipping — could not normalise phone: ${callerPhone}`);
+            return;
+          }
+
+          // Check if we already sent a WhatsApp to this number in the last 24 hours
+          const db = await getDb();
+          if (!db) return;
+          const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          const recentMessages = await db
+            .select({ id: whatsappMessages.id })
+            .from(whatsappMessages)
+            .where(
+              and(
+                eq(whatsappMessages.toNumber, e164Phone),
+                eq(whatsappMessages.templateName, "op_no_answer_cold_data"),
+                gte(whatsappMessages.createdAt, twentyFourHoursAgo)
+              )
+            )
+            .limit(1);
+
+          if (recentMessages.length > 0) {
+            console.log(`[WhatsApp-NA] Skipping — already sent to ${e164Phone} in last 24h`);
+            return;
+          }
+
+          // Find contact to get their name
+          const waContact = await findContactByPhone(String(callerPhone));
+          const customerFirstName = waContact?.name
+            ? waContact.name.split(" ")[0]
+            : "there";
+
+          // Send the template
+          const NA_TEMPLATE_SID = "HXefee4cfd043a6713a2aafe658e657422";
+          const waResult = await sendWhatsAppMessage({
+            to: e164Phone,
+            contentSid: NA_TEMPLATE_SID,
+            contentVariables: { "1": customerFirstName },
+          });
+
+          console.log(`[WhatsApp-NA] Auto-sent to ${e164Phone} (${customerFirstName}): ${waResult.sid}`);
+
+          // Save to whatsapp_messages table
+          const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
+          await db.insert(whatsappMessages).values({
+            contactId: waContact?.id ?? null,
+            direction: "outbound",
+            body: `Hi ${customerFirstName}, One of our skin specialists from Lavie Labs recently tried reaching you...`,
+            templateName: "op_no_answer_cold_data",
+            sentByUserId: waAgent?.id ?? null,
+            fromNumber,
+            toNumber: e164Phone,
+            twilioMessageSid: waResult.sid,
+            status: "sent",
+            isRead: true,
+          });
+        } catch (waErr) {
+          console.error(`[WhatsApp-NA] Failed for phone ${callerPhone}:`, waErr);
+        }
+      })();
+    }
 
     // Skip if no recording
     if (!recordingUrl) {
