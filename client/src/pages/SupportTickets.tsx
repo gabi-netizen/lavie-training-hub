@@ -50,6 +50,8 @@ import {
   Paperclip,
   X,
   FileText,
+  BookOpen,
+  ChevronDown,
 } from "lucide-react";
 const WhatsAppControl = lazy(() => import("@/pages/WhatsAppControl"));
 
@@ -259,12 +261,52 @@ interface AttachedFile {
   buffer: string; // base64
 }
 
+// ─── Email Templates ────────────────────────────────────────────────────────
+const EMAIL_TEMPLATES = [
+  {
+    name: "Welcome",
+    subject: "Welcome to Lavié Labs!",
+    body: `Thank you for choosing Lavié Labs! We're thrilled to have you on board.\n\nYour order is being processed and you'll receive a shipping confirmation shortly.\n\nIf you have any questions, don't hesitate to reach out — we're here to help!`,
+  },
+  {
+    name: "Cancellation Confirmation",
+    subject: "Your cancellation has been processed",
+    body: `We're sorry to see you go. Your subscription has been successfully cancelled.\n\nIf you change your mind, we'd love to welcome you back anytime.\n\nIs there anything we could have done differently? Your feedback helps us improve.`,
+  },
+  {
+    name: "Refund Processed",
+    subject: "Your refund has been processed",
+    body: `We've processed your refund. Please allow 5-10 business days for the amount to appear in your account.\n\nIf you don't see it within that timeframe, please let us know and we'll look into it right away.`,
+  },
+  {
+    name: "Shipping Update",
+    subject: "Your order is on its way!",
+    body: `Great news! Your order has been shipped and is on its way to you.\n\nPlease allow 7-14 business days for delivery. You'll receive a tracking number once available.\n\nIf you have any questions about your delivery, we're happy to help!`,
+  },
+  {
+    name: "Follow Up",
+    subject: "Following up on your inquiry",
+    body: `I wanted to follow up on your recent inquiry to make sure everything has been resolved.\n\nIs there anything else I can help you with? We want to make sure you're completely satisfied.`,
+  },
+  {
+    name: "Invoice Request",
+    subject: "Your invoice from Lavié Labs",
+    body: `Please find your invoice attached to this email.\n\nIf you have any questions about the charges or need any adjustments, please don't hesitate to reach out.`,
+  },
+];
+
 function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onReplySent: () => void; recipient?: string | null }) {
+  const { user } = useAuth();
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-append signature
+  const agentName = user?.name || "Lavie Labs Support";
+  const signature = `\n\nWarm regards,\n${agentName}\nLavié Labs\nwww.lavielabs.com`;
 
   const replyMutation = trpc.tickets.replyToTicket.useMutation({
     onSuccess: () => {
@@ -332,9 +374,14 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
     );
   }
 
+  const applyTemplate = (template: typeof EMAIL_TEMPLATES[0]) => {
+    setReplyText(template.body + signature);
+    setShowTemplates(false);
+  };
+
   return (
     <div className="bg-white rounded-lg border border-indigo-200 p-3 space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Reply className="h-4 w-4 text-indigo-600" />
         <span className="text-sm font-semibold text-indigo-700">Write Reply</span>
         <input
@@ -353,6 +400,41 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
           <Paperclip className="h-3 w-3" />
           {uploading ? "Uploading..." : "Attach File"}
         </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowTemplates(!showTemplates)}
+            className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 rounded px-2 py-1 hover:bg-purple-50 transition-colors"
+          >
+            <BookOpen className="h-3 w-3" />
+            Templates
+            <ChevronDown className="h-3 w-3" />
+          </button>
+          {showTemplates && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-56">
+              {EMAIL_TEMPLATES.map((template, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => applyTemplate(template)}
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 first:rounded-t-lg last:rounded-b-lg transition-colors"
+                >
+                  <span className="font-medium text-gray-700">{template.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => {
+            if (!replyText.includes(signature)) {
+              setReplyText((prev) => prev + signature);
+            }
+          }}
+          className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 border border-green-200 rounded px-2 py-1 hover:bg-green-50 transition-colors"
+          title="Add signature"
+        >
+          <User className="h-3 w-3" />
+          Signature
+        </button>
         <button
           onClick={() => { setShowReplyBox(false); setAttachedFiles([]); }}
           className="ml-auto text-xs text-gray-500 hover:text-gray-700"
@@ -366,6 +448,7 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
         placeholder="Type your reply to the customer..."
         className="min-h-[120px] text-sm resize-y"
         autoFocus
+        spellCheck={true}
       />
       {/* Attached files list */}
       {attachedFiles.length > 0 && (
