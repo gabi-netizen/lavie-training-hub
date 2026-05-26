@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Send, MessageCircle, ArrowLeft, Search, Smile, ChevronDown, UserPlus, X } from "lucide-react";
+import { Send, MessageCircle, ArrowLeft, Search, Smile, ChevronDown, UserPlus, X, CheckSquare, Square } from "lucide-react";
 
 // ─── Common Emojis Grid ─────────────────────────────────────────────────────
 const COMMON_EMOJIS = [
@@ -76,9 +76,14 @@ export default function WhatsAppControl() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showAssignDropdown, setShowAssignDropdown] = useState(false);
   const [assignSearchQuery, setAssignSearchQuery] = useState("");
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<number>>(new Set());
+  const [showBulkAssignDropdown, setShowBulkAssignDropdown] = useState(false);
+  const [bulkAssignSearchQuery, setBulkAssignSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const assignRef = useRef<HTMLDivElement>(null);
+  const bulkAssignRef = useRef<HTMLDivElement>(null);
 
   // Fetch conversations list (manager sees all)
   const { data: conversations, refetch: refetchConversations } =
@@ -108,7 +113,7 @@ export default function WhatsAppControl() {
 
   // Fetch agents for assignment dropdown
   const { data: agents } = trpc.whatsapp.getAgents.useQuery(undefined, {
-    enabled: showAssignDropdown,
+    enabled: showAssignDropdown || showBulkAssignDropdown,
   });
 
   // Fetch current assignment for selected contact
@@ -263,6 +268,62 @@ export default function WhatsAppControl() {
     });
   };
 
+  // Bulk assign handler
+  const handleBulkAssign = (agentId: number) => {
+    const ids = Array.from(selectedContactIds);
+    let completed = 0;
+    ids.forEach((contactId) => {
+      assignConversation.mutate(
+        { contactId, assignedUserId: agentId },
+        {
+          onSuccess: () => {
+            completed++;
+            if (completed === ids.length) {
+              setSelectedContactIds(new Set());
+              setMultiSelectMode(false);
+              setShowBulkAssignDropdown(false);
+              setBulkAssignSearchQuery("");
+              refetchConversations();
+              toast.success(`${ids.length} conversations assigned successfully`);
+            }
+          },
+        }
+      );
+    });
+  };
+
+  // Toggle contact selection for multi-select
+  const toggleContactSelection = (contactId: number) => {
+    setSelectedContactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId)) {
+        next.delete(contactId);
+      } else {
+        next.add(contactId);
+      }
+      return next;
+    });
+  };
+
+  // Filtered agents for bulk assign
+  const filteredBulkAgents = useMemo(() => {
+    if (!agents) return [];
+    if (!bulkAssignSearchQuery.trim()) return agents;
+    const q = bulkAssignSearchQuery.toLowerCase();
+    return agents.filter((a: any) => a.name.toLowerCase().includes(q) || (a.team || "").toLowerCase().includes(q));
+  }, [agents, bulkAssignSearchQuery]);
+
+  // Close bulk assign dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bulkAssignRef.current && !bulkAssignRef.current.contains(e.target as Node)) {
+        setShowBulkAssignDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   const totalUnread = conversations?.reduce((sum: number, c: any) => sum + c.unreadCount, 0) ?? 0;
 
   return (
@@ -300,9 +361,82 @@ export default function WhatsAppControl() {
           </span>
         </div>
 
-        {/* Assign button — only shown when a conversation is selected */}
+        {/* Multi-select toggle + Bulk Assign */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {selectedContactId !== null && (
+          <button
+            onClick={() => { setMultiSelectMode(!multiSelectMode); setSelectedContactIds(new Set()); setShowBulkAssignDropdown(false); }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              background: multiSelectMode ? "#fff" : "rgba(255,255,255,0.15)",
+              color: multiSelectMode ? "#075e54" : "#fff",
+              border: "1px solid rgba(255,255,255,0.3)",
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <CheckSquare size={14} />
+            {multiSelectMode ? "Cancel" : "Select"}
+          </button>
+
+          {/* Bulk Assign button - shown when multi-select has items */}
+          {multiSelectMode && selectedContactIds.size > 0 && (
+            <div ref={bulkAssignRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowBulkAssignDropdown(!showBulkAssignDropdown)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#f97316",
+                  border: "none",
+                  color: "#fff",
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(249,115,22,0.4)",
+                }}
+              >
+                <UserPlus size={14} />
+                Assign {selectedContactIds.size} conversations
+                <ChevronDown size={12} />
+              </button>
+
+              {showBulkAssignDropdown && (
+                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 6, width: 280, background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 100, overflow: "hidden" }}>
+                  <div style={{ padding: "10px 12px", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0f2f5", borderRadius: 20, padding: "6px 12px" }}>
+                      <Search size={14} style={{ color: "#8696a0", flexShrink: 0 }} />
+                      <input type="text" value={bulkAssignSearchQuery} onChange={(e) => setBulkAssignSearchQuery(e.target.value)} placeholder="Search agents..." style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1f2937" }} autoFocus />
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                    {filteredBulkAgents.length === 0 ? (
+                      <div style={{ padding: 16, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>No agents found</div>
+                    ) : (
+                      filteredBulkAgents.map((agent: any) => (
+                        <button key={agent.id} onClick={() => handleBulkAssign(agent.id)} disabled={assignConversation.isPending} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid #f3f4f6", background: "transparent", cursor: assignConversation.isPending ? "not-allowed" : "pointer", textAlign: "left" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#fff7ed"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>{agent.name}</div>
+                            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{agent.team ? agent.team.charAt(0).toUpperCase() + agent.team.slice(1) : "Manager"}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Single Assign button — only shown when a conversation is selected */}
+          {selectedContactId !== null && !multiSelectMode && (
             <div ref={assignRef} style={{ position: "relative" }}>
               <button
                 onClick={() => setShowAssignDropdown(!showAssignDropdown)}
@@ -310,18 +444,19 @@ export default function WhatsAppControl() {
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  background: "rgba(255,255,255,0.15)",
-                  border: "1px solid rgba(255,255,255,0.3)",
+                  background: "#f97316",
+                  border: "none",
                   color: "#fff",
                   borderRadius: 8,
-                  padding: "6px 12px",
+                  padding: "6px 14px",
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(249,115,22,0.4)",
                   transition: "background 0.15s",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#ea580c"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#f97316"; }}
               >
                 <UserPlus size={14} />
                 Assign
@@ -471,23 +606,37 @@ export default function WhatsAppControl() {
                 ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 : "";
 
+              const isChecked = conv.contactId !== null && selectedContactIds.has(conv.contactId);
+
               return (
                 <div
                   key={conv.contactId ?? "null"}
-                  onClick={() => setSelectedContactId(conv.contactId)}
+                  onClick={() => {
+                    if (multiSelectMode && conv.contactId !== null) {
+                      toggleContactSelection(conv.contactId);
+                    } else {
+                      setSelectedContactId(conv.contactId);
+                    }
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 12,
                     padding: "12px 16px",
                     cursor: "pointer",
-                    background: isSelected ? "#f0fdf4" : "transparent",
+                    background: isChecked ? "#fff7ed" : isSelected ? "#f0fdf4" : "transparent",
                     borderBottom: "1px solid #f3f4f6",
                     transition: "background 0.15s",
                   }}
-                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f9fafb"; }}
-                  onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                  onMouseEnter={(e) => { if (!isSelected && !isChecked) e.currentTarget.style.background = "#f9fafb"; }}
+                  onMouseLeave={(e) => { if (!isSelected && !isChecked) e.currentTarget.style.background = isChecked ? "#fff7ed" : "transparent"; }}
                 >
+                  {/* Checkbox for multi-select */}
+                  {multiSelectMode && (
+                    <div style={{ flexShrink: 0, color: isChecked ? "#f97316" : "#9ca3af" }}>
+                      {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                    </div>
+                  )}
                   <div style={{ width: 42, height: 42, borderRadius: "50%", background: isSelected ? "#25d366" : "#e5e7eb", color: isSelected ? "#fff" : "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
                     {initials}
                   </div>
