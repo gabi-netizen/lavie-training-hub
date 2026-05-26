@@ -1330,7 +1330,14 @@ export default function SupportTickets() {
                       {isExpanded && (
                         <div className="border-t border-gray-100 px-4 py-4 bg-gray-50">
                           {/* Meta row */}
-                          <div className="flex flex-wrap gap-3 mb-4">
+                          <div className="flex flex-wrap gap-3 mb-4 items-center">
+                            <div className="shrink-0">
+                              <ReplyBox
+                                ticketId={ticket.id}
+                                onReplySent={() => refetch()}
+                                recipient={ticket.recipient}
+                              />
+                            </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-medium text-gray-600">Priority:</span>
                               <span className={`flex items-center gap-1 text-xs font-semibold ${priCfg.text}`}>
@@ -1373,13 +1380,7 @@ export default function SupportTickets() {
                               <span className="text-xs text-gray-500">
                                 Re: {ticket.subject}
                               </span>
-                              <div className="ml-auto">
-                                <ReplyBox
-                                  ticketId={ticket.id}
-                                  onReplySent={() => refetch()}
-                                  recipient={ticket.recipient}
-                                />
-                              </div>
+
                             </div>
                             <ConversationThread
                               ticketId={ticket.id}
