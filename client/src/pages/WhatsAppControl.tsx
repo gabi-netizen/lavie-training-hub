@@ -361,192 +361,7 @@ export default function WhatsAppControl() {
           </span>
         </div>
 
-        {/* Multi-select toggle + Bulk Assign */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => { setMultiSelectMode(!multiSelectMode); setSelectedContactIds(new Set()); setShowBulkAssignDropdown(false); }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              background: multiSelectMode ? "#fff" : "rgba(255,255,255,0.15)",
-              color: multiSelectMode ? "#075e54" : "#fff",
-              border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: 8,
-              padding: "6px 12px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            <CheckSquare size={14} />
-            {multiSelectMode ? "Cancel" : "Select"}
-          </button>
-
-          {/* Bulk Assign button - shown when multi-select has items */}
-          {multiSelectMode && selectedContactIds.size > 0 && (
-            <div ref={bulkAssignRef} style={{ position: "relative" }}>
-              <button
-                onClick={() => setShowBulkAssignDropdown(!showBulkAssignDropdown)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "#f97316",
-                  border: "none",
-                  color: "#fff",
-                  borderRadius: 8,
-                  padding: "6px 14px",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(249,115,22,0.4)",
-                }}
-              >
-                <UserPlus size={14} />
-                Assign {selectedContactIds.size} conversations
-                <ChevronDown size={12} />
-              </button>
-
-              {showBulkAssignDropdown && (
-                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 6, width: 280, background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 100, overflow: "hidden" }}>
-                  <div style={{ padding: "10px 12px", borderBottom: "1px solid #f3f4f6" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0f2f5", borderRadius: 20, padding: "6px 12px" }}>
-                      <Search size={14} style={{ color: "#8696a0", flexShrink: 0 }} />
-                      <input type="text" value={bulkAssignSearchQuery} onChange={(e) => setBulkAssignSearchQuery(e.target.value)} placeholder="Search agents..." style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1f2937" }} autoFocus />
-                    </div>
-                  </div>
-                  <div style={{ maxHeight: 240, overflowY: "auto" }}>
-                    {filteredBulkAgents.length === 0 ? (
-                      <div style={{ padding: 16, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>No agents found</div>
-                    ) : (
-                      filteredBulkAgents.map((agent: any) => (
-                        <button key={agent.id} onClick={() => handleBulkAssign(agent.id)} disabled={assignConversation.isPending} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid #f3f4f6", background: "transparent", cursor: assignConversation.isPending ? "not-allowed" : "pointer", textAlign: "left" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#fff7ed"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>{agent.name}</div>
-                            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{agent.team ? agent.team.charAt(0).toUpperCase() + agent.team.slice(1) : "Manager"}</div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Single Assign button — only shown when a conversation is selected */}
-          {selectedContactId !== null && !multiSelectMode && (
-            <div ref={assignRef} style={{ position: "relative" }}>
-              <button
-                onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "#f97316",
-                  border: "none",
-                  color: "#fff",
-                  borderRadius: 8,
-                  padding: "6px 14px",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(249,115,22,0.4)",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#ea580c"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#f97316"; }}
-              >
-                <UserPlus size={14} />
-                Assign
-                <ChevronDown size={12} />
-              </button>
-
-              {/* Assign dropdown */}
-              {showAssignDropdown && (
-                <div
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "100%",
-                    marginTop: 6,
-                    width: 280,
-                    background: "#fff",
-                    borderRadius: 12,
-                    border: "1px solid #e5e7eb",
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-                    zIndex: 100,
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Current assignment info */}
-                  {currentAssignment && (
-                    <div style={{ padding: "10px 14px", background: "#f0fdf4", borderBottom: "1px solid #e5e7eb", fontSize: 12, color: "#166534" }}>
-                      Currently assigned to: <strong>{currentAssignment.assignedUserName}</strong>
-                    </div>
-                  )}
-
-                  {/* Search agents */}
-                  <div style={{ padding: "10px 12px", borderBottom: "1px solid #f3f4f6" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0f2f5", borderRadius: 20, padding: "6px 12px" }}>
-                      <Search size={14} style={{ color: "#8696a0", flexShrink: 0 }} />
-                      <input
-                        type="text"
-                        value={assignSearchQuery}
-                        onChange={(e) => setAssignSearchQuery(e.target.value)}
-                        placeholder="Search agents..."
-                        style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1f2937" }}
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  {/* Agent list */}
-                  <div style={{ maxHeight: 240, overflowY: "auto" }}>
-                    {filteredAgents.length === 0 ? (
-                      <div style={{ padding: 16, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
-                        No agents found
-                      </div>
-                    ) : (
-                      filteredAgents.map((agent) => (
-                        <button
-                          key={agent.id}
-                          onClick={() => handleAssign(agent.id)}
-                          disabled={assignConversation.isPending}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            width: "100%",
-                            padding: "10px 14px",
-                            border: "none",
-                            borderBottom: "1px solid #f3f4f6",
-                            background: currentAssignment?.assignedUserId === agent.id ? "#f0fdf4" : "transparent",
-                            cursor: assignConversation.isPending ? "not-allowed" : "pointer",
-                            textAlign: "left",
-                            transition: "background 0.1s",
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = "#f0fdf4"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = currentAssignment?.assignedUserId === agent.id ? "#f0fdf4" : "transparent"; }}
-                        >
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>{agent.name}</div>
-                            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
-                              {agent.team ? agent.team.charAt(0).toUpperCase() + agent.team.slice(1) : "Manager"}
-                            </div>
-                          </div>
-                          {currentAssignment?.assignedUserId === agent.id && (
-                            <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>Current</span>
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -583,6 +398,144 @@ export default function WhatsAppControl() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Action bar: Select + Assign buttons — close to conversations */}
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <button
+              onClick={() => { setMultiSelectMode(!multiSelectMode); setSelectedContactIds(new Set()); setShowBulkAssignDropdown(false); }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                background: multiSelectMode ? "#fee2e2" : "#f3f4f6",
+                color: multiSelectMode ? "#dc2626" : "#374151",
+                border: "none",
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <CheckSquare size={13} />
+              {multiSelectMode ? "Cancel" : "Select Multiple"}
+            </button>
+
+            {/* Bulk Assign button */}
+            {multiSelectMode && selectedContactIds.size > 0 && (
+              <div ref={bulkAssignRef} style={{ position: "relative" }}>
+                <button
+                  onClick={() => setShowBulkAssignDropdown(!showBulkAssignDropdown)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "#f97316",
+                    border: "none",
+                    color: "#fff",
+                    borderRadius: 8,
+                    padding: "7px 14px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(249,115,22,0.4)",
+                  }}
+                >
+                  <UserPlus size={13} />
+                  Assign {selectedContactIds.size}
+                  <ChevronDown size={12} />
+                </button>
+
+                {showBulkAssignDropdown && (
+                  <div style={{ position: "absolute", left: 0, top: "100%", marginTop: 6, width: 260, background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 100, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 12px", borderBottom: "1px solid #f3f4f6" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0f2f5", borderRadius: 20, padding: "6px 12px" }}>
+                        <Search size={14} style={{ color: "#8696a0", flexShrink: 0 }} />
+                        <input type="text" value={bulkAssignSearchQuery} onChange={(e) => setBulkAssignSearchQuery(e.target.value)} placeholder="Search agents..." style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1f2937" }} autoFocus />
+                      </div>
+                    </div>
+                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                      {filteredBulkAgents.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>No agents found</div>
+                      ) : (
+                        filteredBulkAgents.map((agent: any) => (
+                          <button key={agent.id} onClick={() => handleBulkAssign(agent.id)} disabled={assignConversation.isPending} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid #f3f4f6", background: "transparent", cursor: assignConversation.isPending ? "not-allowed" : "pointer", textAlign: "left" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#fff7ed"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>{agent.name}</div>
+                              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{agent.team ? agent.team.charAt(0).toUpperCase() + agent.team.slice(1) : "Manager"}</div>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Single Assign button — shown when a conversation is selected and not in multi-select */}
+            {selectedContactId !== null && !multiSelectMode && (
+              <div ref={assignRef} style={{ position: "relative" }}>
+                <button
+                  onClick={() => setShowAssignDropdown(!showAssignDropdown)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "#f97316",
+                    border: "none",
+                    color: "#fff",
+                    borderRadius: 8,
+                    padding: "7px 14px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(249,115,22,0.4)",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#ea580c"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#f97316"; }}
+                >
+                  <UserPlus size={13} />
+                  Assign
+                  <ChevronDown size={12} />
+                </button>
+
+                {/* Assign dropdown */}
+                {showAssignDropdown && (
+                  <div style={{ position: "absolute", left: 0, top: "100%", marginTop: 6, width: 260, background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 100, overflow: "hidden" }}>
+                    {currentAssignment && (
+                      <div style={{ padding: "10px 14px", background: "#f0fdf4", borderBottom: "1px solid #e5e7eb", fontSize: 12, color: "#166534" }}>
+                        Currently assigned to: <strong>{currentAssignment.assignedUserName}</strong>
+                      </div>
+                    )}
+                    <div style={{ padding: "10px 12px", borderBottom: "1px solid #f3f4f6" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0f2f5", borderRadius: 20, padding: "6px 12px" }}>
+                        <Search size={14} style={{ color: "#8696a0", flexShrink: 0 }} />
+                        <input type="text" value={assignSearchQuery} onChange={(e) => setAssignSearchQuery(e.target.value)} placeholder="Search agents..." style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1f2937" }} autoFocus />
+                      </div>
+                    </div>
+                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                      {filteredAgents.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>No agents found</div>
+                      ) : (
+                        filteredAgents.map((agent) => (
+                          <button key={agent.id} onClick={() => handleAssign(agent.id)} disabled={assignConversation.isPending} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid #f3f4f6", background: currentAssignment?.assignedUserId === agent.id ? "#f0fdf4" : "transparent", cursor: assignConversation.isPending ? "not-allowed" : "pointer", textAlign: "left" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f0fdf4"; }} onMouseLeave={(e) => { e.currentTarget.style.background = currentAssignment?.assignedUserId === agent.id ? "#f0fdf4" : "transparent"; }}>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>{agent.name}</div>
+                              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{agent.team ? agent.team.charAt(0).toUpperCase() + agent.team.slice(1) : "Manager"}</div>
+                            </div>
+                            {currentAssignment?.assignedUserId === agent.id && (
+                              <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>Current</span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Conversation items */}
