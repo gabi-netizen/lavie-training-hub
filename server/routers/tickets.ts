@@ -269,7 +269,11 @@ export const ticketsRouter = router({
           tickets = tickets.filter((t) => t.priority === input.priority);
         }
         if (input.status && input.status !== "all") {
-          tickets = tickets.filter((t) => t.status === input.status);
+          if (input.status === "active") {
+            tickets = tickets.filter((t) => t.status !== "closed" && t.status !== "resolved");
+          } else {
+            tickets = tickets.filter((t) => t.status === input.status);
+          }
         }
         if (input.customerStatus && input.customerStatus !== "all") {
           tickets = tickets.filter((t) => t.customerStatus === input.customerStatus);

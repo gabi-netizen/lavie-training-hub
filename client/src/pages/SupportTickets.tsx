@@ -841,7 +841,7 @@ export default function SupportTickets() {
                 Tickets
               </button>
               <button
-                onClick={() => { setViewMode("retention"); setSelectedIds(new Set()); setExpandedId(null); }}
+                onClick={() => { setViewMode("retention"); setSelectedIds(new Set()); setExpandedId(null); setStatusFilter("active"); }}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                   viewMode === "retention"
                     ? "bg-emerald-600 text-white"
@@ -1070,6 +1070,7 @@ export default function SupportTickets() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="active">Active (excl. Closed/Resolved)</SelectItem>
                     <SelectItem value="open">Open</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
@@ -1132,6 +1133,7 @@ export default function SupportTickets() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="active">Active (excl. Closed/Resolved)</SelectItem>
                     <SelectItem value="open">Open</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="awaiting_response">Awaiting Response</SelectItem>
