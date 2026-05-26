@@ -394,7 +394,7 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
           await db.insert(whatsappMessages).values({
             contactId: waContact?.id ?? null,
             direction: "outbound",
-            body: `Hi ${customerFirstName}, One of our skin specialists from Lavie Labs recently tried reaching you...`,
+            body: `Hi ${customerFirstName},\nOne of our skin specialists from Lavie Labs recently tried reaching you.\nFor the past 9 years, we have been working with clients across the UK on concerns such as skin ageing, pigmentation, sensitivity and skin texture using advanced clinically proven formulations.\nThese are some real client results \u{1F90D}\nWe would also be happy to arrange a complimentary personalised product trial based on your skin concerns.`,
             templateName: "op_no_answer_cold_data",
             sentByUserId: waAgent?.id ?? null,
             fromNumber,
@@ -402,6 +402,7 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
             twilioMessageSid: waResult.sid,
             status: "sent",
             isRead: true,
+            mediaUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663435925457/MdhPnNwYbGdeDwml.png",
           });
         } catch (waErr) {
           console.error(`[WhatsApp-NA] Failed for phone ${callerPhone}:`, waErr);

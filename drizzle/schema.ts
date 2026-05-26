@@ -730,6 +730,8 @@ export const whatsappMessages = mysqlTable("whatsapp_messages", {
   status: mysqlEnum("messageStatus", ["sent", "delivered", "read", "failed", "received"]).default("sent").notNull(),
   /** Whether the agent has read this message (for inbox unread indicators) */
   isRead: boolean("isRead").default(false).notNull(),
+  /** Media URL (image/video) attached to this message */
+  mediaUrl: text("mediaUrl"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

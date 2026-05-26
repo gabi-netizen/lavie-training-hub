@@ -590,6 +590,13 @@ export default function WhatsAppControl() {
                             boxShadow: "0 1px 1px rgba(0,0,0,0.06)",
                           }}
                         >
+                          {(msg as any).mediaUrl && (
+                            <img
+                              src={(msg as any).mediaUrl}
+                              alt="Media"
+                              style={{ maxWidth: "100%", borderRadius: 6, marginBottom: 4 }}
+                            />
+                          )}
                           <p style={{ margin: 0, fontSize: 14, color: "#1f2937", lineHeight: 1.4, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                             {msg.body || "[Template message]"}
                           </p>
