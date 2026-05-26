@@ -131,6 +131,35 @@ async function startServer() {
     }
   );
 
+  // ─── Ticket attachment upload endpoint ─────────────────────────────────────
+  const ticketAttachmentUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max per file
+  });
+  app.post(
+    "/api/ticket-attachment-upload",
+    ticketAttachmentUpload.array("files", 5), // max 5 files
+    async (req: express.Request, res: express.Response) => {
+      try {
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+          res.status(400).json({ error: "No files provided" });
+          return;
+        }
+        const uploaded = files.map((f) => ({
+          filename: f.originalname,
+          contentType: f.mimetype,
+          size: f.size,
+          buffer: f.buffer.toString("base64"),
+        }));
+        res.json({ files: uploaded });
+      } catch (err) {
+        console.error("[ticket-attachment-upload] error:", err);
+        res.status(500).json({ error: err instanceof Error ? err.message : "Upload failed" });
+      }
+    }
+  );
+
   // tRPC API
   app.use(
     "/api/trpc",

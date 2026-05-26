@@ -21,6 +21,12 @@ export const gmailTransporter = nodemailer.createTransport({
   },
 });
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 export interface SendViaGmailOptions {
   from: string;
   to: string;
@@ -28,6 +34,7 @@ export interface SendViaGmailOptions {
   htmlBody: string;
   replyTo?: string;
   textBody?: string;
+  attachments?: EmailAttachment[];
 }
 
 /**
@@ -46,6 +53,15 @@ export async function sendViaGmail(opts: SendViaGmailOptions): Promise<{ Message
     html: opts.htmlBody,
     ...(opts.textBody ? { text: opts.textBody } : {}),
     ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+    ...(opts.attachments && opts.attachments.length > 0
+      ? {
+          attachments: opts.attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+            contentType: a.contentType,
+          })),
+        }
+      : {}),
   });
 
   return { MessageID: info.messageId };

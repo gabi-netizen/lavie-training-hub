@@ -456,6 +456,11 @@ export const ticketsRouter = router({
       z.object({
         ticketId: z.number(),
         replyText: z.string().min(1),
+        attachments: z.array(z.object({
+          filename: z.string(),
+          contentType: z.string(),
+          buffer: z.string(), // base64 encoded
+        })).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -495,6 +500,13 @@ export const ticketsRouter = router({
         customerName: ticket.fromName || toEmail,
       });
 
+      // Build attachments from base64
+      const emailAttachments = (input.attachments || []).map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.buffer, "base64"),
+        contentType: a.contentType,
+      }));
+
       // Send via Gmail SMTP (replaced Postmark 2024-05)
       try {
         await sendViaGmail({
@@ -504,6 +516,7 @@ export const ticketsRouter = router({
           htmlBody,
           textBody: `Hi ${(ticket.fromName || "").split(" ")[0] || "there"},\n\n${input.replyText}\n\nWarm regards,\n${agentName}\nLavie Labs`,
           replyTo: replyToAddress,
+          attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
         });
       } catch (err) {
         if (err instanceof TRPCError) throw err;

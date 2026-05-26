@@ -1,4 +1,4 @@
-import React, { useState, useMemo, lazy, Suspense } from "react";
+import React, { useState, useMemo, useRef, lazy, Suspense } from "react";
 
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -47,6 +47,9 @@ import {
   Trash2,
   Users,
   MessageCircle,
+  Paperclip,
+  X,
+  FileText,
 } from "lucide-react";
 const WhatsAppControl = lazy(() => import("@/pages/WhatsAppControl"));
 
@@ -249,14 +252,25 @@ function ConversationThread({ ticketId, originalBody, originalFrom, originalDate
 
 // ─── Reply Box Component ────────────────────────────────────────────────────
 
+interface AttachedFile {
+  filename: string;
+  contentType: string;
+  size: number;
+  buffer: string; // base64
+}
+
 function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onReplySent: () => void; recipient?: string | null }) {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const replyMutation = trpc.tickets.replyToTicket.useMutation({
     onSuccess: () => {
       toast.success("Reply sent successfully");
       setReplyText("");
+      setAttachedFiles([]);
       setShowReplyBox(false);
       onReplySent();
     },
@@ -264,6 +278,39 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
       toast.error(`Failed to send reply: ${e.message}`);
     },
   });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+      }
+      const res = await fetch("/api/ticket-attachment-upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setAttachedFiles((prev) => [...prev, ...data.files]);
+      toast.success(`${data.files.length} file(s) attached`);
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to upload files");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // Determine the "Sent from" display
   const isRetentionTicket = recipient && RETENTION_EMAILS.includes(recipient);
@@ -291,7 +338,7 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
         <Reply className="h-4 w-4 text-indigo-600" />
         <span className="text-sm font-semibold text-indigo-700">Write Reply</span>
         <button
-          onClick={() => setShowReplyBox(false)}
+          onClick={() => { setShowReplyBox(false); setAttachedFiles([]); }}
           className="ml-auto text-xs text-gray-500 hover:text-gray-700"
         >
           Cancel
@@ -304,20 +351,61 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
         className="min-h-[120px] text-sm resize-y"
         autoFocus
       />
+      {/* Attached files list */}
+      {attachedFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {attachedFiles.map((file, idx) => (
+            <div key={idx} className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1 text-xs">
+              <FileText className="h-3 w-3 text-gray-500" />
+              <span className="max-w-[150px] truncate">{file.filename}</span>
+              <span className="text-gray-400">({(file.size / 1024).toFixed(0)}KB)</span>
+              <button onClick={() => removeFile(idx)} className="ml-1 text-red-400 hover:text-red-600">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
-          Sent from: {sentFromDisplay}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-500">
+            Sent from: {sentFromDisplay}
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-50 transition-colors"
+          >
+            <Paperclip className="h-3 w-3" />
+            {uploading ? "Uploading..." : "Attach File"}
+          </button>
+        </div>
         <Button
           size="sm"
           className="gap-1.5"
           disabled={!replyText.trim() || replyMutation.isPending}
           onClick={() => {
-            replyMutation.mutate({ ticketId, replyText: replyText.trim() });
+            replyMutation.mutate({
+              ticketId,
+              replyText: replyText.trim(),
+              attachments: attachedFiles.length > 0 ? attachedFiles.map(f => ({
+                filename: f.filename,
+                contentType: f.contentType,
+                buffer: f.buffer,
+              })) : undefined,
+            });
           }}
         >
           <Send className="h-3.5 w-3.5" />
-          {replyMutation.isPending ? "Sending..." : "Send Reply"}
+          {replyMutation.isPending ? "Sending..." : `Send Reply${attachedFiles.length > 0 ? ` (${attachedFiles.length} file${attachedFiles.length > 1 ? "s" : ""})` : ""}`}
         </Button>
       </div>
     </div>
