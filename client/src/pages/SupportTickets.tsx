@@ -337,6 +337,22 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
       <div className="flex items-center gap-2">
         <Reply className="h-4 w-4 text-indigo-600" />
         <span className="text-sm font-semibold text-indigo-700">Write Reply</span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-50 transition-colors"
+        >
+          <Paperclip className="h-3 w-3" />
+          {uploading ? "Uploading..." : "Attach File"}
+        </button>
         <button
           onClick={() => { setShowReplyBox(false); setAttachedFiles([]); }}
           className="ml-auto text-xs text-gray-500 hover:text-gray-700"
@@ -367,27 +383,9 @@ function ReplyBox({ ticketId, onReplySent, recipient }: { ticketId: number; onRe
         </div>
       )}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-gray-500">
-            Sent from: {sentFromDisplay}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileSelect}
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-50 transition-colors"
-          >
-            <Paperclip className="h-3 w-3" />
-            {uploading ? "Uploading..." : "Attach File"}
-          </button>
-        </div>
+        <p className="text-xs text-gray-500">
+          Sent from: {sentFromDisplay}
+        </p>
         <Button
           size="sm"
           className="gap-1.5"
