@@ -136,6 +136,7 @@ export default function WhatsAppControl() {
     seesAll ? "all" : "mine"
   );
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const [hasSelectedConversation, setHasSelectedConversation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -166,7 +167,7 @@ export default function WhatsAppControl() {
     refetch: refetchMessages,
   } = trpc.whatsapp.messages.useQuery(
     { contactId: selectedContactId },
-    { enabled: selectedContactId !== null, refetchInterval: 5000 }
+    { enabled: hasSelectedConversation, refetchInterval: 5000 }
   );
 
   const { data: templates } = trpc.whatsapp.templates.useQuery(undefined, {
@@ -179,7 +180,7 @@ export default function WhatsAppControl() {
 
   const { data: currentAssignment, refetch: refetchAssignment } = trpc.whatsapp.getAssignment.useQuery(
     { contactId: selectedContactId! },
-    { enabled: selectedContactId !== null }
+    { enabled: selectedContactId !== null && hasSelectedConversation }
   );
 
   // ─── tRPC Mutations ────────────────────────────────────────────────────────
@@ -260,10 +261,10 @@ export default function WhatsAppControl() {
 
   // ─── Mark as read when selecting a conversation ────────────────────────────
   useEffect(() => {
-    if (selectedContactId !== null) {
+    if (hasSelectedConversation) {
       markAsRead.mutate({ contactId: selectedContactId });
     }
-  }, [selectedContactId]);
+  }, [selectedContactId, hasSelectedConversation]);
 
   // ─── Filter conversations by search ────────────────────────────────────────
   const filteredConversations = useMemo(() => {
@@ -291,7 +292,7 @@ export default function WhatsAppControl() {
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedContactId) return;
+    if (!messageInput.trim() || !hasSelectedConversation) return;
     sendFreeText.mutate({ contactId: selectedContactId, body: messageInput.trim() });
   };
 
@@ -302,13 +303,12 @@ export default function WhatsAppControl() {
     }
   };
 
-  const handleSendTemplate = (contentSid: string, friendlyName: string) => {
-    if (!selectedContactId) return;
+    const handleSendTemplate = (contentSid: string, friendlyName: string) => {
+    if (!hasSelectedConversation) return;
     sendTemplate.mutate({ contactId: selectedContactId, contentSid, templateName: friendlyName });
   };
-
   const handleAssign = (assignedUserId: number) => {
-    if (!selectedContactId) return;
+    if (!hasSelectedConversation) return;
     assignConversation.mutate({ contactId: selectedContactId, assignedUserId });
   };
 
@@ -479,6 +479,7 @@ export default function WhatsAppControl() {
                       toggleContactSelection(conv.contactId);
                     } else {
                       setSelectedContactId(conv.contactId);
+                      setHasSelectedConversation(true);
                     }
                   }}
                   className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-700/50 transition-colors ${
@@ -537,7 +538,7 @@ export default function WhatsAppControl() {
 
       {/* ═══ CENTER PANEL: Chat Window ═══ */}
       <div className="flex-1 flex flex-col bg-[#0f3460] min-w-0 relative">
-        {selectedContactId === null ? (
+        {!hasSelectedConversation ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
             <MessageCircle size={48} className="mb-3 opacity-30" />
             <p className="text-lg font-medium">Select a conversation</p>
@@ -752,7 +753,7 @@ export default function WhatsAppControl() {
 
       {/* ═══ RIGHT PANEL: Contact Details ═══ */}
       <div className="w-[280px] min-w-[280px] border-l border-gray-700 bg-[#16213e] flex flex-col overflow-y-auto">
-        {selectedContactId === null ? (
+        {!hasSelectedConversation ? (
           <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
             <p>No conversation selected</p>
           </div>
