@@ -168,10 +168,8 @@ function Router() {
           {() => <AdminOrRetentionRoute component={SupportTickets} />}
         </Route>
 
-        {/* WhatsApp Control — managers only (users with no team) */}
-        <Route path={"/whatsapp-control"}>
-          {() => <ManagerRoute component={WhatsAppControl} />}
-        </Route>
+        {/* WhatsApp Control — all authenticated users */}
+        <Route path={"/whatsapp-control"} component={WhatsAppControl} />
 
         {/* Users Management — admin only */}
         <Route path={"/users"}>

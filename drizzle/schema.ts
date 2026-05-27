@@ -757,3 +757,25 @@ export const whatsappConversationAssignments = mysqlTable("whatsapp_conversation
 
 export type WhatsappConversationAssignment = typeof whatsappConversationAssignments.$inferSelect;
 export type InsertWhatsappConversationAssignment = typeof whatsappConversationAssignments.$inferInsert;
+
+// ─── WhatsApp Conversations ───────────────────────────────────────────────────────────────
+/**
+ * WhatsApp conversations table — tracks conversation status (open/snoozed/resolved)
+ * for each contact. One conversation per contact.
+ */
+export const whatsappConversations = mysqlTable("whatsapp_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Contact this conversation belongs to (unique — one conversation per contact) */
+  contactId: int("contactId").notNull().unique(),
+  /** Conversation status */
+  status: mysqlEnum("conversationStatus", ["open", "snoozed", "resolved"]).default("open").notNull(),
+  /** When the conversation is snoozed until (null if not snoozed) */
+  snoozedUntil: timestamp("snoozedUntil"),
+  /** When the conversation was resolved (null if not resolved) */
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type WhatsappConversation = typeof whatsappConversations.$inferSelect;
+export type InsertWhatsappConversation = typeof whatsappConversations.$inferInsert;

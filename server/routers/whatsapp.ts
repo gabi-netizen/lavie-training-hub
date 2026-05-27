@@ -5,8 +5,8 @@ import { listWhatsAppTemplates, sendWhatsAppMessage, sendWhatsAppFreeText, fetch
 import { getContact } from "../contacts";
 import { normalisePhone } from "../contacts";
 import { getDb } from "../db";
-import { whatsappMessages, contacts, users, whatsappConversationAssignments } from "../../drizzle/schema";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { whatsappMessages, contacts, users, whatsappConversationAssignments, whatsappConversations } from "../../drizzle/schema";
+import { eq, and, desc, sql, count, isNull, ne } from "drizzle-orm";
 
 export const whatsappRouter = router({
   // ─── List available WhatsApp templates from Twilio Content API ─────────────
@@ -162,43 +162,51 @@ export const whatsappRouter = router({
     }),
 
   // ─── Conversations: list contacts with WhatsApp messages ───────────────────
-  // Returns contacts grouped with latest message and unread count.
+  // Returns contacts grouped with latest message, unread count, assignment info, and status.
   // Managers (no team) see ALL conversations.
-  // Agents (with team) see conversations assigned to them, OR conversations where
-  // they are the sentByUserId and no assignment exists.
-  conversations: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    }
+  // Agents (with team) see conversations assigned to them or unassigned.
+  // Supports tab filtering: "all" | "unassigned" | "mine"
+  conversations: protectedProcedure
+    .input(
+      z.object({
+        tab: z.enum(["unassigned", "mine", "all"]).default("all"),
+        includeResolved: z.boolean().default(false),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
 
-    // Users with a team only see their own conversations; users without a team (managers/admins) see all
-    const seesAll = !ctx.user.team;
-    const userId = ctx.user.id;
+      const tab = input?.tab ?? "all";
+      const includeResolved = input?.includeResolved ?? false;
 
-    // Get all distinct contactIds from whatsapp_messages
-    const allMessages = await db
-      .select({
-        contactId: whatsappMessages.contactId,
-      })
-      .from(whatsappMessages);
+      // Users with a team only see their own conversations; users without a team (managers/admins) see all
+      const seesAll = !ctx.user.team;
+      const userId = ctx.user.id;
 
-    // Get unique contactIds (including null for unmatched messages)
-    const allContactIds = Array.from(new Set(allMessages.map((m) => m.contactId)));
+      // Get all distinct contactIds from whatsapp_messages
+      const allMessages = await db
+        .select({
+          contactId: whatsappMessages.contactId,
+        })
+        .from(whatsappMessages);
 
-    if (allContactIds.length === 0) {
-      return [];
-    }
+      // Get unique contactIds (including null for unmatched messages)
+      const allContactIds = Array.from(new Set(allMessages.map((m) => m.contactId)));
 
-    // If agent (has team), filter to only conversations assigned to them or owned by them
-    let contactIds = allContactIds;
-    if (!seesAll) {
-      // Get all assignments (latest per contact)
+      if (allContactIds.length === 0) {
+        return [];
+      }
+
+      // Get all assignments (latest per contact) — build a map
       const assignments = await db
         .select({
           contactId: whatsappConversationAssignments.contactId,
           assignedUserId: whatsappConversationAssignments.assignedUserId,
           id: whatsappConversationAssignments.id,
+          createdAt: whatsappConversationAssignments.createdAt,
         })
         .from(whatsappConversationAssignments)
         .orderBy(desc(whatsappConversationAssignments.createdAt));
@@ -211,116 +219,172 @@ export const whatsappRouter = router({
         }
       }
 
-      // Filter contactIds: include if assigned to this user, OR if no assignment and sentByUserId matches
-      const agentMessages = await db
-        .select({
-          contactId: whatsappMessages.contactId,
-        })
-        .from(whatsappMessages)
-        .where(eq(whatsappMessages.sentByUserId, userId));
-
-      const agentContactIds = new Set(agentMessages.map((m) => m.contactId));
-
-      contactIds = allContactIds.filter((cId) => {
-        if (cId === null) {
-          // Unmatched messages — only show if agent sent them and no assignment
-          return agentContactIds.has(null);
-        }
-        const assignedTo = assignmentMap.get(cId);
-        if (assignedTo !== undefined) {
-          // Has an assignment — only show if assigned to this user
-          return assignedTo === userId;
-        }
-        // No assignment — fall back to sentByUserId logic
-        return agentContactIds.has(cId);
-      });
-    }
-
-    if (contactIds.length === 0) {
-      return [];
-    }
-
-    // Build conversation list
-    const conversations = [];
-
-    for (const contactId of contactIds) {
-      // Get the latest message for this contact
-      const whereClause = contactId !== null
-        ? eq(whatsappMessages.contactId, contactId)
-        : sql`${whatsappMessages.contactId} IS NULL`;
-
-      const [latestMessage] = await db
+      // Get all conversation status records
+      const conversationStatuses = await db
         .select()
-        .from(whatsappMessages)
-        .where(whereClause)
-        .orderBy(desc(whatsappMessages.createdAt))
-        .limit(1);
+        .from(whatsappConversations);
 
-      if (!latestMessage) continue;
-
-      // Count unread inbound messages
-      const unreadConditions = contactId !== null
-        ? and(
-            eq(whatsappMessages.contactId, contactId),
-            eq(whatsappMessages.direction, "inbound"),
-            eq(whatsappMessages.isRead, false)
-          )
-        : and(
-            sql`${whatsappMessages.contactId} IS NULL`,
-            eq(whatsappMessages.direction, "inbound"),
-            eq(whatsappMessages.isRead, false)
-          );
-
-      const [unreadResult] = await db
-        .select({ count: count() })
-        .from(whatsappMessages)
-        .where(unreadConditions);
-
-      const unreadCount = unreadResult?.count ?? 0;
-
-      // Get contact info if available
-      let contactInfo = null;
-      if (contactId) {
-        const [contact] = await db
-          .select({
-            id: contacts.id,
-            name: contacts.name,
-            phone: contacts.phone,
-            email: contacts.email,
-            status: contacts.status,
-            agentName: contacts.agentName,
-          })
-          .from(contacts)
-          .where(eq(contacts.id, contactId))
-          .limit(1);
-        contactInfo = contact || null;
+      const statusMap = new Map<number, typeof conversationStatuses[0]>();
+      for (const cs of conversationStatuses) {
+        statusMap.set(cs.contactId, cs);
       }
 
-      conversations.push({
-        contactId,
-        contact: contactInfo,
-        lastMessage: {
-          id: latestMessage.id,
-          direction: latestMessage.direction,
-          body: latestMessage.body,
-          status: latestMessage.status,
-          createdAt: latestMessage.createdAt,
-        },
-        unreadCount,
-        // For unmatched messages, use the fromNumber as identifier
-        fromNumber: latestMessage.direction === "inbound" ? latestMessage.fromNumber : latestMessage.toNumber,
+      // Get all user names for assignment display
+      const allUsers = await db
+        .select({ id: users.id, name: users.name })
+        .from(users);
+      const userNameMap = new Map<number, string>();
+      for (const u of allUsers) {
+        userNameMap.set(u.id, u.name ?? "Unknown");
+      }
+
+      // Filter contactIds based on tab and role
+      let contactIds: (number | null)[];
+
+      if (seesAll) {
+        // Manager: sees all conversations
+        switch (tab) {
+          case "unassigned":
+            contactIds = allContactIds.filter((cId) => !assignmentMap.has(cId));
+            break;
+          case "mine":
+            contactIds = allContactIds.filter((cId) => assignmentMap.get(cId) === userId);
+            break;
+          case "all":
+          default:
+            contactIds = allContactIds;
+            break;
+        }
+      } else {
+        // Agent: limited view
+        switch (tab) {
+          case "unassigned":
+            contactIds = allContactIds.filter((cId) => !assignmentMap.has(cId));
+            break;
+          case "mine":
+            contactIds = allContactIds.filter((cId) => assignmentMap.get(cId) === userId);
+            break;
+          case "all":
+          default:
+            // Agents treat "all" as "mine"
+            contactIds = allContactIds.filter((cId) => assignmentMap.get(cId) === userId);
+            break;
+        }
+      }
+
+      if (contactIds.length === 0) {
+        return [];
+      }
+
+      // Filter by conversation status (exclude resolved unless requested)
+      if (!includeResolved) {
+        contactIds = contactIds.filter((cId) => {
+          if (cId === null) return true; // unmatched messages always show
+          const status = statusMap.get(cId);
+          if (!status) return true; // no status record means "open" (default)
+          return status.status !== "resolved";
+        });
+      }
+
+      if (contactIds.length === 0) {
+        return [];
+      }
+
+      // Build conversation list
+      const conversations = [];
+
+      for (const contactId of contactIds) {
+        // Get the latest message for this contact
+        const whereClause = contactId !== null
+          ? eq(whatsappMessages.contactId, contactId)
+          : sql`${whatsappMessages.contactId} IS NULL`;
+
+        const [latestMessage] = await db
+          .select()
+          .from(whatsappMessages)
+          .where(whereClause)
+          .orderBy(desc(whatsappMessages.createdAt))
+          .limit(1);
+
+        if (!latestMessage) continue;
+
+        // Count unread inbound messages
+        const unreadConditions = contactId !== null
+          ? and(
+              eq(whatsappMessages.contactId, contactId),
+              eq(whatsappMessages.direction, "inbound"),
+              eq(whatsappMessages.isRead, false)
+            )
+          : and(
+              sql`${whatsappMessages.contactId} IS NULL`,
+              eq(whatsappMessages.direction, "inbound"),
+              eq(whatsappMessages.isRead, false)
+            );
+
+        const [unreadResult] = await db
+          .select({ count: count() })
+          .from(whatsappMessages)
+          .where(unreadConditions);
+
+        const unreadCount = unreadResult?.count ?? 0;
+
+        // Get contact info if available
+        let contactInfo = null;
+        if (contactId) {
+          const [contact] = await db
+            .select({
+              id: contacts.id,
+              name: contacts.name,
+              phone: contacts.phone,
+              email: contacts.email,
+              status: contacts.status,
+              agentName: contacts.agentName,
+            })
+            .from(contacts)
+            .where(eq(contacts.id, contactId))
+            .limit(1);
+          contactInfo = contact || null;
+        }
+
+        // Get assignment info for this conversation
+        const assignedUserId = contactId !== null ? assignmentMap.get(contactId) : undefined;
+        const assignedTo = assignedUserId
+          ? { userId: assignedUserId, userName: userNameMap.get(assignedUserId) ?? "Unknown" }
+          : null;
+
+        // Get conversation status
+        const convStatus = contactId !== null ? statusMap.get(contactId) : undefined;
+        const conversationStatus = convStatus?.status ?? "open";
+        const snoozedUntil = convStatus?.snoozedUntil ?? null;
+
+        conversations.push({
+          contactId,
+          contact: contactInfo,
+          lastMessage: {
+            id: latestMessage.id,
+            direction: latestMessage.direction,
+            body: latestMessage.body,
+            status: latestMessage.status,
+            createdAt: latestMessage.createdAt,
+          },
+          unreadCount,
+          // For unmatched messages, use the fromNumber as identifier
+          fromNumber: latestMessage.direction === "inbound" ? latestMessage.fromNumber : latestMessage.toNumber,
+          assignedTo,
+          conversationStatus,
+          snoozedUntil,
+        });
+      }
+
+      // Sort by latest message date (most recent first)
+      conversations.sort((a, b) => {
+        const dateA = new Date(a.lastMessage.createdAt).getTime();
+        const dateB = new Date(b.lastMessage.createdAt).getTime();
+        return dateB - dateA;
       });
-    }
 
-    // Sort by latest message date (most recent first)
-    conversations.sort((a, b) => {
-      const dateA = new Date(a.lastMessage.createdAt).getTime();
-      const dateB = new Date(b.lastMessage.createdAt).getTime();
-      return dateB - dateA;
-    });
-
-    return conversations;
-  }),
+      return conversations;
+    }),
 
   // ─── Messages: get all messages for a specific contact ─────────────────────
   messages: protectedProcedure
@@ -594,5 +658,215 @@ export const whatsappRouter = router({
         ...assignment,
         assignedUserName: assignedUser?.name ?? "Unknown",
       };
+    }),
+
+  // ─── Resolve Conversation: mark a conversation as resolved ─────────────────
+  resolveConversation: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const { contactId } = input;
+
+      // Check if conversation record exists
+      const [existing] = await db
+        .select()
+        .from(whatsappConversations)
+        .where(eq(whatsappConversations.contactId, contactId))
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(whatsappConversations)
+          .set({
+            status: "resolved",
+            resolvedAt: new Date(),
+            snoozedUntil: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(whatsappConversations.contactId, contactId));
+      } else {
+        await db.insert(whatsappConversations).values({
+          contactId,
+          status: "resolved",
+          resolvedAt: new Date(),
+        });
+      }
+
+      console.log(`[WhatsApp] Conversation for contact #${contactId} resolved by ${ctx.user.name ?? ctx.user.email}`);
+      return { success: true };
+    }),
+
+  // ─── Reopen Conversation: set status back to open ──────────────────────────
+  reopenConversation: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const { contactId } = input;
+
+      const [existing] = await db
+        .select()
+        .from(whatsappConversations)
+        .where(eq(whatsappConversations.contactId, contactId))
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(whatsappConversations)
+          .set({
+            status: "open",
+            resolvedAt: null,
+            snoozedUntil: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(whatsappConversations.contactId, contactId));
+      } else {
+        await db.insert(whatsappConversations).values({
+          contactId,
+          status: "open",
+        });
+      }
+
+      console.log(`[WhatsApp] Conversation for contact #${contactId} reopened by ${ctx.user.name ?? ctx.user.email}`);
+      return { success: true };
+    }),
+
+  // ─── Snooze Conversation: set status to snoozed with duration ──────────────
+  snoozeConversation: protectedProcedure
+    .input(z.object({
+      contactId: z.number(),
+      durationHours: z.number().min(0.5).max(168), // 30 min to 7 days
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const { contactId, durationHours } = input;
+      const snoozedUntil = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+      const [existing] = await db
+        .select()
+        .from(whatsappConversations)
+        .where(eq(whatsappConversations.contactId, contactId))
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(whatsappConversations)
+          .set({
+            status: "snoozed",
+            snoozedUntil,
+            resolvedAt: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(whatsappConversations.contactId, contactId));
+      } else {
+        await db.insert(whatsappConversations).values({
+          contactId,
+          status: "snoozed",
+          snoozedUntil,
+        });
+      }
+
+      console.log(`[WhatsApp] Conversation for contact #${contactId} snoozed until ${snoozedUntil.toISOString()} by ${ctx.user.name ?? ctx.user.email}`);
+      return { success: true, snoozedUntil };
+    }),
+
+  // ─── Bulk Send Template: send a template to multiple contacts ──────────────
+  bulkSendTemplate: protectedProcedure
+    .input(z.object({
+      contactIds: z.array(z.number()).min(1),
+      contentSid: z.string().min(1),
+      templateName: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Only managers (seesAll) can use bulk send
+      if (ctx.user.team !== null) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only managers can use bulk send",
+        });
+      }
+
+      const { contactIds, contentSid, templateName } = input;
+      const results = { sent: 0, failed: 0, errors: [] as string[] };
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
+
+      for (const contactId of contactIds) {
+        try {
+          const contact = await getContact(contactId);
+          if (!contact || !contact.phone) {
+            results.failed++;
+            results.errors.push(`Contact #${contactId}: no phone number`);
+            continue;
+          }
+
+          const normalisedPhone = normalisePhone(contact.phone);
+          if (!normalisedPhone) {
+            results.failed++;
+            results.errors.push(`Contact #${contactId}: could not normalise phone`);
+            continue;
+          }
+
+          const e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
+          const customerFirstName = (contact.name ?? "").split(" ")[0] || "there";
+          const agentFirstName = (contact.agentName ?? ctx.user.name ?? "").split(" ")[0] || "Lavie Labs";
+
+          const result = await sendWhatsAppMessage({
+            to: e164Phone,
+            contentSid,
+            contentVariables: {
+              "1": customerFirstName,
+              "2": agentFirstName,
+            },
+          });
+
+          // Save to whatsapp_messages
+          try {
+            const resolvedBody = await fetchTemplateBody(contentSid, {
+              "1": customerFirstName,
+              "2": agentFirstName,
+            });
+
+            await db.insert(whatsappMessages).values({
+              contactId,
+              direction: "outbound",
+              body: resolvedBody,
+              templateName: templateName || contentSid,
+              sentByUserId: ctx.user.id,
+              fromNumber,
+              toNumber: e164Phone,
+              twilioMessageSid: result.sid,
+              status: "sent",
+              isRead: true,
+            });
+          } catch (dbErr) {
+            console.error(`[WhatsApp Bulk] Failed to save message for contact #${contactId}:`, dbErr);
+          }
+
+          results.sent++;
+        } catch (err) {
+          results.failed++;
+          results.errors.push(`Contact #${contactId}: ${(err as Error).message}`);
+        }
+      }
+
+      console.log(`[WhatsApp Bulk] Sent ${results.sent}, failed ${results.failed} by ${ctx.user.name ?? ctx.user.email}`);
+      return results;
     }),
 });
