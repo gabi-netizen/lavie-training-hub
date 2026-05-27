@@ -162,7 +162,20 @@ export async function handleWhatsAppIncoming(req: Request, res: Response) {
 
       console.log(`[WhatsApp Incoming] Matched contact #${matchedContactId} (${matchedContact.name}), owner userId: ${ownerUserId}`);
     } else {
-      console.log(`[WhatsApp Incoming] No contact match for ${fromNumber} (normalised: ${normalised})`);
+      // No contact found — create one automatically so messages are never orphaned
+      console.log(`[WhatsApp Incoming] No contact match for ${fromNumber} (normalised: ${normalised}) — creating new contact`);
+      try {
+        const [newContact] = await db.insert(contacts).values({
+          name: "No Name",
+          phone: fromNumber.startsWith("+") ? fromNumber : `+${fromNumber}`,
+          status: "new",
+          department: "opening",
+        }).$returningId();
+        matchedContactId = newContact.id;
+        console.log(`[WhatsApp Incoming] Created new contact #${matchedContactId} for ${fromNumber}`);
+      } catch (createErr) {
+        console.error(`[WhatsApp Incoming] Failed to create contact for ${fromNumber}:`, createErr);
+      }
     }
 
     // ─── Save the inbound message ────────────────────────────────────────────
