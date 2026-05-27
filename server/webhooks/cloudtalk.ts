@@ -373,24 +373,9 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
             return;
           }
 
-          // Find contact to get their name — create if not found
-          let waContact = await findContactByPhone(String(callerPhone));
-          if (!waContact) {
-            // Create a new contact so the message is never orphaned
-            try {
-              const [newContact] = await db.insert(contacts).values({
-                name: "No Name",
-                phone: e164Phone,
-                status: "new",
-                department: "opening",
-              }).$returningId();
-              waContact = { id: newContact.id, name: "No Name", phone: e164Phone } as any;
-              console.log(`[WhatsApp-NA] Created new contact #${newContact.id} for ${e164Phone}`);
-            } catch (createErr) {
-              console.error(`[WhatsApp-NA] Failed to create contact for ${e164Phone}:`, createErr);
-            }
-          }
-          const customerFirstName = waContact?.name && waContact.name !== "No Name"
+          // Find contact to get their name
+          const waContact = await findContactByPhone(String(callerPhone));
+          const customerFirstName = waContact?.name
             ? waContact.name.split(" ")[0]
             : "there";
 
