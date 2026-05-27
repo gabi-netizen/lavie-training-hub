@@ -770,6 +770,7 @@ export interface CallAnalysisReport {
   scriptComplianceScore: number; // 0-100
   toneScore: number; // 0-100
   closingAttempted: boolean;
+  dealClosed: boolean;  // Did the customer actually agree to pay / complete payment?
   magicWandUsed: boolean;
   customerName: string | null; // extracted from transcript, null if not found
   // ─── COMPLIANCE FIELDS ───
@@ -1092,6 +1093,7 @@ ${stagesJson}
   "scriptComplianceScore": <number 0-100>,
   "toneScore": <number 0-100>,
   "closingAttempted": <bool>,
+  "dealClosed": <bool — TRUE only if the customer actually agreed to purchase AND provided payment details, confirmed they filled in the payment form, or payment went through successfully. FALSE if the rep attempted to close but the customer declined, said they would think about it, asked to call back, or the call ended without confirmed payment.>,
   "magicWandUsed": <bool>,
   "customerName": "<first name of the customer if mentioned in the call, otherwise null>",
   "rapportScore": <number 0-100 — how well did the rep build personal connection? Did they ask personal questions, respond warmly, use the customer's name?>,
@@ -1431,7 +1433,8 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
     if (report.upsellAttempted !== undefined && report.upsellAttempted !== null) savePayload.upsellAttempted = report.upsellAttempted;
     if (report.upsellSucceeded !== undefined && report.upsellSucceeded !== null) savePayload.upsellSucceeded = report.upsellSucceeded;
     if (report.cancelReason) savePayload.cancelReason = report.cancelReason;
-    if (report.closingAttempted) (savePayload as any).closeStatus = "closed";
+    if (report.dealClosed) (savePayload as any).closeStatus = "closed";
+    else if (report.closingAttempted) (savePayload as any).closeStatus = "not_closed";
     // If AI classified the retention call type, update callType in DB
     if (callType === "other" && report.retentionCallType && report.retentionCallType !== "other") {
       (savePayload as any).callType = report.retentionCallType;
