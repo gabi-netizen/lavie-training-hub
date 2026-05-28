@@ -593,13 +593,13 @@ function ContactCard({
   // ─── SMS ───────────────────────────────────────────────────────────────────────
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsBody, setSmsBody] = useState("");
-  const sendSmsMutation = trpc.whatsapp.sendSms.useMutation({
+  const sendSmsMutation = (trpc.whatsapp as any).sendSms.useMutation({
     onSuccess: () => {
       toast.success("SMS sent \u2705");
       setSmsOpen(false);
       setSmsBody("");
     },
-    onError: (err) => toast.error(`SMS failed: ${err.message}`),
+    onError: (err: any) => toast.error(`SMS failed: ${err.message}`),
   });
 
   const initials = contact.name
