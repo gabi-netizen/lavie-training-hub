@@ -29,7 +29,10 @@ function getTwilioAuthHeader(): string {
 const audienceFilterSchema = z.object({
   department: z.enum(["opening", "retention"]).optional(),
   leadType: z.string().optional(),
+  // Legacy single-status (kept for backwards compat)
   status: z.string().optional(),
+  // Multi-select statuses array — takes precedence over `status` when present
+  statuses: z.array(z.string()).optional(),
   source: z.string().optional(),
   agentName: z.string().optional(),
 }).passthrough();
@@ -97,7 +100,10 @@ async function getFilteredContacts(filter: Record<string, any>) {
   if (filter.leadType) {
     conditions.push(eq(contacts.leadType, filter.leadType));
   }
-  if (filter.status) {
+  // Multi-select statuses takes precedence over legacy single status
+  if (Array.isArray(filter.statuses) && filter.statuses.length > 0) {
+    conditions.push(inArray(contacts.status, filter.statuses as any[]));
+  } else if (filter.status) {
     conditions.push(eq(contacts.status, filter.status));
   }
   if (filter.source) {

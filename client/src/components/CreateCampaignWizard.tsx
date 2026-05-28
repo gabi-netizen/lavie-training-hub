@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { 
   X, 
@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Search
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,7 +30,7 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
     audienceFilter: {
       department: "" as any,
       leadType: "",
-      status: "",
+      statuses: [] as string[],   // ← multi-select array
       source: "",
       agentName: "",
     }
@@ -44,11 +44,13 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
   const { data: meta } = trpc.contacts.meta.useQuery();
   const { data: agents } = trpc.whatsapp.getAgents.useQuery();
 
+  // For count preview, pass the first selected status (backend count only supports single status)
+  // The actual send uses the full array via audienceFilter
   const { data: matchCount, isLoading: isCountLoading } = trpc.contacts.count.useQuery(
     {
       department: formData.audienceFilter.department || undefined,
       leadType: formData.audienceFilter.leadType || undefined,
-      status: formData.audienceFilter.status || undefined,
+      status: formData.audienceFilter.statuses.length === 1 ? formData.audienceFilter.statuses[0] : undefined,
       source: formData.audienceFilter.source || undefined,
       agentName: formData.audienceFilter.agentName || undefined,
     },
@@ -58,7 +60,6 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
   // ─── tRPC Mutations ────────────────────────────────────────────────────────
   const createCampaign = trpc.campaigns.create.useMutation({
     onSuccess: (data) => {
-      // Once created, immediately trigger the send
       sendCampaign.mutate({ id: data.id });
     },
     onError: (err) => toast.error(`Failed to create: ${err.message}`),
@@ -71,6 +72,17 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
     },
     onError: (err) => toast.error(`Failed to launch: ${err.message}`),
   });
+
+  // ─── Status multi-select toggle ────────────────────────────────────────────
+  const toggleStatus = (status: string) => {
+    setFormData(prev => {
+      const current = prev.audienceFilter.statuses;
+      const next = current.includes(status)
+        ? current.filter(s => s !== status)
+        : [...current, status];
+      return { ...prev, audienceFilter: { ...prev.audienceFilter, statuses: next } };
+    });
+  };
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleNext = () => setStep(s => s + 1);
@@ -85,7 +97,7 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
       audienceFilter: {
         department: formData.audienceFilter.department || undefined,
         leadType: formData.audienceFilter.leadType || undefined,
-        status: formData.audienceFilter.status || undefined,
+        statuses: formData.audienceFilter.statuses.length > 0 ? formData.audienceFilter.statuses : undefined,
         source: formData.audienceFilter.source || undefined,
         agentName: formData.audienceFilter.agentName || undefined,
       }
@@ -151,7 +163,7 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                         : "border-gray-100 bg-gray-50 text-black hover:border-gray-300"
                     }`}
                   >
-                    <MessageCircle size={32} className={formData.channel === "whatsapp" ? "text-[#25D366]" : "text-gray-400"} />
+                    <MessageCircle size={32} className={formData.channel === "whatsapp" ? "text-[#25D366]" : "text-black opacity-30"} />
                     <span className="font-bold">WhatsApp</span>
                   </button>
                   <button
@@ -162,7 +174,7 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                         : "border-gray-100 bg-gray-50 text-black hover:border-gray-300"
                     }`}
                   >
-                    <MessageSquare size={32} className={formData.channel === "sms" ? "text-blue-500" : "text-gray-400"} />
+                    <MessageSquare size={32} className={formData.channel === "sms" ? "text-blue-500" : "text-black opacity-30"} />
                     <span className="font-bold">SMS</span>
                   </button>
                 </div>
@@ -224,12 +236,13 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="flex items-center gap-2 text-blue-600 mb-2">
                 <Users size={18} />
-                <p className="text-xs font-bold uppercase tracking-wide">Filter your target audience</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-black">Filter your target audience</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Department */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-black uppercase tracking-wider opacity-60">Department</label>
+                  <label className="text-[10px] font-bold text-black uppercase tracking-wider">Department</label>
                   <select
                     value={formData.audienceFilter.department}
                     onChange={e => setFormData(prev => ({ ...prev, audienceFilter: { ...prev.audienceFilter, department: e.target.value } }))}
@@ -241,8 +254,9 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                   </select>
                 </div>
 
+                {/* Lead Type */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-black uppercase tracking-wider opacity-60">Lead Type</label>
+                  <label className="text-[10px] font-bold text-black uppercase tracking-wider">Lead Type</label>
                   <select
                     value={formData.audienceFilter.leadType}
                     onChange={e => setFormData(prev => ({ ...prev, audienceFilter: { ...prev.audienceFilter, leadType: e.target.value } }))}
@@ -253,20 +267,9 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                   </select>
                 </div>
 
+                {/* Source */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-black uppercase tracking-wider opacity-60">Status</label>
-                  <select
-                    value={formData.audienceFilter.status}
-                    onChange={e => setFormData(prev => ({ ...prev, audienceFilter: { ...prev.audienceFilter, status: e.target.value } }))}
-                    className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-100 rounded-lg focus:border-blue-600 focus:outline-none text-sm text-black font-bold"
-                  >
-                    <option value="">All Statuses</option>
-                    {meta?.statuses.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-black uppercase tracking-wider opacity-60">Source</label>
+                  <label className="text-[10px] font-bold text-black uppercase tracking-wider">Source</label>
                   <select
                     value={formData.audienceFilter.source}
                     onChange={e => setFormData(prev => ({ ...prev, audienceFilter: { ...prev.audienceFilter, source: e.target.value } }))}
@@ -277,8 +280,9 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                   </select>
                 </div>
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-[10px] font-bold text-black uppercase tracking-wider opacity-60">Assigned Agent</label>
+                {/* Assigned Agent */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-black uppercase tracking-wider">Assigned Agent</label>
                   <select
                     value={formData.audienceFilter.agentName}
                     onChange={e => setFormData(prev => ({ ...prev, audienceFilter: { ...prev.audienceFilter, agentName: e.target.value } }))}
@@ -288,9 +292,52 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                     {agents?.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                   </select>
                 </div>
+
+                {/* Status — Multi-select checkboxes */}
+                <div className="space-y-2 col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-black uppercase tracking-wider">Status</label>
+                    {formData.audienceFilter.statuses.length > 0 && (
+                      <button
+                        onClick={() => setFormData(prev => ({ ...prev, audienceFilter: { ...prev.audienceFilter, statuses: [] } }))}
+                        className="text-[10px] font-bold text-blue-600 hover:underline"
+                      >
+                        Clear ({formData.audienceFilter.statuses.length} selected)
+                      </button>
+                    )}
+                    {formData.audienceFilter.statuses.length === 0 && (
+                      <span className="text-[10px] font-bold text-black opacity-40">All statuses (none selected)</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {meta?.statuses.map(status => {
+                      const isSelected = formData.audienceFilter.statuses.includes(status);
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => toggleStatus(status)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-left transition-all ${
+                            isSelected
+                              ? "border-blue-600 bg-blue-50 text-black font-bold shadow-sm"
+                              : "border-gray-100 bg-gray-50 text-black hover:border-gray-300"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border-2 transition-colors ${
+                            isSelected ? "bg-blue-600 border-blue-600" : "border-black/20 bg-white"
+                          }`}>
+                            {isSelected && <Check size={10} className="text-white" />}
+                          </div>
+                          <span className="text-[11px] font-bold capitalize">{status.replace(/_/g, ' ')}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-8 p-6 bg-blue-600 rounded-xl text-white flex items-center justify-between shadow-lg">
+              {/* Audience count preview */}
+              <div className="mt-4 p-6 bg-blue-600 rounded-xl text-white flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
                     <Users size={24} />
@@ -300,6 +347,11 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                     <p className="text-3xl font-black">
                       {isCountLoading ? "..." : matchCount ?? 0}
                     </p>
+                    {formData.audienceFilter.statuses.length > 1 && (
+                      <p className="text-[10px] opacity-70 mt-0.5">
+                        * Preview shows first selected status only — all {formData.audienceFilter.statuses.length} statuses applied on send
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -330,6 +382,18 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                   <div className="flex items-center gap-1.5">
                     {formData.channel === 'whatsapp' ? <MessageCircle size={14} className="text-[#25D366]" /> : <MessageSquare size={14} className="text-blue-500" />}
                     <span className="text-sm font-black text-black capitalize">{formData.channel}</span>
+                  </div>
+                </div>
+                <div className="p-4 flex justify-between items-start">
+                  <span className="text-xs font-bold text-black opacity-60 uppercase">Statuses</span>
+                  <div className="flex flex-wrap gap-1 justify-end max-w-xs">
+                    {formData.audienceFilter.statuses.length === 0 ? (
+                      <span className="text-sm font-black text-black">All</span>
+                    ) : (
+                      formData.audienceFilter.statuses.map(s => (
+                        <span key={s} className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold capitalize">{s.replace(/_/g, ' ')}</span>
+                      ))
+                    )}
                   </div>
                 </div>
                 <div className="p-4 flex justify-between items-center">
