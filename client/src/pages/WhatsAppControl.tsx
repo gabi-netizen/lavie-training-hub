@@ -365,8 +365,8 @@ export default function WhatsAppControl() {
               onClick={() => setActiveTab("all")}
               className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
                 activeTab === "all"
-                  ? "text-[#25D366] border-b-2 border-[#25D366]"
-                  : "text-black hover:text-[#25D366]"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-black hover:text-blue-600"
               }`}
             >
               All
@@ -376,8 +376,8 @@ export default function WhatsAppControl() {
             onClick={() => setActiveTab("unassigned")}
             className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
               activeTab === "unassigned"
-                ? "text-[#25D366] border-b-2 border-[#25D366]"
-                : "text-black hover:text-[#25D366]"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-black hover:text-blue-600"
             }`}
           >
             Unassigned
@@ -386,8 +386,8 @@ export default function WhatsAppControl() {
             onClick={() => setActiveTab("mine")}
             className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
               activeTab === "mine"
-                ? "text-[#25D366] border-b-2 border-[#25D366]"
-                : "text-black hover:text-[#25D366]"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-black hover:text-blue-600"
             }`}
           >
             Mine
@@ -423,8 +423,8 @@ export default function WhatsAppControl() {
               }}
               className={`text-[10px] px-2 py-0.5 rounded ${
                 multiSelectMode
-                  ? "bg-blue-600 text-white"
-                  : "bg-blue-600 text-white hover:bg-blue-500"
+                  ? "bg-[#25D366] text-white"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
             >
               {multiSelectMode ? "Cancel" : "Select"}
@@ -440,7 +440,7 @@ export default function WhatsAppControl() {
               <>
                 <button
                   onClick={() => setShowBulkTemplateModal(true)}
-                  className="text-[10px] px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-500"
+                  className="text-[10px] px-2 py-1 bg-[#25D366] text-white rounded hover:bg-[#1fb855]"
                 >
                   Send Template
                 </button>
@@ -454,7 +454,7 @@ export default function WhatsAppControl() {
             )}
             <button
               onClick={handleBulkResolve}
-              className="text-[10px] px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-500"
+              className="text-[10px] px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-500"
             >
               Resolve All
             </button>
@@ -725,7 +725,7 @@ export default function WhatsAppControl() {
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageInput.trim() || windowInfo.expired || sendFreeText.isPending}
-                  className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 bg-[#25D366] text-white rounded-full hover:bg-[#1fb855] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Send size={18} />
                 </button>
@@ -802,7 +802,7 @@ export default function WhatsAppControl() {
               {seesAll && (
                 <button
                   onClick={() => setShowAssignModal(true)}
-                  className="mt-2 w-full text-[11px] px-2 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-500 flex items-center justify-center gap-1"
+                  className="mt-2 w-full text-[11px] px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500 flex items-center justify-center gap-1"
                 >
                   <UserPlus size={12} />
                   {currentAssignment ? "Reassign" : "Assign"}
@@ -825,7 +825,7 @@ export default function WhatsAppControl() {
                 {selectedConversation?.conversationStatus !== "resolved" && (
                   <button
                     onClick={() => resolveConversation.mutate({ contactId: selectedContactId! })}
-                    className="w-full text-[11px] px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500 flex items-center justify-center gap-1"
+                    className="w-full text-[11px] px-2 py-1.5 bg-green-600 text-white rounded hover:bg-green-500 flex items-center justify-center gap-1"
                   >
                     <CheckCircle2 size={12} />
                     Resolve
@@ -834,7 +834,7 @@ export default function WhatsAppControl() {
                 {selectedConversation?.conversationStatus === "resolved" && (
                   <button
                     onClick={() => reopenConversation.mutate({ contactId: selectedContactId! })}
-                    className="w-full text-[11px] px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500 flex items-center justify-center gap-1"
+                    className="w-full text-[11px] px-2 py-1.5 bg-green-700 text-white rounded hover:bg-green-600 flex items-center justify-center gap-1"
                   >
                     <RotateCcw size={12} />
                     Reopen
@@ -844,7 +844,7 @@ export default function WhatsAppControl() {
                   <div className="relative">
                     <button
                       onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
-                      className="w-full text-[11px] px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500 flex items-center justify-center gap-1"
+                      className="w-full text-[11px] px-2 py-1.5 bg-yellow-700 text-white rounded hover:bg-yellow-600 flex items-center justify-center gap-1"
                     >
                       <Clock size={12} />
                       Snooze
