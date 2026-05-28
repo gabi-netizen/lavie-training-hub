@@ -469,6 +469,7 @@ function ContactCard({
   const [emailDropOpen, setEmailDropOpen] = useState(false);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [autoSelectFormTemplate, setAutoSelectFormTemplate] = useState(false);
+  const [autoSelectCreditCardTemplate, setAutoSelectCreditCardTemplate] = useState(false);
   const emailDropRef = useRef<HTMLDivElement>(null);
 
   // Close email dropdown when clicking outside
@@ -567,6 +568,22 @@ function ContactCard({
       setAutoSelectFormTemplate(false);
     }
   }, [autoSelectFormTemplate, emailTemplates]);
+
+  // Auto-select the "Payment Form" template when "Credit Card Payment Only" is clicked
+  useEffect(() => {
+    if (autoSelectCreditCardTemplate && emailTemplates && emailTemplates.length > 0) {
+      const paymentFormTemplate = emailTemplates.find(
+        (t: { id: number; name: string; subject?: string }) =>
+          t.name === "Payment Form" ||
+          t.name === "Form" ||
+          (t.subject ?? "").toLowerCase().includes("payment form")
+      );
+      if (paymentFormTemplate) {
+        setSelectedTemplateId(paymentFormTemplate.id);
+      }
+      setAutoSelectCreditCardTemplate(false);
+    }
+  }, [autoSelectCreditCardTemplate, emailTemplates]);
 
   const sendTemplateMutation = trpc.emailTemplates.send.useMutation({
     onSuccess: () => {
@@ -1564,6 +1581,35 @@ function StripePaymentSection({
             Sent to {contact.email}
           </div>
         )}
+      </div>
+
+      {/* ── Credit Card Payment Only ── */}
+      <div style={{ padding: "0 12px 12px" }}>
+        <button
+          type="button"
+          onClick={() => {
+            if (!contact.email) {
+              toast.error("Contact must have an email address.");
+              return;
+            }
+            // Open the template modal and auto-select the Payment Form template
+            setEmailTemplateOpen(true);
+            setAutoSelectCreditCardTemplate(true);
+          }}
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "8px",
+            border: "none",
+            background: "#0d9488",
+            color: "white",
+            fontWeight: 700,
+            fontSize: "13px",
+            cursor: "pointer",
+          }}
+        >
+          💳 Credit Card Payment Only
+        </button>
       </div>
 
       {/* ── Check Payment Status section - temporarily hidden ── */}
