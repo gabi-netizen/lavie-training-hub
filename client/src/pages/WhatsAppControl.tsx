@@ -23,7 +23,11 @@ import {
   RotateCcw,
   Users,
   FileText,
+  BarChart3,
 } from "lucide-react";
+import { CampaignsList } from "@/components/CampaignsList";
+import { CreateCampaignWizard } from "@/components/CreateCampaignWizard";
+import { CampaignDetail } from "@/components/CampaignDetail";
 
 // ─── Common Emojis Grid ─────────────────────────────────────────────────────
 const COMMON_EMOJIS = [
@@ -132,9 +136,11 @@ export default function WhatsAppControl() {
   const seesAll = !user?.team;
 
   // State
-  const [activeTab, setActiveTab] = useState<"unassigned" | "mine" | "all">(
+  const [activeTab, setActiveTab] = useState<"unassigned" | "mine" | "all" | "campaigns">(
     seesAll ? "all" : "mine"
   );
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | undefined>(undefined);
   const [hasSelectedConversation, setHasSelectedConversation] = useState(false);
@@ -159,8 +165,8 @@ export default function WhatsAppControl() {
     data: conversations,
     refetch: refetchConversations,
   } = trpc.whatsapp.conversations.useQuery(
-    { tab: activeTab, includeResolved },
-    { refetchInterval: 10000 }
+    { tab: activeTab as any, includeResolved },
+    { refetchInterval: 10000, enabled: activeTab !== "campaigns" }
   );
 
   const {
@@ -299,7 +305,7 @@ export default function WhatsAppControl() {
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !hasSelectedConversation) return;
+    if (!messageInput.trim() || !hasSelectedConversation || selectedContactId === null) return;
     sendFreeText.mutate({ contactId: selectedContactId, body: messageInput.trim() });
   };
 
@@ -311,11 +317,11 @@ export default function WhatsAppControl() {
   };
 
     const handleSendTemplate = (contentSid: string, friendlyName: string) => {
-    if (!hasSelectedConversation) return;
+    if (!hasSelectedConversation || selectedContactId === null) return;
     sendTemplate.mutate({ contactId: selectedContactId, contentSid, templateName: friendlyName });
   };
   const handleAssign = (assignedUserId: number) => {
-    if (!hasSelectedConversation) return;
+    if (!hasSelectedConversation || selectedContactId === null) return;
     assignConversation.mutate({ contactId: selectedContactId, assignedUserId });
   };
 
@@ -361,16 +367,28 @@ export default function WhatsAppControl() {
         {/* Tabs */}
         <div className="flex border-b border-gray-200">
           {seesAll && (
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
-                activeTab === "all"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-black hover:text-blue-600"
-              }`}
-            >
-              All
-            </button>
+            <>
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+                  activeTab === "all"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-black hover:text-blue-600"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setActiveTab("campaigns")}
+                className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
+                  activeTab === "campaigns"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-black hover:text-blue-600"
+                }`}
+              >
+                Campaigns
+              </button>
+            </>
           )}
           <button
             onClick={() => setActiveTab("unassigned")}
@@ -546,9 +564,23 @@ export default function WhatsAppControl() {
         </div>
       </div>
 
-      {/* ═══ CENTER PANEL: Chat Window ═══ */}
+      {/* ═══ CENTER PANEL: Chat Window / Campaigns ═══ */}
       <div className="flex-1 flex flex-col bg-[#e5ddd5] min-w-0 relative">
-        {!hasSelectedConversation ? (
+        {activeTab === "campaigns" ? (
+          <div className="flex-1 bg-white overflow-hidden">
+            {selectedCampaignId ? (
+              <CampaignDetail 
+                campaignId={selectedCampaignId} 
+                onBack={() => setSelectedCampaignId(null)} 
+              />
+            ) : (
+              <CampaignsList 
+                onCreateClick={() => setShowCreateCampaign(true)} 
+                onCampaignClick={(id) => setSelectedCampaignId(id)}
+              />
+            )}
+          </div>
+        ) : !hasSelectedConversation ? (
           <div className="flex-1 flex flex-col items-center justify-center text-black">
             <MessageCircle size={48} className="mb-3 opacity-30" />
             <p className="text-lg font-medium">Select a conversation</p>
@@ -997,6 +1029,17 @@ export default function WhatsAppControl() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Create Campaign Wizard */}
+      {showCreateCampaign && (
+        <CreateCampaignWizard 
+          onClose={() => setShowCreateCampaign(false)}
+          onSuccess={() => {
+            setShowCreateCampaign(false);
+            setActiveTab("campaigns");
+          }}
+        />
       )}
     </div>
   );
