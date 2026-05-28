@@ -136,6 +136,7 @@ export default function WhatsAppControl() {
     seesAll ? "all" : "mine"
   );
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | undefined>(undefined);
   const [hasSelectedConversation, setHasSelectedConversation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
@@ -166,7 +167,7 @@ export default function WhatsAppControl() {
     data: messages,
     refetch: refetchMessages,
   } = trpc.whatsapp.messages.useQuery(
-    { contactId: selectedContactId },
+    { contactId: selectedContactId, phoneNumber: selectedPhoneNumber },
     { enabled: hasSelectedConversation, refetchInterval: 5000 }
   );
 
@@ -262,9 +263,9 @@ export default function WhatsAppControl() {
   // ─── Mark as read when selecting a conversation ────────────────────────────
   useEffect(() => {
     if (hasSelectedConversation) {
-      markAsRead.mutate({ contactId: selectedContactId });
+      markAsRead.mutate({ contactId: selectedContactId, phoneNumber: selectedPhoneNumber });
     }
-  }, [selectedContactId, hasSelectedConversation]);
+  }, [selectedContactId, selectedPhoneNumber, hasSelectedConversation]);
 
   // ─── Filter conversations by search ────────────────────────────────────────
   const filteredConversations = useMemo(() => {
@@ -281,8 +282,14 @@ export default function WhatsAppControl() {
 
   // ─── Selected conversation data ────────────────────────────────────────────
   const selectedConversation = useMemo(() => {
-    return conversations?.find((c: any) => c.contactId === selectedContactId) ?? null;
-  }, [conversations, selectedContactId]);
+    if (selectedContactId !== null) {
+      return conversations?.find((c: any) => c.contactId === selectedContactId) ?? null;
+    }
+    if (selectedPhoneNumber) {
+      return conversations?.find((c: any) => c.contactId === null && c.fromNumber === selectedPhoneNumber) ?? null;
+    }
+    return null;
+  }, [conversations, selectedContactId, selectedPhoneNumber]);
 
   // ─── 24h window info ───────────────────────────────────────────────────────
   const windowInfo = useMemo(() => {
@@ -463,7 +470,9 @@ export default function WhatsAppControl() {
             </div>
           ) : (
             filteredConversations.map((conv: any) => {
-              const isSelected = conv.contactId === selectedContactId;
+              const isSelected = conv.contactId !== null
+                ? conv.contactId === selectedContactId
+                : (conv.fromNumber === selectedPhoneNumber && selectedContactId === null);
               const displayName = conv.contact?.name || conv.fromNumber || "Unknown";
               const lastBody = conv.lastMessage?.body || "";
               const truncatedBody = lastBody.length > 45 ? lastBody.substring(0, 45) + "..." : lastBody;
@@ -473,12 +482,13 @@ export default function WhatsAppControl() {
 
               return (
                 <div
-                  key={conv.contactId ?? "null"}
+                  key={conv.contactId ?? conv.fromNumber ?? "null"}
                   onClick={() => {
                     if (multiSelectMode) {
                       toggleContactSelection(conv.contactId);
                     } else {
                       setSelectedContactId(conv.contactId);
+                      setSelectedPhoneNumber(conv.contactId === null ? conv.fromNumber : undefined);
                       setHasSelectedConversation(true);
                     }
                   }}

@@ -186,17 +186,38 @@ export const whatsappRouter = router({
       const seesAll = !ctx.user.team;
       const userId = ctx.user.id;
 
-      // Get all distinct contactIds from whatsapp_messages
+      // Get all distinct contactIds and phone numbers from whatsapp_messages
       const allMessages = await db
         .select({
           contactId: whatsappMessages.contactId,
+          fromNumber: whatsappMessages.fromNumber,
+          toNumber: whatsappMessages.toNumber,
+          direction: whatsappMessages.direction,
         })
         .from(whatsappMessages);
 
-      // Get unique contactIds (including null for unmatched messages)
-      const allContactIds = Array.from(new Set(allMessages.map((m) => m.contactId)));
+      // Matched contacts (have contactId)
+      const matchedContactIds = Array.from(new Set(
+        allMessages.filter((m) => m.contactId !== null).map((m) => m.contactId!)
+      ));
 
-      if (allContactIds.length === 0) {
+      // Unmatched messages: group by phone number (the other party)
+      const unmatchedPhones = new Set<string>();
+      for (const m of allMessages) {
+        if (m.contactId === null) {
+          const phone = m.direction === "inbound" ? m.fromNumber : m.toNumber;
+          if (phone) unmatchedPhones.add(phone);
+        }
+      }
+
+      // Combined conversation keys
+      type ConvKey = { type: "contact"; contactId: number } | { type: "phone"; phone: string };
+      const allKeys: ConvKey[] = [
+        ...matchedContactIds.map((id) => ({ type: "contact" as const, contactId: id })),
+        ...Array.from(unmatchedPhones).map((p) => ({ type: "phone" as const, phone: p })),
+      ];
+
+      if (allKeys.length === 0) {
         return [];
       }
 
@@ -238,66 +259,89 @@ export const whatsappRouter = router({
         userNameMap.set(u.id, u.name ?? "Unknown");
       }
 
-      // Filter contactIds based on tab and role
-      let contactIds: (number | null)[];
+      // Filter keys based on tab and role
+      let filteredKeys: ConvKey[] = allKeys;
 
       if (seesAll) {
-        // Manager: sees all conversations
         switch (tab) {
           case "unassigned":
-            contactIds = allContactIds.filter((cId) => !assignmentMap.has(cId));
+            filteredKeys = allKeys.filter((k) => {
+              if (k.type === "phone") return true; // unmatched = unassigned
+              return !assignmentMap.has(k.contactId);
+            });
             break;
           case "mine":
-            contactIds = allContactIds.filter((cId) => assignmentMap.get(cId) === userId);
+            filteredKeys = allKeys.filter((k) => {
+              if (k.type === "phone") return false;
+              return assignmentMap.get(k.contactId) === userId;
+            });
             break;
           case "all":
           default:
-            contactIds = allContactIds;
+            filteredKeys = allKeys;
             break;
         }
       } else {
-        // Agent: limited view
         switch (tab) {
           case "unassigned":
-            contactIds = allContactIds.filter((cId) => !assignmentMap.has(cId));
+            filteredKeys = allKeys.filter((k) => {
+              if (k.type === "phone") return true;
+              return !assignmentMap.has(k.contactId);
+            });
             break;
           case "mine":
-            contactIds = allContactIds.filter((cId) => assignmentMap.get(cId) === userId);
+            filteredKeys = allKeys.filter((k) => {
+              if (k.type === "phone") return false;
+              return assignmentMap.get(k.contactId) === userId;
+            });
             break;
           case "all":
           default:
-            // Agents treat "all" as "mine"
-            contactIds = allContactIds.filter((cId) => assignmentMap.get(cId) === userId);
+            filteredKeys = allKeys.filter((k) => {
+              if (k.type === "phone") return false;
+              return assignmentMap.get(k.contactId) === userId;
+            });
             break;
         }
       }
 
-      if (contactIds.length === 0) {
+      if (filteredKeys.length === 0) {
         return [];
       }
 
       // Filter by conversation status (exclude resolved unless requested)
       if (!includeResolved) {
-        contactIds = contactIds.filter((cId) => {
-          if (cId === null) return true; // unmatched messages always show
-          const status = statusMap.get(cId);
-          if (!status) return true; // no status record means "open" (default)
+        filteredKeys = filteredKeys.filter((k) => {
+          if (k.type === "phone") return true; // unmatched always show
+          const status = statusMap.get(k.contactId);
+          if (!status) return true;
           return status.status !== "resolved";
         });
       }
 
-      if (contactIds.length === 0) {
+      if (filteredKeys.length === 0) {
         return [];
       }
 
       // Build conversation list
       const conversations = [];
 
-      for (const contactId of contactIds) {
-        // Get the latest message for this contact
-        const whereClause = contactId !== null
-          ? eq(whatsappMessages.contactId, contactId)
-          : sql`${whatsappMessages.contactId} IS NULL`;
+      for (const key of filteredKeys) {
+        let whereClause;
+        let contactId: number | null;
+        let phoneIdentifier: string | null = null;
+
+        if (key.type === "contact") {
+          contactId = key.contactId;
+          whereClause = eq(whatsappMessages.contactId, key.contactId);
+        } else {
+          contactId = null;
+          phoneIdentifier = key.phone;
+          whereClause = and(
+            sql`${whatsappMessages.contactId} IS NULL`,
+            sql`(${whatsappMessages.fromNumber} = ${key.phone} OR ${whatsappMessages.toNumber} = ${key.phone})`
+          );
+        }
 
         const [latestMessage] = await db
           .select()
@@ -309,17 +353,21 @@ export const whatsappRouter = router({
         if (!latestMessage) continue;
 
         // Count unread inbound messages
-        const unreadConditions = contactId !== null
-          ? and(
-              eq(whatsappMessages.contactId, contactId),
-              eq(whatsappMessages.direction, "inbound"),
-              eq(whatsappMessages.isRead, false)
-            )
-          : and(
-              sql`${whatsappMessages.contactId} IS NULL`,
-              eq(whatsappMessages.direction, "inbound"),
-              eq(whatsappMessages.isRead, false)
-            );
+        let unreadConditions;
+        if (key.type === "contact") {
+          unreadConditions = and(
+            eq(whatsappMessages.contactId, key.contactId),
+            eq(whatsappMessages.direction, "inbound"),
+            eq(whatsappMessages.isRead, false)
+          );
+        } else {
+          unreadConditions = and(
+            sql`${whatsappMessages.contactId} IS NULL`,
+            eq(whatsappMessages.fromNumber, key.phone),
+            eq(whatsappMessages.direction, "inbound"),
+            eq(whatsappMessages.isRead, false)
+          );
+        }
 
         const [unreadResult] = await db
           .select({ count: count() })
@@ -330,7 +378,7 @@ export const whatsappRouter = router({
 
         // Get contact info if available
         let contactInfo = null;
-        if (contactId) {
+        if (key.type === "contact") {
           const [contact] = await db
             .select({
               id: contacts.id,
@@ -341,19 +389,19 @@ export const whatsappRouter = router({
               agentName: contacts.agentName,
             })
             .from(contacts)
-            .where(eq(contacts.id, contactId))
+            .where(eq(contacts.id, key.contactId))
             .limit(1);
           contactInfo = contact || null;
         }
 
-        // Get assignment info for this conversation
-        const assignedUserId = contactId !== null ? assignmentMap.get(contactId) : undefined;
+        // Get assignment info
+        const assignedUserId = key.type === "contact" ? assignmentMap.get(key.contactId) : undefined;
         const assignedTo = assignedUserId
           ? { userId: assignedUserId, userName: userNameMap.get(assignedUserId) ?? "Unknown" }
           : null;
 
         // Get conversation status
-        const convStatus = contactId !== null ? statusMap.get(contactId) : undefined;
+        const convStatus = key.type === "contact" ? statusMap.get(key.contactId) : undefined;
         const conversationStatus = convStatus?.status ?? "open";
         const snoozedUntil = convStatus?.snoozedUntil ?? null;
 
@@ -368,8 +416,7 @@ export const whatsappRouter = router({
             createdAt: latestMessage.createdAt,
           },
           unreadCount,
-          // For unmatched messages, use the fromNumber as identifier
-          fromNumber: latestMessage.direction === "inbound" ? latestMessage.fromNumber : latestMessage.toNumber,
+          fromNumber: phoneIdentifier ?? (latestMessage.direction === "inbound" ? latestMessage.fromNumber : latestMessage.toNumber),
           assignedTo,
           conversationStatus,
           snoozedUntil,
@@ -386,11 +433,12 @@ export const whatsappRouter = router({
       return conversations;
     }),
 
-  // ─── Messages: get all messages for a specific contact ─────────────────────
+    // ─── Messages: get all messages for a specific contact or phone ────────────
   messages: protectedProcedure
     .input(
       z.object({
         contactId: z.number().nullable(),
+        phoneNumber: z.string().optional(),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -398,32 +446,33 @@ export const whatsappRouter = router({
       if (!db) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
-
-      const { contactId } = input;
-
-      // All users can see messages for a conversation they have access to
-      // (access control is handled at the conversations level)
+      const { contactId, phoneNumber } = input;
       let whereClause;
       if (contactId !== null) {
         whereClause = eq(whatsappMessages.contactId, contactId);
+      } else if (phoneNumber) {
+        // Unmatched conversation: get messages by phone number
+        whereClause = and(
+          sql`${whatsappMessages.contactId} IS NULL`,
+          sql`(${whatsappMessages.fromNumber} = ${phoneNumber} OR ${whatsappMessages.toNumber} = ${phoneNumber})`
+        );
       } else {
         whereClause = sql`${whatsappMessages.contactId} IS NULL`;
       }
-
       const messages = await db
         .select()
         .from(whatsappMessages)
         .where(whereClause)
         .orderBy(whatsappMessages.createdAt);
-
       return messages;
     }),
 
-  // ─── Mark as Read: mark all inbound messages for a contact as read ─────────
+  // ─── Mark as Read: mark all inbound messages for a contact or phone as read ─
   markAsRead: protectedProcedure
     .input(
       z.object({
         contactId: z.number().nullable(),
+        phoneNumber: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -432,12 +481,19 @@ export const whatsappRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
 
-      const { contactId } = input;
+      const { contactId, phoneNumber } = input;
 
       let whereClause;
       if (contactId !== null) {
         whereClause = and(
           eq(whatsappMessages.contactId, contactId),
+          eq(whatsappMessages.direction, "inbound"),
+          eq(whatsappMessages.isRead, false)
+        );
+      } else if (phoneNumber) {
+        whereClause = and(
+          sql`${whatsappMessages.contactId} IS NULL`,
+          eq(whatsappMessages.fromNumber, phoneNumber),
           eq(whatsappMessages.direction, "inbound"),
           eq(whatsappMessages.isRead, false)
         );
