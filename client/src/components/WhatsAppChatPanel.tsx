@@ -1,17 +1,19 @@
 /**
- * WhatsApp Chat Panel — slide-out overlay with conversation list + message view.
- * Features: agent-scoped conversations, read receipts (✓✓), 24h window timer,
- *           date separators, search, emoji picker, template picker, SMS send,
- *           mark as resolved.
+ * WhatsApp Chat Panel — full-featured overlay matching WhatsApp Control design.
+ * 3-panel layout: Left (conversations) | Center (chat) | Right (contact details)
+ * Agent restrictions: no assign, no snooze, no campaigns.
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { X, Send, MessageCircle, ArrowLeft, Search, Smile, ChevronDown, CheckCircle2, MessageSquare } from "lucide-react";
+import {
+  X, Send, MessageCircle, Search, Smile, CheckCircle2,
+  RotateCcw, Clock, FileText
+} from "lucide-react";
 
-// ─── Common Emojis Grid ─────────────────────────────────────────────────────
+// ─── Common Emojis ──────────────────────────────────────────────────────────
 const COMMON_EMOJIS = [
   "😊", "👍", "❤️", "🙏", "😂", "🎉", "✅", "💯",
   "🔥", "⭐", "💪", "👋", "😍", "🤗", "👏", "💐",
@@ -27,7 +29,6 @@ function SingleCheck({ color = "#555" }: { color?: string }) {
     </svg>
   );
 }
-
 function DoubleCheck({ color = "#555" }: { color?: string }) {
   return (
     <svg width="20" height="10" viewBox="0 0 20 10" fill="none" style={{ flexShrink: 0 }}>
@@ -36,18 +37,23 @@ function DoubleCheck({ color = "#555" }: { color?: string }) {
     </svg>
   );
 }
-
-function MessageStatusIcon({ status }: { status: string }) {
+function MessageStatus({ status }: { status: string }) {
   switch (status) {
-    case "sent":     return <SingleCheck color="#555" />;
+    case "sent":      return <SingleCheck color="#555" />;
     case "delivered": return <DoubleCheck color="#555" />;
-    case "read":     return <DoubleCheck color="#53bdeb" />;
-    case "failed":   return <span style={{ color: "#dc2626", fontWeight: 700, fontSize: 12 }}>✗</span>;
-    default:         return null;
+    case "read":      return <DoubleCheck color="#53bdeb" />;
+    case "failed":    return <span className="text-red-500 text-[10px] font-bold">!</span>;
+    default:          return null;
   }
 }
 
-// ─── Date Formatting Helpers ─────────────────────────────────────────────────
+// ─── Status Dot ──────────────────────────────────────────────────────────────
+function StatusDot({ status }: { status: string }) {
+  const colors: Record<string, string> = { open: "bg-green-400", snoozed: "bg-yellow-400", resolved: "bg-gray-400" };
+  return <span className={`inline-block w-2 h-2 rounded-full ${colors[status] || "bg-green-400"}`} />;
+}
+
+// ─── Date Helpers ────────────────────────────────────────────────────────────
 function formatDateSeparator(date: Date): string {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -57,107 +63,108 @@ function formatDateSeparator(date: Date): string {
   if (msgDate.getTime() === yesterday.getTime()) return "Yesterday";
   return date.toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" });
 }
-
 function isSameDay(d1: Date, d2: Date): boolean {
   return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 }
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+function formatRelativeTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString([], { day: "numeric", month: "short" });
+}
 
 // ─── 24h Window Helper ───────────────────────────────────────────────────────
-function getTimeRemaining(lastInboundTime: Date | null): { expired: boolean; label: string } {
-  if (!lastInboundTime) return { expired: true, label: "No customer message yet" };
-  const windowEnd = new Date(lastInboundTime.getTime() + 24 * 60 * 60 * 1000);
-  const diff = windowEnd.getTime() - Date.now();
-  if (diff <= 0) return { expired: true, label: "24h window expired" };
-  const hours = Math.floor(diff / 3600000);
-  const minutes = Math.floor((diff % 3600000) / 60000);
-  return { expired: false, label: `${hours}h ${minutes}m remaining` };
+function get24hWindowRemaining(messages: any[]): { expired: boolean; remaining: string | null } {
+  const lastInbound = [...messages].reverse().find((m) => m.direction === "inbound");
+  if (!lastInbound) return { expired: true, remaining: null };
+  const lastInboundTime = new Date(lastInbound.createdAt).getTime();
+  const windowEnd = lastInboundTime + 24 * 60 * 60 * 1000;
+  const remainingMs = windowEnd - Date.now();
+  if (remainingMs <= 0) return { expired: true, remaining: null };
+  const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+  const mins = Math.floor((remainingMs % (60 * 60 * 1000)) / 60000);
+  return { expired: false, remaining: `${hours}h ${mins}m` };
 }
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 interface WhatsAppChatPanelProps {
   open: boolean;
   onClose: () => void;
+  /** When true, renders inline (no modal overlay). Used as a Workspace tab. */
+  inline?: boolean;
 }
 
-export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
+export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelProps) {
   const { user } = useAuth();
-  const isManager = !user?.team; // managers have no team
+  const isManager = !user?.team;
 
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
-  const [messageText, setMessageText] = useState("");
+  const [hasSelectedConversation, setHasSelectedConversation] = useState(false);
+  const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [includeResolved, setIncludeResolved] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // ─── Conversations: agents see only "mine", managers see "all" ────────────
+  // ─── tRPC Queries ──────────────────────────────────────────────────────────
   const { data: conversations, refetch: refetchConversations } =
     trpc.whatsapp.conversations.useQuery(
-      { tab: isManager ? "all" : "mine" },
+      { tab: isManager ? "all" : "mine", includeResolved },
       { enabled: open, refetchInterval: open ? 10000 : false }
     );
 
-  // ─── Messages for selected conversation ───────────────────────────────────
-  const { data: messages, refetch: refetchMessages, isLoading: messagesLoading, error: messagesError } =
+  const { data: messages, refetch: refetchMessages } =
     trpc.whatsapp.messages.useQuery(
-      { contactId: selectedContactId },
-      { enabled: open && selectedContactId !== null, refetchInterval: open && selectedContactId !== null ? 5000 : false, retry: 1 }
+      { contactId: selectedContactId! },
+      { enabled: open && selectedContactId !== null, refetchInterval: open && selectedContactId !== null ? 5000 : false }
     );
 
-  // ─── Templates ────────────────────────────────────────────────────────────
   const { data: templates } = trpc.whatsapp.templates.useQuery(undefined, {
     enabled: open && selectedContactId !== null,
   });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
-  const markAsRead = trpc.whatsapp.markAsRead.useMutation({
-    onSuccess: () => refetchConversations(),
-  });
+  const markAsRead = trpc.whatsapp.markAsRead.useMutation({ onSuccess: () => refetchConversations() });
 
   const sendFreeText = trpc.whatsapp.sendFreeText.useMutation({
-    onSuccess: () => {
-      setMessageText("");
-      setShowEmoji(false);
-      refetchMessages();
-      refetchConversations();
-      toast.success("Message sent");
-    },
+    onSuccess: () => { setMessageInput(""); refetchMessages(); refetchConversations(); toast.success("Message sent"); },
     onError: (err) => {
       if (err.message.includes("63016") || err.message.includes("outside")) {
-        toast.error("Cannot send: 24h conversation window has expired. Send a template first.");
-      } else {
-        toast.error(`Failed to send: ${err.message}`);
-      }
+        toast.error("24h window expired — send a template first.");
+      } else { toast.error(`Failed: ${err.message}`); }
     },
   });
 
   const sendTemplate = trpc.whatsapp.send.useMutation({
-    onSuccess: () => {
-      setShowTemplates(false);
-      refetchMessages();
-      refetchConversations();
-      toast.success("Template sent — conversation window re-opened ✅");
-    },
-    onError: (err) => toast.error(`Failed to send template: ${err.message}`),
+    onSuccess: () => { setShowTemplatePicker(false); refetchMessages(); refetchConversations(); toast.success("Template sent ✅"); },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
   });
 
   const resolveConversation = trpc.whatsapp.resolveConversation.useMutation({
-    onSuccess: () => {
-      toast.success("Conversation resolved");
-      refetchConversations();
-      setSelectedContactId(null);
-    },
-    onError: (err) => toast.error(`Failed to resolve: ${err.message}`),
+    onSuccess: () => { toast.success("Resolved"); refetchConversations(); },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
+  });
+
+  const reopenConversation = trpc.whatsapp.reopenConversation.useMutation({
+    onSuccess: () => { toast.success("Reopened"); refetchConversations(); },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
   });
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (selectedContactId !== null && open) {
-      markAsRead.mutate({ contactId: selectedContactId });
-    }
-    setShowTemplates(false);
-    setShowEmoji(false);
+    if (selectedContactId !== null && open) markAsRead.mutate({ contactId: selectedContactId });
+    setShowTemplatePicker(false);
+    setShowEmojiPicker(false);
   }, [selectedContactId, open]);
 
   useEffect(() => {
@@ -165,26 +172,15 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
   }, [messages, selectedContactId]);
 
   useEffect(() => {
-    if (selectedContactId !== null) setTimeout(() => inputRef.current?.focus(), 150);
+    if (selectedContactId !== null) setTimeout(() => messageInputRef.current?.focus(), 150);
   }, [selectedContactId]);
 
-  // ─── 24h Window ───────────────────────────────────────────────────────────
-  const lastInboundTime = useMemo(() => {
-    if (!messages) return null;
-    const inbound = messages.filter((m: any) => m.direction === "inbound");
-    if (inbound.length === 0) return null;
-    return new Date(inbound[inbound.length - 1].createdAt);
+  // ─── Derived State ────────────────────────────────────────────────────────
+  const windowInfo = useMemo(() => {
+    if (!messages || messages.length === 0) return { expired: true, remaining: null };
+    return get24hWindowRemaining(messages);
   }, [messages]);
 
-  const [windowStatus, setWindowStatus] = useState({ expired: true, label: "" });
-  useEffect(() => {
-    const update = () => setWindowStatus(getTimeRemaining(lastInboundTime));
-    update();
-    const interval = setInterval(update, 30000);
-    return () => clearInterval(interval);
-  }, [lastInboundTime]);
-
-  // ─── Filtered Conversations ────────────────────────────────────────────────
   const filteredConversations = useMemo(() => {
     if (!conversations) return [];
     if (!searchQuery.trim()) return conversations;
@@ -195,316 +191,363 @@ export function WhatsAppChatPanel({ open, onClose }: WhatsAppChatPanelProps) {
     });
   }, [conversations, searchQuery]);
 
-  // ─── Selected conversation info ────────────────────────────────────────────
-  const selectedConv = useMemo(() =>
+  const selectedConversation = useMemo(() =>
     conversations?.find((c: any) => c.contactId === selectedContactId),
     [conversations, selectedContactId]
   );
 
+  const currentAssignment = selectedConversation?.assignedTo;
+
   // ─── Handlers ─────────────────────────────────────────────────────────────
-  const handleSend = () => {
-    if (!messageText.trim() || selectedContactId === null) return;
-    sendFreeText.mutate({ contactId: selectedContactId, body: messageText.trim() });
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || selectedContactId === null) return;
+    sendFreeText.mutate({ contactId: selectedContactId, body: messageInput.trim() });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
-  const insertEmoji = (emoji: string) => {
-    setMessageText((prev) => prev + emoji);
-    inputRef.current?.focus();
+  const handleSendTemplate = (contentSid: string, friendlyName: string) => {
+    if (selectedContactId === null) return;
+    sendTemplate.mutate({ contactId: selectedContactId, contentSid, templateName: friendlyName });
   };
 
   if (!open) return null;
 
-  const totalUnread = conversations?.reduce((sum: number, c: any) => sum + c.unreadCount, 0) ?? 0;
-  const selectedName = selectedConv?.contact?.name || selectedConv?.fromNumber || "Unknown";
+  const content = (
+    <div className={`bg-white flex overflow-hidden ${inline ? 'w-full h-full rounded-lg border border-gray-200' : 'rounded-xl w-full max-w-[1200px] h-[85vh] shadow-2xl'}`}>
 
-  return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 900, height: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
-
-        {/* ── Header ── */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #e5e7eb", background: "#075e54", color: "#fff", borderRadius: "16px 16px 0 0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {selectedContactId !== null && (
-              <button onClick={() => { setSelectedContactId(null); setShowEmoji(false); setShowTemplates(false); }} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 4, display: "flex" }}>
-                <ArrowLeft size={20} />
-              </button>
-            )}
-            <MessageCircle size={20} />
-            <span style={{ fontWeight: 700, fontSize: 15 }}>
-              {selectedContactId !== null ? selectedName : (
-                <>
-                  WhatsApp Chat
-                  {totalUnread > 0 && (
-                    <span style={{ marginLeft: 8, background: "#25d366", color: "#fff", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
-                      {totalUnread} unread
-                    </span>
-                  )}
-                </>
-              )}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {selectedContactId !== null && (
-              <button
-                onClick={() => resolveConversation.mutate({ contactId: selectedContactId })}
-                disabled={resolveConversation.isPending}
-                title="Mark as resolved"
-                style={{ display: "flex", alignItems: "center", gap: 5, background: "#16a34a", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-              >
-                <CheckCircle2 size={14} /> Resolve
-              </button>
-            )}
-            <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 4 }}>
-              <X size={22} />
+        {/* ═══ LEFT PANEL: Conversation List ═══ */}
+        <div className="w-[320px] min-w-[320px] border-r border-gray-200 flex flex-col bg-gray-50">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#075e54]">
+            <div className="flex items-center gap-2 text-white">
+              <MessageCircle size={18} />
+              <span className="text-sm font-bold">WhatsApp Chat</span>
+            </div>
+            <button onClick={onClose} className="text-white hover:text-white/80 transition-colors">
+              <X size={20} />
             </button>
           </div>
-        </div>
 
-        {/* ── Body ── */}
-        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-
-          {/* Left: Conversation List */}
-          <div
-            style={{ width: selectedContactId !== null ? 300 : "100%", maxWidth: selectedContactId !== null ? 300 : "100%", minWidth: selectedContactId !== null ? 300 : undefined, borderRight: "1px solid #e5e7eb", overflowY: "auto", background: "#fff", display: "flex", flexDirection: "column" }}
-            className="whatsapp-conversation-list"
-          >
-            {/* Search */}
-            <div style={{ padding: "10px 12px", borderBottom: "1px solid #f3f4f6" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0f2f5", borderRadius: 20, padding: "6px 12px" }}>
-                <Search size={14} style={{ color: "#555", flexShrink: 0 }} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search conversations..."
-                  style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1f2937" }}
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#555", padding: 0 }}>
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
+          {/* Search + Controls */}
+          <div className="p-2 border-b border-gray-200 space-y-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-black" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366]"
+              />
             </div>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-[10px] text-black cursor-pointer font-medium">
+                <input
+                  type="checkbox"
+                  checked={includeResolved}
+                  onChange={(e) => setIncludeResolved(e.target.checked)}
+                  className="w-3 h-3 rounded border-gray-500"
+                />
+                Show resolved
+              </label>
+            </div>
+          </div>
 
-            {/* Conversation items */}
-            {!filteredConversations || filteredConversations.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: "#374151", fontSize: 14 }}>
-                <MessageCircle size={40} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
-                <p style={{ margin: 0, fontWeight: 600 }}>{searchQuery ? "No matches found" : "No conversations"}</p>
-                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#374151" }}>
-                  {searchQuery ? "Try a different search" : isManager ? "No active conversations." : "No conversations assigned to you."}
-                </p>
+          {/* Conversation List */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredConversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-black text-sm">
+                <MessageCircle size={32} className="mb-2 opacity-30" />
+                <p className="font-medium">{isManager ? "No conversations" : "No conversations assigned to you"}</p>
               </div>
             ) : (
               filteredConversations.map((conv: any) => {
                 const isSelected = conv.contactId === selectedContactId;
-                const name = conv.contact?.name || conv.fromNumber || "Unknown";
-                const initials = name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
-                const lastMsg = conv.lastMessage;
-                const time = lastMsg?.createdAt ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+                const displayName = conv.contact?.name || conv.fromNumber || "Unknown";
+                const lastBody = conv.lastMessage?.body || "";
+                const truncatedBody = lastBody.length > 45 ? lastBody.substring(0, 45) + "..." : lastBody;
+                const timeStr = conv.lastMessage?.createdAt ? formatRelativeTime(new Date(conv.lastMessage.createdAt)) : "";
 
                 return (
                   <div
-                    key={conv.contactId ?? "null"}
-                    onClick={() => setSelectedContactId(conv.contactId)}
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer", background: isSelected ? "#f0fdf4" : "transparent", borderBottom: "1px solid #f3f4f6", transition: "background 0.15s" }}
-                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f9fafb"; }}
-                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                    key={conv.contactId ?? conv.fromNumber ?? "null"}
+                    onClick={() => { setSelectedContactId(conv.contactId); setHasSelectedConversation(true); }}
+                    className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-200 transition-colors ${
+                      isSelected ? "bg-[#25D366]/10 border-l-2 border-l-[#25D366]" : "hover:bg-gray-100"
+                    }`}
                   >
-                    <div style={{ width: 42, height: 42, borderRadius: "50%", background: isSelected ? "#25d366" : "#e5e7eb", color: isSelected ? "#fff" : "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                      {initials}
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {(displayName[0] || "?").toUpperCase()}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontWeight: conv.unreadCount > 0 ? 700 : 500, fontSize: 14, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {name}
-                        </span>
-                        <span style={{ fontSize: 11, color: conv.unreadCount > 0 ? "#25d366" : "#374151", flexShrink: 0 }}>
-                          {time}
-                        </span>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <StatusDot status={conv.conversationStatus || "open"} />
+                          <span className="text-sm font-medium text-black truncate">{displayName}</span>
+                        </div>
+                        <span className="text-[10px] text-black flex-shrink-0">{timeStr}</span>
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
-                        <span style={{ fontSize: 13, color: "#374151", fontWeight: conv.unreadCount > 0 ? 500 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
-                          {lastMsg?.direction === "outbound" && "You: "}
-                          {lastMsg?.body || "[Template message]"}
-                        </span>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-xs text-black truncate">{truncatedBody}</p>
                         {conv.unreadCount > 0 && (
-                          <span style={{ background: "#25d366", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                            {conv.unreadCount}
+                          <span className="ml-1 flex-shrink-0 w-4 h-4 rounded-full bg-[#25D366] text-white text-[9px] flex items-center justify-center font-bold">
+                            {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                           </span>
                         )}
                       </div>
+                      {conv.assignedTo && (
+                        <p className="text-[10px] text-blue-600 mt-0.5 truncate font-medium">{conv.assignedTo.userName}</p>
+                      )}
                     </div>
                   </div>
                 );
               })
             )}
           </div>
+        </div>
 
-          {/* Right: Messages View */}
-          {selectedContactId !== null && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#ece5dd", minWidth: 0 }}>
+        {/* ═══ CENTER PANEL: Chat View ═══ */}
+        <div className="flex-1 flex flex-col bg-[#e5ddd5] min-w-0 relative">
+          {!hasSelectedConversation ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-black">
+              <MessageCircle size={48} className="mb-3 opacity-30" />
+              <p className="text-lg font-medium">Select a conversation</p>
+              <p className="text-sm mt-1">Choose from the list on the left to start messaging</p>
+            </div>
+          ) : (
+            <>
+              {/* Chat Header */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-[#f0f2f5]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-xs font-bold">
+                    {((selectedConversation?.contact?.name || selectedConversation?.fromNumber || "?")[0] || "?").toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-black">
+                        {selectedConversation?.contact?.name || selectedConversation?.fromNumber || "Unknown"}
+                      </span>
+                      <StatusDot status={selectedConversation?.conversationStatus || "open"} />
+                      <span className="text-[10px] text-black capitalize font-medium">
+                        {selectedConversation?.conversationStatus || "open"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-black">{selectedConversation?.fromNumber}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {windowInfo.remaining && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-green-100 text-green-800 border border-green-300 font-medium">
+                      <Clock size={10} className="inline mr-1" />{windowInfo.remaining}
+                    </span>
+                  )}
+                  {windowInfo.expired && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300 font-medium">
+                      24h expired
+                    </span>
+                  )}
+                </div>
+              </div>
 
-              {/* Messages area */}
-              <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 4 }}>
-                {messagesLoading ? (
-                  <div style={{ textAlign: "center", color: "#374151", fontSize: 13, padding: 40 }}>Loading messages…</div>
-                ) : messagesError ? (
-                  <div style={{ textAlign: "center", color: "#dc2626", fontSize: 13, padding: 40 }}>Error: {messagesError.message}</div>
-                ) : !messages || messages.length === 0 ? (
-                  <div style={{ textAlign: "center", color: "#374151", fontSize: 13, padding: 40 }}>No messages yet</div>
-                ) : (
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+                {messages && messages.length > 0 ? (
                   messages.map((msg: any, idx: number) => {
-                    const isOutbound = msg.direction === "outbound";
                     const msgDate = new Date(msg.createdAt);
-                    const time = msgDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                     const prevMsg = idx > 0 ? messages[idx - 1] : null;
-                    const showDateSep = !prevMsg || !isSameDay(msgDate, new Date(prevMsg.createdAt));
+                    const showDateSeparator = !prevMsg || !isSameDay(new Date(prevMsg.createdAt), msgDate);
+                    const isOutbound = msg.direction === "outbound";
 
                     return (
                       <div key={msg.id}>
-                        {showDateSep && (
-                          <div style={{ display: "flex", justifyContent: "center", margin: "12px 0 8px" }}>
-                            <span style={{ background: "#e2dfd7", color: "#374151", fontSize: 12, fontWeight: 500, padding: "4px 12px", borderRadius: 8 }}>
+                        {showDateSeparator && (
+                          <div className="flex items-center justify-center my-3">
+                            <span className="text-[10px] bg-white text-black px-3 py-0.5 rounded-full shadow-sm font-medium">
                               {formatDateSeparator(msgDate)}
                             </span>
                           </div>
                         )}
-                        <div style={{ display: "flex", justifyContent: isOutbound ? "flex-end" : "flex-start", marginBottom: 2 }}>
-                          <div style={{ maxWidth: "75%", padding: "7px 10px 4px", borderRadius: isOutbound ? "10px 10px 2px 10px" : "10px 10px 10px 2px", background: isOutbound ? "#d9fdd3" : "#fff", boxShadow: "0 1px 1px rgba(0,0,0,0.06)" }}>
-                            <p style={{ margin: 0, fontSize: 14, color: "#111827", lineHeight: 1.4, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                              {msg.body || "[Template message]"}
-                            </p>
-                            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 3, marginTop: 3 }}>
-                              <span style={{ fontSize: 11, color: "#374151" }}>{time}</span>
-                              {isOutbound && <MessageStatusIcon status={msg.status} />}
+                        <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-1`}>
+                          <div className={`max-w-[65%] px-3 py-1.5 rounded-lg text-sm relative ${
+                            isOutbound ? "bg-[#dcf8c6] text-black rounded-tr-none" : "bg-white text-black rounded-tl-none shadow-sm"
+                          }`}>
+                            {msg.mediaUrl && (
+                              <img src={msg.mediaUrl} alt="Media" className="max-w-full rounded mb-1 max-h-48 object-cover" />
+                            )}
+                            <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">{msg.body || "[Template message]"}</p>
+                            <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
+                              <span className="text-[10px] text-black">{formatTime(msgDate)}</span>
+                              {isOutbound && <MessageStatus status={msg.status} />}
                             </div>
                           </div>
                         </div>
                       </div>
                     );
                   })
+                ) : (
+                  <div className="flex items-center justify-center h-full text-black text-sm">No messages yet</div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* ── Input Area ── */}
-              <div style={{ borderTop: "1px solid #e5e7eb", background: "#f0f2f5" }}>
-                {windowStatus.expired ? (
-                  /* Expired window */
-                  <div style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "#fff8f0", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px" }}>
-                      <span style={{ fontSize: 13, color: "#92400e", fontWeight: 500 }}>
-                        ⏰ 24h window expired — send a template to re-open
-                      </span>
-                      <button
-                        onClick={() => setShowTemplates(!showTemplates)}
-                        disabled={sendTemplate.isPending}
-                        style={{ display: "flex", alignItems: "center", gap: 5, background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
-                      >
-                        <MessageCircle size={13} /> Send Template <ChevronDown size={13} />
-                      </button>
-                    </div>
-                    {showTemplates && (
-                      <div style={{ marginTop: 8, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", maxHeight: 240, overflowY: "auto" }}>
-                        {!templates || templates.length === 0 ? (
-                          <div style={{ padding: 16, textAlign: "center", color: "#374151", fontSize: 13 }}>No templates available</div>
-                        ) : (
-                          templates.map((tpl: any) => (
-                            <button
-                              key={tpl.sid}
-                              onClick={() => { if (!sendTemplate.isPending) sendTemplate.mutate({ contactId: selectedContactId!, contentSid: tpl.sid, templateName: tpl.friendly_name }); }}
-                              disabled={sendTemplate.isPending}
-                              style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", border: "none", borderBottom: "1px solid #f3f4f6", background: "transparent", cursor: sendTemplate.isPending ? "not-allowed" : "pointer", fontSize: 13, color: "#111827" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = "#f0fdf4"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                            >
-                              <span style={{ fontWeight: 600, color: "#16a34a" }}>{tpl.friendly_name}</span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Active window */
-                  <>
-                    {messages && messages.length > 0 && (
-                      <div style={{ padding: "4px 16px", fontSize: 11, color: "#16a34a", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
-                        {`Window: ${windowStatus.label}`}
-                      </div>
-                    )}
-
-                    {/* Emoji picker */}
-                    {showEmoji && (
-                      <div style={{ padding: "8px 16px", borderTop: "1px solid #e5e7eb", background: "#fff" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 4 }}>
+              {/* Input Area */}
+              <div className="px-3 py-2 border-t border-gray-200 bg-[#f0f2f5]">
+                <div className="flex items-end gap-2">
+                  {/* Emoji picker */}
+                  <div className="relative">
+                    <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-black hover:text-[#25D366] transition-colors">
+                      <Smile size={20} />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-300 rounded-lg p-2 shadow-xl z-50 w-64">
+                        <div className="grid grid-cols-8 gap-1">
                           {COMMON_EMOJIS.map((emoji) => (
-                            <button key={emoji} onClick={() => insertEmoji(emoji)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", padding: 4, borderRadius: 6 }} onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                            <button key={emoji} onClick={() => { setMessageInput(prev => prev + emoji); setShowEmojiPicker(false); messageInputRef.current?.focus(); }} className="w-7 h-7 flex items-center justify-center text-lg hover:bg-gray-100 rounded">
                               {emoji}
                             </button>
                           ))}
                         </div>
                       </div>
                     )}
+                  </div>
 
-                    {/* Input row */}
-                    <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <button onClick={() => setShowEmoji(!showEmoji)} style={{ background: "none", border: "none", cursor: "pointer", color: showEmoji ? "#25d366" : "#555", padding: 4, display: "flex" }}>
-                        <Smile size={22} />
+                  {/* Template picker */}
+                  <button onClick={() => setShowTemplatePicker(!showTemplatePicker)} className="p-2 text-black hover:text-[#25D366] transition-colors" title="Send template">
+                    <FileText size={20} />
+                  </button>
+
+                  {/* Text input */}
+                  <textarea
+                    ref={messageInputRef}
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={windowInfo.expired ? "24h window expired — use a template" : "Type a message..."}
+                    disabled={windowInfo.expired}
+                    rows={1}
+                    className="flex-1 resize-none bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
+                    style={{ minHeight: "36px" }}
+                  />
+
+                  {/* Send button */}
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!messageInput.trim() || windowInfo.expired || sendFreeText.isPending}
+                    className="p-2 bg-[#25D366] text-white rounded-full hover:bg-[#1fb855] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Template Picker Dropdown */}
+              {showTemplatePicker && (
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-96 max-h-80 bg-white border border-gray-300 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                    <span className="text-sm font-semibold text-black">Templates</span>
+                    <button onClick={() => setShowTemplatePicker(false)} className="text-black hover:text-red-500"><X size={16} /></button>
+                  </div>
+                  <div className="overflow-y-auto max-h-64 p-2 space-y-1">
+                    {templates?.map((t: any) => (
+                      <button key={t.sid} onClick={() => handleSendTemplate(t.sid, t.friendly_name)} className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 transition-colors">
+                        <p className="text-xs font-medium text-black">{t.friendly_name}</p>
                       </button>
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Type a WhatsApp message..."
-                        disabled={sendFreeText.isPending}
-                        style={{ flex: 1, padding: "10px 16px", borderRadius: 24, border: "none", background: "#fff", fontSize: 14, outline: "none", boxShadow: "0 1px 2px rgba(0,0,0,0.06)", color: "#111827" }}
-                      />
-                      {/* WhatsApp send */}
-                      <button
-                        onClick={handleSend}
-                        disabled={!messageText.trim() || sendFreeText.isPending}
-                        title="Send WhatsApp message"
-                        style={{ width: 40, height: 40, borderRadius: "50%", background: messageText.trim() && !sendFreeText.isPending ? "#075e54" : "#ccc", border: "none", color: "#fff", cursor: messageText.trim() && !sendFreeText.isPending ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                      >
-                        <Send size={18} />
-                      </button>
-                    </div>
-                  </>
+                    ))}
+                    {(!templates || templates.length === 0) && (
+                      <p className="text-xs text-black text-center py-4">No templates available</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ═══ RIGHT PANEL: Contact Details ═══ */}
+        <div className="w-[260px] min-w-[260px] border-l border-gray-200 bg-gray-50 flex flex-col overflow-y-auto">
+          {!hasSelectedConversation ? (
+            <div className="flex-1 flex items-center justify-center text-black text-sm">
+              <p>No conversation selected</p>
+            </div>
+          ) : (
+            <div className="p-4 space-y-4">
+              {/* Contact Info */}
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-xl font-bold mx-auto mb-2">
+                  {((selectedConversation?.contact?.name || selectedConversation?.fromNumber || "?")[0] || "?").toUpperCase()}
+                </div>
+                <h3 className="text-sm font-semibold text-black">
+                  {selectedConversation?.contact?.name || "Unknown"}
+                </h3>
+                <p className="text-xs text-black">{selectedConversation?.fromNumber}</p>
+                {selectedConversation?.contact?.email && (
+                  <p className="text-xs text-black mt-0.5">{selectedConversation.contact.email}</p>
                 )}
+              </div>
+
+              {/* Lead Status */}
+              {selectedConversation?.contact?.status && (
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Lead Status</p>
+                  <p className="text-xs text-black capitalize font-medium">{selectedConversation.contact.status}</p>
+                </div>
+              )}
+
+              {/* Assignment */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Assigned To</p>
+                {currentAssignment ? (
+                  <p className="text-xs text-black font-medium">{currentAssignment.userName}</p>
+                ) : (
+                  <p className="text-xs text-black italic">Unassigned</p>
+                )}
+              </div>
+
+              {/* Conversation Status + Actions */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <p className="text-[10px] text-black uppercase tracking-wide mb-2 font-semibold">Conversation</p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <StatusDot status={selectedConversation?.conversationStatus || "open"} />
+                  <span className="text-xs text-black capitalize font-medium">
+                    {selectedConversation?.conversationStatus || "open"}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {selectedConversation?.conversationStatus !== "resolved" && (
+                    <button
+                      onClick={() => resolveConversation.mutate({ contactId: selectedContactId! })}
+                      className="w-full text-[11px] px-2 py-1.5 bg-green-600 text-white rounded hover:bg-green-500 flex items-center justify-center gap-1 font-semibold"
+                    >
+                      <CheckCircle2 size={12} /> Resolve
+                    </button>
+                  )}
+                  {selectedConversation?.conversationStatus === "resolved" && (
+                    <button
+                      onClick={() => reopenConversation.mutate({ contactId: selectedContactId! })}
+                      className="w-full text-[11px] px-2 py-1.5 bg-green-700 text-white rounded hover:bg-green-600 flex items-center justify-center gap-1 font-semibold"
+                    >
+                      <RotateCcw size={12} /> Reopen
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Responsive styles */}
-      <style>{`
-        @media (max-width: 640px) {
-          .whatsapp-conversation-list {
-            ${selectedContactId !== null ? "display: none !important;" : ""}
-          }
-        }
-        @media (min-width: 641px) {
-          .whatsapp-conversation-list {
-            width: 300px !important;
-            max-width: 300px !important;
-            min-width: 300px !important;
-          }
-        }
-      `}</style>
+    </div>
+  );
+
+  if (inline) return content;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      {content}
     </div>
   );
 }
