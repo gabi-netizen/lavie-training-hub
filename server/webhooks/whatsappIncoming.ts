@@ -18,8 +18,8 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { whatsappMessages, contacts } from "../../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { whatsappMessages, contacts, campaignSends, campaigns } from "../../drizzle/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { normalisePhone } from "../contacts";
 import crypto from "crypto";
 
@@ -180,6 +180,49 @@ export async function handleWhatsAppIncoming(req: Request, res: Response) {
     });
 
     console.log(`[WhatsApp Incoming] ✓ Message saved — contact: ${matchedContactId ?? "unmatched"}, SID: ${messageSid}`);
+
+    // ─── Campaign Reply Tracking ─────────────────────────────────────────────
+    // Check if this incoming message matches a recent campaign_send (by phone number).
+    // If so, mark that send as "replied" and increment the campaign's repliedCount.
+    if (normalised) {
+      try {
+        // Find the most recent campaign_send to this phone number that hasn't been replied to yet
+        // Match by normalised phone — campaign_sends stores E.164 format
+        const [matchedSend] = await db
+          .select()
+          .from(campaignSends)
+          .where(
+            and(
+              eq(campaignSends.phoneNumber, normalised),
+              sql`${campaignSends.status} IN ('sent', 'delivered', 'read')`
+            )
+          )
+          .orderBy(desc(campaignSends.createdAt))
+          .limit(1);
+
+        if (matchedSend) {
+          // Mark this send as replied
+          await db
+            .update(campaignSends)
+            .set({
+              status: "replied",
+              repliedAt: new Date(),
+            })
+            .where(eq(campaignSends.id, matchedSend.id));
+
+          // Increment the replied count on the parent campaign
+          await db
+            .update(campaigns)
+            .set({ repliedCount: sql`${campaigns.repliedCount} + 1` })
+            .where(eq(campaigns.id, matchedSend.campaignId));
+
+          console.log(`[WhatsApp Incoming] ✓ Campaign reply tracked — send #${matchedSend.id}, campaign #${matchedSend.campaignId}`);
+        }
+      } catch (campaignErr) {
+        // Don't fail the webhook if campaign tracking fails
+        console.error("[WhatsApp Incoming] Error tracking campaign reply:", campaignErr);
+      }
+    }
 
     // ─── Return empty TwiML response ─────────────────────────────────────────
     res.type("text/xml").status(200).send("<Response></Response>");

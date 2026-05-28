@@ -13,6 +13,7 @@ import { ticketsRouter } from "./routers/tickets";
 import { openingDashboardRouter } from "./routers/openingDashboard";
 import { usersRouter } from "./routers/users";
 import { whatsappRouter } from "./routers/whatsapp";
+import { campaignsRouter } from "./routers/campaigns";
 
 export const appRouter = router({
   system: systemRouter,
@@ -45,6 +46,7 @@ export const appRouter = router({
   openingDashboard: openingDashboardRouter,
   users: usersRouter,
   whatsapp: whatsappRouter,
+  campaigns: campaignsRouter,
 });
 
 export type AppRouter = typeof appRouter;

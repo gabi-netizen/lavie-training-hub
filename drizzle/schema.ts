@@ -1,4 +1,4 @@
-import { boolean, date, decimal, float, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, float, int, json, mediumtext, mysqlEnum, mysqlTable, serial, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -779,3 +779,81 @@ export const whatsappConversations = mysqlTable("whatsapp_conversations", {
 
 export type WhatsappConversation = typeof whatsappConversations.$inferSelect;
 export type InsertWhatsappConversation = typeof whatsappConversations.$inferInsert;
+
+// ─── Campaigns ─────────────────────────────────────────────────────────────────
+/**
+ * Campaigns table — bulk WhatsApp/SMS outreach campaigns.
+ * Each campaign targets a filtered set of contacts and sends a template or free-text message.
+ */
+export const campaigns = mysqlTable("campaigns", {
+  id: serial("id").primaryKey(),
+  /** Campaign name (human-readable label) */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Channel: whatsapp or sms */
+  channel: mysqlEnum("channel", ["whatsapp", "sms"]).notNull(),
+  /** WhatsApp Content SID / template name (used for WhatsApp campaigns) */
+  templateName: varchar("templateName", { length: 255 }),
+  /** SMS free-text message body (used for SMS campaigns) */
+  messageBody: text("messageBody"),
+  /** Campaign lifecycle status */
+  status: mysqlEnum("campaignStatus", ["draft", "sending", "completed", "cancelled"]).default("draft").notNull(),
+  /** JSON filter criteria used to select contacts (mirrors CRM filter shape) */
+  audienceFilter: json("audienceFilter"),
+  /** Total number of recipients when campaign was sent */
+  totalRecipients: int("totalRecipients").default(0).notNull(),
+  /** Number of messages successfully sent */
+  sentCount: int("sentCount").default(0).notNull(),
+  /** Number of messages delivered */
+  deliveredCount: int("deliveredCount").default(0).notNull(),
+  /** Number of messages read */
+  readCount: int("readCount").default(0).notNull(),
+  /** Number of recipients who replied */
+  repliedCount: int("repliedCount").default(0).notNull(),
+  /** User who created this campaign */
+  createdByUserId: int("createdByUserId").notNull(),
+  /** When the campaign is scheduled to send (null = manual trigger) */
+  scheduledAt: timestamp("scheduledAt"),
+  /** When the campaign actually started sending */
+  sentAt: timestamp("sentAt"),
+  /** When the campaign finished sending all messages */
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = typeof campaigns.$inferInsert;
+
+// ─── Campaign Sends ────────────────────────────────────────────────────────────
+/**
+ * Campaign sends table — individual message records for each recipient in a campaign.
+ * Tracks delivery lifecycle per recipient.
+ */
+export const campaignSends = mysqlTable("campaign_sends", {
+  id: serial("id").primaryKey(),
+  /** Parent campaign */
+  campaignId: int("campaignId").notNull(),
+  /** Contact this message was sent to (nullable if contact was deleted) */
+  contactId: int("contactId"),
+  /** Recipient phone number in E.164 format */
+  phoneNumber: varchar("phoneNumber", { length: 20 }).notNull(),
+  /** Channel used for this send */
+  channel: mysqlEnum("sendChannel", ["whatsapp", "sms"]).notNull(),
+  /** Delivery status lifecycle */
+  status: mysqlEnum("sendStatus", ["pending", "sent", "delivered", "read", "replied", "failed"]).default("pending").notNull(),
+  /** Twilio Message SID for tracking */
+  twilioMessageSid: varchar("twilioMessageSid", { length: 50 }),
+  /** Error message if send failed */
+  errorMessage: text("errorMessage"),
+  /** When the message was sent */
+  sentAt: timestamp("sentAt"),
+  /** When delivery was confirmed */
+  deliveredAt: timestamp("deliveredAt"),
+  /** When the message was read */
+  readAt: timestamp("readAt"),
+  /** When the recipient replied */
+  repliedAt: timestamp("repliedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CampaignSend = typeof campaignSends.$inferSelect;
+export type InsertCampaignSend = typeof campaignSends.$inferInsert;

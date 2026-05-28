@@ -14,8 +14,8 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { whatsappMessages } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { whatsappMessages, campaignSends, campaigns } from "../../drizzle/schema";
+import { eq, sql } from "drizzle-orm";
 
 // ─── Status ordering (higher = more advanced in delivery lifecycle) ───────────
 const STATUS_ORDER: Record<string, number> = {
@@ -55,10 +55,29 @@ function mapStatus(twilioStatus: string): "sent" | "delivered" | "read" | "faile
   }
 }
 
+// ─── Map Twilio status to campaign_sends enum ────────────────────────────────
+function mapCampaignSendStatus(twilioStatus: string): "sent" | "delivered" | "read" | "failed" | null {
+  switch (twilioStatus) {
+    case "sent":
+    case "queued":
+    case "sending":
+      return "sent";
+    case "delivered":
+      return "delivered";
+    case "read":
+      return "read";
+    case "failed":
+    case "undelivered":
+      return "failed";
+    default:
+      return null;
+  }
+}
+
 // ─── Main Webhook Handler ────────────────────────────────────────────────────
 export async function handleWhatsAppStatus(req: Request, res: Response) {
   try {
-    const { MessageSid, MessageStatus } = req.body;
+    const { MessageSid, MessageStatus, ErrorMessage } = req.body;
 
     console.log(`[WhatsApp Status] SID: ${MessageSid}, Status: ${MessageStatus}`);
 
@@ -82,32 +101,85 @@ export async function handleWhatsAppStatus(req: Request, res: Response) {
       return;
     }
 
-    // Find the message by Twilio SID
+    // ─── Update whatsapp_messages table (existing behaviour) ─────────────────
     const [existing] = await db
       .select({ id: whatsappMessages.id, status: whatsappMessages.status })
       .from(whatsappMessages)
       .where(eq(whatsappMessages.twilioMessageSid, MessageSid))
       .limit(1);
 
-    if (!existing) {
-      console.log(`[WhatsApp Status] No message found for SID ${MessageSid} — ignoring`);
-      res.type("text/xml").status(200).send("<Response></Response>");
-      return;
+    if (existing) {
+      // Only update if this is a status upgrade (don't downgrade delivered → sent)
+      if (isStatusUpgrade(existing.status, newStatus)) {
+        await db
+          .update(whatsappMessages)
+          .set({ status: newStatus })
+          .where(eq(whatsappMessages.id, existing.id));
+
+        console.log(`[WhatsApp Status] ✓ Updated message #${existing.id} (SID: ${MessageSid}): ${existing.status} → ${newStatus}`);
+      } else {
+        console.log(`[WhatsApp Status] Skipping downgrade: ${existing.status} → ${newStatus} for SID ${MessageSid}`);
+      }
+    } else {
+      console.log(`[WhatsApp Status] No whatsapp_messages row for SID ${MessageSid}`);
     }
 
-    // Only update if this is a status upgrade (don't downgrade delivered → sent)
-    if (!isStatusUpgrade(existing.status, newStatus)) {
-      console.log(`[WhatsApp Status] Skipping downgrade: ${existing.status} → ${newStatus} for SID ${MessageSid}`);
-      res.type("text/xml").status(200).send("<Response></Response>");
-      return;
+    // ─── Update campaign_sends table (new campaign tracking) ─────────────────
+    const [campaignSend] = await db
+      .select({
+        id: campaignSends.id,
+        status: campaignSends.status,
+        campaignId: campaignSends.campaignId,
+      })
+      .from(campaignSends)
+      .where(eq(campaignSends.twilioMessageSid, MessageSid))
+      .limit(1);
+
+    if (campaignSend) {
+      const campaignNewStatus = mapCampaignSendStatus(MessageStatus);
+      if (!campaignNewStatus) {
+        res.type("text/xml").status(200).send("<Response></Response>");
+        return;
+      }
+
+      // Only upgrade status (pending → sent → delivered → read; failed always allowed)
+      if (!isStatusUpgrade(campaignSend.status, campaignNewStatus)) {
+        console.log(`[WhatsApp Status] Campaign send #${campaignSend.id}: skipping downgrade ${campaignSend.status} → ${campaignNewStatus}`);
+        res.type("text/xml").status(200).send("<Response></Response>");
+        return;
+      }
+
+      // Build the update payload with appropriate timestamp
+      const updatePayload: Record<string, any> = { status: campaignNewStatus };
+
+      if (campaignNewStatus === "delivered") {
+        updatePayload.deliveredAt = new Date();
+      } else if (campaignNewStatus === "read") {
+        updatePayload.readAt = new Date();
+      } else if (campaignNewStatus === "failed") {
+        updatePayload.errorMessage = ErrorMessage || "Message delivery failed";
+      }
+
+      await db
+        .update(campaignSends)
+        .set(updatePayload)
+        .where(eq(campaignSends.id, campaignSend.id));
+
+      // Increment the corresponding counter on the parent campaign
+      if (campaignNewStatus === "delivered") {
+        await db
+          .update(campaigns)
+          .set({ deliveredCount: sql`${campaigns.deliveredCount} + 1` })
+          .where(eq(campaigns.id, campaignSend.campaignId));
+      } else if (campaignNewStatus === "read") {
+        await db
+          .update(campaigns)
+          .set({ readCount: sql`${campaigns.readCount} + 1` })
+          .where(eq(campaigns.id, campaignSend.campaignId));
+      }
+
+      console.log(`[WhatsApp Status] ✓ Campaign send #${campaignSend.id} (campaign #${campaignSend.campaignId}): ${campaignSend.status} → ${campaignNewStatus}`);
     }
-
-    await db
-      .update(whatsappMessages)
-      .set({ status: newStatus })
-      .where(eq(whatsappMessages.id, existing.id));
-
-    console.log(`[WhatsApp Status] ✓ Updated message #${existing.id} (SID: ${MessageSid}): ${existing.status} → ${newStatus}`);
 
     res.type("text/xml").status(200).send("<Response></Response>");
   } catch (err) {
