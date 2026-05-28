@@ -2449,6 +2449,7 @@ function CallbacksPanel({
 export default function Workspace() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isManager = !user?.team; // users without a team are managers
   const [, navigate] = useLocation();
   const [activeId, setActiveId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -2626,9 +2627,6 @@ export default function Workspace() {
 
   // How to Use guide modal
   const [showGuide, setShowGuide] = useState(false);
-
-  // WhatsApp Chat panel
-  const [showWhatsAppChat, setShowWhatsAppChat] = useState(false);
 
   // WhatsApp unread badge — poll conversations to get total unread count
   const { data: waConversations } = trpc.whatsapp.conversations.useQuery(undefined, {
@@ -2985,7 +2983,7 @@ export default function Workspace() {
                 </button>
 
                 {/* Manager View */}
-                {isAdmin && (
+                {isManager && (
                   <button
                     onClick={() => setActiveTab("manager")}
                     style={{
@@ -3114,12 +3112,14 @@ export default function Workspace() {
             </div>
           </div>
 
-          {/* RIGHT: QUICK TOOLS (Offer, Objections, Products) */}
-          <div className="ws-quicktools-col">
-            <div className="ws-sales-content">
-              <QuickTools />
+          {/* RIGHT: QUICK TOOLS — only visible on My Pitch tab */}
+          {activeTab === "pitch" && (
+            <div className="ws-quicktools-col">
+              <div className="ws-sales-content">
+                <QuickTools />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
