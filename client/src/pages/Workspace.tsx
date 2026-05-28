@@ -584,10 +584,22 @@ function ContactCard({
 
   const sendWhatsAppMutation = trpc.whatsapp.send.useMutation({
     onSuccess: () => {
-      toast.success("WhatsApp message sent ✅");
+      toast.success("WhatsApp message sent \u2705");
       setWhatsappOpen(false);
     },
     onError: (err) => toast.error(`WhatsApp failed: ${err.message}`),
+  });
+
+  // ─── SMS ───────────────────────────────────────────────────────────────────────
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [smsBody, setSmsBody] = useState("");
+  const sendSmsMutation = trpc.whatsapp.sendSms.useMutation({
+    onSuccess: () => {
+      toast.success("SMS sent \u2705");
+      setSmsOpen(false);
+      setSmsBody("");
+    },
+    onError: (err) => toast.error(`SMS failed: ${err.message}`),
   });
 
   const initials = contact.name
@@ -679,6 +691,13 @@ function ContactCard({
             >
               <X size={14} strokeWidth={2.5} />
               Close
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onAction("sold"); }}
+              className="px-3 py-1 flex items-center gap-1 rounded-md font-semibold text-xs transition-colors"
+              style={{ background: '#16a34a', color: '#fff', border: '1.5px solid #15803d' }}
+            >
+              Sold
             </button>
           </div>
         )}
@@ -1119,26 +1138,42 @@ function ContactCard({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="ws-actions">
-            <button className="ws-btn ws-btn-call" onClick={() => onAction("call")} disabled={isCallPending} style={isCallPending ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{isCallPending ? "Calling…" : "Call"}</button>
-            <button className="ws-btn ws-btn-sold" onClick={() => onAction("sold")}>Sold</button>
-            <button className="ws-btn ws-btn-cb" onClick={() => onAction("callback")}>Callback</button>
-            <button className="ws-btn ws-btn-done" onClick={() => onAction("done")}>Not Interested</button>
-            <button className="ws-btn ws-btn-skip" onClick={() => onAction("skip")}>N/A</button>
+          {/* Row 1: Call, Callback, Not Interested, Send SMS, N/A */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+            <button
+              onClick={() => onAction("call")}
+              disabled={isCallPending}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: isCallPending ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 700, background: '#2563eb', color: '#fff', opacity: isCallPending ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, whiteSpace: 'nowrap' }}
+            >{isCallPending ? 'Calling…' : 'Call'}</button>
+            <button
+              onClick={() => onAction("callback")}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#f59e0b', color: '#fff', whiteSpace: 'nowrap' }}
+            >Callback</button>
+            <button
+              onClick={() => onAction("done")}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#dc2626', color: '#fff', whiteSpace: 'nowrap' }}
+            >Not Interested</button>
+            <button
+              onClick={() => setSmsOpen(!smsOpen)}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#2563eb', color: '#fff', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}
+            ><MessageCircle size={11} /> Send SMS</button>
+            <button
+              onClick={() => onAction("skip")}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#6b7280', color: '#fff', whiteSpace: 'nowrap' }}
+            >N/A</button>
           </div>
 
-          {/* Take Payment + Send Email + Send WhatsApp — 3 buttons */}
-          <div className="ws-btn-pair" style={{ flexWrap: 'wrap' }}>
-            <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-              <CreditCard size={13} /> Take Payment
+          {/* Row 2: Take Payment + Send Email + Send WhatsApp */}
+          <div className="ws-btn-pair" style={{ flexWrap: 'nowrap', gap: 4 }}>
+            <button className="ws-btn-pay ws-btn-pair-item" onClick={() => setPayOpen(!payOpen)} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '6px 8px', flex: '1 1 auto', justifyContent: 'center', whiteSpace: 'nowrap' }}>
+              <CreditCard size={12} /> Take Payment
             </button>
             <button
               className="ws-btn-email ws-btn-pair-item"
               onClick={() => setEmailTemplateOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '6px 8px', flex: '1 1 auto', justifyContent: 'center', whiteSpace: 'nowrap' }}
             >
-              <Mail size={13} /> Send Email
+              <Mail size={12} /> Send Email
             </button>
             <button
               className="ws-btn-whatsapp ws-btn-pair-item"
@@ -1151,6 +1186,37 @@ function ContactCard({
               Send WhatsApp
             </button>
           </div>
+
+          {/* SMS Compose Panel */}
+          {smsOpen && (
+            <div className="ws-pay-box" style={{ borderColor: '#2563eb' }}>
+              <div className="ws-pay-title" style={{ color: '#2563eb' }}>
+                <span>\ud83d\udcac</span> Send SMS
+              </div>
+              {!contact.phone ? (
+                <p style={{ fontSize: 12, color: '#dc2626' }}>\u26a0 No phone number on file</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <textarea
+                    value={smsBody}
+                    onChange={(e) => setSmsBody(e.target.value)}
+                    placeholder="Type your SMS message..."
+                    maxLength={1600}
+                    style={{ width: '100%', minHeight: 80, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', color: '#111827' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: '#111827', opacity: 0.6 }}>{smsBody.length}/1600</span>
+                    <button
+                      onClick={() => { if (!smsBody.trim() || sendSmsMutation.isPending) return; sendSmsMutation.mutate({ contactId: contact.id, body: smsBody.trim() }); }}
+                      disabled={!smsBody.trim() || sendSmsMutation.isPending}
+                      style={{ padding: '6px 16px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 700, background: !smsBody.trim() || sendSmsMutation.isPending ? '#93c5fd' : '#2563eb', color: '#fff', cursor: !smsBody.trim() || sendSmsMutation.isPending ? 'not-allowed' : 'pointer' }}
+                    >{sendSmsMutation.isPending ? 'Sending...' : 'Send SMS'}</button>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => { setSmsOpen(false); setSmsBody(''); }} style={{ marginTop: 8, fontSize: 11, color: '#111827', opacity: 0.6, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Close</button>
+            </div>
+          )}
 
           {/* WhatsApp Template Picker */}
           {whatsappOpen && (
