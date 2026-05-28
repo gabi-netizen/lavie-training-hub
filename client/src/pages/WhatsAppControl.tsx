@@ -355,18 +355,18 @@ export default function WhatsAppControl() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-56px)] bg-[#1a1a2e] overflow-hidden">
+    <div className="flex h-[calc(100vh-56px)] bg-white overflow-hidden">
       {/* ═══ LEFT PANEL: Conversation List ═══ */}
-      <div className="w-[320px] min-w-[320px] border-r border-gray-700 flex flex-col bg-[#16213e]">
+      <div className="w-[320px] min-w-[320px] border-r border-gray-200 flex flex-col bg-gray-50">
         {/* Tabs */}
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-gray-200">
           {seesAll && (
             <button
               onClick={() => setActiveTab("all")}
               className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
                 activeTab === "all"
                   ? "text-[#25D366] border-b-2 border-[#25D366]"
-                  : "text-gray-400 hover:text-gray-200"
+                  : "text-black hover:text-[#25D366]"
               }`}
             >
               All
@@ -377,7 +377,7 @@ export default function WhatsAppControl() {
             className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
               activeTab === "unassigned"
                 ? "text-[#25D366] border-b-2 border-[#25D366]"
-                : "text-gray-400 hover:text-gray-200"
+                : "text-black hover:text-[#25D366]"
             }`}
           >
             Unassigned
@@ -387,7 +387,7 @@ export default function WhatsAppControl() {
             className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${
               activeTab === "mine"
                 ? "text-[#25D366] border-b-2 border-[#25D366]"
-                : "text-gray-400 hover:text-gray-200"
+                : "text-black hover:text-[#25D366]"
             }`}
           >
             Mine
@@ -395,19 +395,19 @@ export default function WhatsAppControl() {
         </div>
 
         {/* Search + Controls */}
-        <div className="p-2 border-b border-gray-700 space-y-2">
+        <div className="p-2 border-b border-gray-200 space-y-2">
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-black" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[#1a1a2e] border border-gray-600 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#25D366]"
+              className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366]"
             />
           </div>
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-1.5 text-[10px] text-gray-400 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-[10px] text-black cursor-pointer">
               <input
                 type="checkbox"
                 checked={includeResolved}
@@ -424,7 +424,7 @@ export default function WhatsAppControl() {
               className={`text-[10px] px-2 py-0.5 rounded ${
                 multiSelectMode
                   ? "bg-[#25D366] text-white"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  : "bg-gray-200 text-black hover:bg-gray-300"
               }`}
             >
               {multiSelectMode ? "Cancel" : "Select"}
@@ -434,8 +434,8 @@ export default function WhatsAppControl() {
 
         {/* Bulk Actions Toolbar */}
         {multiSelectMode && selectedContactIds.size > 0 && (
-          <div className="p-2 border-b border-gray-700 bg-[#1a1a2e] flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] text-gray-400">{selectedContactIds.size} selected</span>
+          <div className="p-2 border-b border-gray-200 bg-white flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-black">{selectedContactIds.size} selected</span>
             {seesAll && (
               <>
                 <button
@@ -464,7 +464,7 @@ export default function WhatsAppControl() {
         {/* Conversation List */}
         <div className="flex-1 overflow-y-auto">
           {filteredConversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm">
+            <div className="flex flex-col items-center justify-center h-full text-black text-sm">
               <MessageCircle size={32} className="mb-2 opacity-50" />
               <p>No conversations</p>
             </div>
@@ -492,10 +492,10 @@ export default function WhatsAppControl() {
                       setHasSelectedConversation(true);
                     }
                   }}
-                  className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-700/50 transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-200 transition-colors ${
                     isSelected && !multiSelectMode
                       ? "bg-[#25D366]/10 border-l-2 border-l-[#25D366]"
-                      : "hover:bg-[#1a1a2e]/80"
+                      : "hover:bg-gray-100"
                   }`}
                 >
                   {/* Multi-select checkbox */}
@@ -504,7 +504,7 @@ export default function WhatsAppControl() {
                       {conv.contactId !== null && selectedContactIds.has(conv.contactId) ? (
                         <CheckSquare size={16} className="text-[#25D366]" />
                       ) : (
-                        <Square size={16} className="text-gray-500" />
+                        <Square size={16} className="text-black" />
                       )}
                     </div>
                   )}
@@ -519,14 +519,14 @@ export default function WhatsAppControl() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <StatusDot status={conv.conversationStatus || "open"} />
-                        <span className="text-sm font-medium text-gray-200 truncate">
+                        <span className="text-sm font-medium text-black truncate">
                           {displayName}
                         </span>
                       </div>
-                      <span className="text-[10px] text-gray-500 flex-shrink-0">{timeStr}</span>
+                      <span className="text-[10px] text-black flex-shrink-0">{timeStr}</span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
-                      <p className="text-xs text-gray-400 truncate">{truncatedBody}</p>
+                      <p className="text-xs text-black truncate">{truncatedBody}</p>
                       {conv.unreadCount > 0 && (
                         <span className="ml-1 flex-shrink-0 w-4 h-4 rounded-full bg-[#25D366] text-white text-[9px] flex items-center justify-center font-bold">
                           {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
@@ -534,7 +534,7 @@ export default function WhatsAppControl() {
                       )}
                     </div>
                     {conv.assignedTo && (
-                      <p className="text-[10px] text-blue-400 mt-0.5 truncate">
+                      <p className="text-[10px] text-blue-600 mt-0.5 truncate">
                         {conv.assignedTo.userName}
                       </p>
                     )}
@@ -547,9 +547,9 @@ export default function WhatsAppControl() {
       </div>
 
       {/* ═══ CENTER PANEL: Chat Window ═══ */}
-      <div className="flex-1 flex flex-col bg-[#0f3460] min-w-0 relative">
+      <div className="flex-1 flex flex-col bg-[#e5ddd5] min-w-0 relative">
         {!hasSelectedConversation ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+          <div className="flex-1 flex flex-col items-center justify-center text-black">
             <MessageCircle size={48} className="mb-3 opacity-30" />
             <p className="text-lg font-medium">Select a conversation</p>
             <p className="text-sm mt-1">Choose from the list on the left to start messaging</p>
@@ -557,22 +557,22 @@ export default function WhatsAppControl() {
         ) : (
           <>
             {/* Chat Header */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 bg-[#16213e]">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-[#f0f2f5]">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-xs font-bold">
                   {((selectedConversation?.contact?.name || selectedConversation?.fromNumber || "?")[0] || "?").toUpperCase()}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-200">
+                    <span className="text-sm font-semibold text-black">
                       {selectedConversation?.contact?.name || selectedConversation?.fromNumber || "Unknown"}
                     </span>
                     <StatusDot status={selectedConversation?.conversationStatus || "open"} />
-                    <span className="text-[10px] text-gray-400 capitalize">
+                    <span className="text-[10px] text-black capitalize">
                       {selectedConversation?.conversationStatus || "open"}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-400">
+                  <p className="text-[11px] text-black">
                     {selectedConversation?.fromNumber}
                   </p>
                 </div>
@@ -580,13 +580,13 @@ export default function WhatsAppControl() {
               <div className="flex items-center gap-2">
                 {/* 24h window indicator */}
                 {windowInfo.remaining && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-green-900/50 text-green-300 border border-green-700">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-green-100 text-green-800 border border-green-300">
                     <Clock size={10} className="inline mr-1" />
                     {windowInfo.remaining}
                   </span>
                 )}
                 {windowInfo.expired && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-red-900/50 text-red-300 border border-red-700">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300">
                     24h expired
                   </span>
                 )}
@@ -622,7 +622,7 @@ export default function WhatsAppControl() {
                       {/* Date separator */}
                       {showDateSeparator && (
                         <div className="flex items-center justify-center my-3">
-                          <span className="text-[10px] bg-[#1a1a2e] text-gray-400 px-3 py-0.5 rounded-full">
+                          <span className="text-[10px] bg-white text-black px-3 py-0.5 rounded-full shadow-sm">
                             {formatDateSeparator(msgDate)}
                           </span>
                         </div>
@@ -633,8 +633,8 @@ export default function WhatsAppControl() {
                         <div
                           className={`max-w-[65%] px-3 py-1.5 rounded-lg text-sm relative ${
                             isOutbound
-                              ? "bg-[#005c4b] text-gray-100 rounded-tr-none"
-                              : "bg-[#1f2c33] text-gray-200 rounded-tl-none"
+                              ? "bg-[#dcf8c6] text-black rounded-tr-none"
+                              : "bg-white text-black rounded-tl-none shadow-sm"
                           }`}
                         >
                           {/* Media */}
@@ -651,7 +651,7 @@ export default function WhatsAppControl() {
                           </p>
                           {/* Time + status */}
                           <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
-                            <span className="text-[10px] text-gray-400">{formatTime(msgDate)}</span>
+                            <span className="text-[10px] text-black">{formatTime(msgDate)}</span>
                             {isOutbound && <MessageStatus status={msg.status} />}
                           </div>
                         </div>
@@ -660,7 +660,7 @@ export default function WhatsAppControl() {
                   );
                 })
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                <div className="flex items-center justify-center h-full text-black text-sm">
                   No messages yet
                 </div>
               )}
@@ -668,18 +668,18 @@ export default function WhatsAppControl() {
             </div>
 
             {/* Input Area */}
-            <div className="px-3 py-2 border-t border-gray-700 bg-[#16213e]">
+            <div className="px-3 py-2 border-t border-gray-200 bg-[#f0f2f5]">
               <div className="flex items-end gap-2">
                 {/* Emoji picker toggle */}
                 <div className="relative">
                   <button
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
+                    className="p-2 text-black hover:text-[#25D366] transition-colors"
                   >
                     <Smile size={20} />
                   </button>
                   {showEmojiPicker && (
-                    <div className="absolute bottom-full left-0 mb-2 bg-[#1a1a2e] border border-gray-600 rounded-lg p-2 shadow-xl z-50 w-64">
+                    <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-300 rounded-lg p-2 shadow-xl z-50 w-64">
                       <div className="grid grid-cols-8 gap-1">
                         {COMMON_EMOJIS.map((emoji) => (
                           <button
@@ -689,7 +689,7 @@ export default function WhatsAppControl() {
                               setShowEmojiPicker(false);
                               messageInputRef.current?.focus();
                             }}
-                            className="w-7 h-7 flex items-center justify-center text-lg hover:bg-gray-700 rounded"
+                            className="w-7 h-7 flex items-center justify-center text-lg hover:bg-gray-100 rounded"
                           >
                             {emoji}
                           </button>
@@ -702,7 +702,7 @@ export default function WhatsAppControl() {
                 {/* Template picker toggle */}
                 <button
                   onClick={() => setShowTemplatePicker(!showTemplatePicker)}
-                  className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
+                  className="p-2 text-black hover:text-[#25D366] transition-colors"
                   title="Send template"
                 >
                   <FileText size={20} />
@@ -717,7 +717,7 @@ export default function WhatsAppControl() {
                   placeholder={windowInfo.expired ? "24h window expired — use a template" : "Type a message..."}
                   disabled={windowInfo.expired}
                   rows={1}
-                  className="flex-1 resize-none bg-[#1a1a2e] border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
+                  className="flex-1 resize-none bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
                   style={{ minHeight: "36px" }}
                 />
 
@@ -734,10 +734,10 @@ export default function WhatsAppControl() {
 
             {/* Template Picker Dropdown */}
             {showTemplatePicker && (
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-96 max-h-80 bg-[#1a1a2e] border border-gray-600 rounded-lg shadow-xl z-50 overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
-                  <span className="text-sm font-semibold text-gray-200">Templates</span>
-                  <button onClick={() => setShowTemplatePicker(false)} className="text-gray-400 hover:text-gray-200">
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-96 max-h-80 bg-white border border-gray-300 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                  <span className="text-sm font-semibold text-black">Templates</span>
+                  <button onClick={() => setShowTemplatePicker(false)} className="text-black hover:text-red-500">
                     <X size={16} />
                   </button>
                 </div>
@@ -746,13 +746,13 @@ export default function WhatsAppControl() {
                     <button
                       key={t.sid}
                       onClick={() => handleSendTemplate(t.sid, t.friendly_name)}
-                      className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 transition-colors"
+                      className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 transition-colors"
                     >
-                      <p className="text-xs font-medium text-gray-200">{t.friendly_name}</p>
+                      <p className="text-xs font-medium text-black">{t.friendly_name}</p>
                     </button>
                   ))}
                   {(!templates || templates.length === 0) && (
-                    <p className="text-xs text-gray-500 text-center py-4">No templates available</p>
+                    <p className="text-xs text-black text-center py-4">No templates available</p>
                   )}
                 </div>
               </div>
@@ -762,9 +762,9 @@ export default function WhatsAppControl() {
       </div>
 
       {/* ═══ RIGHT PANEL: Contact Details ═══ */}
-      <div className="w-[280px] min-w-[280px] border-l border-gray-700 bg-[#16213e] flex flex-col overflow-y-auto">
+      <div className="w-[280px] min-w-[280px] border-l border-gray-200 bg-gray-50 flex flex-col overflow-y-auto">
         {!hasSelectedConversation ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+          <div className="flex-1 flex items-center justify-center text-black text-sm">
             <p>No conversation selected</p>
           </div>
         ) : (
@@ -774,30 +774,30 @@ export default function WhatsAppControl() {
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-xl font-bold mx-auto mb-2">
                 {((selectedConversation?.contact?.name || selectedConversation?.fromNumber || "?")[0] || "?").toUpperCase()}
               </div>
-              <h3 className="text-sm font-semibold text-gray-200">
+              <h3 className="text-sm font-semibold text-black">
                 {selectedConversation?.contact?.name || "Unknown"}
               </h3>
-              <p className="text-xs text-gray-400">{selectedConversation?.fromNumber}</p>
+              <p className="text-xs text-black">{selectedConversation?.fromNumber}</p>
               {selectedConversation?.contact?.email && (
-                <p className="text-xs text-gray-400 mt-0.5">{selectedConversation.contact.email}</p>
+                <p className="text-xs text-black mt-0.5">{selectedConversation.contact.email}</p>
               )}
             </div>
 
             {/* Lead Status */}
             {selectedConversation?.contact?.status && (
-              <div className="bg-[#1a1a2e] rounded-lg p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Lead Status</p>
-                <p className="text-xs text-gray-200 capitalize">{selectedConversation.contact.status}</p>
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Lead Status</p>
+                <p className="text-xs text-black capitalize">{selectedConversation.contact.status}</p>
               </div>
             )}
 
             {/* Assignment */}
-            <div className="bg-[#1a1a2e] rounded-lg p-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Assigned To</p>
+            <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Assigned To</p>
               {currentAssignment ? (
-                <p className="text-xs text-gray-200">{currentAssignment.assignedUserName}</p>
+                <p className="text-xs text-black">{currentAssignment.assignedUserName}</p>
               ) : (
-                <p className="text-xs text-gray-400 italic">Unassigned</p>
+                <p className="text-xs text-black italic">Unassigned</p>
               )}
               {seesAll && (
                 <button
@@ -811,11 +811,11 @@ export default function WhatsAppControl() {
             </div>
 
             {/* Conversation Status */}
-            <div className="bg-[#1a1a2e] rounded-lg p-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Conversation</p>
+            <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <p className="text-[10px] text-black uppercase tracking-wide mb-2 font-semibold">Conversation</p>
               <div className="flex items-center gap-1.5 mb-2">
                 <StatusDot status={selectedConversation?.conversationStatus || "open"} />
-                <span className="text-xs text-gray-200 capitalize">
+                <span className="text-xs text-black capitalize">
                   {selectedConversation?.conversationStatus || "open"}
                 </span>
               </div>
@@ -825,7 +825,7 @@ export default function WhatsAppControl() {
                 {selectedConversation?.conversationStatus !== "resolved" && (
                   <button
                     onClick={() => resolveConversation.mutate({ contactId: selectedContactId! })}
-                    className="w-full text-[11px] px-2 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-500 flex items-center justify-center gap-1"
+                    className="w-full text-[11px] px-2 py-1.5 bg-green-600 text-white rounded hover:bg-green-500 flex items-center justify-center gap-1"
                   >
                     <CheckCircle2 size={12} />
                     Resolve
@@ -850,7 +850,7 @@ export default function WhatsAppControl() {
                       Snooze
                     </button>
                     {showSnoozeMenu && (
-                      <div className="absolute top-full left-0 mt-1 w-full bg-[#1a1a2e] border border-gray-600 rounded shadow-lg z-50">
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded shadow-lg z-50">
                         {[
                           { label: "1 hour", hours: 1 },
                           { label: "4 hours", hours: 4 },
@@ -866,7 +866,7 @@ export default function WhatsAppControl() {
                                 durationHours: opt.hours,
                               });
                             }}
-                            className="w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700"
+                            className="w-full text-left px-3 py-1.5 text-xs text-black hover:bg-gray-100"
                           >
                             {opt.label}
                           </button>
@@ -880,9 +880,9 @@ export default function WhatsAppControl() {
 
             {/* Snoozed Until */}
             {selectedConversation?.conversationStatus === "snoozed" && selectedConversation?.snoozedUntil && (
-              <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-3">
-                <p className="text-[10px] text-yellow-400 uppercase tracking-wide mb-1">Snoozed Until</p>
-                <p className="text-xs text-yellow-200">
+              <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Snoozed Until</p>
+                <p className="text-xs text-black">
                   {new Date(selectedConversation.snoozedUntil).toLocaleString()}
                 </p>
               </div>
@@ -896,10 +896,10 @@ export default function WhatsAppControl() {
       {/* Assign Modal */}
       {showAssignModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowAssignModal(false)}>
-          <div className="bg-[#16213e] border border-gray-600 rounded-lg w-80 max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <span className="text-sm font-semibold text-gray-200">Assign Conversation</span>
-              <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-200">
+          <div className="bg-white border border-gray-300 rounded-lg w-80 max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-semibold text-black">Assign Conversation</span>
+              <button onClick={() => setShowAssignModal(false)} className="text-black hover:text-red-500">
                 <X size={16} />
               </button>
             </div>
@@ -909,7 +909,7 @@ export default function WhatsAppControl() {
                 placeholder="Search agents..."
                 value={assignSearch}
                 onChange={(e) => setAssignSearch(e.target.value)}
-                className="w-full px-3 py-1.5 bg-[#1a1a2e] border border-gray-600 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#25D366] mb-2"
+                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366] mb-2"
               />
               <div className="max-h-56 overflow-y-auto space-y-1">
                 {agents
@@ -918,11 +918,11 @@ export default function WhatsAppControl() {
                     <button
                       key={agent.id}
                       onClick={() => handleAssign(agent.id)}
-                      className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 transition-colors flex items-center justify-between"
+                      className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 transition-colors flex items-center justify-between"
                     >
-                      <span className="text-xs text-gray-200">{agent.name}</span>
+                      <span className="text-xs text-black">{agent.name}</span>
                       {agent.team && (
-                        <span className="text-[10px] text-gray-500 capitalize">{agent.team}</span>
+                        <span className="text-[10px] text-black capitalize">{agent.team}</span>
                       )}
                     </button>
                   ))}
@@ -935,10 +935,10 @@ export default function WhatsAppControl() {
       {/* Bulk Assign Modal */}
       {showBulkAssignModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowBulkAssignModal(false)}>
-          <div className="bg-[#16213e] border border-gray-600 rounded-lg w-80 max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <span className="text-sm font-semibold text-gray-200">Assign {selectedContactIds.size} conversations</span>
-              <button onClick={() => setShowBulkAssignModal(false)} className="text-gray-400 hover:text-gray-200">
+          <div className="bg-white border border-gray-300 rounded-lg w-80 max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-semibold text-black">Assign {selectedContactIds.size} conversations</span>
+              <button onClick={() => setShowBulkAssignModal(false)} className="text-black hover:text-red-500">
                 <X size={16} />
               </button>
             </div>
@@ -948,7 +948,7 @@ export default function WhatsAppControl() {
                 placeholder="Search agents..."
                 value={assignSearch}
                 onChange={(e) => setAssignSearch(e.target.value)}
-                className="w-full px-3 py-1.5 bg-[#1a1a2e] border border-gray-600 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#25D366] mb-2"
+                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366] mb-2"
               />
               <div className="max-h-56 overflow-y-auto space-y-1">
                 {agents
@@ -957,11 +957,11 @@ export default function WhatsAppControl() {
                     <button
                       key={agent.id}
                       onClick={() => handleBulkAssign(agent.id)}
-                      className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 transition-colors flex items-center justify-between"
+                      className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 transition-colors flex items-center justify-between"
                     >
-                      <span className="text-xs text-gray-200">{agent.name}</span>
+                      <span className="text-xs text-black">{agent.name}</span>
                       {agent.team && (
-                        <span className="text-[10px] text-gray-500 capitalize">{agent.team}</span>
+                        <span className="text-[10px] text-black capitalize">{agent.team}</span>
                       )}
                     </button>
                   ))}
@@ -974,10 +974,10 @@ export default function WhatsAppControl() {
       {/* Bulk Template Modal */}
       {showBulkTemplateModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowBulkTemplateModal(false)}>
-          <div className="bg-[#16213e] border border-gray-600 rounded-lg w-96 max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <span className="text-sm font-semibold text-gray-200">Send Template to {selectedContactIds.size} contacts</span>
-              <button onClick={() => setShowBulkTemplateModal(false)} className="text-gray-400 hover:text-gray-200">
+          <div className="bg-white border border-gray-300 rounded-lg w-96 max-h-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-semibold text-black">Send Template to {selectedContactIds.size} contacts</span>
+              <button onClick={() => setShowBulkTemplateModal(false)} className="text-black hover:text-red-500">
                 <X size={16} />
               </button>
             </div>
@@ -986,13 +986,13 @@ export default function WhatsAppControl() {
                 <button
                   key={t.sid}
                   onClick={() => handleBulkSendTemplate(t.sid, t.friendly_name)}
-                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <p className="text-xs font-medium text-gray-200">{t.friendly_name}</p>
+                  <p className="text-xs font-medium text-black">{t.friendly_name}</p>
                 </button>
               ))}
               {(!templates || templates.length === 0) && (
-                <p className="text-xs text-gray-500 text-center py-4">No templates available</p>
+                <p className="text-xs text-black text-center py-4">No templates available</p>
               )}
             </div>
           </div>
