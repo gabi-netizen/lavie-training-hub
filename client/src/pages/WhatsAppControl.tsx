@@ -699,6 +699,21 @@ export default function WhatsAppControl() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* 24h Window Expired Banner */}
+            {windowInfo.expired && hasSelectedConversation && (
+              <div className="mx-3 mt-2 mb-1 flex items-center justify-between gap-3 rounded-lg border border-amber-400 bg-amber-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-black leading-snug">
+                  ⚠️ חלון 24 שעות נסגר — ניתן לשלוח רק הודעת Template
+                </span>
+                <button
+                  onClick={() => alert("Template selection coming soon")}
+                  className="shrink-0 rounded-md bg-amber-400 px-3 py-1.5 text-xs font-bold text-black hover:bg-amber-500 transition-colors"
+                >
+                  Select Template
+                </button>
+              </div>
+            )}
+
             {/* Input Area */}
             <div className="px-3 py-2 border-t border-gray-200 bg-[#f0f2f5]">
               <div className="flex items-end gap-2">
