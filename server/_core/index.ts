@@ -18,9 +18,11 @@ import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
 import { ensureBrandsColumn } from "../ensureBrandsColumn";
+import { ensureEmailTrackingTables } from "../ensureEmailTables";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
+import { handleEmailTrackPixel, handleEmailLinkClick } from "../emailTracking";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -101,6 +103,12 @@ async function startServer() {
   // Twilio sends delivery/read status updates here (sent → delivered → read).
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/whatsapp/status", handleWhatsAppStatus);
+
+  // ─── Email Tracking Endpoints (public, no auth) ────────────────────────────
+  // Tracking pixel — records email opens
+  app.get("/api/email-track/:emailLogId.png", handleEmailTrackPixel);
+  // Link click tracking — records clicks and redirects to original URL
+  app.get("/api/email-link/:emailLogId/:linkIndex", handleEmailLinkClick);
 
   // ─── Stripe PaymentIntent creation ────────────────────────────────────────
   // Public endpoint — called by the payment page to initiate a Stripe payment.
@@ -280,6 +288,12 @@ async function startServer() {
         console.error("[CloudTalk] Startup sync error:", err)
       );
     }, 5000); // 5s delay to let the server fully warm up first
+    // Ensure email tracking tables/columns exist
+    setTimeout(() => {
+      ensureEmailTrackingTables().catch((err) =>
+        console.error("[DB] Error ensuring email tracking tables:", err)
+      );
+    }, 7000);
   });
 }
 

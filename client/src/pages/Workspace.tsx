@@ -24,6 +24,7 @@ import {
   MessageCircle, BookOpen
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
+import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
 import {
   Popover,
   PopoverContent,
@@ -2522,7 +2523,7 @@ export default function Workspace() {
   const [localDoneItems, setLocalDoneItems] = useState<Record<number, string>>({});
   const [listFilter, setListFilter] = useState<string>("active");
 
-  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp">("pitch");
+  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails">("pitch");
   const managerMode = activeTab === "manager";
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(() => {
     const saved = localStorage.getItem('ws_selectedAgentId');
@@ -3097,6 +3098,23 @@ export default function Workspace() {
                   )}
                 </button>
 
+                {/* Emails */}
+                <button
+                  onClick={() => setActiveTab("emails")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
+                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+                    background: activeTab === "emails" ? "#fff" : "transparent",
+                    color: activeTab === "emails" ? "#2563eb" : "#111827",
+                    boxShadow: activeTab === "emails" ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+                    borderBottom: activeTab === "emails" ? "2px solid #2563eb" : "2px solid transparent",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <Mail size={14} /> Emails
+                </button>
+
                 {/* Divider */}
                 <div style={{ flex: 1 }} />
 
@@ -3172,6 +3190,10 @@ export default function Workspace() {
                     });
                   }}
                 />
+              ) : activeTab === "emails" ? (
+                <div style={{ margin: "-12px -16px -16px", height: "calc(100% + 28px)", display: "flex" }}>
+                  <WorkspaceEmailPanel contactId={activeId} visible={activeTab === "emails"} />
+                </div>
               ) : (
                 <AgentPitchPanel />
               )}

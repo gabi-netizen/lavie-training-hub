@@ -301,10 +301,62 @@ export const emailLogs = mysqlTable("email_logs", {
   toEmail: varchar("toEmail", { length: 320 }),
   /** Postmark message ID for tracking */
   postmarkMessageId: varchar("postmarkMessageId", { length: 128 }),
+  /** HTML body of the sent email (for viewing in Emails tab) */
+  htmlBody: text("htmlBody"),
+  /** From address used when sending */
+  fromEmail: varchar("fromEmail", { length: 320 }),
+  /** When the email was first opened (tracking pixel hit) */
+  openedAt: timestamp("openedAt"),
+  /** Number of times the email was opened */
+  openCount: int("openCount").default(0).notNull(),
+  /** When a link in the email was first clicked */
+  clickedAt: timestamp("clickedAt"),
+  /** Number of link clicks across all links */
+  clickCount: int("clickCount").default(0).notNull(),
   sentAt: timestamp("sentAt").defaultNow().notNull(),
 });
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertEmailLog = typeof emailLogs.$inferInsert;
+
+/**
+ * Email link clicks — records each click on a tracked link in a sent email.
+ */
+export const emailLinkClicks = mysqlTable("email_link_clicks", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Reference to the email_logs row */
+  emailLogId: int("emailLogId").notNull(),
+  /** Zero-based index of the link in the email HTML */
+  linkIndex: int("linkIndex").notNull(),
+  /** The original URL the link pointed to */
+  originalUrl: text("originalUrl").notNull(),
+  /** When the link was clicked */
+  clickedAt: timestamp("clickedAt").defaultNow().notNull(),
+});
+export type EmailLinkClick = typeof emailLinkClicks.$inferSelect;
+export type InsertEmailLinkClick = typeof emailLinkClicks.$inferInsert;
+
+/**
+ * Email notifications — real-time alerts for agents when emails are opened or links clicked.
+ */
+export const emailNotifications = mysqlTable("email_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  /** The agent who should see this notification (sentByUserId from email_logs) */
+  userId: int("userId").notNull(),
+  /** Reference to the email_logs row */
+  emailLogId: int("emailLogId").notNull(),
+  /** Notification type */
+  type: mysqlEnum("type", ["opened", "clicked"]).notNull(),
+  /** Contact ID for display purposes */
+  contactId: int("contactId").notNull(),
+  /** Contact name for display (denormalized) */
+  contactName: varchar("contactName", { length: 256 }),
+  /** When the notification was created */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  /** When the agent read/dismissed this notification */
+  readAt: timestamp("readAt"),
+});
+export type EmailNotification = typeof emailNotifications.$inferSelect;
+export type InsertEmailNotification = typeof emailNotifications.$inferInsert;
 
 // ── Pitch Customizations ──
 export const pitchCustomizations = mysqlTable("pitch_customizations", {
