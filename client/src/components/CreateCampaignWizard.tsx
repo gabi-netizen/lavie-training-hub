@@ -27,6 +27,7 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
     channel: "whatsapp" as "whatsapp" | "sms",
     templateName: "",
     messageBody: "",
+    sendLimit: "" as string, // empty = send to all
     audienceFilter: {
       department: "" as any,
       leadType: "",
@@ -88,12 +89,15 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
   const handleNext = () => setStep(s => s + 1);
   const handleBack = () => setStep(s => s - 1);
 
+  const parsedSendLimit = formData.sendLimit ? parseInt(formData.sendLimit, 10) : undefined;
+
   const handleSubmit = () => {
     createCampaign.mutate({
       name: formData.name,
       channel: formData.channel,
       templateName: formData.channel === "whatsapp" ? formData.templateName : undefined,
       messageBody: formData.channel === "sms" ? formData.messageBody : undefined,
+      sendLimit: parsedSendLimit,
       audienceFilter: {
         department: formData.audienceFilter.department || undefined,
         leadType: formData.audienceFilter.leadType || undefined,
@@ -359,6 +363,40 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                   <p className="text-xs font-bold">Targeted Outreach</p>
                 </div>
               </div>
+
+              {/* Send Limit */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-black uppercase tracking-wider">Send To</label>
+                  {formData.sendLimit && (
+                    <button
+                      onClick={() => setFormData(prev => ({ ...prev, sendLimit: "" }))}
+                      className="text-[10px] font-bold text-blue-600 hover:underline"
+                    >
+                      Clear limit (send to all)
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={matchCount ?? undefined}
+                    placeholder={isCountLoading ? "..." : String(matchCount ?? 0)}
+                    value={formData.sendLimit}
+                    onChange={e => setFormData(prev => ({ ...prev, sendLimit: e.target.value }))}
+                    className="w-36 px-3 py-2 bg-gray-50 border-2 border-gray-100 rounded-lg focus:border-blue-600 focus:outline-none text-sm text-black font-bold"
+                  />
+                  <span className="text-xs text-black font-medium">
+                    out of <strong>{isCountLoading ? "..." : (matchCount ?? 0)}</strong> matching contacts
+                  </span>
+                </div>
+                {formData.sendLimit && parsedSendLimit && parsedSendLimit > 0 && (
+                  <p className="text-[10px] text-black font-bold">
+                    ⚠️ Will send to the first <strong>{parsedSendLimit}</strong> contacts only.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -399,6 +437,12 @@ export function CreateCampaignWizard({ onClose, onSuccess }: CreateCampaignWizar
                 <div className="p-4 flex justify-between items-center">
                   <span className="text-xs font-bold text-black opacity-60 uppercase">Audience</span>
                   <span className="text-sm font-black text-black">{matchCount} Contacts</span>
+                </div>
+                <div className="p-4 flex justify-between items-center">
+                  <span className="text-xs font-bold text-black opacity-60 uppercase">Send Limit</span>
+                  <span className="text-sm font-black text-black">
+                    {parsedSendLimit ? `First ${parsedSendLimit} contacts` : "All matching contacts"}
+                  </span>
                 </div>
                 <div className="p-4">
                   <span className="text-xs font-bold text-black opacity-60 uppercase block mb-2">Message Content</span>

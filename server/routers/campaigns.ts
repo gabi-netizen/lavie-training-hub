@@ -180,6 +180,7 @@ export const campaignsRouter = router({
         channel: z.enum(["whatsapp", "sms"]),
         templateName: z.string().optional(),
         messageBody: z.string().optional(),
+        sendLimit: z.number().int().positive().optional(),
         audienceFilter: audienceFilterSchema.optional(),
       })
     )
@@ -203,12 +204,17 @@ export const campaignsRouter = router({
         });
       }
 
+      // Store sendLimit inside audienceFilter JSON so it travels with the campaign record
+      const filterWithLimit: Record<string, any> | null = input.audienceFilter
+        ? { ...input.audienceFilter, _sendLimit: input.sendLimit ?? null }
+        : input.sendLimit ? { _sendLimit: input.sendLimit } : null;
+
       const [result] = await db.insert(campaigns).values({
         name: input.name,
         channel: input.channel,
         templateName: input.templateName || null,
         messageBody: input.messageBody || null,
-        audienceFilter: input.audienceFilter || null,
+        audienceFilter: filterWithLimit || null,
         createdByUserId: ctx.user.id,
       }).$returningId();
 
@@ -246,7 +252,13 @@ export const campaignsRouter = router({
 
       // Get contacts matching the filter
       const filter = (campaign.audienceFilter as Record<string, any>) || {};
-      const matchedContacts = await getFilteredContacts(filter);
+      const allMatchedContacts = await getFilteredContacts(filter);
+
+      // Apply optional send limit (stored as _sendLimit inside audienceFilter JSON)
+      const sendLimit: number | null = filter._sendLimit ?? null;
+      const matchedContacts = sendLimit && sendLimit > 0
+        ? allMatchedContacts.slice(0, sendLimit)
+        : allMatchedContacts;
 
       if (matchedContacts.length === 0) {
         throw new TRPCError({
