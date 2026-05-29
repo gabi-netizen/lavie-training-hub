@@ -1177,8 +1177,12 @@ function ContactCard({
             ><MessageCircle size={11} /> Send SMS</button>
             <button
               onClick={() => onAction("skip")}
-              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#6b7280', color: '#fff', whiteSpace: 'nowrap' }}
+              style={{ flex: '0.5 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#6b7280', color: '#fff', whiteSpace: 'nowrap' }}
             >N/A</button>
+            <button
+              onClick={() => onAction("sold")}
+              style={{ flex: '0.5 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#16a34a', color: '#fff', whiteSpace: 'nowrap' }}
+            >Sold ✓</button>
           </div>
 
           {/* Row 2: Take Payment + Send Email + Send WhatsApp */}
