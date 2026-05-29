@@ -341,8 +341,13 @@ export default function WhatsAppControl() {
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !hasSelectedConversation || selectedContactId === null) return;
-    replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
+    if (!messageInput.trim() || !hasSelectedConversation) return;
+    // Allow sending to unmatched conversations (contactId null) using phoneNumber fallback
+    if (selectedContactId !== null) {
+      replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
+    } else if (selectedPhoneNumber) {
+      replyMutation.mutate({ phoneNumber: selectedPhoneNumber, body: messageInput.trim(), channel: replyChannel });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -850,7 +855,7 @@ export default function WhatsAppControl() {
                 {/* Send button */}
                 <button
                   onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending}
+                  disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending || (selectedContactId === null && !selectedPhoneNumber)}
                   className={`p-2 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                     replyChannel === "sms" ? "bg-blue-600 hover:bg-blue-500" : "bg-[#25D366] hover:bg-[#1fb855]"
                   }`}

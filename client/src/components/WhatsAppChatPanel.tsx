@@ -107,6 +107,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
   const isManager = !user?.team;
 
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | undefined>(undefined);
   const [hasSelectedConversation, setHasSelectedConversation] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,12 +127,12 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
 
   const { data: messages, refetch: refetchMessages } =
     trpc.whatsapp.messages.useQuery(
-      { contactId: selectedContactId! },
-      { enabled: open && selectedContactId !== null, refetchInterval: open && selectedContactId !== null ? 5000 : false }
+      { contactId: selectedContactId, phoneNumber: selectedPhoneNumber },
+      { enabled: open && hasSelectedConversation, refetchInterval: open && hasSelectedConversation ? 5000 : false }
     );
 
   const { data: templates } = trpc.whatsapp.templates.useQuery(undefined, {
-    enabled: open && selectedContactId !== null,
+    enabled: open && hasSelectedConversation,
   });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
@@ -172,7 +173,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (selectedContactId !== null && open) markAsRead.mutate({ contactId: selectedContactId });
+    if (hasSelectedConversation && open) markAsRead.mutate({ contactId: selectedContactId, phoneNumber: selectedPhoneNumber });
     setShowTemplatePicker(false);
     setShowEmojiPicker(false);
   }, [selectedContactId, open]);
@@ -222,8 +223,13 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
-    if (!messageInput.trim() || selectedContactId === null) return;
-    replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
+    if (!messageInput.trim() || !hasSelectedConversation) return;
+    // Allow sending to unmatched conversations (contactId null) using phoneNumber fallback
+    if (selectedContactId !== null) {
+      replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
+    } else if (selectedPhoneNumber) {
+      replyMutation.mutate({ phoneNumber: selectedPhoneNumber, body: messageInput.trim(), channel: replyChannel });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -296,7 +302,11 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                 return (
                   <div
                     key={conv.contactId ?? conv.fromNumber ?? "null"}
-                    onClick={() => { setSelectedContactId(conv.contactId); setHasSelectedConversation(true); }}
+                    onClick={() => {
+                      setSelectedContactId(conv.contactId);
+                      setSelectedPhoneNumber(conv.contactId === null ? conv.fromNumber : undefined);
+                      setHasSelectedConversation(true);
+                    }}
                     className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-200 transition-colors ${
                       isSelected ? "bg-[#25D366]/10 border-l-2 border-l-[#25D366]" : "hover:bg-gray-100"
                     }`}
@@ -523,7 +533,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                   {/* Send button */}
                   <button
                     onClick={handleSendMessage}
-                    disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending}
+                    disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending || (selectedContactId === null && !selectedPhoneNumber)}
                     className={`p-2 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                       replyChannel === "sms" ? "bg-blue-600 hover:bg-blue-500" : "bg-[#25D366] hover:bg-[#1fb855]"
                     }`}

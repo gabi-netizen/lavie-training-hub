@@ -930,29 +930,44 @@ export const whatsappRouter = router({
   reply: protectedProcedure
     .input(
       z.object({
-        contactId: z.number(),
+        contactId: z.number().optional(),
+        phoneNumber: z.string().optional(),
         body: z.string().min(1).max(4096),
         channel: z.enum(["whatsapp", "sms"]),
+      }).refine((d) => d.contactId != null || (d.phoneNumber && d.phoneNumber.trim().length > 0), {
+        message: "Either contactId or phoneNumber must be provided",
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { contactId, body, channel } = input;
+      const { contactId, phoneNumber: rawPhoneNumber, body, channel } = input;
 
-      // Look up the contact
-      const contact = await getContact(contactId);
-      if (!contact) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
-      }
-      if (!contact.phone) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
-      }
+      // ─── Resolve the destination phone number ────────────────────────────
+      let e164Phone: string;
+      let resolvedContactId: number | null = contactId ?? null;
 
-      // Normalise to E.164
-      const normalisedPhone = normalisePhone(contact.phone);
-      if (!normalisedPhone) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
+      if (contactId != null) {
+        // Normal path: look up contact by ID
+        const contact = await getContact(contactId);
+        if (!contact) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+        }
+        if (!contact.phone) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
+        }
+        const normalisedPhone = normalisePhone(contact.phone);
+        if (!normalisedPhone) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
+        }
+        e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
+      } else {
+        // Unmatched path: use the raw phone number directly
+        const normalisedPhone = normalisePhone(rawPhoneNumber!);
+        if (!normalisedPhone) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise phone number" });
+        }
+        e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
+        resolvedContactId = null;
       }
-      const e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
 
       if (channel === "sms") {
         // ─── Send via SMS ─────────────────────────────────────────────────
@@ -991,14 +1006,14 @@ export const whatsappRouter = router({
         }
 
         const data = await res.json();
-        console.log(`[Reply/SMS] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${data.sid}`);
+        console.log(`[Reply/SMS] Sent by ${ctx.user.name ?? ctx.user.email} to ${resolvedContactId != null ? `contact #${resolvedContactId}` : "unmatched"} (${e164Phone}): ${data.sid}`);
 
         // Save outbound message to DB
         const db = await getDb();
         if (db) {
           try {
             await db.insert(whatsappMessages).values({
-              contactId,
+              contactId: resolvedContactId,
               direction: "outbound",
               body,
               templateName: null,
@@ -1022,7 +1037,7 @@ export const whatsappRouter = router({
           const result = await sendWhatsAppFreeText({ to: e164Phone, body });
 
           console.log(
-            `[Reply/WhatsApp] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${result.sid}`
+            `[Reply/WhatsApp] Sent by ${ctx.user.name ?? ctx.user.email} to ${resolvedContactId != null ? `contact #${resolvedContactId}` : "unmatched"} (${e164Phone}): ${result.sid}`
           );
 
           // Save outbound message to DB
@@ -1032,7 +1047,7 @@ export const whatsappRouter = router({
               const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
 
               await db.insert(whatsappMessages).values({
-                contactId,
+                contactId: resolvedContactId,
                 direction: "outbound",
                 body,
                 templateName: null,
