@@ -5,8 +5,8 @@
  * Other components can trigger a call via:
  *   window.dispatchEvent(new CustomEvent('cloudtalk:dial', { detail: { phone: '+44...' } }))
  */
-import { useEffect, useRef, useState } from "react";
-import { Phone, X, Minus } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Phone, X, Minus, RefreshCw } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const CLOUDTALK_ORIGINS = [
@@ -20,6 +20,17 @@ export default function FloatingDialler() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [hasIncoming, setHasIncoming] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Force the iframe to remount by incrementing the key
+    setIframeKey(k => k + 1);
+    // Also ensure the panel is expanded so the user can see it reload
+    setExpanded(true);
+    setTimeout(() => setRefreshing(false), 1500);
+  }, []);
 
   // Listen for dial events dispatched by ContactCard "Call Now"
   useEffect(() => {
@@ -91,6 +102,7 @@ export default function FloatingDialler() {
             </button>
           </div>
           <iframe
+            key={iframeKey}
             ref={iframeRef}
             src="https://phone.cloudtalk.io?partner=lavielabs"
             allow="microphone; camera; autoplay"
@@ -100,6 +112,18 @@ export default function FloatingDialler() {
           />
         </div>
       )}
+
+      {/* Refresh Click to Call button */}
+      <button
+        onClick={handleRefresh}
+        disabled={refreshing}
+        style={{ pointerEvents: "auto" }}
+        title="Refresh Click to Call connection"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-gray-700 shadow-md border border-gray-200 text-xs font-medium hover:bg-gray-50 transition-all duration-150 disabled:opacity-60"
+      >
+        <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+        {refreshing ? "Refreshing…" : "Refresh Click to Call"}
+      </button>
 
       {/* Floating toggle button */}
       <button
