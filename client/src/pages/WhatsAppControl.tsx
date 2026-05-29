@@ -748,8 +748,8 @@ export default function WhatsAppControl() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* 24h Window Expired Banner */}
-            {windowInfo.expired && hasSelectedConversation && (
+            {/* 24h Window Expired Banner — only shown for WhatsApp channel */}
+            {windowInfo.expired && hasSelectedConversation && replyChannel === "whatsapp" && (
               <div className="mx-3 mt-2 mb-1 flex items-center justify-between gap-3 rounded-lg border border-amber-400 bg-amber-50 px-4 py-2.5">
                 <span className="text-sm font-semibold text-black leading-snug">
                   ⚠️ 24-hour window expired — You can only send a Template message
@@ -835,8 +835,8 @@ export default function WhatsAppControl() {
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={windowInfo.expired ? "24h window expired — use a template" : "Type a message..."}
-                  disabled={windowInfo.expired}
+                  placeholder={windowInfo.expired && replyChannel === "whatsapp" ? "24h window expired — use a WhatsApp template" : replyChannel === "sms" ? "Type your SMS message..." : "Type a message..."}
+                  disabled={windowInfo.expired && replyChannel === "whatsapp"}
                   rows={1}
                   className="flex-1 resize-none bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
                   style={{ minHeight: "36px" }}
