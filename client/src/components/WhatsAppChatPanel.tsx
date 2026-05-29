@@ -113,6 +113,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
   const [includeResolved, setIncludeResolved] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [replyChannel, setReplyChannel] = useState<"whatsapp" | "sms">("whatsapp");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -145,6 +146,15 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
     },
   });
 
+  const replyMutation = trpc.whatsapp.reply.useMutation({
+    onSuccess: () => { setMessageInput(""); refetchMessages(); refetchConversations(); toast.success("Message sent"); },
+    onError: (err) => {
+      if (err.message.includes("63016") || err.message.includes("outside")) {
+        toast.error("24h window expired — send a template first.");
+      } else { toast.error(`Failed: ${err.message}`); }
+    },
+  });
+
   const sendTemplate = trpc.whatsapp.send.useMutation({
     onSuccess: () => { setShowTemplatePicker(false); refetchMessages(); refetchConversations(); toast.success("Template sent ✅"); },
     onError: (err) => toast.error(`Failed: ${err.message}`),
@@ -166,6 +176,18 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
     setShowTemplatePicker(false);
     setShowEmojiPicker(false);
   }, [selectedContactId, open]);
+
+  // Auto-detect reply channel from last inbound message
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      const lastInbound = [...messages].reverse().find((m: any) => m.direction === "inbound");
+      if (lastInbound && lastInbound.channel) {
+        setReplyChannel(lastInbound.channel as "whatsapp" | "sms");
+      } else {
+        setReplyChannel("whatsapp");
+      }
+    }
+  }, [messages, selectedContactId]);
 
   useEffect(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -201,7 +223,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
     if (!messageInput.trim() || selectedContactId === null) return;
-    sendFreeText.mutate({ contactId: selectedContactId, body: messageInput.trim() });
+    replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -382,9 +404,9 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                             <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">{msg.body || "[Template message]"}</p>
                             <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
                               {msg.channel === "sms" ? (
-                                <Smartphone size={10} className="text-blue-600" title="SMS" />
+                                <Smartphone size={10} className="text-blue-600" />
                               ) : (
-                                <MessageCircle size={10} className="text-green-600" title="WhatsApp" />
+                                <MessageCircle size={10} className="text-green-600" />
                               )}
                               <span className="text-[10px] text-black">{formatTime(msgDate)}</span>
                               {isOutbound && <MessageStatus status={msg.status} />}
@@ -417,6 +439,31 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
 
               {/* Input Area */}
               <div className="px-3 py-2 border-t border-gray-200 bg-[#f0f2f5]">
+                {/* Channel Toggle */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <button
+                    onClick={() => setReplyChannel("whatsapp")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                      replyChannel === "whatsapp"
+                        ? "bg-[#25D366] text-white shadow-sm"
+                        : "bg-gray-200 text-black hover:bg-gray-300"
+                    }`}
+                  >
+                    <span className="text-sm">💬</span>
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => setReplyChannel("sms")}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                      replyChannel === "sms"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-gray-200 text-black hover:bg-gray-300"
+                    }`}
+                  >
+                    <span className="text-sm">📱</span>
+                    <span>SMS</span>
+                  </button>
+                </div>
                 <div className="flex items-end gap-2">
                   {/* Emoji picker */}
                   <div className="relative">
@@ -457,8 +504,10 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                   {/* Send button */}
                   <button
                     onClick={handleSendMessage}
-                    disabled={!messageInput.trim() || windowInfo.expired || sendFreeText.isPending}
-                    className="p-2 bg-[#25D366] text-white rounded-full hover:bg-[#1fb855] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending}
+                    className={`p-2 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                      replyChannel === "sms" ? "bg-blue-600 hover:bg-blue-500" : "bg-[#25D366] hover:bg-[#1fb855]"
+                    }`}
                   >
                     <Send size={18} />
                   </button>

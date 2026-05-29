@@ -163,6 +163,7 @@ export default function WhatsAppControl() {
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showBulkTemplateModal, setShowBulkTemplateModal] = useState(false);
   const [assignSearch, setAssignSearch] = useState("");
+  const [replyChannel, setReplyChannel] = useState<"whatsapp" | "sms">("whatsapp");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -202,13 +203,29 @@ export default function WhatsAppControl() {
     onSuccess: () => refetchConversations(),
   });
 
-  const sendFreeText = trpc.whatsapp.sendFreeText.useMutation({
+    const sendFreeText = trpc.whatsapp.sendFreeText.useMutation({
     onSuccess: () => {
       setMessageInput("");
       refetchMessages();
       refetchConversations();
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  const replyMutation = trpc.whatsapp.reply.useMutation({
+    onSuccess: () => {
+      setMessageInput("");
+      refetchMessages();
+      refetchConversations();
+      toast.success("Message sent");
+    },
+    onError: (err) => {
+      if (err.message.includes("63016") || err.message.includes("outside")) {
+        toast.error("24h window expired — send a template first.");
+      } else {
+        toast.error(err.message);
+      }
+    },
   });
 
   const sendTemplate = trpc.whatsapp.send.useMutation({
@@ -268,6 +285,18 @@ export default function WhatsAppControl() {
     onError: (err) => toast.error(err.message),
   });
 
+  // ─── Auto-detect reply channel from last inbound message ───────────────────
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      const lastInbound = [...messages].reverse().find((m: any) => m.direction === "inbound");
+      if (lastInbound && lastInbound.channel) {
+        setReplyChannel(lastInbound.channel as "whatsapp" | "sms");
+      } else {
+        setReplyChannel("whatsapp");
+      }
+    }
+  }, [messages, selectedContactId]);
+
   // ─── Auto-scroll messages ──────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -313,7 +342,7 @@ export default function WhatsAppControl() {
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
     if (!messageInput.trim() || !hasSelectedConversation || selectedContactId === null) return;
-    sendFreeText.mutate({ contactId: selectedContactId, body: messageInput.trim() });
+    replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -603,7 +632,7 @@ export default function WhatsAppControl() {
             {/* Chat Header */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-[#f0f2f5]">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${selectedConversation?.lastMessage?.channel === 'sms' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-[#25D366] to-[#128C7E]'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${(selectedConversation?.lastMessage as any)?.channel === 'sms' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-[#25D366] to-[#128C7E]'}`}>
                   {((selectedConversation?.contact?.name || selectedConversation?.fromNumber || "?")[0] || "?").toUpperCase()}
                 </div>
                 <div>
@@ -733,6 +762,31 @@ export default function WhatsAppControl() {
 
             {/* Input Area */}
             <div className="px-3 py-2 border-t border-gray-200 bg-[#f0f2f5]">
+              {/* Channel Toggle */}
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <button
+                  onClick={() => setReplyChannel("whatsapp")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                    replyChannel === "whatsapp"
+                      ? "bg-[#25D366] text-white shadow-sm"
+                      : "bg-gray-200 text-black hover:bg-gray-300"
+                  }`}
+                >
+                  <span className="text-sm">💬</span>
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => setReplyChannel("sms")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                    replyChannel === "sms"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-gray-200 text-black hover:bg-gray-300"
+                  }`}
+                >
+                  <span className="text-sm">📱</span>
+                  <span>SMS</span>
+                </button>
+              </div>
               <div className="flex items-end gap-2">
                 {/* Emoji picker toggle */}
                 <div className="relative">
@@ -788,8 +842,10 @@ export default function WhatsAppControl() {
                 {/* Send button */}
                 <button
                   onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || windowInfo.expired || sendFreeText.isPending}
-                  className="p-2 bg-[#25D366] text-white rounded-full hover:bg-[#1fb855] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending}
+                  className={`p-2 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    replyChannel === "sms" ? "bg-blue-600 hover:bg-blue-500" : "bg-[#25D366] hover:bg-[#1fb855]"
+                  }`}
                 >
                   <Send size={18} />
                 </button>

@@ -926,6 +926,140 @@ export const whatsappRouter = router({
       return results;
     }),
 
+  // ─── Reply: unified reply procedure with channel selection (WhatsApp or SMS) ──────────
+  reply: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        body: z.string().min(1).max(4096),
+        channel: z.enum(["whatsapp", "sms"]),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { contactId, body, channel } = input;
+
+      // Look up the contact
+      const contact = await getContact(contactId);
+      if (!contact) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+      }
+      if (!contact.phone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
+      }
+
+      // Normalise to E.164
+      const normalisedPhone = normalisePhone(contact.phone);
+      if (!normalisedPhone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
+      }
+      const e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
+
+      if (channel === "sms") {
+        // ─── Send via SMS ─────────────────────────────────────────────────
+        const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+        const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+        const smsFrom = process.env.SMS_FROM_NUMBER || process.env.TWILIO_SMS_FROM || "+447700139589";
+
+        if (!accountSid || !authToken) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Twilio credentials not configured" });
+        }
+
+        const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+        const params = new URLSearchParams({
+          From: smsFrom,
+          To: e164Phone,
+          Body: body,
+        });
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          console.error(`[Reply/SMS] Twilio error: ${res.status} ${errText}`);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to send SMS: ${res.status} — ${errText}`,
+          });
+        }
+
+        const data = await res.json();
+        console.log(`[Reply/SMS] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${data.sid}`);
+
+        // Save outbound message to DB
+        const db = await getDb();
+        if (db) {
+          try {
+            await db.insert(whatsappMessages).values({
+              contactId,
+              direction: "outbound",
+              body,
+              templateName: null,
+              sentByUserId: ctx.user.id,
+              fromNumber: smsFrom,
+              toNumber: e164Phone,
+              twilioMessageSid: data.sid,
+              status: "sent",
+              isRead: true,
+              channel: "sms",
+            });
+          } catch (dbErr) {
+            console.error("[Reply/SMS] Failed to save outbound message to DB:", dbErr);
+          }
+        }
+
+        return { success: true, messageSid: data.sid as string, status: data.status as string };
+      } else {
+        // ─── Send via WhatsApp ────────────────────────────────────────────
+        try {
+          const result = await sendWhatsAppFreeText({ to: e164Phone, body });
+
+          console.log(
+            `[Reply/WhatsApp] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${result.sid}`
+          );
+
+          // Save outbound message to DB
+          const db = await getDb();
+          if (db) {
+            try {
+              const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
+
+              await db.insert(whatsappMessages).values({
+                contactId,
+                direction: "outbound",
+                body,
+                templateName: null,
+                sentByUserId: ctx.user.id,
+                fromNumber,
+                toNumber: e164Phone,
+                twilioMessageSid: result.sid,
+                status: "sent",
+                isRead: true,
+                channel: "whatsapp",
+              });
+            } catch (dbErr) {
+              console.error("[Reply/WhatsApp] Failed to save outbound message to DB:", dbErr);
+            }
+          }
+
+          return { success: true, messageSid: result.sid, status: result.status };
+        } catch (err) {
+          console.error("[Reply/WhatsApp] Send error:", err);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to send WhatsApp message: ${(err as Error).message}`,
+          });
+        }
+      }
+    }),
+
   // ─── Send SMS: send a plain SMS (not WhatsApp) to a contact's phone number ──────────
   sendSms: protectedProcedure
     .input(
