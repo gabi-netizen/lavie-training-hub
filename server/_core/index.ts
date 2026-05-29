@@ -24,6 +24,7 @@ import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
 import { handleEmailTrackPixel, handleEmailLinkClick } from "../emailTracking";
+import { startNightlyCron } from "../cron/nightlyCoolingPool";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -300,6 +301,10 @@ async function startServer() {
         console.error("[DB] Error ensuring email tracking tables:", err)
       );
     }, 7000);
+    // Start nightly Cooling Pool cron (23:00 UTC — moves N/A leads to unassigned)
+    setTimeout(() => {
+      startNightlyCron();
+    }, 8000);
   });
 }
 

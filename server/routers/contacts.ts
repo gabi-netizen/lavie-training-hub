@@ -546,6 +546,19 @@ export const contactsRouter = router({
         return { success: false, message: "Contact has no phone number" };
       }
 
+      // Block calling a contact that was already marked N/A today by this agent
+      if (contact.status === "no_answer" && contact.updatedAt) {
+        const updatedDate = new Date(contact.updatedAt);
+        const today = new Date();
+        if (
+          updatedDate.getFullYear() === today.getFullYear() &&
+          updatedDate.getMonth() === today.getMonth() &&
+          updatedDate.getDate() === today.getDate()
+        ) {
+          return { success: false, message: "This lead was already marked N/A today. You cannot call them again until tomorrow." };
+        }
+      }
+
       // Normalize phone: ensure it starts with + and contains only digits
       const rawPhone = contact.phone.replace(/[\s\-().]/g, "");
       const phone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
