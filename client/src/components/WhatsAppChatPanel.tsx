@@ -314,11 +314,16 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <StatusDot status={conv.conversationStatus || "open"} />
-                          {/* Channel dot: green = WhatsApp, blue = SMS */}
-                          <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                            conv.lastMessage?.channel === "sms" ? "bg-blue-500" : "bg-[#25D366]"
-                          }`} />
                           <span className="text-sm font-medium text-black truncate">{displayName}</span>
+                          {/* Channel icon: 💬 green = WhatsApp, 📱 blue = SMS */}
+                          <span
+                            className={`flex-shrink-0 text-[11px] leading-none ${
+                              conv.lastMessage?.channel === "sms" ? "text-blue-600" : "text-[#25D366]"
+                            }`}
+                            title={conv.lastMessage?.channel === "sms" ? "SMS" : "WhatsApp"}
+                          >
+                            {conv.lastMessage?.channel === "sms" ? "📱" : "💬"}
+                          </span>
                         </div>
                         <span className="text-[10px] text-black flex-shrink-0">{timeStr}</span>
                       </div>
