@@ -56,7 +56,7 @@ const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDas
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
-const WHATSAPP_CONTROL_ITEM = { path: "/whatsapp-control", label: "WhatsApp Control", icon: MessageSquare };
+const WHATSAPP_CONTROL_ITEM = { path: "/whatsapp-control", label: "Messages", icon: MessageSquare };
 const OPENING_DASHBOARD_ITEM = { path: "/opening-dashboard", label: "Opening", icon: Phone };
 
 // Mobile bottom bar items (flat — no dropdown on mobile)

@@ -991,6 +991,29 @@ export const whatsappRouter = router({
       const data = await res.json();
       console.log(`[SMS] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${data.sid}`);
 
+      // ─── Save outbound message to whatsapp_messages table ──────────────
+      const db = await getDb();
+      if (db) {
+        try {
+          await db.insert(whatsappMessages).values({
+            contactId,
+            direction: "outbound",
+            body: body,
+            templateName: null,
+            sentByUserId: ctx.user.id,
+            fromNumber: smsFrom,
+            toNumber: e164Phone,
+            twilioMessageSid: data.sid,
+            status: "sent",
+            isRead: true,
+            channel: "sms",
+          });
+          console.log(`[SMS] Outbound message saved to DB — contact #${contactId}, SID: ${data.sid}`);
+        } catch (dbErr) {
+          console.error("[SMS] Failed to save outbound message to DB:", dbErr);
+        }
+      }
+
       return { success: true, messageSid: data.sid as string, status: data.status as string };
     }),
 });

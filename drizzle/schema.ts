@@ -784,6 +784,8 @@ export const whatsappMessages = mysqlTable("whatsapp_messages", {
   isRead: boolean("isRead").default(false).notNull(),
   /** Media URL (image/video) attached to this message */
   mediaUrl: text("mediaUrl"),
+  /** Channel: whatsapp or sms */
+  channel: mysqlEnum("channel", ["whatsapp", "sms"]).default("whatsapp").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

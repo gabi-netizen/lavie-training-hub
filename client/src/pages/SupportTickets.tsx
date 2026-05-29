@@ -855,13 +855,13 @@ export default function SupportTickets() {
               {isManager && (
                 <button
                   onClick={() => setViewMode("whatsapp")}
-                  className={`relative px-3 py-1.5 text-xs font-medium transition-colors bg-green-700 text-white hover:bg-green-800 ${whatsappUnreadCount > 0 && viewMode !== "whatsapp" ? "animate-pulse" : ""}`}
+                  className={`relative px-3 py-1.5 text-xs font-medium transition-colors bg-blue-700 text-white hover:bg-blue-800 ${whatsappUnreadCount > 0 && viewMode !== "whatsapp" ? "animate-pulse" : ""}`}
                 >
                   <span className="flex items-center gap-1">
                     <MessageCircle className="h-3 w-3" />
-                    WhatsApp Control
+                    Messages
                     {whatsappUnreadCount > 0 && (
-                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-green-600 text-white text-[10px] font-bold">
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold">
                         {whatsappUnreadCount}
                       </span>
                     )}
@@ -948,7 +948,7 @@ export default function SupportTickets() {
       {/* WhatsApp Control View */}
       {viewMode === "whatsapp" && (
         <div className="px-0 py-0" style={{ height: "calc(100vh - 140px)" }}>
-          <Suspense fallback={<div className="flex items-center justify-center h-64"><p className="text-gray-500">Loading WhatsApp Control...</p></div>}>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><p className="text-gray-500">Loading Messages...</p></div>}>
             <WhatsAppControl />
           </Suspense>
         </div>

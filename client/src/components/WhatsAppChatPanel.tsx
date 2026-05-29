@@ -10,7 +10,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
   X, Send, MessageCircle, Search, Smile, CheckCircle2,
-  RotateCcw, Clock, FileText
+  RotateCcw, Clock, FileText, Smartphone
 } from "lucide-react";
 
 // ─── Common Emojis ──────────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#075e54]">
             <div className="flex items-center gap-2 text-white">
               <MessageCircle size={18} />
-              <span className="text-sm font-bold">WhatsApp Chat</span>
+              <span className="text-sm font-bold">Messages</span>
             </div>
             <button onClick={onClose} className="text-white hover:text-white/80 transition-colors">
               <X size={20} />
@@ -381,6 +381,11 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                             )}
                             <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">{msg.body || "[Template message]"}</p>
                             <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
+                              {msg.channel === "sms" ? (
+                                <Smartphone size={10} className="text-blue-600" title="SMS" />
+                              ) : (
+                                <MessageCircle size={10} className="text-green-600" title="WhatsApp" />
+                              )}
                               <span className="text-[10px] text-black">{formatTime(msgDate)}</span>
                               {isOutbound && <MessageStatus status={msg.status} />}
                             </div>

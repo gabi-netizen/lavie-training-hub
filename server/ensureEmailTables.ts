@@ -74,4 +74,15 @@ export async function ensureEmailTrackingTables() {
   } catch (err) {
     console.error("[DB] Error creating email_notifications table:", err);
   }
+
+  // ── whatsapp_messages: channel column ──────────────────────────────────────
+  try {
+    const [msgColumns] = await db.execute(sql`SHOW COLUMNS FROM whatsapp_messages LIKE 'channel'`);
+    if (Array.isArray(msgColumns) && msgColumns.length === 0) {
+      console.log("[DB] Adding 'channel' column to whatsapp_messages...");
+      await db.execute(sql`ALTER TABLE whatsapp_messages ADD COLUMN channel ENUM('whatsapp', 'sms') DEFAULT 'whatsapp' NOT NULL`);
+    }
+  } catch (err) {
+    console.error("[DB] Error adding channel column to whatsapp_messages:", err);
+  }
 }

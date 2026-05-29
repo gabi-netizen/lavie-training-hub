@@ -14,6 +14,7 @@ import { handleGmailWebhook } from "../webhooks/gmail";
 import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { handleWhatsAppIncoming } from "../webhooks/whatsappIncoming";
 import { handleWhatsAppStatus } from "../webhooks/whatsappStatus";
+import { handleSMSIncoming } from "../webhooks/smsIncoming";
 import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
@@ -98,6 +99,11 @@ async function startServer() {
   // parsed as form fields (Body, From, To, MessageSid, etc.).
   // Must be registered BEFORE tRPC middleware.
   app.post("/api/whatsapp/incoming", handleWhatsAppIncoming);
+
+  // ─── SMS Incoming Webhook ───────────────────────────────────────────────────
+  // Twilio sends application/x-www-form-urlencoded POST requests here.
+  // Must be registered BEFORE tRPC middleware.
+  app.post("/api/webhooks/sms-incoming", handleSMSIncoming);
 
   // ─── WhatsApp Status Callback Webhook ─────────────────────────────────────────
   // Twilio sends delivery/read status updates here (sent → delivered → read).
