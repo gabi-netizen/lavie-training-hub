@@ -302,7 +302,11 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                     }`}
                   >
                     {/* Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${
+                      conv.lastMessage?.channel === "sms"
+                        ? "bg-gradient-to-br from-blue-500 to-indigo-600"
+                        : "bg-gradient-to-br from-[#25D366] to-[#128C7E]"
+                    }`}>
                       {(displayName[0] || "?").toUpperCase()}
                     </div>
                     {/* Content */}
@@ -310,6 +314,10 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <StatusDot status={conv.conversationStatus || "open"} />
+                          {/* Channel dot: green = WhatsApp, blue = SMS */}
+                          <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                            conv.lastMessage?.channel === "sms" ? "bg-blue-500" : "bg-[#25D366]"
+                          }`} />
                           <span className="text-sm font-medium text-black truncate">{displayName}</span>
                         </div>
                         <span className="text-[10px] text-black flex-shrink-0">{timeStr}</span>
@@ -396,7 +404,13 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                         )}
                         <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-1`}>
                           <div className={`max-w-[65%] px-3 py-1.5 rounded-lg text-sm relative ${
-                            isOutbound ? "bg-[#dcf8c6] text-black rounded-tr-none" : "bg-white text-black rounded-tl-none shadow-sm"
+                            msg.channel === "sms"
+                              ? isOutbound
+                                ? "bg-blue-100 text-black rounded-tr-none border border-blue-200"
+                                : "bg-blue-50 text-black rounded-tl-none shadow-sm border border-blue-200"
+                              : isOutbound
+                                ? "bg-[#dcf8c6] text-black rounded-tr-none"
+                                : "bg-white text-black rounded-tl-none shadow-sm"
                           }`}>
                             {msg.mediaUrl && (
                               <img src={msg.mediaUrl} alt="Media" className="max-w-full rounded mb-1 max-h-48 object-cover" />
@@ -443,24 +457,24 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <button
                     onClick={() => setReplyChannel("whatsapp")}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all min-w-[90px] ${
                       replyChannel === "whatsapp"
                         ? "bg-[#25D366] text-white shadow-sm"
-                        : "bg-gray-200 text-black hover:bg-gray-300"
+                        : "bg-[#25D366]/20 text-black hover:bg-[#25D366]/30"
                     }`}
                   >
-                    <span className="text-sm">💬</span>
+                    <span>💬</span>
                     <span>WhatsApp</span>
                   </button>
                   <button
                     onClick={() => setReplyChannel("sms")}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all min-w-[90px] ${
                       replyChannel === "sms"
                         ? "bg-blue-600 text-white shadow-sm"
-                        : "bg-gray-200 text-black hover:bg-gray-300"
+                        : "bg-blue-600/20 text-black hover:bg-blue-600/30"
                     }`}
                   >
-                    <span className="text-sm">📱</span>
+                    <span>📱</span>
                     <span>SMS</span>
                   </button>
                 </div>

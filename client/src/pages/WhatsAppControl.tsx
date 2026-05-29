@@ -457,7 +457,7 @@ export default function WhatsAppControl() {
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366]"
+              className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366]"
             />
           </div>
           <div className="flex items-center justify-between">
@@ -573,11 +573,10 @@ export default function WhatsAppControl() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <StatusDot status={conv.conversationStatus || "open"} />
-                        {conv.lastMessage?.channel === 'sms' ? (
-                          <SmartphoneIcon size={12} className="text-blue-600" />
-                        ) : (
-                          <MessageCircle size={12} className="text-green-600" />
-                        )}
+                        {/* Channel dot: green = WhatsApp, blue = SMS */}
+                        <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                          conv.lastMessage?.channel === "sms" ? "bg-blue-500" : "bg-[#25D366]"
+                        }`} />
                         <span className="text-sm font-medium text-black truncate">
                           {displayName}
                         </span>
@@ -705,9 +704,13 @@ export default function WhatsAppControl() {
                       <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-1`}>
                         <div
                           className={`max-w-[65%] px-3 py-1.5 rounded-lg text-sm relative ${
-                            isOutbound
-                              ? "bg-[#dcf8c6] text-black rounded-tr-none"
-                              : "bg-white text-black rounded-tl-none shadow-sm"
+                            msg.channel === "sms"
+                              ? isOutbound
+                                ? "bg-blue-100 text-black rounded-tr-none border border-blue-200"
+                                : "bg-blue-50 text-black rounded-tl-none shadow-sm border border-blue-200"
+                              : isOutbound
+                                ? "bg-[#dcf8c6] text-black rounded-tr-none"
+                                : "bg-white text-black rounded-tl-none shadow-sm"
                           }`}
                         >
                           {/* Media */}
@@ -766,24 +769,24 @@ export default function WhatsAppControl() {
               <div className="flex items-center gap-1.5 mb-1.5">
                 <button
                   onClick={() => setReplyChannel("whatsapp")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all min-w-[90px] ${
                     replyChannel === "whatsapp"
                       ? "bg-[#25D366] text-white shadow-sm"
-                      : "bg-gray-200 text-black hover:bg-gray-300"
+                      : "bg-[#25D366]/20 text-black hover:bg-[#25D366]/30"
                   }`}
                 >
-                  <span className="text-sm">💬</span>
+                  <span>💬</span>
                   <span>WhatsApp</span>
                 </button>
                 <button
                   onClick={() => setReplyChannel("sms")}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all min-w-[90px] ${
                     replyChannel === "sms"
                       ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-gray-200 text-black hover:bg-gray-300"
+                      : "bg-blue-600/20 text-black hover:bg-blue-600/30"
                   }`}
                 >
-                  <span className="text-sm">📱</span>
+                  <span>📱</span>
                   <span>SMS</span>
                 </button>
               </div>
@@ -835,7 +838,7 @@ export default function WhatsAppControl() {
                   placeholder={windowInfo.expired ? "24h window expired — use a template" : "Type a message..."}
                   disabled={windowInfo.expired}
                   rows={1}
-                  className="flex-1 resize-none bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
+                  className="flex-1 resize-none bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
                   style={{ minHeight: "36px" }}
                 />
 
@@ -1029,7 +1032,7 @@ export default function WhatsAppControl() {
                 placeholder="Search agents..."
                 value={assignSearch}
                 onChange={(e) => setAssignSearch(e.target.value)}
-                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366] mb-2"
+                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366] mb-2"
               />
               <div className="max-h-56 overflow-y-auto space-y-1">
                 {agents
@@ -1068,7 +1071,7 @@ export default function WhatsAppControl() {
                 placeholder="Search agents..."
                 value={assignSearch}
                 onChange={(e) => setAssignSearch(e.target.value)}
-                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm text-black placeholder-gray-400 focus:outline-none focus:border-[#25D366] mb-2"
+                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366] mb-2"
               />
               <div className="max-h-56 overflow-y-auto space-y-1">
                 {agents

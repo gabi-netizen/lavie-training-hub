@@ -1223,7 +1223,7 @@ function ContactCard({
                     style={{ width: '100%', minHeight: 80, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', color: '#111827' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: '#111827', opacity: 0.6 }}>{smsBody.length}/1600</span>
+                    <span style={{ fontSize: 11, color: '#000000' }}>{smsBody.length}/1600</span>
                     <button
                       onClick={() => { if (!smsBody.trim() || sendSmsMutation.isPending) return; sendSmsMutation.mutate({ contactId: contact.id, body: smsBody.trim() }); }}
                       disabled={!smsBody.trim() || sendSmsMutation.isPending}
@@ -1232,7 +1232,7 @@ function ContactCard({
                   </div>
                 </div>
               )}
-              <button onClick={() => { setSmsOpen(false); setSmsBody(''); }} style={{ marginTop: 8, fontSize: 11, color: '#111827', opacity: 0.6, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Close</button>
+              <button onClick={() => { setSmsOpen(false); setSmsBody(''); }} style={{ marginTop: 8, fontSize: 11, color: '#000000', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Close</button>
             </div>
           )}
 
@@ -1245,9 +1245,9 @@ function ContactCard({
               {!contact.phone ? (
                 <p style={{ fontSize: 12, color: '#dc2626' }}>⚠ No phone number on file</p>
               ) : waTemplatesLoading ? (
-                <p style={{ fontSize: 12, color: '#6b7280' }}>Loading templates…</p>
+                <p style={{ fontSize: 12, color: '#000000' }}>Loading templates…</p>
               ) : !whatsappTemplates || whatsappTemplates.length === 0 ? (
-                <p style={{ fontSize: 12, color: '#6b7280' }}>No WhatsApp templates found in Twilio</p>
+                <p style={{ fontSize: 12, color: '#000000' }}>No WhatsApp templates found in Twilio</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {whatsappTemplates.filter((tpl) => {
@@ -1285,7 +1285,7 @@ function ContactCard({
                       onMouseLeave={(e) => { (e.target as HTMLElement).style.borderColor = '#d1d5db'; }}
                     >
                       {tpl.friendly_name}
-                      <span style={{ display: 'block', fontSize: 10, color: '#9ca3af', fontWeight: 400, marginTop: 2 }}>
+                      <span style={{ display: 'block', fontSize: 10, color: '#000000', fontWeight: 400, marginTop: 2 }}>
                         {tpl.language || 'en'} • Click to send
                       </span>
                     </button>
@@ -1294,7 +1294,7 @@ function ContactCard({
               )}
               <button
                 onClick={() => setWhatsappOpen(false)}
-                style={{ marginTop: 8, fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                style={{ marginTop: 8, fontSize: 11, color: '#000000', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 Close
               </button>
