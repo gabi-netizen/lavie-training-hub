@@ -44,8 +44,8 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages } from "../../drizzle/schema";
-import { eq, or } from "drizzle-orm";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema } from "../../drizzle/schema";
+import { eq, or, and, sql, ne, isNull, isNotNull, inArray, notInArray, count as drizzleCount, gte, lte } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
 import { getZohoBillingDataByEmail } from "../zohoBilling";
 
@@ -952,5 +952,209 @@ export const contactsRouter = router({
     .query(async ({ input }) => {
       if (!input.email) return { found: false } as any;
       return getZohoBillingDataByEmail(input.email);
+    }),
+
+  // ─── Data Management Dashboard (admin only) ─────────────────────────────────
+  dataManagement: adminProcedure
+    .input(
+      z.object({
+        dateFilter: z.enum(["today", "this_week", "this_month", "all"]).default("all"),
+        customFrom: z.string().optional(),
+        customTo: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // ── Calculate date boundaries ──────────────────────────────────────────
+      const now = new Date();
+      let dateFrom: Date | null = null;
+      let dateTo: Date | null = null;
+
+      if (input.dateFilter === "today") {
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        dateTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      } else if (input.dateFilter === "this_week") {
+        // Monday start
+        const dayOfWeek = now.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0);
+        dateTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      } else if (input.dateFilter === "this_month") {
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        dateTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      } else if (input.dateFilter === "all" && input.customFrom) {
+        dateFrom = new Date(input.customFrom);
+        dateTo = input.customTo ? new Date(input.customTo + "T23:59:59") : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      }
+      // "all" with no custom range = no date filter
+
+      // ── Build base conditions ──────────────────────────────────────────────
+      const baseConditions = [
+        eq(contactsSchema.department, "opening"),
+        isNotNull(contactsSchema.agentName),
+        ne(contactsSchema.agentName, ""),
+      ];
+
+      if (dateFrom && dateTo) {
+        baseConditions.push(gte(contactsSchema.updatedAt, dateFrom));
+        baseConditions.push(lte(contactsSchema.updatedAt, dateTo));
+      }
+
+      // ── Fetch all relevant contacts in one query ───────────────────────────
+      const allContacts = await db
+        .select({
+          agentName: contactsSchema.agentName,
+          status: contactsSchema.status,
+          callbackAt: contactsSchema.callbackAt,
+          agentEmail: contactsSchema.agentEmail,
+        })
+        .from(contactsSchema)
+        .where(and(...baseConditions));
+
+      // ── Group by agent and compute stats ───────────────────────────────────
+      const agentMap = new Map<string, {
+        assigned: number;
+        worked: number;
+        na: number;
+        sold: number;
+        done: number;
+        callback: number;
+        remaining: number;
+        burnRate: number;
+      }>();
+
+      for (const row of allContacts) {
+        const agent = row.agentName!;
+        if (!agentMap.has(agent)) {
+          agentMap.set(agent, { assigned: 0, worked: 0, na: 0, sold: 0, done: 0, callback: 0, remaining: 0, burnRate: 0 });
+        }
+        const stats = agentMap.get(agent)!;
+        stats.assigned++;
+
+        // "Worked" = any status NOT in ('new', 'assigned')
+        const isWorked = row.status !== "new" && row.status !== "assigned";
+        if (isWorked) stats.worked++;
+
+        if (row.status === "no_answer") stats.na++;
+        if (row.status === "done_deal") stats.sold++;
+        if (row.status === "done") stats.done++;
+        if (row.callbackAt !== null) stats.callback++;
+      }
+
+      // Calculate derived fields
+      const agents: Array<{
+        agentName: string;
+        assigned: number;
+        worked: number;
+        na: number;
+        sold: number;
+        done: number;
+        callback: number;
+        remaining: number;
+        burnRate: number;
+      }> = [];
+
+      for (const [agentName, stats] of Array.from(agentMap.entries())) {
+        stats.remaining = stats.assigned - stats.worked;
+        stats.burnRate = stats.worked > 0 ? Math.round((stats.na / stats.worked) * 100) : 0;
+        agents.push({ agentName, ...stats });
+      }
+
+      // Sort by burn rate descending
+      agents.sort((a, b) => b.burnRate - a.burnRate);
+
+      // ── Summary totals (these are NOT filtered by date — they show overall state) ──
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0);
+
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+
+      // Total data in opening department (no date filter)
+      const [totalDataResult] = await db
+        .select({ count: drizzleCount() })
+        .from(contactsSchema)
+        .where(eq(contactsSchema.department, "opening"));
+      const totalData = totalDataResult?.count ?? 0;
+
+      // Unassigned: agentName is null/empty OR agentEmail = trial@lavielabs.com
+      const [unassignedResult] = await db
+        .select({ count: drizzleCount() })
+        .from(contactsSchema)
+        .where(
+          and(
+            eq(contactsSchema.department, "opening"),
+            or(
+              isNull(contactsSchema.agentName),
+              eq(contactsSchema.agentName, ""),
+              eq(contactsSchema.agentEmail, "trial@lavielabs.com")
+            )
+          )
+        );
+      const unassigned = unassignedResult?.count ?? 0;
+
+      // Deals today
+      const [dealsTodayResult] = await db
+        .select({ count: drizzleCount() })
+        .from(contactsSchema)
+        .where(
+          and(
+            eq(contactsSchema.department, "opening"),
+            eq(contactsSchema.status, "done_deal"),
+            gte(contactsSchema.updatedAt, todayStart),
+            lte(contactsSchema.updatedAt, todayEnd)
+          )
+        );
+      const dealsToday = dealsTodayResult?.count ?? 0;
+
+      // Deals this week
+      const [dealsWeekResult] = await db
+        .select({ count: drizzleCount() })
+        .from(contactsSchema)
+        .where(
+          and(
+            eq(contactsSchema.department, "opening"),
+            eq(contactsSchema.status, "done_deal"),
+            gte(contactsSchema.updatedAt, weekStart),
+            lte(contactsSchema.updatedAt, todayEnd)
+          )
+        );
+      const dealsThisWeek = dealsWeekResult?.count ?? 0;
+
+      // Deals this month
+      const [dealsMonthResult] = await db
+        .select({ count: drizzleCount() })
+        .from(contactsSchema)
+        .where(
+          and(
+            eq(contactsSchema.department, "opening"),
+            eq(contactsSchema.status, "done_deal"),
+            gte(contactsSchema.updatedAt, monthStart),
+            lte(contactsSchema.updatedAt, todayEnd)
+          )
+        );
+      const dealsThisMonth = dealsMonthResult?.count ?? 0;
+
+      // Overall burn rate from the filtered agent data
+      const totalWorked = agents.reduce((sum, a) => sum + a.worked, 0);
+      const totalNA = agents.reduce((sum, a) => sum + a.na, 0);
+      const overallBurnRate = totalWorked > 0 ? Math.round((totalNA / totalWorked) * 100) : 0;
+
+      return {
+        agents,
+        summary: {
+          totalData,
+          unassigned,
+          dealsToday,
+          dealsThisWeek,
+          dealsThisMonth,
+          overallBurnRate,
+        },
+      };
     }),
 });

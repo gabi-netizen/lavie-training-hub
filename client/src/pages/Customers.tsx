@@ -18,6 +18,10 @@ import {
   UserPlus,
   Trash2,
   UserCog,
+  Database,
+  Flame,
+  Target,
+  BarChart3,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -270,7 +274,18 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [currentPage, setCurrentPage] = useState(1);
 
   // ─── Department tab state ─────────────────────────────────────────────────
-  const [department, setDepartment] = useState<"opening" | "retention">("opening");
+  const [department, setDepartment] = useState<"opening" | "retention" | "data_management">("opening");
+
+  // ─── User role for admin-only features ───────────────────────────────────
+  const { data: currentUser } = trpc.auth.me.useQuery();
+  const isAdmin = currentUser?.role === "admin";
+
+  // ─── Data Management state ───────────────────────────────────────────────
+  const [dmDateFilter, setDmDateFilter] = useState<"today" | "this_week" | "this_month" | "all">("all");
+  const { data: dmData, isLoading: dmLoading } = trpc.contacts.dataManagement.useQuery(
+    { dateFilter: dmDateFilter },
+    { enabled: department === "data_management" && isAdmin }
+  );
 
   // ─── Import department picker state ───────────────────────────────────────
   const [showImportDeptPicker, setShowImportDeptPicker] = useState(false);
@@ -287,7 +302,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
-    department,
+    department: department === "data_management" ? "opening" : department,
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
     leadDateTo: filterLeadDateTo || undefined,
@@ -299,7 +314,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
-    department,
+    department: department === "data_management" ? "opening" : department,
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
     leadDateTo: filterLeadDateTo || undefined,
@@ -506,7 +521,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 font-semibold border-2 border-indigo-800"
               onClick={() => {
-                setImportDepartment(department);
+                setImportDepartment(department === "data_management" ? "opening" : department);
                 setShowImportDeptPicker(true);
               }}
               disabled={importing}
@@ -522,7 +537,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white h-9 px-4 font-semibold border-2 border-green-800"
               onClick={() => {
-                setAddForm({ ...emptyForm(), department });
+                setAddForm({ ...emptyForm(), department: department === "data_management" ? "opening" : department });
                 setShowAddModal(true);
               }}
             >
@@ -535,15 +550,17 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
         {/* ── Department Tabs ── */}
         <div className="mt-4">
-          <Tabs value={department} onValueChange={(v) => { setDepartment(v as "opening" | "retention"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
+          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
             <TabsList>
               <TabsTrigger value="opening" className="px-6">Opening</TabsTrigger>
               <TabsTrigger value="retention" className="px-6">Retention</TabsTrigger>
+              {isAdmin && <TabsTrigger value="data_management" className="px-6">Data Management</TabsTrigger>}
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Stats row */}
+        {/* Stats row (hidden when Data Management tab is active) */}
+        {department !== "data_management" && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {[
             { icon: Users,      label: "Total Contacts", value: totalContacts, colour: "text-indigo-600 bg-indigo-50" },
@@ -562,9 +579,167 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             </div>
           ))}
         </div>
+        )}
       </div>
 
-      {/* ── Search & Filters ── */}
+      {/* ── Data Management Tab Content ── */}
+      {department === "data_management" && isAdmin && (
+        <div className="px-4 md:px-8 py-4 md:py-6">
+          {dmLoading ? (
+            <div className="flex items-center justify-center h-48 text-gray-900">
+              <RefreshCw className="animate-spin mr-2" size={18} /> Loading data management stats…
+            </div>
+          ) : dmData ? (
+            <>
+              {/* A) Top Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                {/* Total Data */}
+                <div className="flex items-center gap-3 bg-white rounded-xl border-2 border-gray-900 px-4 py-3 shadow-sm">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-indigo-600 bg-indigo-50">
+                    <Database size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900 leading-none">{dmData.summary.totalData.toLocaleString()}</p>
+                    <p className="text-xs text-gray-900 mt-0.5">Total Data</p>
+                  </div>
+                </div>
+                {/* Unassigned */}
+                <div className="flex items-center gap-3 bg-white rounded-xl border-2 border-gray-900 px-4 py-3 shadow-sm">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-red-600 bg-red-50">
+                    <AlertCircle size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900 leading-none">{dmData.summary.unassigned.toLocaleString()}</p>
+                    <p className="text-xs text-gray-900 mt-0.5">Unassigned</p>
+                  </div>
+                </div>
+                {/* Deals */}
+                <div className="flex items-center gap-3 bg-white rounded-xl border-2 border-gray-900 px-4 py-3 shadow-sm">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-green-600 bg-green-50">
+                    <Target size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900 leading-none">{dmData.summary.dealsToday} / {dmData.summary.dealsThisWeek} / {dmData.summary.dealsThisMonth}</p>
+                    <p className="text-xs text-gray-900 mt-0.5">Deals (Today / Week / Month)</p>
+                  </div>
+                </div>
+                {/* Overall Burn Rate */}
+                <div className="flex items-center gap-3 bg-white rounded-xl border-2 border-gray-900 px-4 py-3 shadow-sm">
+                  <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", dmData.summary.overallBurnRate > 60 ? "text-red-600 bg-red-50" : dmData.summary.overallBurnRate > 40 ? "text-amber-600 bg-amber-50" : "text-green-600 bg-green-50")}>
+                    <Flame size={18} />
+                  </div>
+                  <div>
+                    <p className={cn("text-xl font-bold leading-none", dmData.summary.overallBurnRate > 60 ? "text-red-600" : dmData.summary.overallBurnRate > 40 ? "text-amber-600" : "text-gray-900")}>{dmData.summary.overallBurnRate}%</p>
+                    <p className="text-xs text-gray-900 mt-0.5">Overall Burn Rate</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* B) Date Filter Bar */}
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-sm font-semibold text-gray-900 mr-2">Filter by:</span>
+                {(["today", "this_week", "this_month", "all"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setDmDateFilter(f)}
+                    className={cn(
+                      "px-4 py-2 text-sm font-semibold rounded-lg border-2 transition-colors",
+                      dmDateFilter === f
+                        ? "bg-indigo-600 text-white border-indigo-800"
+                        : "bg-white text-gray-900 border-gray-900 hover:bg-gray-50"
+                    )}
+                  >
+                    {f === "today" ? "Today" : f === "this_week" ? "This Week" : f === "this_month" ? "This Month" : "All"}
+                  </button>
+                ))}
+              </div>
+
+              {/* C) Main Table — Agent Performance */}
+              <div className="bg-white rounded-xl border-2 border-gray-900 shadow-sm overflow-hidden mb-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-900">
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Agent Name</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Assigned</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Worked</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">NA</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Sold</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Done</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Callback</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Remaining</th>
+                        <th className="text-center px-3 py-3 text-xs font-semibold text-gray-900 uppercase tracking-wide">Burn Rate %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {dmData.agents.map((agent: { agentName: string; assigned: number; worked: number; na: number; sold: number; done: number; callback: number; remaining: number; burnRate: number }) => (
+                        <tr key={agent.agentName} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900">{agent.agentName}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center">{agent.assigned}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center">{agent.worked}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center">{agent.na}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center font-semibold text-green-700">{agent.sold}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center">{agent.done}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center">{agent.callback}</td>
+                          <td className="px-3 py-3 text-sm text-gray-900 text-center font-semibold">{agent.remaining}</td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={cn(
+                              "inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold",
+                              agent.burnRate > 60 ? "bg-red-100 text-red-700" :
+                              agent.burnRate >= 40 ? "bg-amber-100 text-amber-700" :
+                              "bg-green-100 text-green-700"
+                            )}>
+                              {agent.burnRate}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {/* TOTAL row */}
+                      <tr className="bg-gray-100 border-t-2 border-gray-900 font-bold">
+                        <td className="px-4 py-3 text-sm text-gray-900 font-bold">TOTAL</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold">{dmData.agents.reduce((s: number, a: any) => s + a.assigned, 0)}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold">{dmData.agents.reduce((s: number, a: any) => s + a.worked, 0)}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold">{dmData.agents.reduce((s: number, a: any) => s + a.na, 0)}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold text-green-700">{dmData.agents.reduce((s: number, a: any) => s + a.sold, 0)}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold">{dmData.agents.reduce((s: number, a: any) => s + a.done, 0)}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold">{dmData.agents.reduce((s: number, a: any) => s + a.callback, 0)}</td>
+                        <td className="px-3 py-3 text-sm text-gray-900 text-center font-bold">{dmData.agents.reduce((s: number, a: any) => s + a.remaining, 0)}</td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={cn(
+                            "inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold",
+                            dmData.summary.overallBurnRate > 60 ? "bg-red-100 text-red-700" :
+                            dmData.summary.overallBurnRate >= 40 ? "bg-amber-100 text-amber-700" :
+                            "bg-green-100 text-green-700"
+                          )}>
+                            {dmData.summary.overallBurnRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* D) Bottom Section — Cooling Pool Status (placeholder) */}
+              <div className="bg-white rounded-xl border-2 border-gray-900 px-6 py-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 size={18} className="text-gray-900" />
+                  <h3 className="text-base font-bold text-gray-900">Cooling Pool & Smart Retry</h3>
+                </div>
+                <p className="text-sm text-gray-900">Coming Soon — This section will show leads in the cooling pool, retry schedules, and smart recycling metrics.</p>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-gray-900">
+              <AlertCircle size={18} className="mr-2" /> Failed to load data management stats.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Search & Filters (hidden when Data Management tab is active) ── */}
+      {department !== "data_management" && (
+      <>
       <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
@@ -1029,6 +1204,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           );
         })()}
       </div>
+      </>
+      )}
 
       {/* ─── Import Department Picker Dialog ─────────────────────────────────────────── */}
       <Dialog open={showImportDeptPicker} onOpenChange={(open) => { setShowImportDeptPicker(open); if (!open) { setImportSourceError(false); } }}>
