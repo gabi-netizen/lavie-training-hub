@@ -925,4 +925,72 @@ export const whatsappRouter = router({
       console.log(`[WhatsApp Bulk] Sent ${results.sent}, failed ${results.failed} by ${ctx.user.name ?? ctx.user.email}`);
       return results;
     }),
+
+  // ─── Send SMS: send a plain SMS (not WhatsApp) to a contact's phone number ──────────
+  sendSms: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        body: z.string().min(1).max(1600),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { contactId, body } = input;
+
+      // Look up the contact
+      const contact = await getContact(contactId);
+      if (!contact) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+      }
+      if (!contact.phone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
+      }
+
+      // Normalise to E.164
+      const normalisedPhone = normalisePhone(contact.phone);
+      if (!normalisedPhone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
+      }
+      const e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
+
+      // Twilio credentials
+      const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+      const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+      const smsFrom = process.env.TWILIO_SMS_FROM || "+447888868298";
+
+      if (!accountSid || !authToken) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Twilio credentials not configured" });
+      }
+
+      const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+      const params = new URLSearchParams({
+        From: smsFrom,
+        To: e164Phone,
+        Body: body,
+      });
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.error(`[SMS] Twilio error: ${res.status} ${errText}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send SMS: ${res.status} — ${errText}`,
+        });
+      }
+
+      const data = await res.json();
+      console.log(`[SMS] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${data.sid}`);
+
+      return { success: true, messageSid: data.sid as string, status: data.status as string };
+    }),
 });
