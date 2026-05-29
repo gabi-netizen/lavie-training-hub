@@ -956,7 +956,7 @@ export const whatsappRouter = router({
       // Twilio credentials
       const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
       const authToken = process.env.TWILIO_AUTH_TOKEN || "";
-      const smsFrom = process.env.TWILIO_SMS_FROM || "+447888868298";
+      const smsFrom = process.env.TWILIO_SMS_FROM || "+447700139589";
 
       if (!accountSid || !authToken) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Twilio credentials not configured" });
