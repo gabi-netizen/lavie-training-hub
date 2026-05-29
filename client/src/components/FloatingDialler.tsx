@@ -119,9 +119,9 @@ export default function FloatingDialler() {
         disabled={refreshing}
         style={{ pointerEvents: "auto" }}
         title="Refresh Click to Call connection"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-gray-700 shadow-md border border-gray-200 text-xs font-medium hover:bg-gray-50 transition-all duration-150 disabled:opacity-60"
+        className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all duration-150 disabled:opacity-60 shadow-lg"
       >
-        <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+        <RefreshCw size={12} className={`text-white ${refreshing ? "animate-spin" : ""}`} />
         {refreshing ? "Refreshing…" : "Refresh Click to Call"}
       </button>
 
