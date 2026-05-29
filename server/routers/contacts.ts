@@ -1157,4 +1157,63 @@ export const contactsRouter = router({
         },
       };
     }),
+
+  // ─── Request More Leads (self-serve allocation for agents) ────────────────
+  requestMoreLeads: protectedProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+    const agentEmail = ctx.user.email;
+    const agentName = ctx.user.name;
+    if (!agentEmail || !agentName) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "User profile incomplete (missing name or email)" });
+    }
+
+    const BATCH_SIZE = 100;
+
+    // 1. Fetch up to 100 unassigned NEW leads (department = opening, oldest first)
+    const [newLeadsResult]: any = await db.execute(
+      sql`SELECT id FROM contacts
+          WHERE status = 'new'
+            AND (agentName IS NULL OR agentName = '')
+            AND department = 'opening'
+          ORDER BY createdAt ASC
+          LIMIT ${BATCH_SIZE}`
+    );
+    const newLeadIds: number[] = (newLeadsResult as any[]).map((r: any) => r.id);
+    const fromNew = newLeadIds.length;
+
+    // 2. If not enough, fill from cooling pool (no_answer, unassigned, updatedAt >= 7 days ago)
+    let coolingLeadIds: number[] = [];
+    if (fromNew < BATCH_SIZE) {
+      const remaining = BATCH_SIZE - fromNew;
+      const [coolingResult]: any = await db.execute(
+        sql`SELECT id FROM contacts
+            WHERE status = 'no_answer'
+              AND (agentName IS NULL OR agentName = '')
+              AND department = 'opening'
+              AND updatedAt <= NOW() - INTERVAL 7 DAY
+            ORDER BY updatedAt ASC
+            LIMIT ${remaining}`
+      );
+      coolingLeadIds = (coolingResult as any[]).map((r: any) => r.id);
+    }
+    const fromCoolingPool = coolingLeadIds.length;
+
+    // 3. Combine all IDs and bulk-update
+    const allIds = [...newLeadIds, ...coolingLeadIds];
+    if (allIds.length === 0) {
+      return { allocated: 0, fromNew: 0, fromCoolingPool: 0 };
+    }
+
+    await db.execute(
+      sql`UPDATE contacts
+          SET agentName = ${agentName},
+              agentEmail = ${agentEmail},
+              status = 'assigned'
+          WHERE id IN (${sql.join(allIds.map(id => sql`${id}`), sql`, `)})`
+    );
+
+    return { allocated: allIds.length, fromNew, fromCoolingPool };
+  }),
 });

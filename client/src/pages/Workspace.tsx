@@ -21,7 +21,7 @@ import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronLeft, ChevronDown, CreditCard, Search,
   Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus, ChevronsUpDown,
-  MessageCircle, BookOpen
+  MessageCircle, BookOpen, Package, Loader2
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -2795,6 +2795,15 @@ export default function Workspace() {
     onSuccess: () => refetch(),
   });
 
+  // ── Request More Leads mutation ──
+  const requestMoreLeads = trpc.contacts.requestMoreLeads.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.allocated} new leads allocated!`);
+      refetch();
+    },
+    onError: (err: any) => toast.error(`Failed to get leads: ${err.message}`),
+  });
+
   // ── Add Contact modal ──
   const [showAddContactModal, setShowAddContactModal] = useState(false);
   const [addContactForm, setAddContactForm] = useState({ name: "", phone: "", email: "", address: "", source: "" });
@@ -2987,6 +2996,23 @@ export default function Workspace() {
           </div>
 
           <div className="ws-dl-items">
+            {/* More Leads Button */}
+            <div style={{ padding: "8px 12px" }}>
+              <button
+                onClick={() => requestMoreLeads.mutate()}
+                disabled={requestMoreLeads.isPending}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ backgroundColor: "#16a34a" }}
+              >
+                {requestMoreLeads.isPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Package size={16} />
+                )}
+                More Leads
+              </button>
+            </div>
+
             {filteredContacts.map((contact: any, idx: number) => {
               // Overdue callbacks are always unlocked (interactive) regardless of doneItems
               const isOverdueCallback = (callbacksDue as any[]).some((c) => c.id === contact.id);
