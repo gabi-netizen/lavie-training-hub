@@ -4,7 +4,7 @@
  * Centralised Stripe SDK access and helper functions for the Lavie Labs Training Hub.
  * All functions accept flexible parameters so billing logic can be composed freely.
  *
- * The Stripe secret key is read from process.env.STRIPE_SECRET_KEY, making it trivial
+ * The Stripe secret key is read from process.env.STRIPE_BILLING_SECRET_KEY, making it trivial
  * to swap Stripe accounts by changing the environment variable.
  */
 import Stripe from "stripe";
@@ -15,14 +15,14 @@ let _stripe: Stripe | null = null;
 
 /**
  * Returns the lazily-initialised Stripe client.
- * Throws if STRIPE_SECRET_KEY is not set.
+ * Throws if STRIPE_BILLING_SECRET_KEY is not set.
  */
 export function getStripeClient(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    const key = process.env.STRIPE_BILLING_SECRET_KEY;
     if (!key) {
       throw new Error(
-        "[Stripe] STRIPE_SECRET_KEY is not configured. Set it in environment variables."
+        "[Stripe] STRIPE_BILLING_SECRET_KEY is not configured. Set it in environment variables."
       );
     }
     _stripe = new Stripe(key, {

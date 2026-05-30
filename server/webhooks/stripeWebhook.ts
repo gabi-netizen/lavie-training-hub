@@ -27,9 +27,9 @@ import { eq } from "drizzle-orm";
 // ─── Signature Verification & Event Construction ─────────────────────────────
 
 function constructEvent(rawBody: Buffer, signature: string): Stripe.Event {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env.STRIPE_BILLING_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    throw new Error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET is not configured");
+    throw new Error("[Stripe Webhook] STRIPE_BILLING_WEBHOOK_SECRET is not configured");
   }
   const stripe = getStripeClient();
   return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
