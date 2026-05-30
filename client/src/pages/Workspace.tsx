@@ -2832,6 +2832,9 @@ export default function Workspace() {
   // ── Add Contact modal ──
   const [showAddContactModal, setShowAddContactModal] = useState(false);
   const [addContactForm, setAddContactForm] = useState({ name: "", phone: "", email: "", address: "", source: "" });
+  const [returnMode, setReturnMode] = useState(false);
+  const [selectedForReturn, setSelectedForReturn] = useState<Set<number>>(new Set());
+  const [bulkReturning, setBulkReturning] = useState(false);
   const createContactMutation = trpc.contacts.create.useMutation({
     onSuccess: () => {
       toast.success("Contact added successfully!");
@@ -3036,29 +3039,78 @@ export default function Workspace() {
                 )}
                 More Leads
               </button>
-              <button
-                onClick={() => {
-                  if (!activeId) { toast.error("Select a lead first"); return; }
-                  const contact = (contacts as any[]).find((c: any) => c.id === activeId);
-                  if (!contact) return;
-                  const status = contact.status;
-                  if (status === "done_deal" || status === "working") {
-                    toast.error("Cannot return a Sold or Callback lead");
-                    return;
-                  }
-                  updateContact.mutate(
-                    { id: activeId, status: status === "no_answer" ? "no_answer" : "new", agentName: "", agentEmail: "" },
-                    { onSuccess: () => { toast.success("Lead returned"); refetch(); } }
-                  );
-                }}
-                disabled={!activeId || updateContact.isPending}
-                className="flex items-center justify-center gap-2 flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "#f59e0b" }}
-              >
-                <RotateCcw size={16} />
-                Return Lead
-              </button>
+              {!returnMode ? (
+                <button
+                  onClick={() => { setReturnMode(true); setSelectedForReturn(new Set()); }}
+                  className="flex items-center justify-center gap-2 flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-white transition-colors"
+                  style={{ backgroundColor: "#f59e0b" }}
+                >
+                  <RotateCcw size={16} />
+                  Return Lead
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setReturnMode(false); setSelectedForReturn(new Set()); }}
+                    className="flex items-center justify-center gap-2 flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-white transition-colors"
+                    style={{ backgroundColor: "#6b7280" }}
+                  >
+                    <X size={16} />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (selectedForReturn.size === 0) { toast.error("Select leads to return"); return; }
+                      setBulkReturning(true);
+                      try {
+                        const ids = Array.from(selectedForReturn);
+                        for (const id of ids) {
+                          const contact = (contacts as any[]).find((c: any) => c.id === id);
+                          if (!contact) continue;
+                          const status = contact.status;
+                          await updateContact.mutateAsync(
+                            { id, status: status === "no_answer" ? "no_answer" : "new", agentName: "", agentEmail: "" }
+                          );
+                        }
+                        toast.success(`${ids.length} leads returned`);
+                        refetch();
+                      } catch (err) {
+                        toast.error("Failed to return some leads");
+                      } finally {
+                        setBulkReturning(false);
+                        setReturnMode(false);
+                        setSelectedForReturn(new Set());
+                      }
+                    }}
+                    disabled={selectedForReturn.size === 0 || bulkReturning}
+                    className="flex items-center justify-center gap-2 flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: "#dc2626" }}
+                  >
+                    {bulkReturning ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
+                    Return ({selectedForReturn.size})
+                  </button>
+                </>
+              )}
             </div>
+            {/* Select All checkbox in return mode */}
+            {returnMode && (
+              <div style={{ padding: "4px 12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  checked={selectedForReturn.size > 0 && selectedForReturn.size === (filteredContacts as any[]).filter((c: any) => c.status !== "done_deal" && c.status !== "working").length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const eligible = (filteredContacts as any[]).filter((c: any) => c.status !== "done_deal" && c.status !== "working").map((c: any) => c.id);
+                      setSelectedForReturn(new Set(eligible));
+                    } else {
+                      setSelectedForReturn(new Set());
+                    }
+                  }}
+                  className="w-4 h-4 accent-red-600 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-black">Select All</span>
+              </div>
+            )}
 
             {filteredContacts.map((contact: any, idx: number) => {
               // Overdue callbacks are always unlocked (interactive) regardless of doneItems
@@ -3067,8 +3119,24 @@ export default function Workspace() {
               const isDone = isOverdueCallback ? false : (!!doneItems[contact.id] && !isSkipped);
               const prevContact = filteredContacts[idx - 1];
               const nextContact = filteredContacts[idx + 1];
+              const isEligibleForReturn = contact.status !== "done_deal" && contact.status !== "working";
               return (
-                <div key={contact.id} id={`ws-contact-${contact.id}`}>
+                <div key={contact.id} id={`ws-contact-${contact.id}`} style={{ display: "flex", alignItems: "center", gap: "0px" }}>
+                  {returnMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedForReturn.has(contact.id)}
+                      disabled={!isEligibleForReturn}
+                      onChange={(e) => {
+                        const next = new Set(selectedForReturn);
+                        if (e.target.checked) next.add(contact.id);
+                        else next.delete(contact.id);
+                        setSelectedForReturn(next);
+                      }}
+                      className="w-5 h-5 accent-red-600 cursor-pointer shrink-0 ml-2 disabled:opacity-30"
+                    />
+                  )}
+                  <div style={{ flex: 1 }}>
                   <ContactCard
                     contact={contact}
                     isActive={activeId === contact.id}
@@ -3105,6 +3173,7 @@ export default function Workspace() {
                       });
                     }}
                   />
+                  </div>
                 </div>
               );
             })}
