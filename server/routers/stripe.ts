@@ -19,6 +19,7 @@ import {
   cancelSubscription,
   createCheckoutSession,
   getCustomerPaymentMethods,
+  getStripeClient,
   type SubscriptionPhase,
 } from "../stripe/index";
 
@@ -382,5 +383,71 @@ export const stripeRouter = router({
         .offset(offset);
 
       return { entries, count: entries.length };
+    }),
+
+  /**
+   * Updates the agent attribution on a subscription record.
+   * Admin only — used for corrections or transfers.
+   */
+  updateSubscriptionAgent: adminProcedure
+    .input(
+      z.object({
+        contactId: z.number().int().positive(),
+        agentName: z.string().min(1),
+        agentEmail: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Update local stripe_customers record
+      const [mapping] = await db
+        .select()
+        .from(stripeCustomers)
+        .where(eq(stripeCustomers.contactId, input.contactId))
+        .limit(1);
+
+      if (!mapping) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No Stripe customer mapping found for this contact.",
+        });
+      }
+
+      await db
+        .update(stripeCustomers)
+        .set({
+          agentName: input.agentName,
+          agentEmail: input.agentEmail,
+        })
+        .where(eq(stripeCustomers.contactId, input.contactId));
+
+      // Also update Stripe subscription schedule metadata if one exists
+      try {
+        const stripe = getStripeClient();
+        const schedules = await stripe.subscriptionSchedules.list({
+          customer: mapping.stripeCustomerId,
+          limit: 5,
+        });
+
+        // Update metadata on all active/not_started schedules
+        for (const schedule of schedules.data) {
+          if (schedule.status === "active" || schedule.status === "not_started") {
+            await stripe.subscriptionSchedules.update(schedule.id, {
+              metadata: {
+                ...((schedule.metadata as Record<string, string>) ?? {}),
+                agentName: input.agentName,
+                agentEmail: input.agentEmail,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(`[Stripe] Could not update subscription metadata for contact ${input.contactId}:`, err);
+        // Don't fail — local DB is already updated
+      }
+
+      return { success: true, agentName: input.agentName, agentEmail: input.agentEmail };
     }),
 });

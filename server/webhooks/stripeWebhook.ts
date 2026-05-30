@@ -19,7 +19,7 @@
  */
 import type { Request, Response } from "express";
 import Stripe from "stripe";
-import { getStripeClient } from "../stripe/index";
+import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
 import { stripeAuditLog, stripeCustomers, contacts } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -138,6 +138,140 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
 
   if (customerId) {
     await updateContactStatus(customerId, "done_deal");
+  }
+
+  // ─── Auto-create Subscription Schedule for £4.95 trial payments ──────────
+  const contactId = (pi.metadata as Record<string, string>)?.contactId;
+  if (pi.amount === 495 && contactId && customerId) {
+    try {
+      const db = await getDb();
+      const billingStripe = getStripeClient();
+
+      // Get customer's payment methods and set the first card as default
+      const paymentMethods = await getCustomerPaymentMethods(customerId, "card");
+      let defaultPaymentMethodId: string | undefined;
+
+      if (paymentMethods.length > 0) {
+        defaultPaymentMethodId = paymentMethods[0].id;
+        await billingStripe.customers.update(customerId, {
+          invoice_settings: { default_payment_method: defaultPaymentMethodId },
+        });
+      }
+
+      // Look up agent attribution from the contact record
+      let agentName = "Unknown";
+      let agentEmail = "unknown@lavielabs.com";
+      if (db) {
+        const [contact] = await db
+          .select({ agentName: contacts.agentName, agentEmail: contacts.agentEmail })
+          .from(contacts)
+          .where(eq(contacts.id, Number(contactId)))
+          .limit(1);
+        if (contact) {
+          agentName = contact.agentName ?? "Unknown";
+          agentEmail = contact.agentEmail ?? "unknown@lavielabs.com";
+        }
+      }
+
+      // Calculate start date: 21 days from now (unix timestamp)
+      const startDate = Math.floor(Date.now() / 1000) + 21 * 24 * 60 * 60;
+
+      // Create Subscription Schedule: £44.95 every 60 days, starting 21 days from now
+      const schedule = await createSubscriptionSchedule(
+        {
+          customerId,
+          phases: [
+            {
+              amount: 4495,
+              interval: "day",
+              intervalCount: 60,
+              iterations: undefined as unknown as number, // ongoing
+            },
+          ],
+          startDate,
+          defaultPaymentMethod: defaultPaymentMethodId,
+          metadata: {
+            contactId,
+            createdBy: "webhook_payment_intent.succeeded",
+            trialAmount: "495",
+            agentName,
+            agentEmail,
+          },
+        },
+        `auto-sub-webhook-${contactId}-${Date.now()}`
+      );
+
+      // Upsert stripe_customers mapping with agent info
+      if (db) {
+        const existingMapping = await db
+          .select()
+          .from(stripeCustomers)
+          .where(eq(stripeCustomers.contactId, Number(contactId)))
+          .limit(1);
+
+        if (existingMapping.length > 0) {
+          await db
+            .update(stripeCustomers)
+            .set({
+              paymentMethodId: defaultPaymentMethodId ?? null,
+              agentName,
+              agentEmail,
+            })
+            .where(eq(stripeCustomers.contactId, Number(contactId)));
+        } else {
+          await db.insert(stripeCustomers).values({
+            contactId: Number(contactId),
+            stripeCustomerId: customerId,
+            paymentMethodId: defaultPaymentMethodId ?? null,
+            agentName,
+            agentEmail,
+          });
+        }
+
+        // Audit log for subscription creation
+        await db.insert(stripeAuditLog).values({
+          eventId: `auto-sub-created-webhook-${contactId}-${Date.now()}`,
+          eventType: "subscription_schedule.auto_created",
+          customerId,
+          subscriptionId: schedule.id,
+          amount: 4495,
+          currency: "gbp",
+          status: "processed",
+          metadata: {
+            source: "webhook_payment_intent.succeeded",
+            trialAmount: 495,
+            subscriptionAmount: 4495,
+            intervalDays: 60,
+            startDate,
+            agentName,
+            agentEmail,
+            paymentMethodId: defaultPaymentMethodId,
+          },
+        });
+      }
+
+      console.log(`[Stripe Webhook] Auto-created subscription schedule ${schedule.id} for contact ${contactId} (agent: ${agentName})`);
+    } catch (err) {
+      console.error(`[Stripe Webhook] Failed to auto-create subscription for contact ${contactId}:`, err);
+      try {
+        const db = await getDb();
+        if (db) {
+          await db.insert(stripeAuditLog).values({
+            eventId: `auto-sub-failed-webhook-${contactId}-${Date.now()}`,
+            eventType: "subscription_schedule.auto_create_failed",
+            customerId,
+            status: "error",
+            metadata: {
+              source: "webhook_payment_intent.succeeded",
+              error: err instanceof Error ? err.message : "Unknown error",
+              contactId,
+            },
+          });
+        }
+      } catch {
+        // Swallow — best effort audit
+      }
+    }
   }
 }
 

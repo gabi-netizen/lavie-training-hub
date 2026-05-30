@@ -1339,10 +1339,19 @@ function StripeCheckoutForm({
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [subscriptionCreated, setSubscriptionCreated] = useState(false);
+
+  // Calculate the subscription start date (21 days from now) for display
+  const subscriptionStartDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   const confirmPaymentMutation = trpc.contacts.confirmPayment.useMutation({
     onSuccess: () => {
       toast.success("Payment successful! Contact marked as Sold.");
+      setSubscriptionCreated(true);
       onSuccess();
     },
     onError: (err: any) => {
@@ -1386,13 +1395,29 @@ function StripeCheckoutForm({
           <AlertCircle size={12} /> {errorMsg}
         </div>
       )}
+      {subscriptionCreated && (
+        <div style={{
+          marginTop: "10px",
+          padding: "8px 12px",
+          backgroundColor: "#ecfdf5",
+          border: "1px solid #6ee7b7",
+          borderRadius: "6px",
+          fontSize: "12px",
+          color: "#065f46",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+        }}>
+          <span>✅ Subscription created — £44.95/60 days starting {subscriptionStartDate}</span>
+        </div>
+      )}
       <button
         type="submit"
         className="ws-pay-submit"
-        disabled={!stripe || processing}
-        style={processing ? { opacity: 0.6, cursor: "not-allowed" } : {}}
+        disabled={!stripe || processing || subscriptionCreated}
+        style={processing || subscriptionCreated ? { opacity: 0.6, cursor: "not-allowed" } : {}}
       >
-        {processing ? "Processing…" : "Charge \u00a34.95"}
+        {processing ? "Processing\u2026" : subscriptionCreated ? "Payment Complete" : "Charge \u00a34.95"}
       </button>
     </form>
   );

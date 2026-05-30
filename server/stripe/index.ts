@@ -139,6 +139,8 @@ export interface CreateSubscriptionScheduleParams {
   metadata?: Record<string, string>;
   /** Existing product ID to use (if not provided, inline product_data is used) */
   productId?: string;
+  /** Unix timestamp for when the schedule should start. If omitted, defaults to "now". */
+  startDate?: number;
 }
 
 /**
@@ -196,7 +198,7 @@ export async function createSubscriptionSchedule(
   return stripe.subscriptionSchedules.create(
     {
       customer: params.customerId,
-      start_date: "now" as unknown as number,
+      start_date: params.startDate ?? ("now" as unknown as number),
       end_behavior: "cancel",
       phases: stripePhases,
       metadata: params.metadata ?? {},

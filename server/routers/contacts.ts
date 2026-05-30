@@ -44,7 +44,12 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages, contacts as contactsSchema } from "../../drizzle/schema";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers } from "../../drizzle/schema";
+import {
+  createSubscriptionSchedule,
+  getCustomerPaymentMethods,
+  getStripeClient as getBillingStripeClient,
+} from "../stripe/index";
 import { eq, or, and, sql, ne, isNull, isNotNull, inArray, notInArray, count as drizzleCount, gte, lte } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
 import { getZohoBillingDataByEmail } from "../zohoBilling";
@@ -768,7 +773,7 @@ export const contactsRouter = router({
         stripeCustomerId: z.string().min(1),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { contactId, stripeCustomerId } = input;
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -783,6 +788,122 @@ export const contactsRouter = router({
           status: "done_deal",
         })
         .where(eq(contactsTable.id, contactId));
+
+      // ─── Auto-create Subscription Schedule after £4.95 trial payment ─────────
+      try {
+        const billingStripe = getBillingStripeClient();
+
+        // Get customer's payment methods and set the first card as default
+        const paymentMethods = await getCustomerPaymentMethods(stripeCustomerId, "card");
+        let defaultPaymentMethodId: string | undefined;
+
+        if (paymentMethods.length > 0) {
+          defaultPaymentMethodId = paymentMethods[0].id;
+          // Set as default payment method on the customer
+          await billingStripe.customers.update(stripeCustomerId, {
+            invoice_settings: { default_payment_method: defaultPaymentMethodId },
+          });
+        }
+
+        // Agent attribution from ctx.user (the logged-in agent taking payment)
+        const agentName = ctx.user?.name ?? "Unknown";
+        const agentEmail = ctx.user?.email ?? "unknown@lavielabs.com";
+
+        // Calculate start date: 21 days from now (unix timestamp)
+        const startDate = Math.floor(Date.now() / 1000) + 21 * 24 * 60 * 60;
+
+        // Create Subscription Schedule: £44.95 every 60 days, starting 21 days from now
+        const schedule = await createSubscriptionSchedule(
+          {
+            customerId: stripeCustomerId,
+            phases: [
+              {
+                amount: 4495,
+                interval: "day",
+                intervalCount: 60,
+                iterations: undefined as unknown as number, // ongoing
+              },
+            ],
+            startDate,
+            defaultPaymentMethod: defaultPaymentMethodId,
+            metadata: {
+              contactId: String(contactId),
+              createdBy: "confirmPayment",
+              trialAmount: "495",
+              agentName,
+              agentEmail,
+            },
+          },
+          `auto-sub-confirm-${contactId}-${Date.now()}`
+        );
+
+        // Upsert stripe_customers mapping with agent info
+        const existingMapping = await db
+          .select()
+          .from(stripeCustomers)
+          .where(eq(stripeCustomers.contactId, contactId))
+          .limit(1);
+
+        if (existingMapping.length > 0) {
+          await db
+            .update(stripeCustomers)
+            .set({
+              paymentMethodId: defaultPaymentMethodId ?? null,
+              agentName,
+              agentEmail,
+            })
+            .where(eq(stripeCustomers.contactId, contactId));
+        } else {
+          await db.insert(stripeCustomers).values({
+            contactId,
+            stripeCustomerId,
+            paymentMethodId: defaultPaymentMethodId ?? null,
+            agentName,
+            agentEmail,
+          });
+        }
+
+        // Audit log
+        await db.insert(stripeAuditLog).values({
+          eventId: `auto-sub-created-${contactId}-${Date.now()}`,
+          eventType: "subscription_schedule.auto_created",
+          customerId: stripeCustomerId,
+          subscriptionId: schedule.id,
+          amount: 4495,
+          currency: "gbp",
+          status: "processed",
+          metadata: {
+            source: "confirmPayment",
+            trialAmount: 495,
+            subscriptionAmount: 4495,
+            intervalDays: 60,
+            startDate,
+            agentName,
+            agentEmail,
+            paymentMethodId: defaultPaymentMethodId,
+          },
+        });
+
+        console.log(`[Stripe] Auto-created subscription schedule ${schedule.id} for contact ${contactId} (agent: ${agentName})`);
+      } catch (err) {
+        // Log the error but don't fail the payment confirmation
+        console.error(`[Stripe] Failed to auto-create subscription for contact ${contactId}:`, err);
+        try {
+          await db.insert(stripeAuditLog).values({
+            eventId: `auto-sub-failed-${contactId}-${Date.now()}`,
+            eventType: "subscription_schedule.auto_create_failed",
+            customerId: stripeCustomerId,
+            status: "error",
+            metadata: {
+              source: "confirmPayment",
+              error: err instanceof Error ? err.message : "Unknown error",
+              contactId,
+            },
+          });
+        } catch {
+          // Swallow — best effort audit
+        }
+      }
 
       return { success: true };
     }),

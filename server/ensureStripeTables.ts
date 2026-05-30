@@ -59,6 +59,26 @@ export async function ensureStripeTables(): Promise<void> {
     console.error("[DB] Error creating stripe_customers table:", err);
   }
 
+  // ── Add agentName / agentEmail columns to stripe_customers (idempotent) ────
+  const agentColumns = [
+    { name: "agentName", definition: "varchar(256) NULL" },
+    { name: "agentEmail", definition: "varchar(320) NULL" },
+  ];
+  for (const col of agentColumns) {
+    try {
+      await db.execute(sql.raw(
+        `ALTER TABLE stripe_customers ADD COLUMN ${col.name} ${col.definition}`
+      ));
+      console.log(`[DB] Added column stripe_customers.${col.name}`);
+    } catch (err: any) {
+      if (err?.message?.includes("Duplicate column")) {
+        // Already exists, skip
+      } else {
+        console.warn(`[DB] Could not add stripe_customers.${col.name}:`, err);
+      }
+    }
+  }
+
   // ── Add index on stripe_audit_log for faster lookups by eventType ──────────
   try {
     await db.execute(sql`

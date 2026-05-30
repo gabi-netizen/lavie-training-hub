@@ -952,6 +952,10 @@ export const stripeCustomers = mysqlTable("stripe_customers", {
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }).notNull().unique(),
   /** Default Stripe Payment Method ID (pm_xxx) */
   paymentMethodId: varchar("paymentMethodId", { length: 128 }),
+  /** Agent (salesperson) who made the sale — for commission tracking */
+  agentName: varchar("agentName", { length: 256 }),
+  /** Agent's email address */
+  agentEmail: varchar("agentEmail", { length: 320 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
