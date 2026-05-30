@@ -324,6 +324,16 @@ export const contactsRouter = router({
         }
       }
 
+      // ── Auto-unassign: done & do_not_call leave the agent immediately ─────
+      if (updates.status && (updates.status === "done" || updates.status === "do_not_call")) {
+        await updateContact(id, { agentName: null as any, agentEmail: null as any });
+        // Also clear assignedUserId
+        const dbConn = await getDb();
+        if (dbConn) {
+          await dbConn.execute(sql`UPDATE contacts SET assignedUserId = NULL WHERE id = ${id}`);
+        }
+      }
+
       // ── Postmark: callback reminder ─────────────────────────────────────
       if (updates.callbackAt && notifyEmail && contact) {
         const callbackTime = new Date(updates.callbackAt).toLocaleString("en-GB", {

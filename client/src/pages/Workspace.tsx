@@ -2996,12 +2996,12 @@ export default function Workspace() {
           </div>
 
           <div className="ws-dl-items">
-            {/* More Leads Button */}
-            <div style={{ padding: "8px 12px" }}>
+            {/* More Leads + Return Lead Buttons */}
+            <div style={{ padding: "8px 12px", display: "flex", gap: "8px" }}>
               <button
                 onClick={() => requestMoreLeads.mutate()}
                 disabled={requestMoreLeads.isPending}
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#16a34a" }}
               >
                 {requestMoreLeads.isPending ? (
@@ -3010,6 +3010,28 @@ export default function Workspace() {
                   <Package size={16} />
                 )}
                 More Leads
+              </button>
+              <button
+                onClick={() => {
+                  if (!activeId) { toast.error("Select a lead first"); return; }
+                  const contact = (contacts as any[]).find((c: any) => c.id === activeId);
+                  if (!contact) return;
+                  const status = contact.status;
+                  if (status === "done_deal" || status === "working") {
+                    toast.error("Cannot return a Sold or Callback lead");
+                    return;
+                  }
+                  updateContact.mutate(
+                    { id: activeId, status: status === "no_answer" ? "no_answer" : "new", agentName: "", agentEmail: "" },
+                    { onSuccess: () => { toast.success("Lead returned"); refetch(); } }
+                  );
+                }}
+                disabled={!activeId || updateContact.isPending}
+                className="flex items-center justify-center gap-2 flex-1 px-3 py-2.5 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ backgroundColor: "#f59e0b" }}
+              >
+                <RotateCcw size={16} />
+                Return Lead
               </button>
             </div>
 
