@@ -54,6 +54,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import * as XLSX from "xlsx";
+import BillingDashboard from "@/components/BillingDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Contact {
@@ -274,7 +275,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [currentPage, setCurrentPage] = useState(1);
 
   // ─── Department tab state ─────────────────────────────────────────────────
-  const [department, setDepartment] = useState<"opening" | "retention" | "data_management">("opening");
+  const [department, setDepartment] = useState<"opening" | "retention" | "data_management" | "billing">("opening");
 
   // ─── User role for admin-only features ───────────────────────────────────
   const { data: currentUser } = trpc.auth.me.useQuery();
@@ -302,7 +303,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
-    department: department === "data_management" ? "opening" : department,
+    department: (department === "data_management" || department === "billing") ? "opening" : department,
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
     leadDateTo: filterLeadDateTo || undefined,
@@ -314,7 +315,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadType: filterLeadType || undefined,
     status: filterStatus || undefined,
     agentEmail: filterAgent || undefined,
-    department: department === "data_management" ? "opening" : department,
+    department: (department === "data_management" || department === "billing") ? "opening" : department,
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
     leadDateTo: filterLeadDateTo || undefined,
@@ -521,7 +522,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 font-semibold border-2 border-indigo-800"
               onClick={() => {
-                setImportDepartment(department === "data_management" ? "opening" : department);
+                setImportDepartment((department === "data_management" || department === "billing") ? "opening" : department);
                 setShowImportDeptPicker(true);
               }}
               disabled={importing}
@@ -537,7 +538,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white h-9 px-4 font-semibold border-2 border-green-800"
               onClick={() => {
-                setAddForm({ ...emptyForm(), department: department === "data_management" ? "opening" : department });
+                setAddForm({ ...emptyForm(), department: (department === "data_management" || department === "billing") ? "opening" : department });
                 setShowAddModal(true);
               }}
             >
@@ -550,17 +551,18 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
         {/* ── Department Tabs ── */}
         <div className="mt-4">
-          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
+          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management" | "billing"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
             <TabsList>
               <TabsTrigger value="opening" className="px-6">Opening</TabsTrigger>
               <TabsTrigger value="retention" className="px-6">Retention</TabsTrigger>
               {isAdmin && <TabsTrigger value="data_management" className="px-6">Data Management</TabsTrigger>}
+              {isAdmin && <TabsTrigger value="billing" className="px-6">Billing</TabsTrigger>}
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Stats row (hidden when Data Management tab is active) */}
-        {department !== "data_management" && (
+        {/* Stats row (hidden when Data Management or Billing tab is active) */}
+        {department !== "data_management" && department !== "billing" && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {[
             { icon: Users,      label: "Total Contacts", value: totalContacts, colour: "text-indigo-600 bg-indigo-50" },
@@ -737,8 +739,13 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
         </div>
       )}
 
-      {/* ── Search & Filters (hidden when Data Management tab is active) ── */}
-      {department !== "data_management" && (
+      {/* ── Billing Tab Content ── */}
+      {department === "billing" && isAdmin && (
+        <BillingDashboard />
+      )}
+
+      {/* ── Search & Filters (hidden when Data Management or Billing tab is active) ── */}
+      {department !== "data_management" && department !== "billing" && (
       <>
       <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-3">
         <div className="flex items-center gap-3">
