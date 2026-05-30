@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { storagePut } from "../storage";
 import { handleCloudTalkWebhook } from "../webhooks/cloudtalk";
+import { handleStripeBillingWebhook } from "../webhooks/stripeWebhook";
 import { handleGmailWebhook } from "../webhooks/gmail";
 import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { handleWhatsAppIncoming } from "../webhooks/whatsappIncoming";
@@ -20,6 +21,7 @@ import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
 import { ensureBrandsColumn } from "../ensureBrandsColumn";
 import { ensureEmailTrackingTables } from "../ensureEmailTables";
+import { ensureStripeTables } from "../ensureStripeTables";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -63,13 +65,22 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // ─── Stripe Webhook ────────────────────────────────────────────────────────
+  // ─── Stripe Webhook (legacy — payment form) ────────────────────────────────
   // MUST be registered BEFORE express.json() because Stripe requires the raw body
   // to verify the webhook signature.
   app.post(
     "/api/webhooks/stripe",
     express.raw({ type: "application/json" }),
     handleStripeWebhook
+  );
+
+  // ─── Stripe Billing Webhook (new — subscriptions, invoices, disputes) ──────
+  // Separate endpoint for the full billing infrastructure webhook.
+  // Also requires raw body for signature verification.
+  app.post(
+    "/api/webhooks/stripe-billing",
+    express.raw({ type: "application/json" }),
+    handleStripeBillingWebhook
   );
 
   // Configure body parser with larger size limit for file uploads (250MB for long call recordings)
@@ -301,6 +312,12 @@ async function startServer() {
         console.error("[DB] Error ensuring email tracking tables:", err)
       );
     }, 7000);
+    // Ensure Stripe billing tables exist
+    setTimeout(() => {
+      ensureStripeTables().catch((err) =>
+        console.error("[DB] Error ensuring Stripe tables:", err)
+      );
+    }, 8000);
     // Start nightly Cooling Pool cron (23:00 UTC — moves N/A leads to unassigned)
     setTimeout(() => {
       startNightlyCron();

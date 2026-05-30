@@ -911,3 +911,50 @@ export const campaignSends = mysqlTable("campaign_sends", {
 
 export type CampaignSend = typeof campaignSends.$inferSelect;
 export type InsertCampaignSend = typeof campaignSends.$inferInsert;
+
+/**
+ * Stripe Audit Log — records every Stripe webhook event for compliance and debugging.
+ * Idempotency is enforced via the unique `eventId` column (Stripe event ID).
+ */
+export const stripeAuditLog = mysqlTable("stripe_audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe event ID (evt_xxx) — unique to prevent duplicate processing */
+  eventId: varchar("eventId", { length: 128 }).notNull().unique(),
+  /** Stripe event type e.g. payment_intent.succeeded */
+  eventType: varchar("eventType", { length: 128 }).notNull(),
+  /** Stripe Customer ID associated with this event */
+  customerId: varchar("customerId", { length: 128 }),
+  /** Stripe Subscription ID if applicable */
+  subscriptionId: varchar("subscriptionId", { length: 128 }),
+  /** Amount in smallest currency unit (pence/cents) */
+  amount: int("amount"),
+  /** ISO 4217 currency code e.g. gbp */
+  currency: varchar("currency", { length: 8 }),
+  /** Event processing status: received, processed, failed */
+  status: varchar("status", { length: 32 }).default("received").notNull(),
+  /** Full event payload or relevant metadata as JSON */
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type StripeAuditLog = typeof stripeAuditLog.$inferSelect;
+export type InsertStripeAuditLog = typeof stripeAuditLog.$inferInsert;
+
+/**
+ * Stripe Customers — maps internal contact IDs to Stripe Customer IDs.
+ * Allows looking up Stripe data from our CRM contacts and vice versa.
+ */
+export const stripeCustomers = mysqlTable("stripe_customers", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Internal contact ID (references contacts.id) */
+  contactId: int("contactId").notNull().unique(),
+  /** Stripe Customer ID (cus_xxx) */
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }).notNull().unique(),
+  /** Default Stripe Payment Method ID (pm_xxx) */
+  paymentMethodId: varchar("paymentMethodId", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StripeCustomer = typeof stripeCustomers.$inferSelect;
+export type InsertStripeCustomer = typeof stripeCustomers.$inferInsert;

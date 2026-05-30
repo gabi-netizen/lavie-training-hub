@@ -15,6 +15,7 @@ import { usersRouter } from "./routers/users";
 import { whatsappRouter } from "./routers/whatsapp";
 import { campaignsRouter } from "./routers/campaigns";
 import { emailsRouter } from "./routers/emails";
+import { stripeRouter } from "./routers/stripe";
 
 export const appRouter = router({
   system: systemRouter,
@@ -49,6 +50,7 @@ export const appRouter = router({
   whatsapp: whatsappRouter,
   campaigns: campaignsRouter,
   emails: emailsRouter,
+  stripe: stripeRouter,
 });
 
 export type AppRouter = typeof appRouter;
