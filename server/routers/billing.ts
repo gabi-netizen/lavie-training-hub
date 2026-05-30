@@ -116,19 +116,17 @@ async function fetchAllSubscriptions(forceRefresh = false): Promise<ZohoSubscrip
 
   const allSubscriptions: ZohoSubscription[] = [];
 
-  // Fetch live subscriptions
-  for (const status of ["live", "trial"]) {
-    let page = 1;
-    let hasMore = true;
-    while (hasMore) {
-      const response = await zohoGet(`/subscriptions?per_page=200&page=${page}&status=${status}`);
-      const subscriptions = response.subscriptions ?? [];
-      allSubscriptions.push(...subscriptions);
-      if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
-        hasMore = false;
-      } else {
-        page++;
-      }
+  // Fetch only live subscriptions (active)
+  let page = 1;
+  let hasMore = true;
+  while (hasMore) {
+    const response = await zohoGet(`/subscriptions?per_page=200&page=${page}&status=live`);
+    const subscriptions = response.subscriptions ?? [];
+    allSubscriptions.push(...subscriptions);
+    if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
+      hasMore = false;
+    } else {
+      page++;
     }
   }
 
