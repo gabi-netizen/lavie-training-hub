@@ -73,6 +73,7 @@ async function zohoGet(path: string): Promise<any> {
 // ─── Subscription Data Cache (5 minutes) ────────────────────────────────────
 interface ZohoSubscription {
   subscription_id: string;
+  customer_id: string;
   customer_name: string;
   email: string;
   phone: string;
@@ -91,6 +92,11 @@ interface ZohoSubscription {
   trial_ends_at: string;
 }
 
+// Helper: determine if a plan is an installment
+function isInstallmentPlan(planName: string): boolean {
+  return /installment/i.test(planName);
+}
+
 interface CacheEntry {
   data: ZohoSubscription[];
   timestamp: number;
@@ -100,7 +106,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 let subscriptionCache: CacheEntry | null = null;
 
 /**
- * Fetch ALL subscriptions from Zoho (paginate through all pages).
+ * Fetch active subscriptions from Zoho (live + trial only).
  * Uses in-memory cache unless forceRefresh is true.
  */
 async function fetchAllSubscriptions(forceRefresh = false): Promise<ZohoSubscription[]> {
@@ -109,18 +115,20 @@ async function fetchAllSubscriptions(forceRefresh = false): Promise<ZohoSubscrip
   }
 
   const allSubscriptions: ZohoSubscription[] = [];
-  let page = 1;
-  let hasMore = true;
 
-  while (hasMore) {
-    const response = await zohoGet(`/subscriptions?per_page=200&page=${page}`);
-    const subscriptions = response.subscriptions ?? [];
-    allSubscriptions.push(...subscriptions);
-
-    if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
-      hasMore = false;
-    } else {
-      page++;
+  // Fetch live subscriptions
+  for (const status of ["live", "trial"]) {
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      const response = await zohoGet(`/subscriptions?per_page=200&page=${page}&status=${status}`);
+      const subscriptions = response.subscriptions ?? [];
+      allSubscriptions.push(...subscriptions);
+      if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     }
   }
 
@@ -140,71 +148,59 @@ export const billingRouter = router({
       try {
         const subscriptions = await fetchAllSubscriptions(input?.forceRefresh ?? false);
 
-        // Status counts
-        const statusCounts = { live: 0, trial: 0, cancelled: 0, future: 0 };
+        // Count UNIQUE customers with active subscriptions vs installments
+        const subCustomers = new Set<string>();
+        const installmentCustomers = new Set<string>();
+
         for (const sub of subscriptions) {
-          const s = sub.status?.toLowerCase();
-          if (s === "live") statusCounts.live++;
-          else if (s === "trial" || s === "trialing") statusCounts.trial++;
-          else if (s === "cancelled" || s === "canceled") statusCounts.cancelled++;
-          else if (s === "future") statusCounts.future++;
+          const customerId = sub.customer_id || sub.email || sub.customer_name;
+          if (isInstallmentPlan(sub.plan_name || "")) {
+            installmentCustomers.add(customerId);
+          } else {
+            subCustomers.add(customerId);
+          }
         }
 
-        // By salesperson
-        const agentMap = new Map<string, { live: number; trial: number; total: number; revenue: number }>();
+        // By salesperson - count unique customers per agent
+        const agentMap = new Map<string, { subscriptions: Set<string>; installments: Set<string>; revenue: number }>();
         for (const sub of subscriptions) {
           const agent = sub.salesperson_name || "Unassigned";
           if (!agentMap.has(agent)) {
-            agentMap.set(agent, { live: 0, trial: 0, total: 0, revenue: 0 });
+            agentMap.set(agent, { subscriptions: new Set(), installments: new Set(), revenue: 0 });
           }
           const entry = agentMap.get(agent)!;
-          entry.total++;
-          const s = sub.status?.toLowerCase();
-          if (s === "live") {
-            entry.live++;
-            entry.revenue += sub.amount || 0;
-          } else if (s === "trial" || s === "trialing") {
-            entry.trial++;
+          const customerId = sub.customer_id || sub.email || sub.customer_name;
+          if (isInstallmentPlan(sub.plan_name || "")) {
+            entry.installments.add(customerId);
+          } else {
+            entry.subscriptions.add(customerId);
           }
+          entry.revenue += sub.amount || 0;
         }
         const bySalesperson = Array.from(agentMap.entries())
-          .map(([agent, data]) => ({ agent, ...data }))
+          .map(([agent, data]) => ({
+            agent,
+            subscriptions: data.subscriptions.size,
+            installments: data.installments.size,
+            total: data.subscriptions.size + data.installments.size,
+            revenue: data.revenue,
+          }))
           .sort((a, b) => b.total - a.total);
 
-        // By plan type
-        const planMap = new Map<string, { count: number; isInstallment: boolean }>();
-        for (const sub of subscriptions) {
-          const plan = sub.plan_name || "Unknown Plan";
-          if (!planMap.has(plan)) {
-            planMap.set(plan, { count: 0, isInstallment: plan.toLowerCase().includes("installment") });
-          }
-          planMap.get(plan)!.count++;
-        }
-        const byPlan = Array.from(planMap.entries())
-          .map(([plan, data]) => ({ plan, ...data }))
-          .sort((a, b) => b.count - a.count);
-
-        // MRR: sum of all live subscription amounts
+        // MRR: sum of all live non-installment subscription amounts
         let mrr = 0;
         for (const sub of subscriptions) {
-          if (sub.status?.toLowerCase() === "live") {
+          if (sub.status?.toLowerCase() === "live" && !isInstallmentPlan(sub.plan_name || "")) {
             mrr += sub.amount || 0;
           }
         }
 
-        // Installments active count
-        const installmentsActive = subscriptions.filter(
-          (sub) =>
-            sub.plan_name?.toLowerCase().includes("installment") &&
-            (sub.status?.toLowerCase() === "live" || sub.status?.toLowerCase() === "trial" || sub.status?.toLowerCase() === "trialing")
-        ).length;
-
         return {
-          statusCounts,
+          uniqueSubCustomers: subCustomers.size,
+          uniqueInstallmentCustomers: installmentCustomers.size,
+          totalActiveCustomers: new Set([...Array.from(subCustomers), ...Array.from(installmentCustomers)]).size,
           bySalesperson,
-          byPlan,
           mrr,
-          installmentsActive,
           totalSubscriptions: subscriptions.length,
         };
       } catch (err: any) {
@@ -254,7 +250,13 @@ export const billingRouter = router({
         }
 
         if (input.planType) {
-          filtered = filtered.filter((sub) => sub.plan_name === input.planType);
+          if (input.planType === "subscription") {
+            filtered = filtered.filter((sub) => !isInstallmentPlan(sub.plan_name || ""));
+          } else if (input.planType === "installment") {
+            filtered = filtered.filter((sub) => isInstallmentPlan(sub.plan_name || ""));
+          } else {
+            filtered = filtered.filter((sub) => sub.plan_name === input.planType);
+          }
         }
 
         if (input.search) {
