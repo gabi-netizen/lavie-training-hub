@@ -116,17 +116,19 @@ async function fetchAllSubscriptions(forceRefresh = false): Promise<ZohoSubscrip
 
   const allSubscriptions: ZohoSubscription[] = [];
 
-  // Fetch only live subscriptions (active)
-  let page = 1;
-  let hasMore = true;
-  while (hasMore) {
-    const response = await zohoGet(`/subscriptions?per_page=200&page=${page}&status=live`);
-    const subscriptions = response.subscriptions ?? [];
-    allSubscriptions.push(...subscriptions);
-    if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
-      hasMore = false;
-    } else {
-      page++;
+  // Fetch live and unpaid subscriptions
+  for (const status of ["live", "unpaid"]) {
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      const response = await zohoGet(`/subscriptions?per_page=200&page=${page}&status=${status}`);
+      const subscriptions = response.subscriptions ?? [];
+      allSubscriptions.push(...subscriptions);
+      if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     }
   }
 
@@ -187,9 +189,13 @@ export const billingRouter = router({
 
         // MRR: sum of all live non-installment subscription amounts
         let mrr = 0;
+        let unpaidCount = 0;
         for (const sub of subscriptions) {
           if (sub.status?.toLowerCase() === "live" && !isInstallmentPlan(sub.plan_name || "")) {
             mrr += sub.amount || 0;
+          }
+          if (sub.status?.toLowerCase() === "unpaid") {
+            unpaidCount++;
           }
         }
 
@@ -199,6 +205,7 @@ export const billingRouter = router({
           totalActiveCustomers: new Set([...Array.from(subCustomers), ...Array.from(installmentCustomers)]).size,
           bySalesperson,
           mrr,
+          unpaidCount,
           totalSubscriptions: subscriptions.length,
         };
       } catch (err: any) {

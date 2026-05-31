@@ -157,7 +157,7 @@ export default function BillingDashboard() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-bold text-black">Billing Dashboard</h2>
-          <p className="text-sm text-black mt-0.5">Active customers from Zoho Billing (live + trial)</p>
+          <p className="text-sm text-black mt-0.5">Active customers from Zoho Billing (live + unpaid)</p>
         </div>
         <Button
           variant="outline"
@@ -178,7 +178,7 @@ export default function BillingDashboard() {
       ) : summary ? (
         <>
           {/* ── Summary Cards ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
             {/* Unique Subscription Customers */}
             <div className="flex items-center gap-3 bg-white rounded-xl border-2 border-gray-900 px-4 py-3 shadow-sm">
               <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-green-600 bg-green-50">
@@ -207,6 +207,16 @@ export default function BillingDashboard() {
               <div>
                 <p className="text-xl font-bold text-black leading-none">{formatCurrency(summary.mrr ?? 0)}</p>
                 <p className="text-xs text-black mt-0.5">MRR (Subs Only)</p>
+              </div>
+            </div>
+            {/* Unpaid */}
+            <div className="flex items-center gap-3 bg-white rounded-xl border-2 border-red-400 px-4 py-3 shadow-sm">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-red-600 bg-red-50">
+                <CreditCard size={18} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-red-600 leading-none">{(summary.unpaidCount ?? 0).toLocaleString()}</p>
+                <p className="text-xs text-black mt-0.5">Unpaid</p>
               </div>
             </div>
             {/* Total Active Customers */}
