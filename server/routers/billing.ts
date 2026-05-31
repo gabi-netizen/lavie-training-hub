@@ -97,6 +97,11 @@ function isInstallmentPlan(planName: string): boolean {
   return /installment/i.test(planName);
 }
 
+// Helper: determine if a subscription is a Live Trial (status=live, amount=4.95, not installment)
+function isTrialSub(sub: ZohoSubscription): boolean {
+  return sub.status?.toLowerCase() === "live" && sub.amount === 4.95 && !isInstallmentPlan(sub.plan_name || "");
+}
+
 interface CacheEntry {
   data: ZohoSubscription[];
   timestamp: number;
@@ -148,31 +153,39 @@ export const billingRouter = router({
       try {
         const subscriptions = await fetchAllSubscriptions(input?.forceRefresh ?? false);
 
-        // Count UNIQUE customers with active subscriptions vs installments
-        const subCustomers = new Set<string>();
+        // Count UNIQUE customers: trials (live, £4.95), live subs (live, >£4.95), and installments
+        const trialCustomers = new Set<string>();
+        const liveSubCustomers = new Set<string>();
         const installmentCustomers = new Set<string>();
 
         for (const sub of subscriptions) {
           const customerId = sub.customer_id || sub.email || sub.customer_name;
           if (isInstallmentPlan(sub.plan_name || "")) {
             installmentCustomers.add(customerId);
-          } else {
-            subCustomers.add(customerId);
+          } else if (isTrialSub(sub)) {
+            trialCustomers.add(customerId);
+          } else if (sub.status?.toLowerCase() === "live" && (sub.amount || 0) > 4.95) {
+            liveSubCustomers.add(customerId);
           }
         }
 
-        // By salesperson - count unique customers per agent
-        const agentMap = new Map<string, { subscriptions: Set<string>; installments: Set<string>; revenue: number }>();
+        // subCustomers = all non-installment customers (trials + live subs) for backward compat
+        const subCustomers = new Set<string>([...Array.from(trialCustomers), ...Array.from(liveSubCustomers)]);
+
+        // By salesperson - count unique customers per agent (trials, live subs, installments)
+        const agentMap = new Map<string, { subscriptions: Set<string>; trials: Set<string>; installments: Set<string>; revenue: number }>();
         for (const sub of subscriptions) {
           const agent = sub.salesperson_name || "Unassigned";
           if (!agentMap.has(agent)) {
-            agentMap.set(agent, { subscriptions: new Set(), installments: new Set(), revenue: 0 });
+            agentMap.set(agent, { subscriptions: new Set(), trials: new Set(), installments: new Set(), revenue: 0 });
           }
           const entry = agentMap.get(agent)!;
           const customerId = sub.customer_id || sub.email || sub.customer_name;
           if (isInstallmentPlan(sub.plan_name || "")) {
             entry.installments.add(customerId);
-          } else {
+          } else if (isTrialSub(sub)) {
+            entry.trials.add(customerId);
+          } else if (sub.status?.toLowerCase() === "live" && (sub.amount || 0) > 4.95) {
             entry.subscriptions.add(customerId);
           }
           entry.revenue += sub.amount || 0;
@@ -181,17 +194,18 @@ export const billingRouter = router({
           .map(([agent, data]) => ({
             agent,
             subscriptions: data.subscriptions.size,
+            trials: data.trials.size,
             installments: data.installments.size,
-            total: data.subscriptions.size + data.installments.size,
+            total: data.subscriptions.size + data.trials.size + data.installments.size,
             revenue: data.revenue,
           }))
           .sort((a, b) => b.total - a.total);
 
-        // MRR: sum of all live non-installment subscription amounts
+        // MRR: sum of all live non-installment subscription amounts EXCLUDING trials (amount > 4.95)
         let mrr = 0;
         let unpaidCount = 0;
         for (const sub of subscriptions) {
-          if (sub.status?.toLowerCase() === "live" && !isInstallmentPlan(sub.plan_name || "")) {
+          if (sub.status?.toLowerCase() === "live" && !isInstallmentPlan(sub.plan_name || "") && (sub.amount || 0) > 4.95) {
             mrr += sub.amount || 0;
           }
           if (sub.status?.toLowerCase() === "unpaid") {
@@ -200,7 +214,9 @@ export const billingRouter = router({
         }
 
         return {
-          uniqueSubCustomers: subCustomers.size,
+          uniqueTrialCustomers: trialCustomers.size,
+          uniqueLiveSubCustomers: liveSubCustomers.size,
+          uniqueSubCustomers: subCustomers.size, // backward compat: trial + live sub
           uniqueInstallmentCustomers: installmentCustomers.size,
           totalActiveCustomers: new Set([...Array.from(subCustomers), ...Array.from(installmentCustomers)]).size,
           bySalesperson,

@@ -220,20 +220,36 @@ export default function BillingDashboard() {
       ) : summary ? (
         <div className="flex flex-col flex-1 overflow-hidden px-4">
           {/* ── Summary Cards (clickable) ── */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3 shrink-0">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3 shrink-0">
+            {/* 1. Live Trial */}
             <div
-              className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-green-500 transition-colors", drillDown?.title === "Subscription Customers" ? "border-green-500" : "border-gray-900")}
-              onClick={() => openDrillDown("Subscription Customers", (s) => !/installment/i.test(s.plan))}
+              className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-orange-500 transition-colors", drillDown?.title === "Live Trial Customers" ? "border-orange-500" : "border-gray-900")}
+              onClick={() => openDrillDown("Live Trial Customers", (s) => s.status?.toLowerCase() === "live" && s.amount === 4.95 && !/installment/i.test(s.plan))}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-orange-600 bg-orange-50">
+                <Users size={16} />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-black leading-none">{(summary.uniqueTrialCustomers ?? 0).toLocaleString()}</p>
+                <p className="text-[10px] text-gray-600">Live Trial</p>
+              </div>
+            </div>
+
+            {/* 2. Live Sub */}
+            <div
+              className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-green-500 transition-colors", drillDown?.title === "Live Sub Customers" ? "border-green-500" : "border-gray-900")}
+              onClick={() => openDrillDown("Live Sub Customers", (s) => s.status?.toLowerCase() === "live" && s.amount > 4.95 && !/installment/i.test(s.plan))}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-green-600 bg-green-50">
                 <Users size={16} />
               </div>
               <div>
-                <p className="text-lg font-bold text-black leading-none">{(summary.uniqueSubCustomers ?? 0).toLocaleString()}</p>
-                <p className="text-[10px] text-gray-600">Subs</p>
+                <p className="text-lg font-bold text-black leading-none">{(summary.uniqueLiveSubCustomers ?? 0).toLocaleString()}</p>
+                <p className="text-[10px] text-gray-600">Live Sub</p>
               </div>
             </div>
 
+            {/* 3. Installments */}
             <div
               className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-purple-500 transition-colors", drillDown?.title === "Installment Customers" ? "border-purple-500" : "border-gray-900")}
               onClick={() => openDrillDown("Installment Customers", (s) => /installment/i.test(s.plan))}
@@ -247,9 +263,10 @@ export default function BillingDashboard() {
               </div>
             </div>
 
+            {/* 4. MRR (excludes trials) */}
             <div
               className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-blue-500 transition-colors", drillDown?.title === "MRR Breakdown" ? "border-blue-500" : "border-gray-900")}
-              onClick={() => openDrillDown("MRR Breakdown", (s) => s.status?.toLowerCase() === "live" && !/installment/i.test(s.plan))}
+              onClick={() => openDrillDown("MRR Breakdown", (s) => s.status?.toLowerCase() === "live" && s.amount > 4.95 && !/installment/i.test(s.plan))}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-blue-600 bg-blue-50">
                 <CreditCard size={16} />
@@ -260,6 +277,7 @@ export default function BillingDashboard() {
               </div>
             </div>
 
+            {/* 5. Unpaid */}
             <div
               className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-red-500 transition-colors", drillDown?.title === "Unpaid Customers" ? "border-red-500" : "border-gray-900")}
               onClick={() => openDrillDown("Unpaid Customers", (s) => s.status?.toLowerCase() === "unpaid")}
@@ -273,6 +291,7 @@ export default function BillingDashboard() {
               </div>
             </div>
 
+            {/* 6. Total Active */}
             <div
               className={cn("flex items-center gap-2 bg-white rounded-lg border-2 px-3 py-2 shadow-sm cursor-pointer hover:border-yellow-500 transition-colors", drillDown?.title === "All Active Customers" ? "border-yellow-500" : "border-gray-900")}
               onClick={() => openDrillDown("All Active Customers", () => true)}
@@ -342,6 +361,7 @@ export default function BillingDashboard() {
                 <thead className="sticky top-0 bg-gray-50">
                   <tr className="border-b border-gray-200">
                     <th className="text-left px-3 py-2 font-semibold text-black">Agent</th>
+                    <th className="text-center px-2 py-2 font-semibold text-black">Trials</th>
                     <th className="text-center px-2 py-2 font-semibold text-black">Subs</th>
                     <th className="text-center px-2 py-2 font-semibold text-black">Install.</th>
                     <th className="text-center px-2 py-2 font-semibold text-black">Total</th>
@@ -357,8 +377,14 @@ export default function BillingDashboard() {
                     >
                       <td className="px-3 py-2 font-semibold text-black">{row.agent}</td>
                       <td
+                        className="px-2 py-2 text-center text-orange-700 font-semibold cursor-pointer hover:underline"
+                        onClick={(e) => { e.stopPropagation(); openDrillDown(`${row.agent} - Trials`, (s) => s.salesperson === row.agent && s.status?.toLowerCase() === "live" && s.amount === 4.95 && !/installment/i.test(s.plan)); }}
+                      >
+                        {row.trials}
+                      </td>
+                      <td
                         className="px-2 py-2 text-center text-green-700 font-semibold cursor-pointer hover:underline"
-                        onClick={(e) => { e.stopPropagation(); openDrillDown(`${row.agent} - Subscriptions`, (s) => s.salesperson === row.agent && !/installment/i.test(s.plan)); }}
+                        onClick={(e) => { e.stopPropagation(); openDrillDown(`${row.agent} - Subscriptions`, (s) => s.salesperson === row.agent && s.status?.toLowerCase() === "live" && s.amount > 4.95 && !/installment/i.test(s.plan)); }}
                       >
                         {row.subscriptions}
                       </td>
