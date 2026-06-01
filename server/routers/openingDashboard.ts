@@ -179,6 +179,7 @@ const NON_OPENING_AGENTS = new Set([
   "julie ann",  // Julie Ann Relox — not an opening agent
   "muhammad",   // Muhammad Usama Waheed — not an opening agent
   "wendy",      // Wendy Calderon — not an opening agent
+  "ashley",     // Ashley — duplicate, removed from system
 ]);
 
 const HUBSTAFF_TO_TRIALS_MAP: Record<string, string> = {
