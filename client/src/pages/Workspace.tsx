@@ -1156,8 +1156,8 @@ function ContactCard({
             </div>
           )}
 
-          {/* Row 1: Call, Callback, Not Interested, Send SMS, N/A */}
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+          {/* Row 1: Call, Callback, Not Interested, N/A */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', marginBottom: 4 }}>
             <button
               onClick={() => onAction("call")}
               disabled={isCallPending}
@@ -1172,17 +1172,20 @@ function ContactCard({
               style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#dc2626', color: '#fff', whiteSpace: 'nowrap' }}
             >Not Interested</button>
             <button
-              onClick={() => setSmsOpen(!smsOpen)}
-              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#2563eb', color: '#fff', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}
-            ><MessageCircle size={11} /> Send SMS</button>
-            <button
               onClick={() => onAction("skip")}
               style={{ flex: '0.5 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#6b7280', color: '#fff', whiteSpace: 'nowrap' }}
             >N/A</button>
+          </div>
+          {/* Row 2: Sold + Send SMS */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', marginBottom: 6 }}>
             <button
               onClick={() => onAction("sold")}
-              style={{ flex: '0.5 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#16a34a', color: '#fff', whiteSpace: 'nowrap' }}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#16a34a', color: '#fff', whiteSpace: 'nowrap' }}
             >Sold ✓</button>
+            <button
+              onClick={() => setSmsOpen(!smsOpen)}
+              style={{ flex: '1 1 auto', padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#2563eb', color: '#fff', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}
+            ><MessageCircle size={11} /> Send SMS</button>
           </div>
 
           {/* Row 2: Take Payment + Send Email + Send WhatsApp */}
@@ -1197,6 +1200,7 @@ function ContactCard({
             >
               <Mail size={12} /> Send Email
             </button>
+
             <button
               className="ws-btn-whatsapp ws-btn-pair-item"
               onClick={() => setWhatsappOpen(!whatsappOpen)}
