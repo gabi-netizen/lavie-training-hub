@@ -1313,6 +1313,10 @@ function ContactCard({
                 setPayOpen(false);
                 onAction("sold");
               }}
+              onCreditCardClick={() => {
+                setEmailTemplateOpen(true);
+                setAutoSelectCreditCardTemplate(true);
+              }}
             />
           )}
         </div>
@@ -1428,10 +1432,12 @@ function StripePaymentSection({
   contact,
   isAdmin,
   onSuccess,
+  onCreditCardClick,
 }: {
   contact: Contact;
   isAdmin: boolean;
   onSuccess: () => void;
+  onCreditCardClick?: () => void;
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -1621,9 +1627,7 @@ function StripePaymentSection({
               toast.error("Contact must have an email address.");
               return;
             }
-            // Open the template modal and auto-select the Payment Form template
-            setEmailTemplateOpen(true);
-            setAutoSelectCreditCardTemplate(true);
+            if (onCreditCardClick) onCreditCardClick();
           }}
           style={{
             width: "100%",
