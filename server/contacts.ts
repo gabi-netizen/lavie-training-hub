@@ -464,7 +464,7 @@ export async function bulkAssignContacts(
 }
 
 /**
- * Bulk return contacts to the system (unassign agent, set status to "new").
+ * Bulk return contacts to the system (unassign agent, keep existing status).
  * Leads will re-enter the assignment pool based on lead type logic.
  */
 export async function bulkReturnToSystem(
@@ -475,7 +475,7 @@ export async function bulkReturnToSystem(
   if (!db) return { returned: 0 };
   await db
     .update(contacts)
-    .set({ agentName: null as any, agentEmail: null as any, status: "new" as any })
+    .set({ agentName: null as any, agentEmail: null as any })
     .where(inArray(contacts.id, ids));
   return { returned: ids.length };
 }
