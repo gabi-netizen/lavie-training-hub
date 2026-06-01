@@ -567,6 +567,21 @@ export const openingDashboardRouter = router({
         }
       }
 
+      // Ensure filtered agents always appear even if they have no data at all
+      // (no trials, no Hubstaff hours). This allows admins to edit W.Days for agents
+      // who haven't closed any trials in the selected period.
+      if (input.agentNames && input.agentNames.length > 0) {
+        for (const name of input.agentNames) {
+          if (!NON_OPENING_AGENTS.has(name.toLowerCase())) {
+            ensureAgent(name);
+          }
+        }
+      } else if (input.agentName && input.agentName !== "all") {
+        if (!NON_OPENING_AGENTS.has(input.agentName.toLowerCase())) {
+          ensureAgent(input.agentName);
+        }
+      }
+
       const agents = Array.from(agentMap.values());
 
       return { agents, month: input.month };
