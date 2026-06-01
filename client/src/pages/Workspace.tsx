@@ -2742,6 +2742,8 @@ export default function Workspace() {
       else if (c.status === "closed") fromDB[c.id] = "No";
       else if (c.status === "no_answer") fromDB[c.id] = "Skip";
       else if (c.status === "skipped") fromDB[c.id] = "Skip";
+      else if (c.status === "working") fromDB[c.id] = "Callback";
+      else if (c.status === "done") fromDB[c.id] = "Done";
     }
     return { ...fromDB, ...localDoneItems };
   }, [contacts, localDoneItems]);
