@@ -22,6 +22,7 @@ import {
   Flame,
   Target,
   BarChart3,
+  RotateCcw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -488,6 +489,22 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       agentName: agent.name!,
       agentEmail: agent.email ?? "trial@lavielabs.com",
     });
+  };
+
+  // ─── Bulk Return to System ──────────────────────────────────────────────────
+  const bulkReturnMutation = trpc.contacts.bulkReturnToSystem.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.returned} contact${result.returned !== 1 ? 's' : ''} returned to system.`);
+      utils.contacts.list.invalidate();
+      setSelectedIds(new Set());
+      setShowBulkAssignDialog(false);
+    },
+    onError: (err) => {
+      toast.error(`Return failed: ${err.message}`);
+    },
+  });
+  const handleBulkReturn = () => {
+    bulkReturnMutation.mutate({ ids: Array.from(selectedIds) });
   };
 
   const activeFilters = [filterLeadType, filterStatus, filterAgent, filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo].filter(Boolean).length;
@@ -1312,8 +1329,16 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             </div>
 
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => { setShowBulkAssignDialog(false); setSelectedAgentId(""); }}>Cancel</Button>
+            <Button
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={handleBulkReturn}
+              disabled={bulkReturnMutation.isPending}
+            >
+              <RotateCcw size={13} className="mr-1.5" />
+              {bulkReturnMutation.isPending ? "Returning…" : `Return to System`}
+            </Button>
             <Button
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
               onClick={handleBulkAssign}

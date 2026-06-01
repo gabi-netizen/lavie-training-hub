@@ -16,6 +16,7 @@ import {
   deleteContact,
   bulkDeleteContacts,
   bulkAssignContacts,
+  bulkReturnToSystem,
   normalisePhone,
   getCallbacksDue,
   getAllCallbacks,
@@ -715,6 +716,17 @@ export const contactsRouter = router({
     )
     .mutation(async ({ input }) => {
       return bulkAssignContacts(input.ids, input.agentName, input.agentEmail);
+    }),
+
+  // ─── Bulk Return to System (unassign + set status new) ──────────────────
+  bulkReturnToSystem: adminProcedure
+    .input(
+      z.object({
+        ids: z.array(z.number()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return bulkReturnToSystem(input.ids);
     }),
 
   // ─── Get overdue callbacks (callbackAt <= now) ────────────────────────────

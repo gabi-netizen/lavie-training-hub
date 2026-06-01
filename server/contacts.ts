@@ -463,6 +463,23 @@ export async function bulkAssignContacts(
   return { assigned: ids.length };
 }
 
+/**
+ * Bulk return contacts to the system (unassign agent, set status to "new").
+ * Leads will re-enter the assignment pool based on lead type logic.
+ */
+export async function bulkReturnToSystem(
+  ids: number[]
+): Promise<{ returned: number }> {
+  if (!ids.length) return { returned: 0 };
+  const db = await getDb();
+  if (!db) return { returned: 0 };
+  await db
+    .update(contacts)
+    .set({ agentName: null as any, agentEmail: null as any, status: "new" as any })
+    .where(inArray(contacts.id, ids));
+  return { returned: ids.length };
+}
+
 // ─── Bulk CloudTalk Sync (startup / catch-up) ─────────────────────────────────
 /**
  * Sync all contacts that have no cloudtalkId yet.
