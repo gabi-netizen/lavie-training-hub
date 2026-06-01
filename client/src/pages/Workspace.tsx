@@ -2727,8 +2727,9 @@ export default function Workspace() {
   }, [sendToCloudTalk]);
 
   // Fetch contacts from the API (filter by selected agent in manager mode, or current user in My Pitch)
+  // When searching, search ALL contacts in the system (not just the agent's)
   const { data: contacts = [], refetch } = trpc.contacts.list.useQuery(
-    { search: searchQuery || undefined, limit: 5000, agentEmail: selectedAgentEmail },
+    { search: searchQuery || undefined, limit: 5000, agentEmail: searchQuery ? undefined : selectedAgentEmail },
     { enabled: true, staleTime: 0, refetchOnMount: "always" }
   );
 
@@ -3000,8 +3001,8 @@ export default function Workspace() {
               <div className="relative flex-1">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1f2937]" />
                 <input
-                  className="ws-dl-search"
-                  placeholder="Search contacts..."
+                  className="ws-dl-search placeholder:text-black placeholder:font-bold"
+                  placeholder="Search ALL customers..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
