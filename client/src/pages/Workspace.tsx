@@ -3127,7 +3127,7 @@ export default function Workspace() {
               // Overdue callbacks are always unlocked (interactive) regardless of doneItems
               const isOverdueCallback = (callbacksDue as any[]).some((c) => c.id === contact.id);
               const isSkipped = doneItems[contact.id] === "Skip";
-              const isDone = isOverdueCallback ? false : (!!doneItems[contact.id] && !isSkipped);
+              const isDone = isOverdueCallback ? false : (!!doneItems[contact.id] && !isSkipped && activeId !== contact.id);
               const prevContact = filteredContacts[idx - 1];
               const nextContact = filteredContacts[idx + 1];
               const isEligibleForReturn = contact.status !== "done_deal" && contact.status !== "working";
