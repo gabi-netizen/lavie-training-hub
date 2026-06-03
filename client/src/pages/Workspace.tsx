@@ -620,6 +620,19 @@ function ContactCard({
     onError: (err: any) => toast.error(`SMS failed: ${err.message}`),
   });
 
+  // SMS Templates
+  const { data: smsTemplates, isLoading: smsTemplatesLoading } = (trpc.whatsapp as any).smsTemplates.useQuery(
+    undefined,
+    { enabled: smsOpen }
+  );
+  const sendSmsTemplateMutation = (trpc.whatsapp as any).sendSmsTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("SMS template sent \u2705");
+      setSmsOpen(false);
+    },
+    onError: (err: any) => toast.error(`SMS template failed: ${err.message}`),
+  });
+
   const initials = contact.name
     .split(" ")
     .map((w) => w[0])
@@ -1223,6 +1236,55 @@ function ContactCard({
                 <p style={{ fontSize: 12, color: '#dc2626' }}>\u26a0 No phone number on file</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {/* SMS Template Picker */}
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', marginBottom: 2 }}>📋 Quick Templates</div>
+                  {smsTemplatesLoading ? (
+                    <p style={{ fontSize: 12, color: '#6b7280' }}>Loading templates…</p>
+                  ) : smsTemplates && smsTemplates.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+                      {smsTemplates.filter((tpl: any) => {
+                        if (!viewingAgentTeam) return true;
+                        const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
+                        const hasPrefix = allPrefixes.some((p: string) => tpl.friendly_name.startsWith(p));
+                        if (viewingAgentTeam === "opening" || viewingAgentTeam === "academy") {
+                          return tpl.friendly_name.startsWith("op_") || tpl.friendly_name.startsWith("OP:");
+                        }
+                        if (viewingAgentTeam === "retention") {
+                          return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                        }
+                        return true;
+                      }).map((tpl: any) => (
+                        <button
+                          key={tpl.sid}
+                          onClick={() => {
+                            if (sendSmsTemplateMutation.isPending) return;
+                            sendSmsTemplateMutation.mutate({ contactId: contact.id, contentSid: tpl.sid, templateName: tpl.friendly_name });
+                          }}
+                          disabled={sendSmsTemplateMutation.isPending}
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            border: '1.5px solid #d1d5db',
+                            borderRadius: 6,
+                            background: sendSmsTemplateMutation.isPending ? '#f3f4f6' : '#fff',
+                            cursor: sendSmsTemplateMutation.isPending ? 'not-allowed' : 'pointer',
+                            textAlign: 'left' as const,
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={(e) => { if (!sendSmsTemplateMutation.isPending) (e.target as HTMLElement).style.borderColor = '#2563eb'; }}
+                          onMouseLeave={(e) => { (e.target as HTMLElement).style.borderColor = '#d1d5db'; }}
+                        >
+                          {tpl.friendly_name}
+                          <span style={{ display: 'block', fontSize: 10, color: '#6b7280', fontWeight: 400, marginTop: 1 }}>
+                            {tpl.language || 'en'} • Click to send
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {/* Divider */}
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', marginBottom: 2 }}>✏️ Or type a custom message</div>
                   <textarea
                     value={smsBody}
                     onChange={(e) => setSmsBody(e.target.value)}

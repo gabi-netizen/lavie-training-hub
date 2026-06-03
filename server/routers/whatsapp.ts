@@ -1165,4 +1165,139 @@ export const whatsappRouter = router({
 
       return { success: true, messageSid: data.sid as string, status: data.status as string };
     }),
+
+  // ─── List SMS templates from Twilio Content API (same source as WhatsApp) ──────────
+  smsTemplates: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const templates = await listWhatsAppTemplates();
+      const userTeam = ctx.user.team;
+
+      if (!userTeam) {
+        return templates;
+      }
+
+      const allKnownPrefixes = ["op_", "OP:", "rt_", "RT:"];
+      const hasKnownPrefix = (name: string) =>
+        allKnownPrefixes.some((p) => name.startsWith(p));
+
+      if (userTeam === "opening" || userTeam === "academy") {
+        return templates.filter((t) =>
+          t.friendly_name.startsWith("op_") || t.friendly_name.startsWith("OP:")
+        );
+      }
+
+      if (userTeam === "retention") {
+        return templates.filter((t) =>
+          t.friendly_name.startsWith("rt_") ||
+          t.friendly_name.startsWith("RT:") ||
+          !hasKnownPrefix(t.friendly_name)
+        );
+      }
+
+      return templates;
+    } catch (err) {
+      console.error("[SMS] Failed to fetch SMS templates:", err);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch SMS templates from Twilio",
+      });
+    }
+  }),
+
+  // ─── Send SMS using a Twilio Content Template (ContentSid) ──────────────────
+  sendSmsTemplate: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        contentSid: z.string().min(1),
+        templateName: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { contactId, contentSid, templateName } = input;
+
+      const contact = await getContact(contactId);
+      if (!contact) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+      }
+      if (!contact.phone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
+      }
+
+      const normalisedPhone = normalisePhone(contact.phone);
+      if (!normalisedPhone) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
+      }
+      const e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
+
+      // Build content variables: {{1}} = customer first name, {{2}} = agent first name
+      const customerFirstName = (contact.name ?? "").split(" ")[0] || "there";
+      const agentFirstName = (contact.agentName ?? ctx.user.name ?? "").split(" ")[0] || "Lavie Labs";
+
+      const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+      const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+      const smsFrom = process.env.TWILIO_SMS_FROM || "+447700139589";
+
+      if (!accountSid || !authToken) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Twilio credentials not configured" });
+      }
+
+      const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+      const params = new URLSearchParams({
+        From: smsFrom,
+        To: e164Phone,
+        ContentSid: contentSid,
+      });
+
+      const contentVariables = { "1": customerFirstName, "2": agentFirstName };
+      params.append("ContentVariables", JSON.stringify(contentVariables));
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.error(`[SMS Template] Twilio error: ${res.status} ${errText}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send SMS template: ${res.status} — ${errText}`,
+        });
+      }
+
+      const data = await res.json();
+      console.log(`[SMS Template] Sent by ${ctx.user.name ?? ctx.user.email} to contact #${contactId} (${e164Phone}): ${data.sid}`);
+
+      // Save outbound message to DB
+      const db = await getDb();
+      if (db) {
+        try {
+          const resolvedBody = await fetchTemplateBody(contentSid, contentVariables);
+          await db.insert(whatsappMessages).values({
+            contactId,
+            direction: "outbound",
+            body: resolvedBody,
+            templateName: templateName || contentSid,
+            sentByUserId: ctx.user.id,
+            fromNumber: smsFrom,
+            toNumber: e164Phone,
+            twilioMessageSid: data.sid,
+            status: "sent",
+            isRead: true,
+            channel: "sms",
+          });
+          console.log(`[SMS Template] Outbound message saved to DB — contact #${contactId}, SID: ${data.sid}`);
+        } catch (dbErr) {
+          console.error("[SMS Template] Failed to save outbound message to DB:", dbErr);
+        }
+      }
+
+      return { success: true, messageSid: data.sid as string, status: data.status as string };
+    }),
 });
