@@ -1250,8 +1250,17 @@ export const whatsappRouter = router({
         ContentSid: contentSid,
       });
 
-      const contentVariables = { "1": customerFirstName, "2": agentFirstName };
-      params.append("ContentVariables", JSON.stringify(contentVariables));
+      // Fetch template body first to check if it has variables ({{1}}, {{2}})
+      // Only send ContentVariables if the template actually uses them
+      let templateBody = "";
+      try {
+        templateBody = await fetchTemplateBody(contentSid);
+      } catch (_) { /* ignore */ }
+      const hasVariables = /\{\{\d+\}\}/.test(templateBody);
+      const contentVariables = hasVariables ? { "1": customerFirstName, "2": agentFirstName } : undefined;
+      if (contentVariables) {
+        params.append("ContentVariables", JSON.stringify(contentVariables));
+      }
 
       const res = await fetch(url, {
         method: "POST",
@@ -1278,7 +1287,9 @@ export const whatsappRouter = router({
       const db = await getDb();
       if (db) {
         try {
-          const resolvedBody = await fetchTemplateBody(contentSid, contentVariables);
+          const resolvedBody = contentVariables
+            ? await fetchTemplateBody(contentSid, contentVariables)
+            : (templateBody || await fetchTemplateBody(contentSid));
           await db.insert(whatsappMessages).values({
             contactId,
             direction: "outbound",
