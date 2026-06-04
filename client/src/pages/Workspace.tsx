@@ -2954,7 +2954,8 @@ export default function Workspace() {
       // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];
       if (newStatus) {
-        updateContact.mutate({ id: contactId, status: newStatus as any, callbackAt: null });
+        const currentContact = (contacts as any[]).find((c) => c.id === contactId);
+        updateContact.mutate({ id: contactId, status: newStatus as any, callbackAt: null, previousStatus: currentContact?.status || "working" });
       }
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];

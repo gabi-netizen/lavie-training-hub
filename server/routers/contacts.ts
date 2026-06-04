@@ -330,6 +330,40 @@ export const contactsRouter = router({
         }
       }
 
+      // ── New Sale email notification to support@lavielabs.com ─────────────
+      if (
+        updates.status === "done_deal" &&
+        previousStatus &&
+        previousStatus !== "done_deal" &&
+        contact
+      ) {
+        const agentName = ctx.user.name ?? contact.agentName ?? "Unknown Agent";
+        const customerName = contact.name ?? "Unknown";
+        const phone = contact.phone ?? "N/A";
+        const email = contact.email ?? "N/A";
+        const address = contact.address ?? "N/A";
+        const starterKit = contact.trialKit ?? "N/A";
+
+        const htmlBody = `
+          <h2>🎉 New Sale!!!!</h2>
+          <table style="border-collapse:collapse; font-size:15px;">
+            <tr><td style="padding:6px 12px; font-weight:bold;">Agent Name:</td><td style="padding:6px 12px;">${agentName}</td></tr>
+            <tr><td style="padding:6px 12px; font-weight:bold;">Customer Name:</td><td style="padding:6px 12px;">${customerName}</td></tr>
+            <tr><td style="padding:6px 12px; font-weight:bold;">Phone Number:</td><td style="padding:6px 12px;">${phone}</td></tr>
+            <tr><td style="padding:6px 12px; font-weight:bold;">Email Address:</td><td style="padding:6px 12px;">${email}</td></tr>
+            <tr><td style="padding:6px 12px; font-weight:bold;">Delivery Address:</td><td style="padding:6px 12px;">${address}</td></tr>
+            <tr><td style="padding:6px 12px; font-weight:bold;">Starter Kit:</td><td style="padding:6px 12px;">${starterKit}</td></tr>
+          </table>
+        `;
+
+        sendViaGmail({
+          from: "Lavie Labs <trial@lavielabs.com>",
+          to: "support@lavielabs.com",
+          subject: "🎉 New Sale!!!!",
+          htmlBody,
+        }).catch((err) => console.error("[New Sale Email] Failed:", err));
+      }
+
       // ── Auto-unassign: done & do_not_call leave the agent immediately ─────
       if (updates.status && (updates.status === "done" || updates.status === "do_not_call")) {
         await updateContact(id, { agentName: null as any, agentEmail: null as any });
