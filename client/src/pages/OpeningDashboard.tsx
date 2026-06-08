@@ -131,7 +131,7 @@ function SortIcon({
 function calculateMetrics(agent: AgentDetail): AgentRow {
   const converted = agent.live + agent.saved + agent.cancelledAfterPayment;
   const conversionRate =
-    agent.matured > 0 ? (converted / agent.matured) * 100 : 0;
+    agent.trials > 0 ? (converted / agent.trials) * 100 : 0;
   const lost = agent.cancelledBeforePayment + agent.dunning;
   const avePerDay = agent.workingDays > 0 ? agent.trials / agent.workingDays : 0;
   return {
@@ -568,8 +568,9 @@ export default function OpeningDashboard() {
   const totalConverted = AGENT_ROWS.reduce((s, r) => s + r.converted, 0);
   const totalSaved = AGENT_ROWS.reduce((s, r) => s + r.saved, 0);
   const retentionPct = matured > 0 ? (totalSaved / matured) * 100 : 0;
+  const totalTrials = AGENT_ROWS.reduce((s, r) => s + r.trials, 0);
   const overallConversionRate =
-    matured > 0 ? (totalConverted / matured) * 100 : 0;
+    totalTrials > 0 ? (totalConverted / totalTrials) * 100 : 0;
   // Find best agent by conversion rate (among those with matured trials)
   const bestAgent = AGENT_ROWS.filter((r) => r.matured > 0).reduce(
     (best, current) =>
