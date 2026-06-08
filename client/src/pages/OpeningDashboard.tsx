@@ -568,7 +568,6 @@ export default function OpeningDashboard() {
   const totalConverted = AGENT_ROWS.reduce((s, r) => s + r.converted, 0);
   const totalSaved = AGENT_ROWS.reduce((s, r) => s + r.saved, 0);
   const retentionPct = matured > 0 ? (totalSaved / matured) * 100 : 0;
-  const totalTrials = AGENT_ROWS.reduce((s, r) => s + r.trials, 0);
   const overallConversionRate =
     totalTrials > 0 ? (totalConverted / totalTrials) * 100 : 0;
   // Find best agent by conversion rate (among those with matured trials)
