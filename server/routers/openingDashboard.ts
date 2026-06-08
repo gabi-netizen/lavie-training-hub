@@ -482,6 +482,7 @@ export const openingDashboardRouter = router({
             agent.cancelledBeforePayment += count;
             break;
           case "dunning":
+          case "past_due":
             agent.dunning += count;
             break;
           case "future_deal":
