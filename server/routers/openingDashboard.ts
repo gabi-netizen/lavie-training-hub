@@ -494,8 +494,9 @@ export const openingDashboardRouter = router({
       // Note: agentMap keys are lowercase; use agent.agentName (proper case) for lookups.
       Array.from(agentMap.values()).forEach((agent) => {
         const displayName = agent.agentName;
-        // Matured = everyone who is no longer on the £4.95 trial
-        agent.matured = agent.trials - agent.stillInTrial;
+        // Matured = (Trials - Still in Trial) + Lost
+        const lost = agent.cancelledBeforePayment + agent.dunning;
+        agent.matured = (agent.trials - agent.stillInTrial) + lost;
         // Daily Openings = trials opened today (from todayCountMap)
         // todayCountMap is keyed by the raw DB name, try both the display name and lowercase
         agent.dailyOpenings =
@@ -562,8 +563,9 @@ export const openingDashboardRouter = router({
             const bonus = ov.trialsCount - ov.dbCountAtOverride;
             // Final trials = current DB count + bonus (bonus can be negative if admin reduced)
             agent.trials = agent.trials + bonus;
-            // Recalculate matured based on adjusted trials
-            agent.matured = agent.trials - agent.stillInTrial;
+            // Recalculate matured = (Trials - Still in Trial) + Lost
+            const lostAdj = agent.cancelledBeforePayment + agent.dunning;
+            agent.matured = (agent.trials - agent.stillInTrial) + lostAdj;
           }
         }
       }
