@@ -167,6 +167,14 @@ export default function WhatsAppControl() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const prevConversationsRef = useRef<any[]>([]);
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize notification sound
+  useEffect(() => {
+    notificationAudioRef.current = new Audio("data:audio/wav;base64,UklGRl9vT19teleQBAABAAEARKwAAIlYAAACABAAZGF0YUFvT19teleQAAAA/3//f/9//3//f/9//3//f/9//38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/3//f/9//3//f/9//3//f/9//3//f/9//38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    notificationAudioRef.current.volume = 0.5;
+  }, []);
 
   // ─── tRPC Queries ──────────────────────────────────────────────────────────
   const {
@@ -296,6 +304,30 @@ export default function WhatsAppControl() {
       }
     }
   }, [messages, selectedContactId]);
+
+  // ─── Play notification sound on new inbound message ────────────────────────
+  useEffect(() => {
+    if (!conversations || conversations.length === 0) {
+      prevConversationsRef.current = conversations || [];
+      return;
+    }
+    const prev = prevConversationsRef.current;
+    if (prev.length > 0) {
+      const hasNewInbound = conversations.some((conv: any) => {
+        if (conv.lastMessage?.direction !== "inbound") return false;
+        const prevConv = prev.find((p: any) =>
+          (p.contactId && p.contactId === conv.contactId) ||
+          (!p.contactId && p.fromNumber && p.fromNumber === conv.fromNumber)
+        );
+        if (!prevConv) return true;
+        return conv.lastMessage.id !== prevConv.lastMessage?.id;
+      });
+      if (hasNewInbound && notificationAudioRef.current) {
+        notificationAudioRef.current.play().catch(() => {});
+      }
+    }
+    prevConversationsRef.current = conversations;
+  }, [conversations]);
 
   // ─── Auto-scroll messages ──────────────────────────────────────────────────
   useEffect(() => {
