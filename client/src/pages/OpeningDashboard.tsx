@@ -1078,7 +1078,7 @@ export default function OpeningDashboard() {
                               </button>
                             )}
                           </div>
-                          <div className={`text-right text-sm font-semibold ${row.avePerDay >= 3 ? "text-green-600" : row.avePerDay > 0 ? "text-orange-500" : "text-gray-800"}`}>{row.avePerDay > 0 ? row.avePerDay.toFixed(1) : "\u2014"}</div>
+                          <div className={`text-right text-sm font-semibold ${row.avePerDay >= 3 ? "text-green-800" : row.avePerDay > 0 ? "text-orange-600" : "text-gray-800"}`}>{row.avePerDay > 0 ? row.avePerDay.toFixed(1) : "\u2014"}</div>
                           <div className="text-right text-sm text-gray-800 font-medium flex items-center justify-end gap-1">
                             <span
                               className="cursor-pointer hover:text-indigo-600 hover:underline transition-colors"
@@ -1203,7 +1203,7 @@ export default function OpeningDashboard() {
                     })()}
                   </div>
                   <div className="text-right font-bold text-gray-900">{AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0).toFixed(1)}</div>
-                  <div className={`text-right font-bold ${(totalTrials / Math.max(AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0), 1)) >= 3 ? "text-green-600" : "text-orange-500"}`}>{(totalTrials / Math.max(AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0), 1)).toFixed(1)}</div>
+                  <div className={`text-right font-bold ${(totalTrials / Math.max(AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0), 1)) >= 3 ? "text-green-800" : "text-orange-600"}`}>{(totalTrials / Math.max(AGENT_ROWS.reduce((s, r) => s + r.workingDays, 0), 1)).toFixed(1)}</div>
                   <div className="text-right font-bold text-gray-900">{totalTrials}</div>
                   <div className="text-right font-bold text-gray-900">{matured}</div>
                   <div className="text-right">
