@@ -283,52 +283,17 @@ export const contactsRouter = router({
         }).catch(() => {});
       }
 
-      // ── WhatsApp: auto-send N/A template (Opening team) ─────────────────
-      if (
-        updates.status === "no_answer" &&
-        previousStatus &&
-        previousStatus !== "no_answer" &&
-        contact &&
-        contact.phone
-      ) {
-        const NA_TEMPLATE_SID = "HXefee4cfd043a6713a2aafe658e657422";
-        const customerFirstName = (contact.name || "there").split(" ")[0];
-        const e164Phone = normalisePhone(contact.phone);
-
-        if (e164Phone) {
-          try {
-            const waResult = await sendWhatsAppMessage({
-              to: e164Phone,
-              contentSid: NA_TEMPLATE_SID,
-              contentVariables: { "1": customerFirstName },
-            });
-
-            console.log(`[WhatsApp-NA] Auto-sent to contact #${id} (${e164Phone}): ${waResult.sid}`);
-
-            // Save to whatsapp_messages table
-            const db = await getDb();
-            if (db) {
-              const resolvedBody = await fetchTemplateBody(NA_TEMPLATE_SID, { "1": customerFirstName }).catch(() => "[Template: op_no_answer_cold_data]");
-              const fromNumber = (process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+447888868298").replace(/^whatsapp:/, "");
-
-              await db.insert(whatsappMessages).values({
-                contactId: id,
-                direction: "outbound",
-                body: resolvedBody,
-                templateName: "op_no_answer_cold_data",
-                sentByUserId: ctx.user.id,
-                fromNumber,
-                toNumber: e164Phone,
-                twilioMessageSid: waResult.sid,
-                status: "sent",
-                isRead: true,
-              });
-            }
-          } catch (waErr) {
-            console.error(`[WhatsApp-NA] Failed to auto-send to contact #${id}:`, waErr);
-          }
-        }
-      }
+      // ── WhatsApp: auto-send N/A template (Opening team) ── DISABLED ──────
+      // Disabled on 2026-06-08: automatic sending of op_no_answer_cold_data stopped per Gabriel's request.
+      // if (
+      //   updates.status === "no_answer" &&
+      //   previousStatus &&
+      //   previousStatus !== "no_answer" &&
+      //   contact &&
+      //   contact.phone
+      // ) {
+      //   ... auto WhatsApp template removed ...
+      // }
 
       // ── New Sale email notification to support@lavielabs.com ─────────────
       if (
