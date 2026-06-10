@@ -60,7 +60,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
   const [nextBillingFilter, setNextBillingFilter] = useState("");
-  const [activatedFilter, setActivatedFilter] = useState("this_month");
+  const [activatedFilter, setActivatedFilter] = useState("");
   const [amountFilter, setAmountFilter] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
