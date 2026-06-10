@@ -39,6 +39,7 @@ import {
   ArrowLeft,
   Pencil,
   Check,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -352,6 +353,14 @@ export default function ContactCard() {
       toast.success("Note updated");
     },
     onError: () => toast.error("Failed to update note"),
+  });
+
+  const deleteNoteMutation = trpc.contacts.deleteNote.useMutation({
+    onSuccess: () => {
+      refetch();
+      toast.success("Note deleted");
+    },
+    onError: () => toast.error("Failed to delete note"),
   });
 
   const syncToACMutation = trpc.contacts.syncToAC.useMutation({
@@ -1470,8 +1479,10 @@ export default function ContactCard() {
                                     {outcome.label}
                                   </span>
                                 </div>
-                                {/* Full note text - editable */}
-                                {editingNoteId === note.id ? (
+                                {/* Full note text - editable (only for manually created notes, not external/auto notes) */}
+                                {(() => {
+                                  const isExternalNote = note.note.startsWith("🤖") || note.note.startsWith("📧");
+                                  return editingNoteId === note.id ? (
                                   <div className="mt-2">
                                     <textarea
                                       value={editingNoteText}
@@ -1494,24 +1505,42 @@ export default function ContactCard() {
                                       </button>
                                       <button
                                         onClick={() => { setEditingNoteId(null); setEditingNoteText(""); }}
-                                        className="text-xs text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
+                                        className="text-xs text-black px-3 py-1 rounded hover:bg-gray-100"
                                       >
                                         Cancel
+                                      </button>
+                                      <button
+                                        onClick={() => { if (confirm("Delete this note?")) { deleteNoteMutation.mutate({ noteId: note.id }); setEditingNoteId(null); setEditingNoteText(""); } }}
+                                        className="text-xs text-red-600 px-3 py-1 rounded hover:bg-red-50"
+                                      >
+                                        Delete
                                       </button>
                                     </div>
                                   </div>
                                 ) : (
                                   <div className="group/note flex items-start gap-1 mt-2">
                                     <p className="text-xs text-gray-800 leading-relaxed flex-1">{note.note}</p>
-                                    <button
-                                      onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.note); }}
-                                      className="text-gray-600 hover:text-blue-600 shrink-0 mt-0.5"
-                                      title="Edit note"
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
+                                    {!isExternalNote && (
+                                      <>
+                                        <button
+                                          onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.note); }}
+                                          className="text-black hover:text-blue-600 shrink-0 mt-0.5"
+                                          title="Edit note"
+                                        >
+                                          <Pencil size={12} />
+                                        </button>
+                                        <button
+                                          onClick={() => { if (confirm("Delete this note?")) deleteNoteMutation.mutate({ noteId: note.id }); }}
+                                          className="text-black hover:text-red-600 shrink-0 mt-0.5"
+                                          title="Delete note"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
-                                )}
+                                );
+                                })()}
                               </div>
                             </div>
                           </div>

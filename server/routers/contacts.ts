@@ -391,6 +391,21 @@ export const contactsRouter = router({
       return { success: true };
     }),
 
+  deleteNote: protectedProcedure
+    .input(
+      z.object({
+        noteId: z.number(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await db
+        .delete(contactCallNotes)
+        .where(eq(contactCallNotes.id, input.noteId));
+      return { success: true };
+    }),
+
   // ─── Bulk CSV import ──────────────────────────────────────────────────────
   import: protectedProcedure
     .input(
