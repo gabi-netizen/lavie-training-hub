@@ -85,11 +85,17 @@ const CURRENT_BRAND_OPTIONS = [
   "Clarins",
   "Elemis",
   "L'Occitane",
+  "Dermalogica",
+  "Medic8",
+  "Medicube",
+  "La Roche Posay",
   // Budget
   "No.7",
   "Nivea",
   "Olay",
   "Simple",
+  "The Ordinary",
+  "Aveeno",
   // Other
   "Other",
   "None",
