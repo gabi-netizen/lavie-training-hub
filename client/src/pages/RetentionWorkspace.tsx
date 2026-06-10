@@ -398,7 +398,7 @@ export default function RetentionWorkspace() {
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
-          My Queue
+          Incoming Lead June
         </button>
         <button
           onClick={() => setActiveTab("callbacks")}
