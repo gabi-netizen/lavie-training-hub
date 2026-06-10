@@ -424,6 +424,14 @@ export default function ContactCard() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
+  // WhatsApp compose state
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState("");
+
+  // SMS compose state
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [smsMessage, setSmsMessage] = useState("");
+
   // Tab state
   const [centerTopTab, setCenterTopTab] = useState<"history" | "transactions" | "shipments" | "notes">("history");
   const [centerBottomTab, setCenterBottomTab] = useState<"documents" | "activities" | "cloudtalk" | "privacy">("documents");
@@ -469,6 +477,31 @@ export default function ContactCard() {
     },
     onError: (err) => toast.error(err.message ?? "Failed to send email"),
   });
+
+  const sendWhatsAppMutation = (trpc.whatsapp as any).reply.useMutation({
+    onSuccess: () => {
+      toast.success("WhatsApp sent ✅");
+      setWhatsappOpen(false);
+      setWhatsappMessage("");
+    },
+    onError: (err: any) => {
+      if (err.message?.includes("63016") || err.message?.includes("outside")) {
+        toast.error("24h window expired — send a template first.");
+      } else {
+        toast.error(`WhatsApp failed: ${err.message}`);
+      }
+    },
+  });
+
+  const sendSmsMutation = (trpc.whatsapp as any).reply.useMutation({
+    onSuccess: () => {
+      toast.success("SMS sent ✅");
+      setSmsOpen(false);
+      setSmsMessage("");
+    },
+    onError: (err: any) => toast.error(`SMS failed: ${err.message}`),
+  });
+
 
   if (isLoading) {
     return (
@@ -900,8 +933,7 @@ export default function ContactCard() {
               <button
                 onClick={() => {
                   if (!contact.phone) { toast.error("No phone number on file"); return; }
-                  const num = contact.phone.replace(/\D/g, "");
-                  window.open(`https://wa.me/${num}`, "_blank");
+                  setWhatsappOpen(true);
                 }}
                 disabled={!contact.phone}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-green-50 hover:border-green-300 hover:text-green-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -925,7 +957,7 @@ export default function ContactCard() {
               <button
                 onClick={() => {
                   if (!contact.phone) { toast.error("No phone number on file"); return; }
-                  window.open(`sms:${contact.phone}`);
+                  setSmsOpen(true);
                 }}
                 disabled={!contact.phone}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -935,6 +967,72 @@ export default function ContactCard() {
               </button>
             </div>
           </div>
+
+          {/* WhatsApp Compose */}
+          {whatsappOpen && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Send WhatsApp</p>
+                <button onClick={() => setWhatsappOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={14} />
+                </button>
+              </div>
+              <textarea
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-300"
+                rows={3}
+              />
+              <button
+                onClick={() => {
+                  if (!whatsappMessage.trim()) return;
+                  sendWhatsAppMutation.mutate({
+                    contactId: contact.id,
+                    body: whatsappMessage.trim(),
+                    channel: "whatsapp" as const,
+                  });
+                }}
+                disabled={sendWhatsAppMutation.isPending || !whatsappMessage.trim()}
+                className="mt-2 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+              >
+                {sendWhatsAppMutation.isPending ? "Sending..." : "Send WhatsApp"}
+              </button>
+            </div>
+          )}
+
+          {/* SMS Compose */}
+          {smsOpen && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Send SMS</p>
+                <button onClick={() => setSmsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={14} />
+                </button>
+              </div>
+              <textarea
+                value={smsMessage}
+                onChange={(e) => setSmsMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+                rows={3}
+              />
+              <button
+                onClick={() => {
+                  if (!smsMessage.trim()) return;
+                  sendSmsMutation.mutate({
+                    contactId: contact.id,
+                    body: smsMessage.trim(),
+                    channel: "sms" as const,
+                  });
+                }}
+                disabled={sendSmsMutation.isPending || !smsMessage.trim()}
+                className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+              >
+                {sendSmsMutation.isPending ? "Sending..." : "Send SMS"}
+              </button>
+            </div>
+          )}
 
           {/* ── White Info Card (with inline editing when from retention) ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">

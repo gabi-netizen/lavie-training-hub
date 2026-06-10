@@ -398,7 +398,7 @@ export default function OpeningDashboard() {
     if (selectedAgents.size === 0) {
       localStorage.removeItem("opening_dash_agents");
     } else {
-      localStorage.setItem("opening_dash_agents", JSON.stringify([...selectedAgents]));
+      localStorage.setItem("opening_dash_agents", JSON.stringify(Array.from(selectedAgents)));
     }
   }, [selectedAgents]);
 
@@ -461,7 +461,7 @@ export default function OpeningDashboard() {
       params.customDateTo = customDateTo;
     }
     if (selectedAgents.size > 0 && !selectedAgents.has("__none__")) {
-      params.agentNames = [...selectedAgents];
+      params.agentNames = Array.from(selectedAgents);
     } else if (selectedAgents.has("__none__")) {
       // None selected - pass a dummy name that matches nothing
       params.agentNames = ["__none__"];
@@ -486,7 +486,7 @@ export default function OpeningDashboard() {
   function getAgentFilterLabel(): string {
     if (isAllAgentsSelected) return "All Agents";
     if (isNoneSelected) return "None Selected";
-    if (selectedAgents.size === 1) return [...selectedAgents][0];
+    if (selectedAgents.size === 1) return Array.from(selectedAgents)[0];
     return `${selectedAgents.size} selected`;
   }
 
@@ -1257,7 +1257,7 @@ export default function OpeningDashboard() {
           dateRange={dateRange}
           customDateFrom={customDateFrom || undefined}
           customDateTo={customDateTo || undefined}
-          selectedAgents={selectedAgents.size > 0 && !selectedAgents.has("__none__") ? [...selectedAgents] : []}
+          selectedAgents={selectedAgents.size > 0 && !selectedAgents.has("__none__") ? Array.from(selectedAgents) : []}
           onClose={() => setSummaryCardModal(null)}
         />
       )}

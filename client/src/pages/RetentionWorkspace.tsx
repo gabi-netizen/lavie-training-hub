@@ -19,6 +19,8 @@ import {
   ChevronRight,
   MessageSquare,
 } from "lucide-react";
+import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
+import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
 
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
 
@@ -83,6 +85,7 @@ export default function RetentionWorkspace() {
   const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails">("queue");
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
+  const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
 
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
@@ -319,13 +322,13 @@ export default function RetentionWorkspace() {
 
       {/* Tab Content */}
       {activeTab === "messages" && (
-        <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
-          Coming soon
+        <div style={{ height: "calc(100vh - 220px)", display: "flex" }}>
+          <WhatsAppChatPanel open={true} onClose={() => setActiveTab("queue")} inline />
         </div>
       )}
       {activeTab === "emails" && (
-        <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
-          Coming soon
+        <div style={{ height: "calc(100vh - 220px)", display: "flex" }}>
+          <WorkspaceEmailPanel contactId={selectedLeadContactId} visible={activeTab === "emails"} />
         </div>
       )}
 
@@ -370,7 +373,10 @@ export default function RetentionWorkspace() {
                     return (
                       <tr
                         key={lead.subscriptionId}
-                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                        onClick={() => lead.contactId && setSelectedLeadContactId(lead.contactId)}
+                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                          selectedLeadContactId === lead.contactId ? "bg-blue-50" : ""
+                        }`}
                       >
                         {/* # */}
                         <td className="py-3 px-3 text-sm text-gray-800">{idx + 1}</td>

@@ -795,7 +795,7 @@ export const openingDashboardRouter = router({
         );
 
       // Deduplicate (in case title-case normalisation creates duplicates)
-      return { agents: [...new Set(agents)] };
+      return { agents: Array.from(new Set(agents)) };
     }),
 
   // ─── Admin: Agent Daily Hours CRUD ──────────────────────────────────────────

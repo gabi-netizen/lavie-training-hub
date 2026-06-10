@@ -382,6 +382,8 @@ export const contactsRouter = router({
     )
     .mutation(async ({ input }) => {
       const { noteId, note, statusAtTime } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
       await db
         .update(contactCallNotes)
         .set({ note, ...(statusAtTime !== undefined ? { statusAtTime } : {}) })
