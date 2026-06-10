@@ -593,42 +593,75 @@ export default function ContactCard() {
               </div>
             )}
 
-            {/* Current Brand */}
+            {/* Opening Data — info gathered by opening agent */}
             <div className={cn("pt-3 border-t border-gray-100", !contact.address && !contact.email && "pt-0 border-t-0")}>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Current Brand</p>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                {["Estée Lauder", "Clinique", "Lancôme", "Clarins", "Elemis", "L'Occitane", "No.7"].map((brand) => {
-                  const selectedBrands: string[] = (() => {
-                    try { return JSON.parse((contact as any).brands ?? "[]"); } catch { return []; }
-                  })();
-                  const isChecked = selectedBrands.includes(brand);
-                  return (
-                    <label
-                      key={brand}
-                      className={cn(
-                        "flex items-center gap-1.5 cursor-pointer rounded px-1.5 py-1 text-xs select-none transition-colors",
-                        isChecked
-                          ? "bg-violet-50 text-violet-700 font-medium"
-                          : "text-gray-600 hover:bg-gray-50"
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="accent-violet-600 w-3 h-3 shrink-0"
-                        checked={isChecked}
-                        onChange={() => {
-                          const updated = isChecked
-                            ? selectedBrands.filter((b) => b !== brand)
-                            : [...selectedBrands, brand];
-                          updateMutation.mutate({ id: contactId, brands: JSON.stringify(updated) });
-                        }}
-                      />
-                      {brand}
-                    </label>
-                  );
-                })}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Opening Info</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Age</span>
+                  <span className="text-xs font-medium text-gray-700">{contact.skinType || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Current Brand</span>
+                  <span className="text-xs font-medium text-gray-700">{contact.concern || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Products Used</span>
+                  <span className="text-xs font-medium text-gray-700">{contact.routine || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Trial Kit</span>
+                  <span className="text-xs font-medium text-gray-700">{contact.trialKit || "—"}</span>
+                </div>
               </div>
             </div>
+
+            {/* Opening Agent Notes */}
+            {(contact as any).callNotes?.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Opening Agent Notes</p>
+                <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-xs text-gray-700 leading-relaxed">
+                  {(contact as any).callNotes[0]?.note || ""}
+                </div>
+              </div>
+            )}
+
+            {/* Imported Notes (reason for cancellation) */}
+            {contact.importedNotes && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Customer Note</p>
+                <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-xs text-gray-700 leading-relaxed">
+                  {contact.importedNotes}
+                </div>
+              </div>
+            )}
+
+            {/* AI Coach Recording */}
+            {(contact as any).latestCallAnalysis && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">AI Coach Recording</p>
+                <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-700">
+                      Score: {(contact as any).latestCallAnalysis.overallScore}/100
+                    </span>
+                    <a
+                      href={`/call-coach/${(contact as any).latestCallAnalysis.id}`}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      View Full Analysis
+                    </a>
+                  </div>
+                  {(contact as any).latestCallAnalysis.audioFileUrl && (
+                    <audio
+                      controls
+                      className="w-full h-8"
+                      src={(contact as any).latestCallAnalysis.audioFileUrl}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Source & Agent */}
             <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
@@ -640,7 +673,7 @@ export default function ContactCard() {
               )}
               {contact.agentName && (
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Agent</span>
+                  <span className="text-xs text-gray-400">Opening Agent</span>
                   <span className="text-xs font-medium text-gray-700">{contact.agentName}</span>
                 </div>
               )}
@@ -650,97 +683,7 @@ export default function ContactCard() {
                   <span className="text-xs font-medium text-gray-700">{formatDate(contact.leadDate)}</span>
                 </div>
               )}
-              {contact.department && (
-                <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Department</span>
-                  <span className="text-xs font-medium text-gray-700 capitalize">{contact.department}</span>
-                </div>
-              )}
             </div>
-
-
-
-            {/* Integrations */}
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Integrations</p>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => syncToACMutation.mutate({ id: contactId })}
-                  disabled={syncToACMutation.isPending}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-indigo-600 hover:bg-indigo-50 font-medium text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Tag size={13} />
-                  {syncToACMutation.isPending ? "Syncing…" : "Sync to ActiveCampaign"}
-                </button>
-                <button
-                  onClick={() => setTemplatePickerOpen(true)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-amber-700 hover:bg-amber-50 font-medium text-xs transition-colors"
-                >
-                  <Mail size={13} />
-                  Send Email Template
-                </button>
-              </div>
-            </div>
-
-            {/* Starter Kit Selector */}
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Starter Kit</p>
-              <select
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                value={contact.trialKit || ""}
-                onChange={(e) => updateMutation.mutate({ id: contactId, trialKit: e.target.value || undefined })}
-              >
-                <option value="">Select kit...</option>
-                <option value="Starter Kit Ashkara">Starter Kit Ashkara</option>
-                <option value="Starter Kit Oulala">Starter Kit Oulala</option>
-              </select>
-              {contact.trialKit && (
-                <button
-                  onClick={() => alert("Coming soon")}
-                  className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white font-semibold text-xs transition-colors shadow-sm"
-                  style={{ background: "#1565c0" }}
-                >
-                  Create Subscription
-                </button>
-              )}
-            </div>
-
-            {/* Imported Notes */}
-            {contact.importedNotes && (
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Imported Notes</p>
-                <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-xs text-gray-700 leading-relaxed">
-                  {contact.importedNotes}
-                </div>
-              </div>
-            )}
-
-            {/* Skin Info */}
-            {(contact.skinType || contact.concern || contact.routine) && (
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skin Profile</p>
-                <div className="flex flex-col gap-1.5">
-                  {contact.skinType && (
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-400">Skin Type</span>
-                      <span className="text-xs font-medium text-gray-700">{contact.skinType}</span>
-                    </div>
-                  )}
-                  {contact.concern && (
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-400">Concern</span>
-                      <span className="text-xs font-medium text-gray-700">{contact.concern}</span>
-                    </div>
-                  )}
-                  {contact.routine && (
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-400">Routine</span>
-                      <span className="text-xs font-medium text-gray-700">{contact.routine}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

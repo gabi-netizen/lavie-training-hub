@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { contacts, contactCallNotes, type Contact, type InsertContact } from "../drizzle/schema";
+import { contacts, contactCallNotes, callAnalyses, type Contact, type InsertContact } from "../drizzle/schema";
 import { eq, like, or, desc, and, gte, lte, isNull, isNotNull, inArray, count, sql } from "drizzle-orm";
 
 // ─── Lead Types ───────────────────────────────────────────────────────────────
@@ -250,7 +250,29 @@ export async function getContact(id: number) {
     .where(eq(contactCallNotes.contactId, id))
     .orderBy(desc(contactCallNotes.createdAt));
 
-  return { ...contact, callNotes: notes };
+  // Fetch latest AI Coach call analysis for this contact (by contactId or phone match)
+  let latestCallAnalysis = null;
+  try {
+    const analyses = await db
+      .select({
+        id: callAnalyses.id,
+        overallScore: callAnalyses.overallScore,
+        audioFileUrl: callAnalyses.audioFileUrl,
+        callDate: callAnalyses.callDate,
+        repName: callAnalyses.repName,
+        callType: callAnalyses.callType,
+        status: callAnalyses.status,
+      })
+      .from(callAnalyses)
+      .where(and(eq(callAnalyses.contactId, id), eq(callAnalyses.status, "done")))
+      .orderBy(desc(callAnalyses.createdAt))
+      .limit(1);
+    if (analyses.length > 0) {
+      latestCallAnalysis = analyses[0];
+    }
+  } catch (_e) { /* ignore if table doesn't exist */ }
+
+  return { ...contact, callNotes: notes, latestCallAnalysis };
 }
 
 // ─── Update Contact ────────────────────────────────────────────────────────────
