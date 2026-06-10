@@ -1353,4 +1353,85 @@ export const whatsappRouter = router({
 
       return { success: true, messageSid: data.sid as string, status: data.status as string };
     }),
+
+  // ─── Delete Message: remove a single message from the database ─────────────────────
+  deleteMessage: protectedProcedure
+    .input(z.object({ messageId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const { messageId } = input;
+
+      // Verify the message exists
+      const [message] = await db
+        .select()
+        .from(whatsappMessages)
+        .where(eq(whatsappMessages.id, messageId))
+        .limit(1);
+
+      if (!message) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Message not found",
+        });
+      }
+
+      // Delete the message
+      await db.delete(whatsappMessages).where(eq(whatsappMessages.id, messageId));
+
+      console.log(`[WhatsApp] Message #${messageId} deleted by ${ctx.user.name ?? ctx.user.email}`);
+      return { success: true };
+    }),
+
+  // ─── Delete Conversation: remove all messages for a contact + clear assignments ───────
+  deleteConversation: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number().nullable(),
+        phoneNumber: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      const { contactId, phoneNumber } = input;
+
+      if (contactId !== null) {
+        // Delete all messages for this contact
+        await db.delete(whatsappMessages).where(eq(whatsappMessages.contactId, contactId));
+
+        // Delete all assignments for this contact
+        await db.delete(whatsappConversationAssignments).where(eq(whatsappConversationAssignments.contactId, contactId));
+
+        // Delete conversation status record
+        await db.delete(whatsappConversations).where(eq(whatsappConversations.contactId, contactId));
+
+        console.log(`[WhatsApp] Conversation for contact #${contactId} deleted by ${ctx.user.name ?? ctx.user.email}`);
+      } else if (phoneNumber) {
+        // Delete all messages for this phone number (unmatched conversation)
+        await db.delete(whatsappMessages).where(
+          and(
+            sql`${whatsappMessages.contactId} IS NULL`,
+            sql`(${whatsappMessages.fromNumber} = ${phoneNumber} OR ${whatsappMessages.toNumber} = ${phoneNumber})`
+          )
+        );
+
+        console.log(`[WhatsApp] Conversation for phone ${phoneNumber} deleted by ${ctx.user.name ?? ctx.user.email}`);
+      } else {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Either contactId or phoneNumber must be provided",
+        });
+      }
+
+      return { success: true };
+    }),
 });

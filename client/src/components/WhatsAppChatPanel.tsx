@@ -10,7 +10,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import {
   X, Send, MessageCircle, Search, Smile, CheckCircle2,
-  RotateCcw, Clock, FileText, Smartphone
+  RotateCcw, Clock, FileText, Smartphone, Trash2
 } from "lucide-react";
 
 // ─── Common Emojis ──────────────────────────────────────────────────────────
@@ -168,6 +168,22 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
 
   const reopenConversation = trpc.whatsapp.reopenConversation.useMutation({
     onSuccess: () => { toast.success("Reopened"); refetchConversations(); },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
+  });
+
+  const deleteMessage = trpc.whatsapp.deleteMessage.useMutation({
+    onSuccess: () => { refetchMessages(); toast.success("Message deleted"); },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
+  });
+
+  const deleteConversation = trpc.whatsapp.deleteConversation.useMutation({
+    onSuccess: () => { 
+      setSelectedContactId(null);
+      setSelectedPhoneNumber(undefined);
+      setHasSelectedConversation(false);
+      refetchConversations();
+      toast.success("Conversation deleted"); 
+    },
     onError: (err) => toast.error(`Failed: ${err.message}`),
   });
 
@@ -345,7 +361,21 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-black mt-0.5 truncate font-medium">{conv.assignedTo ? conv.assignedTo.userName : "Unassigned"}</p>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-[10px] text-black truncate font-medium">{conv.assignedTo ? conv.assignedTo.userName : "Unassigned"}</p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Delete this entire conversation and all messages?")) {
+                              deleteConversation.mutate({ contactId: conv.contactId, phoneNumber: conv.contactId === null ? conv.fromNumber : undefined });
+                            }
+                          }}
+                          className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors ml-1"
+                          title="Delete conversation"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -416,7 +446,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                           </div>
                         )}
                         <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-1`}>
-                          <div className={`max-w-[65%] px-3 py-1.5 rounded-lg text-sm relative ${
+                          <div className={`max-w-[65%] px-3 py-1.5 rounded-lg text-sm relative group ${
                             msg.channel === "sms"
                               ? isOutbound
                                 ? "bg-blue-100 text-black rounded-tr-none border border-blue-200"
@@ -438,6 +468,17 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                               <span className="text-[10px] text-black">{formatTime(msgDate)}</span>
                               {isOutbound && <MessageStatus status={msg.status} />}
                             </div>
+                            <button
+                              onClick={() => {
+                                if (confirm("Delete this message?")) {
+                                  deleteMessage.mutate({ messageId: msg.id });
+                                }
+                              }}
+                              className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                              title="Delete message"
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </div>
                       </div>
