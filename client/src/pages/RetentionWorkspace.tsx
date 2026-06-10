@@ -572,13 +572,13 @@ export default function RetentionWorkspace() {
                                 </button>
                                 <button
                                   onClick={() => { navigator.clipboard.writeText(currentNote); toast.success("Copied!"); }}
-                                  className="text-xs bg-gray-200 text-gray-800 font-medium px-2 py-1 rounded hover:bg-gray-300"
+                                  className="text-xs bg-black text-white font-medium px-2 py-1 rounded hover:bg-gray-900"
                                 >
                                   Copy
                                 </button>
                                 <button
                                   onClick={() => setExpandedNoteId(null)}
-                                  className="text-xs bg-gray-200 text-gray-800 font-medium px-2 py-1 rounded hover:bg-gray-300"
+                                  className="text-xs bg-black text-white font-medium px-2 py-1 rounded hover:bg-gray-900"
                                 >
                                   ✕ Close
                                 </button>
