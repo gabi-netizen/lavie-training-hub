@@ -455,13 +455,8 @@ export const whatsappRouter = router({
         });
       }
 
-      // Sort: unanswered inbound messages first, then by date (most recent first)
+      // Sort by most recent activity (last message date, regardless of direction)
       conversations.sort((a, b) => {
-        // Unanswered = last message is inbound (customer sent, we haven't replied)
-        const aUnanswered = a.lastMessage.direction === "inbound" ? 1 : 0;
-        const bUnanswered = b.lastMessage.direction === "inbound" ? 1 : 0;
-        if (aUnanswered !== bUnanswered) return bUnanswered - aUnanswered;
-        // Within same group, sort by date (most recent first)
         const dateA = new Date(a.lastMessage.createdAt).getTime();
         const dateB = new Date(b.lastMessage.createdAt).getTime();
         return dateB - dateA;
