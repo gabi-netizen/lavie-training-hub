@@ -686,6 +686,9 @@ export default function SupportTickets() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
 
+  // Send to Retention modal state
+  const [sendToRetentionTicket, setSendToRetentionTicket] = useState<any | null>(null);
+
   // Multi-select
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -812,8 +815,156 @@ export default function SupportTickets() {
 
   const isAdmin = user?.role === "admin";
 
+  // ─── Send to Retention Modal ─────────────────────────────────────────────
+  const SendToRetentionModal = () => {
+    const ticket = sendToRetentionTicket;
+    if (!ticket) return null;
+
+    const [leadType, setLeadType] = useState("Pre-Cycle-Cancelled");
+    const [agent, setAgent] = useState("Rob");
+    const [customerName, setCustomerName] = useState(ticket.fromName || "");
+    const [email, setEmail] = useState(ticket.fromEmail || "");
+    const [phone, setPhone] = useState("");
+    const [customerNote, setCustomerNote] = useState(
+      (ticket.body || "").slice(0, 200)
+    );
+
+    const createLeadMutation = trpc.manager.createLead.useMutation({
+      onSuccess: () => {
+        toast.success("Sent to Retention");
+        updateTicket.mutate({ id: ticket.id, status: "resolved" });
+        setSendToRetentionTicket(null);
+      },
+      onError: (e: { message: string }) => toast.error(e.message),
+    });
+
+    const handleSubmit = () => {
+      createLeadMutation.mutate({
+        customerName,
+        email,
+        phone,
+        leadType,
+        assignedAgent: agent,
+        managerNote: customerNote,
+        leadCategory: "subscription",
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-gray-900">Send to Retention</h2>
+            <button
+              onClick={() => setSendToRetentionTicket(null)}
+              className="p-1 rounded hover:bg-gray-100 transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Lead Type */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Lead Type</label>
+              <Select value={leadType} onValueChange={setLeadType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</SelectItem>
+                  <SelectItem value="Cancel Live Sub">Cancel Live Sub</SelectItem>
+                  <SelectItem value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</SelectItem>
+                  <SelectItem value="From Cat to Rob">From Cat to Rob</SelectItem>
+                  <SelectItem value="Pre-Cycle-Decline">Pre-Cycle-Decline</SelectItem>
+                  <SelectItem value="Hot Lead">Hot Lead</SelectItem>
+                  <SelectItem value="Decline Live Sub">Decline Live Sub</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Agent */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Agent</label>
+              <Select value={agent} onValueChange={setAgent}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Rob">Rob</SelectItem>
+                  <SelectItem value="Guy">Guy</SelectItem>
+                  <SelectItem value="James">James</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Customer Name */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Customer Name</label>
+              <Input
+                value={customerName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerName(e.target.value)}
+                placeholder="Customer name"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+              <Input
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                placeholder="customer@example.com"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Phone</label>
+              <Input
+                value={phone}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+                placeholder="+44..."
+              />
+            </div>
+
+            {/* Customer Note */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Customer Note</label>
+              <Textarea
+                value={customerNote}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomerNote(e.target.value)}
+                placeholder="Notes from the ticket..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setSendToRetentionTicket(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleSubmit}
+              disabled={createLeadMutation.isPending}
+            >
+              {createLeadMutation.isPending ? "Sending..." : "Send to Retention"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Send to Retention Modal */}
+      <SendToRetentionModal />
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-4">
         <div className="flex items-center justify-between">
@@ -1501,6 +1652,21 @@ export default function SupportTickets() {
                                 >
                                   <Ban className="h-3 w-3" />
                                   Block Subject
+                                </Button>
+                              </div>
+                            )}
+                            {/* Send to Retention Button (admin + retention team) */}
+                            {(isAdmin || user?.team === "retention") && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 mb-1 block">&nbsp;</label>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-xs gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                                  onClick={() => setSendToRetentionTicket(ticket)}
+                                >
+                                  <ArrowUpRight className="h-3 w-3" />
+                                  Send to Retention
                                 </Button>
                               </div>
                             )}

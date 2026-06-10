@@ -56,6 +56,7 @@ const WORKSPACE_ITEM = { path: "/workspace", label: "Workspace", icon: LayoutDas
 const TRAINING_ITEM = { path: "/training", label: "Training", icon: BookOpen };
 const COMMAND_CENTRE_ITEM = { path: "/command-centre", label: "Command Centre", icon: Shield };
 const SUPPORT_TICKETS_ITEM = { path: "/support-tickets", label: "Support Tickets", icon: Mail };
+const RETENTION_WORKSPACE_ITEM = { path: "/retention-workspace", label: "Retention", icon: Users };
 const WHATSAPP_CONTROL_ITEM = { path: "/whatsapp-control", label: "Messages", icon: MessageSquare };
 const OPENING_DASHBOARD_ITEM = { path: "/opening-dashboard", label: "Opening", icon: Phone };
 
@@ -87,6 +88,7 @@ export default function TopNav() {
   const isAdmin = user?.role === "admin";
   const isManager = !user?.team; // Managers have no team assigned
   const isAcademy = user?.team === "academy";
+  const isRetention = user?.team === "retention";
   const callsItems = isAdmin ? CALLS_ITEMS_ADMIN : CALLS_ITEMS_AGENT;
   const aiCoachItems = isAdmin ? AI_COACH_ITEMS_ADMIN : AI_COACH_ITEMS_AGENT;
   const mobileItems = isAcademy
@@ -123,7 +125,7 @@ export default function TopNav() {
   const initials = user?.name
     ? user.name
         .split(" ")
-        .map((w) => w[0])
+        .map((w: string) => w[0])
         .join("")
         .toUpperCase()
         .slice(0, 2)
@@ -291,8 +293,8 @@ export default function TopNav() {
               </button>
             </Link>
           )}
-          {/* Support Tickets — admin only */}
-          {isAdmin && (
+          {/* Support Tickets — admin + retention */}
+          {(isAdmin || isRetention) && (
             <Link href={SUPPORT_TICKETS_ITEM.path}>
               <button
                 className={cn(
@@ -304,6 +306,22 @@ export default function TopNav() {
               >
                 <Mail size={14} />
                 Support Tickets
+              </button>
+            </Link>
+          )}
+          {/* Retention Workspace — admin + retention */}
+          {(isAdmin || isRetention) && (
+            <Link href={RETENTION_WORKSPACE_ITEM.path}>
+              <button
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
+                  location === RETENTION_WORKSPACE_ITEM.path
+                    ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
+                    : "text-white hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Users size={14} />
+                Retention
               </button>
             </Link>
           )}

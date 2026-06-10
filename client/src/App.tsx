@@ -23,7 +23,9 @@ import OpeningDashboard from "@/pages/OpeningDashboard";
 import WhatsAppControl from "@/pages/WhatsAppControl";
 import SharedCallView from "./pages/SharedCallView";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useEffect } from "react";
+import { lazy, useEffect } from "react";
+
+const RetentionWorkspace = lazy(() => import("./pages/RetentionWorkspace"));
 
 /** Wraps a component so only admins can access it. Non-admins are redirected to /training. */
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
@@ -178,6 +180,11 @@ function Router() {
 
         {/* Opening Agents Dashboard — all authenticated users */}
         <Route path={"/opening-dashboard"} component={OpeningDashboard} />
+
+        {/* Retention Workspace — admin + retention agents */}
+        <Route path={"/retention-workspace"}>
+          {() => <AdminOrRetentionRoute component={RetentionWorkspace} />}
+        </Route>
 
         {/* Workspace — agent calling workspace */}
         <Route path={"/workspace"} component={Workspace} />
