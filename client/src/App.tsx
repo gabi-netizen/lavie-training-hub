@@ -20,12 +20,12 @@ import ManagerDashboard from "./pages/ManagerDashboard";
 import SupportTickets from "@/pages/SupportTickets";
 import UsersPage from "@/pages/Users";
 import OpeningDashboard from "@/pages/OpeningDashboard";
-import WhatsAppControl from "@/pages/WhatsAppControl";
 import SharedCallView from "./pages/SharedCallView";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { lazy, useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 
 const RetentionWorkspace = lazy(() => import("./pages/RetentionWorkspace"));
+const WhatsAppControl = lazy(() => import("@/pages/WhatsAppControl"));
 
 /** Wraps a component so only admins can access it. Non-admins are redirected to /training. */
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
@@ -171,7 +171,13 @@ function Router() {
         </Route>
 
         {/* WhatsApp Control — all authenticated users */}
-        <Route path={"/whatsapp-control"} component={WhatsAppControl} />
+        <Route path={"/whatsapp-control"}>
+          {() => (
+            <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+              <WhatsAppControl />
+            </Suspense>
+          )}
+        </Route>
 
         {/* Users Management — admin only */}
         <Route path={"/users"}>
