@@ -20,6 +20,7 @@ import {
   MessageSquare,
   X,
   Pencil,
+  Send,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -95,6 +96,9 @@ export default function RetentionWorkspace() {
   const [emailLeadName, setEmailLeadName] = useState("");
   const [emailLeadEmail, setEmailLeadEmail] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [composeFreeEmail, setComposeFreeEmail] = useState(false);
+  const [freeSubject, setFreeSubject] = useState("");
+  const [freeBody, setFreeBody] = useState("");
 
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
@@ -133,9 +137,19 @@ export default function RetentionWorkspace() {
   }, [selectedTemplate, emailLeadName, user]);
   const sendTemplateMutation = trpc.emailTemplates.send.useMutation({
     onSuccess: () => {
-      toast.success("Email sent successfully ✅");
+      toast.success("Email sent successfully \u2705");
       setEmailTemplateOpen(false);
       setSelectedTemplateId(null);
+    },
+    onError: (err) => toast.error(`Failed to send: ${err.message}`),
+  });
+  const sendFreeEmailMutation = trpc.emails.send.useMutation({
+    onSuccess: () => {
+      toast.success("Email sent successfully \u2705");
+      setEmailTemplateOpen(false);
+      setComposeFreeEmail(false);
+      setFreeSubject("");
+      setFreeBody("");
     },
     onError: (err) => toast.error(`Failed to send: ${err.message}`),
   });
@@ -588,12 +602,24 @@ export default function RetentionWorkspace() {
                     : <span className="ml-2 text-red-500 text-xs">⚠ No email on file</span>}
                 </p>
               </div>
-              <button
-                onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <X size={18} className="text-gray-500" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setComposeFreeEmail(!composeFreeEmail); setSelectedTemplateId(null); }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    composeFreeEmail
+                      ? "bg-red-50 text-red-700 hover:bg-red-100"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {composeFreeEmail ? <><X size={14} /> Cancel</> : <><Send size={14} /> Compose</>}
+                </button>
+                <button
+                  onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); setComposeFreeEmail(false); }}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
             </div>
             {/* Body: Template list + Preview */}
             <div className="flex flex-1 overflow-hidden">
@@ -620,60 +646,104 @@ export default function RetentionWorkspace() {
                   ))}
                 </div>
               </div>
-              {/* Right: Preview */}
+              {/* Right: Preview or Compose */}
               <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                {!selectedTemplateId && (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                    <Mail size={32} className="opacity-30" />
-                    <p className="text-sm">Select a template to preview</p>
-                  </div>
-                )}
-                {selectedTemplateId && templateDetailLoading && (
-                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading preview…</div>
-                )}
-                {selectedTemplateId && previewHtml && (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                    <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
-                      <p className="text-xs text-gray-500">
-                        Subject: <span className="font-medium text-gray-700">
-                          {selectedTemplate?.subject
-                            ?.replaceAll("${Customers.First Name}", (emailLeadName ?? "").split(" ")[0] || "[Name]")
-                            .replaceAll("${agentName}", user?.name ?? "[Agent]")}
-                        </span>
-                      </p>
+                {composeFreeEmail ? (
+                  <div className="flex flex-col gap-4 h-full">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">To</label>
+                      <p className="mt-1 text-sm text-gray-800 bg-gray-100 rounded-lg px-3 py-2">{emailLeadEmail}</p>
                     </div>
-                    <iframe
-                      srcDoc={previewHtml}
-                      className="w-full"
-                      style={{ height: "520px", border: "none" }}
-                      title="Email Preview"
-                    />
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject</label>
+                      <input
+                        type="text"
+                        value={freeSubject}
+                        onChange={(e) => setFreeSubject(e.target.value)}
+                        placeholder="Add a subject"
+                        className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Message</label>
+                      <textarea
+                        value={freeBody}
+                        onChange={(e) => setFreeBody(e.target.value)}
+                        placeholder="Write your email..."
+                        className="mt-1 flex-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        style={{ minHeight: "300px" }}
+                      />
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    {!selectedTemplateId && (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                        <Mail size={32} className="opacity-30" />
+                        <p className="text-sm">Select a template to preview</p>
+                      </div>
+                    )}
+                    {selectedTemplateId && templateDetailLoading && (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading preview…</div>
+                    )}
+                    {selectedTemplateId && previewHtml && (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                        <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                          <p className="text-xs text-gray-500">
+                            Subject: <span className="font-medium text-gray-700">
+                              {selectedTemplate?.subject
+                                ?.replaceAll("${Customers.First Name}", (emailLeadName ?? "").split(" ")[0] || "[Name]")
+                                .replaceAll("${agentName}", user?.name ?? "[Agent]")}
+                            </span>
+                          </p>
+                        </div>
+                        <iframe
+                          srcDoc={previewHtml}
+                          className="w-full"
+                          style={{ height: "520px", border: "none" }}
+                          title="Email Preview"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
             {/* Footer */}
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
               <p className="text-xs text-gray-400">
-                Placeholders (name, agent, email) are filled automatically before sending
+                {composeFreeEmail ? "Email will be sent from trial@lavielabs.com" : "Placeholders (name, agent, email) are filled automatically before sending"}
               </p>
               <div className="flex gap-3">
                 <button
-                  onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}
+                  onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); setComposeFreeEmail(false); }}
                   className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={() => {
-                    if (!selectedTemplateId || !emailLeadContactId) return;
-                    sendTemplateMutation.mutate({ templateId: selectedTemplateId, contactId: emailLeadContactId });
-                  }}
-                  disabled={!selectedTemplateId || sendTemplateMutation.isPending || !emailLeadEmail}
-                  className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sendTemplateMutation.isPending ? "Sending…" : "Send Email"}
-                </button>
+                {composeFreeEmail ? (
+                  <button
+                    onClick={() => {
+                      if (!emailLeadContactId || !freeSubject.trim() || !freeBody.trim()) return;
+                      sendFreeEmailMutation.mutate({ contactId: emailLeadContactId, subject: freeSubject.trim(), body: freeBody.trim() });
+                    }}
+                    disabled={!freeSubject.trim() || !freeBody.trim() || sendFreeEmailMutation.isPending || !emailLeadEmail}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendFreeEmailMutation.isPending ? "Sending…" : "Send Email"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (!selectedTemplateId || !emailLeadContactId) return;
+                      sendTemplateMutation.mutate({ templateId: selectedTemplateId, contactId: emailLeadContactId });
+                    }}
+                    disabled={!selectedTemplateId || sendTemplateMutation.isPending || !emailLeadEmail}
+                    className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendTemplateMutation.isPending ? "Sending…" : "Send Email"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
