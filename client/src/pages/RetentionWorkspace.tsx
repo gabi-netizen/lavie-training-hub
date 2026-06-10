@@ -532,9 +532,9 @@ export default function RetentionWorkspace() {
                                 : lead.managerNote
                               : "—"}
                           </p>
-                          {/* Tooltip on hover */}
+                          {/* Tooltip on hover - above the text */}
                           {lead.managerNote && lead.managerNote.length > 40 && (
-                            <div className="absolute z-50 left-0 top-full mt-1 hidden group-hover/note:block bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-[350px] whitespace-pre-wrap shadow-lg">
+                            <div className="absolute z-50 left-0 bottom-full mb-1 hidden group-hover/note:block bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-[350px] whitespace-pre-wrap shadow-lg">
                               {lead.managerNote}
                             </div>
                           )}
