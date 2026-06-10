@@ -142,65 +142,68 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
 
         {/* Compose Form */}
         {composing ? (
-          <div style={{ padding: 16, borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
-            <div style={{ marginBottom: 10 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>To</label>
-              <input
-                type="email"
-                value={toEmail}
-                onChange={(e) => setToEmail(e.target.value)}
-                placeholder="Enter email address..."
-                style={{
-                  width: "100%", padding: "8px 12px", borderRadius: 6,
-                  border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>Subject</label>
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Email subject..."
-                style={{
-                  width: "100%", padding: "8px 12px", borderRadius: 6,
-                  border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>Message</label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Write your message here..."
-                rows={6}
-                style={{
-                  width: "100%", padding: "10px 12px", borderRadius: 6,
-                  border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                  resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
-                }}
-              />
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button
-                onClick={handleSend}
-                disabled={sendDirectEmail.isPending || !subject.trim() || !body.trim() || !toEmail.trim()}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "9px 20px", borderRadius: 6, border: "none", cursor: "pointer",
-                  fontSize: 13, fontWeight: 600,
-                  background: sendDirectEmail.isPending ? "#000" : "#2563eb",
-                  color: "#fff",
-                  opacity: (!subject.trim() || !body.trim() || !toEmail.trim()) ? 0.5 : 1,
-                }}
-              >
-                <Send size={14} />
-                {sendDirectEmail.isPending ? "Sending..." : "Send Email"}
-              </button>
+          <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "32px 24px", background: "#f8fafc", overflow: "auto" }}>
+            <div style={{ width: "100%", maxWidth: 700 }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#000", marginBottom: 6 }}>To</label>
+                <input
+                  type="email"
+                  value={toEmail}
+                  onChange={(e) => setToEmail(e.target.value)}
+                  placeholder="Enter email address..."
+                  style={{
+                    width: "100%", padding: "12px 16px", borderRadius: 8,
+                    border: "1px solid #e2e8f0", fontSize: 15, color: "#000",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#000", marginBottom: 6 }}>Subject</label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Email subject..."
+                  style={{
+                    width: "100%", padding: "12px 16px", borderRadius: 8,
+                    border: "1px solid #e2e8f0", fontSize: 15, color: "#000",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#000", marginBottom: 6 }}>Message</label>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Write your message here..."
+                  rows={12}
+                  style={{
+                    width: "100%", padding: "14px 16px", borderRadius: 8,
+                    border: "1px solid #e2e8f0", fontSize: 15, color: "#000",
+                    resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
+                    minHeight: 250,
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                <button
+                  onClick={handleSend}
+                  disabled={sendDirectEmail.isPending || !subject.trim() || !body.trim() || !toEmail.trim()}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "12px 28px", borderRadius: 8, border: "none", cursor: "pointer",
+                    fontSize: 15, fontWeight: 600,
+                    background: sendDirectEmail.isPending ? "#000" : "#2563eb",
+                    color: "#fff",
+                    opacity: (!subject.trim() || !body.trim() || !toEmail.trim()) ? 0.5 : 1,
+                  }}
+                >
+                  <Send size={16} />
+                  {sendDirectEmail.isPending ? "Sending..." : "Send Email"}
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -248,76 +251,77 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
       {/* Compose Form */}
       {composing && (
         <div style={{
-          padding: 16, borderBottom: "1px solid #e2e8f0", background: "#f8fafc",
+          padding: "32px 24px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc",
+          display: "flex", justifyContent: "center",
         }}>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>
-              To
-            </label>
-            <input
-              type="email"
-              value={toEmail || contactInfo?.email || ""}
-              onChange={(e) => setToEmail(e.target.value)}
-              placeholder="Enter email address..."
-              style={{
-                width: "100%", padding: "8px 12px", borderRadius: 6,
-                border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                boxSizing: "border-box",
-              }}
-            />
+          <div style={{ width: "100%", maxWidth: 700 }}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#000", marginBottom: 6 }}>
+                To
+              </label>
+              <input
+                type="email"
+                value={toEmail || contactInfo?.email || ""}
+                onChange={(e) => setToEmail(e.target.value)}
+                placeholder="Enter email address..."
+                style={{
+                  width: "100%", padding: "12px 16px", borderRadius: 8,
+                  border: "1px solid #e2e8f0", fontSize: 15, color: "#000",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#000", marginBottom: 6 }}>
+                Subject
+              </label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Email subject..."
+                style={{
+                  width: "100%", padding: "12px 16px", borderRadius: 8,
+                  border: "1px solid #e2e8f0", fontSize: 15, color: "#000",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#000", marginBottom: 6 }}>
+                Message
+              </label>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your message here..."
+                rows={12}
+                style={{
+                  width: "100%", padding: "14px 16px", borderRadius: 8,
+                  border: "1px solid #e2e8f0", fontSize: 15, color: "#000",
+                  resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
+                  minHeight: 250,
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={handleSend}
+                disabled={sendEmail.isPending || sendDirectEmail.isPending || !subject.trim() || !body.trim()}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "12px 28px", borderRadius: 8, border: "none", cursor: "pointer",
+                  fontSize: 15, fontWeight: 600,
+                  background: (sendEmail.isPending || sendDirectEmail.isPending) ? "#000" : "#2563eb",
+                  color: "#fff",
+                  opacity: (!subject.trim() || !body.trim()) ? 0.5 : 1,
+                }}
+              >
+                <Send size={16} />
+                {(sendEmail.isPending || sendDirectEmail.isPending) ? "Sending..." : "Send Email"}
+              </button>
+            </div>
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>
-              Subject
-            </label>
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Email subject..."
-              style={{
-                width: "100%", padding: "8px 12px", borderRadius: 6,
-                border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>
-              Message
-            </label>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Write your message here..."
-              rows={6}
-              style={{
-                width: "100%", padding: "10px 12px", borderRadius: 6,
-                border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
-              }}
-            />
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <button
-              onClick={handleSend}
-              disabled={sendEmail.isPending || sendDirectEmail.isPending || !subject.trim() || !body.trim()}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "9px 20px", borderRadius: 6, border: "none", cursor: "pointer",
-                fontSize: 13, fontWeight: 600,
-                background: (sendEmail.isPending || sendDirectEmail.isPending) ? "#000" : "#2563eb",
-                color: "#fff",
-                opacity: (!subject.trim() || !body.trim()) ? 0.5 : 1,
-              }}
-            >
-              <Send size={14} />
-              {(sendEmail.isPending || sendDirectEmail.isPending) ? "Sending..." : "Send Email"}
-            </button>
-          </div>
-          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#000" }}>
-            Tracking pixel and link tracking will be automatically added.
-          </p>
         </div>
       )}
 
