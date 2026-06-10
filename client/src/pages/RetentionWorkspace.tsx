@@ -619,9 +619,13 @@ export default function RetentionWorkspace() {
                             {/* Phone */}
                             <a
                               href={lead.phone ? `tel:${lead.phone}` : "#"}
-                              className={`p-1.5 rounded hover:bg-green-50 transition-colors ${
-                                lead.phone ? "text-green-600" : "text-gray-300 pointer-events-none"
-                              }`}
+                              onClick={(e) => {
+                                if (!lead.phone && lead.contactId) {
+                                  e.preventDefault();
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                                }
+                              }}
+                              className="p-1.5 rounded hover:bg-green-50 transition-colors text-green-600"
                               title="Call"
                             >
                               <Phone className="h-4 w-4" />
@@ -630,18 +634,21 @@ export default function RetentionWorkspace() {
                             {/* WhatsApp */}
                             <button
                               onClick={() => {
-                                if (lead.contactId && lead.phone) {
-                                  setMsgLeadContactId(lead.contactId);
-                                  setMsgLeadPhone(lead.phone);
-                                  setMsgLeadName(lead.customerName || "");
-                                  setWaModalOpen(true);
+                                if (lead.phone) {
+                                  if (lead.contactId) {
+                                    setMsgLeadContactId(lead.contactId);
+                                    setMsgLeadPhone(lead.phone);
+                                    setMsgLeadName(lead.customerName || "");
+                                    setWaModalOpen(true);
+                                  }
+                                } else if (lead.contactId) {
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
                                 }
                               }}
                               className={`p-1.5 rounded hover:bg-green-50 transition-colors ${
-                                lead.phone ? "text-green-600" : "text-gray-300 pointer-events-none"
+                                lead.contactId ? "text-green-600" : "text-black"
                               }`}
                               title="WhatsApp"
-                              disabled={!lead.phone}
                             >
                               <MessageCircle className="h-4 w-4" />
                             </button>
@@ -649,18 +656,21 @@ export default function RetentionWorkspace() {
                             {/* SMS */}
                             <button
                               onClick={() => {
-                                if (lead.contactId && lead.phone) {
-                                  setMsgLeadContactId(lead.contactId);
-                                  setMsgLeadPhone(lead.phone);
-                                  setMsgLeadName(lead.customerName || "");
-                                  setSmsModalOpen(true);
+                                if (lead.phone) {
+                                  if (lead.contactId) {
+                                    setMsgLeadContactId(lead.contactId);
+                                    setMsgLeadPhone(lead.phone);
+                                    setMsgLeadName(lead.customerName || "");
+                                    setSmsModalOpen(true);
+                                  }
+                                } else if (lead.contactId) {
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
                                 }
                               }}
                               className={`p-1.5 rounded hover:bg-blue-50 transition-colors ${
-                                lead.phone ? "text-blue-600" : "text-gray-300 pointer-events-none"
+                                lead.contactId ? "text-blue-600" : "text-black"
                               }`}
                               title="SMS"
-                              disabled={!lead.phone}
                             >
                               <MessageSquare className="h-4 w-4" />
                             </button>
