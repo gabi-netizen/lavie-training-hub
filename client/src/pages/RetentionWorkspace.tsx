@@ -41,8 +41,9 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> 
   working: { bg: "bg-amber-100", text: "text-amber-800", label: "Working" },
   in_progress: { bg: "bg-amber-100", text: "text-amber-800", label: "In Progress" },
   done_deal: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Done Deal" },
+  retained_sub: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Retained Sub" },
   retained: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Retained" },
-  closed: { bg: "bg-gray-100", text: "text-gray-700", label: "Closed" },
+  closed: { bg: "bg-red-100", text: "text-red-800", label: "Closed" },
   callback: { bg: "bg-blue-100", text: "text-blue-800", label: "Callback" },
   follow_up: { bg: "bg-blue-100", text: "text-blue-800", label: "Follow Up" },
   no_answer: { bg: "bg-orange-100", text: "text-orange-800", label: "No Answer" },
@@ -73,7 +74,7 @@ function formatDateDDMMYYYY(dateStr: string | null | undefined): string {
 
 // ─── Status Dropdown Options ─────────────────────────────────────────────────
 
-const STATUS_OPTIONS = ["new", "working", "callback", "done_deal", "retained", "closed"] as const;
+const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub", "callback", "no_answer", "not_interested"] as const;
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -165,25 +166,28 @@ export default function RetentionWorkspace() {
     );
   };
 
-  // ─── Status Badge with Dropdown ──────────────────────────────────────────────
+    // ─── Status Badge with Dropdown ──────────────────────────────────────────────
+  const [customStatusInput, setCustomStatusInput] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const StatusBadge = ({ lead }: { lead: (typeof allLeads)[0] }) => {
     const badge = getStatusBadge(lead.workStatus);
     const isOpen = statusDropdownOpen === lead.subscriptionId;
-
     return (
       <div className="relative">
         <button
           onClick={(e) => {
             e.stopPropagation();
             setStatusDropdownOpen(isOpen ? null : lead.subscriptionId);
+            setShowCustomInput(false);
+            setCustomStatusInput("");
           }}
           className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${badge.bg} ${badge.text}`}
         >
           {badge.label}
         </button>
         {isOpen && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
+          <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
             {STATUS_OPTIONS.map((status) => {
               const opt = getStatusBadge(status);
               return (
@@ -193,12 +197,57 @@ export default function RetentionWorkspace() {
                     e.stopPropagation();
                     handleStatusChange(lead.subscriptionId, status);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors text-gray-800"
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors text-gray-800 ${lead.workStatus === status ? "bg-gray-100 font-semibold" : ""}`}
                 >
                   {opt.label}
                 </button>
               );
             })}
+            <div className="border-t border-gray-100 mt-1 pt-1">
+              {!showCustomInput ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCustomInput(true);
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors font-medium"
+                >
+                  + Custom Status
+                </button>
+              ) : (
+                <div className="px-2 py-1.5 flex gap-1">
+                  <input
+                    type="text"
+                    value={customStatusInput}
+                    onChange={(e) => setCustomStatusInput(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && customStatusInput.trim()) {
+                        handleStatusChange(lead.subscriptionId, customStatusInput.trim().toLowerCase().replace(/\s+/g, "_"));
+                        setCustomStatusInput("");
+                        setShowCustomInput(false);
+                      }
+                    }}
+                    placeholder="Type status..."
+                    className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-indigo-400"
+                    autoFocus
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (customStatusInput.trim()) {
+                        handleStatusChange(lead.subscriptionId, customStatusInput.trim().toLowerCase().replace(/\s+/g, "_"));
+                        setCustomStatusInput("");
+                        setShowCustomInput(false);
+                      }
+                    }}
+                    className="text-xs bg-indigo-600 text-white rounded px-2 py-1 hover:bg-indigo-700"
+                  >
+                    OK
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
