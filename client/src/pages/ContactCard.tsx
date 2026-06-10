@@ -1303,7 +1303,7 @@ export default function ContactCard() {
                                     <p className="text-xs text-gray-800 leading-relaxed flex-1">{note.note}</p>
                                     <button
                                       onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.note); }}
-                                      className="opacity-0 group-hover/note:opacity-100 transition-opacity text-gray-600 hover:text-blue-600 shrink-0 mt-0.5"
+                                      className="text-gray-600 hover:text-blue-600 shrink-0 mt-0.5"
                                       title="Edit note"
                                     >
                                       <Pencil size={12} />
