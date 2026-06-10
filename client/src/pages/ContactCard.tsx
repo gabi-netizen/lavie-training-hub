@@ -263,6 +263,10 @@ export default function ContactCard() {
   };
 
   // ─── Retention lead status & note management ────────────────────────────────
+  const logCallAttemptMutation = trpc.manager.logCallAttempt.useMutation({
+    onSuccess: () => { toast.success("Callback scheduled"); },
+    onError: (err: any) => toast.error(err.message || "Failed to schedule callback"),
+  });
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
     onSuccess: () => {
       refetch();
@@ -506,6 +510,8 @@ export default function ContactCard() {
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [smsModalOpen, setSmsModalOpen] = useState(false);
   const [smsBody, setSmsBody] = useState("");
+  const [callbackModalOpen, setCallbackModalOpen] = useState(false);
+  const [callbackDateTime, setCallbackDateTime] = useState("");
   const { data: whatsappTemplates, isLoading: waTemplatesLoading } = trpc.whatsapp.templates.useQuery(
     undefined,
     { enabled: waModalOpen }
@@ -963,14 +969,14 @@ export default function ContactCard() {
           {/* ── Quick Contact Card ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
             <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Quick Contact</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => {
                   if (!contact.phone) { toast.error("No phone number on file"); return; }
                   setWaModalOpen(true);
                 }}
                 disabled={!contact.phone}
-                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-green-500 bg-green-50 text-green-700 text-xs font-medium transition-colors hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-green-600 text-white text-xs font-bold transition-colors hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -983,7 +989,7 @@ export default function ContactCard() {
                   setEmailOpen((v) => !v);
                 }}
                 disabled={!contact.email}
-                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-purple-500 bg-purple-50 text-purple-700 text-xs font-medium transition-colors hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-purple-600 text-white text-xs font-bold transition-colors hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Mail size={16} />
                 Email
@@ -994,10 +1000,17 @@ export default function ContactCard() {
                   setSmsModalOpen(true);
                 }}
                 disabled={!contact.phone}
-                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border border-blue-500 bg-blue-50 text-blue-700 text-xs font-medium transition-colors hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-blue-600 text-white text-xs font-bold transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <MessageSquare size={16} />
                 SMS
+              </button>
+              <button
+                onClick={() => { setCallbackModalOpen(true); setCallbackDateTime(""); }}
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-indigo-600 text-white text-xs font-bold transition-colors hover:bg-indigo-700"
+              >
+                <Calendar size={16} />
+                Callback
               </button>
             </div>
           </div>
@@ -2286,6 +2299,103 @@ export default function ContactCard() {
         </div>
       </div>
     )}
+    {/* Schedule Callback Modal */}
+    {callbackModalOpen && (() => {
+      const TIME_SLOTS = [
+        "09:00","09:30","10:00","10:30","11:00","11:30",
+        "12:00","12:30","13:00","13:30","14:00","14:30",
+        "15:00","15:30","16:00","16:30","17:00","17:30",
+        "18:00","18:30","19:00","19:30","20:00"
+      ];
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
+      const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+      const in2Days = new Date(today); in2Days.setDate(today.getDate() + 2);
+      const in2DaysStr = in2Days.toISOString().slice(0, 10);
+      const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+      const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+
+      const cbParts = callbackDateTime.split("T");
+      const selectedDate = cbParts[0] || "";
+      const selectedTime = cbParts[1]?.slice(0, 5) || "";
+      const isCustomDate = selectedDate && selectedDate !== todayStr && selectedDate !== tomorrowStr && selectedDate !== in2DaysStr && selectedDate !== nextWeekStr;
+
+      const setDatePart = (dateStr: string) => setCallbackDateTime(dateStr + "T" + (selectedTime || ""));
+      const setTimePart = (timeStr: string) => setCallbackDateTime((selectedDate || todayStr) + "T" + timeStr);
+      const isValid = selectedDate && selectedTime;
+
+      return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={() => setCallbackModalOpen(false)}>
+          <div className="bg-white rounded-xl shadow-2xl p-7 min-w-[380px] max-w-[460px] flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              <span className="font-bold text-lg text-gray-800">Schedule Callback</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              Scheduling callback for <strong>{contact.name}</strong>
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-700">Date</label>
+              <div className="flex gap-2 flex-wrap">
+                {[{label:"Today",val:todayStr},{label:"Tomorrow",val:tomorrowStr},{label:"In 2 Days",val:in2DaysStr},{label:"Next Week",val:nextWeekStr}].map(b => (
+                  <button key={b.val} type="button" onClick={() => setDatePart(b.val)}
+                    className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${
+                      selectedDate === b.val ? "border-indigo-500 bg-indigo-50 text-indigo-600" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                    }`}>{b.label}</button>
+                ))}
+                <button type="button" onClick={() => setCallbackDateTime("T" + (selectedTime || ""))}
+                  className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${
+                    isCustomDate ? "border-indigo-500 bg-indigo-50 text-indigo-600" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  }`}>Custom</button>
+              </div>
+              {(isCustomDate || (!selectedDate && callbackDateTime.startsWith("T"))) && (
+                <input type="date" value={selectedDate} onChange={(e) => setDatePart(e.target.value)} min={todayStr}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 w-full" />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-700">Time</label>
+              <select value={selectedTime} onChange={(e) => setTimePart(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold w-full">
+                <option value="" disabled>Select time...</option>
+                {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            {isValid && (
+              <div className="bg-green-50 border border-green-300 rounded-lg px-3 py-2 text-sm text-green-800 font-semibold text-center">
+                {new Date(callbackDateTime).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} at {selectedTime}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setCallbackModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+              <button
+                onClick={() => {
+                  if (!isValid || !retentionSubId) return;
+                  const dt = new Date(callbackDateTime);
+                  logCallAttemptMutation.mutate({
+                    subscriptionId: retentionSubId,
+                    agentName: user?.name || "Rob",
+                    result: "callback",
+                    callbackAt: dt.getTime(),
+                    note: `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`,
+                  });
+                  setCallbackModalOpen(false);
+                }}
+                disabled={!isValid}
+                className={`px-5 py-2 rounded-lg border-none font-bold text-sm text-white ${
+                  isValid ? "bg-indigo-600 hover:bg-indigo-700 cursor-pointer" : "bg-indigo-300 cursor-not-allowed"
+                }`}>Confirm Callback</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
     </>
   );
 }
