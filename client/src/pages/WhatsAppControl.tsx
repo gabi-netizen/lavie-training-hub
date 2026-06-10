@@ -633,11 +633,7 @@ export default function WhatsAppControl() {
                         </span>
                       )}
                     </div>
-                    {conv.assignedTo && (
-                      <p className="text-[10px] text-blue-600 mt-0.5 truncate">
-                        {conv.assignedTo.userName}
-                      </p>
-                    )}
+                    <p className="text-[10px] text-black mt-0.5 truncate font-medium">{conv.assignedTo ? conv.assignedTo.userName : "Unassigned"}</p>
                   </div>
                 </div>
               );

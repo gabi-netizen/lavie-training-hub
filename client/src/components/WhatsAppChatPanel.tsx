@@ -345,9 +345,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                           </span>
                         )}
                       </div>
-                      {conv.assignedTo && (
-                        <p className="text-[10px] text-blue-600 mt-0.5 truncate font-medium">{conv.assignedTo.userName}</p>
-                      )}
+                      <p className="text-[10px] text-black mt-0.5 truncate font-medium">{conv.assignedTo ? conv.assignedTo.userName : "Unassigned"}</p>
                     </div>
                   </div>
                 );
