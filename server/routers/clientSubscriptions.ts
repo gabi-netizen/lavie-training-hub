@@ -27,6 +27,7 @@ export const clientSubscriptionsRouter = router({
         status: z.string().optional(),
         planType: z.enum(["installment", "subscription", "one_payment"]).optional(),
         nextBillingRange: z.enum(["this_week", "this_month", "overdue"]).optional(),
+        activatedRange: z.enum(["this_month", "last_month", "last_3_months"]).optional(),
         amountMin: z.number().optional(),
         amountMax: z.number().optional(),
         page: z.number().default(1),
@@ -74,6 +75,23 @@ export const clientSubscriptionsRouter = router({
 
       if (input.amountMax !== undefined) {
         conditions.push(lte(clientSubscriptions.amount, String(input.amountMax)));
+      }
+
+      // Activated date range filter
+      if (input.activatedRange) {
+        const now = new Date();
+        if (input.activatedRange === "this_month") {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          conditions.push(gte(clientSubscriptions.activatedOn, startOfMonth));
+        } else if (input.activatedRange === "last_month") {
+          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+          conditions.push(gte(clientSubscriptions.activatedOn, startOfLastMonth));
+          conditions.push(lte(clientSubscriptions.activatedOn, endOfLastMonth));
+        } else if (input.activatedRange === "last_3_months") {
+          const start3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+          conditions.push(gte(clientSubscriptions.activatedOn, start3Months));
+        }
       }
 
       // Next billing range filter

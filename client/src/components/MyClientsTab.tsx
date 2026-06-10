@@ -60,6 +60,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
   const [nextBillingFilter, setNextBillingFilter] = useState("");
+  const [activatedFilter, setActivatedFilter] = useState("this_month");
   const [amountFilter, setAmountFilter] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -82,6 +83,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
       status: statusFilter || undefined,
       planType: (planTypeFilter as "installment" | "subscription" | "one_payment") || undefined,
       nextBillingRange: (nextBillingFilter as "this_week" | "this_month" | "overdue") || undefined,
+      activatedRange: (activatedFilter as "this_month" | "last_month" | "last_3_months") || undefined,
       amountMin: amountRange.min,
       amountMax: amountRange.max,
       page,
@@ -100,6 +102,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
     setStatusFilter("");
     setPlanTypeFilter("");
     setNextBillingFilter("");
+    setActivatedFilter("");
     setAmountFilter("");
     setPage(1);
   };
@@ -195,6 +198,16 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           <option value="this_week">Due This Week</option>
           <option value="this_month">Due This Month</option>
           <option value="overdue">Overdue</option>
+        </select>
+        <select
+          value={activatedFilter}
+          onChange={(e) => { setActivatedFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
+        >
+          <option value="this_month">Activated This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="last_3_months">Last 3 Months</option>
+          <option value="">All Time</option>
         </select>
         <select
           value={amountFilter}
