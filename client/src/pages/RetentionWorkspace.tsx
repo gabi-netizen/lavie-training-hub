@@ -104,11 +104,14 @@ export default function RetentionWorkspace() {
   });
 
   type Lead = NonNullable<typeof leadsData>["leads"][number];
-  const allLeads: Lead[] = leadsData?.leads ?? [];
+  const allLeads: Lead[] = useMemo(
+    () => [...(leadsData?.leads ?? [])].sort((a, b) => (a.assignmentId ?? 0) - (b.assignmentId ?? 0)),
+    [leadsData]
+  );
 
-  // Tab filtering
+  // Tab filtering - show ALL leads in queue
   const queueLeads = useMemo(
-    () => allLeads.filter((l: Lead) => ["new", "assigned", "working", "in_progress"].includes(l.workStatus)),
+    () => allLeads,
     [allLeads]
   );
 
