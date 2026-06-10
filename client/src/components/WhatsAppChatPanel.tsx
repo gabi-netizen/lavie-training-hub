@@ -53,6 +53,19 @@ function StatusDot({ status }: { status: string }) {
   return <span className={`inline-block w-2 h-2 rounded-full ${colors[status] || "bg-green-400"}`} />;
 }
 
+function ConversationBadge({ conversationStatus, lastMessageDirection, isAssigned }: { conversationStatus: string; lastMessageDirection?: string; isAssigned: boolean }) {
+  if (conversationStatus === "resolved") {
+    return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-black text-white">Resolved</span>;
+  }
+  if (isAssigned && lastMessageDirection === "outbound") {
+    return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-orange-500 text-white">In Progress</span>;
+  }
+  if (lastMessageDirection === "inbound") {
+    return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-yellow-400 text-black">Interested</span>;
+  }
+  return null;
+}
+
 // ─── Date Helpers ────────────────────────────────────────────────────────────
 function formatDateSeparator(date: Date): string {
   const now = new Date();
@@ -186,6 +199,13 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
       refetchConversations();
       toast.success("Conversation deleted"); 
     },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
+  });
+
+  // ─── Assign ──────────────────────────────────────────────────────────────
+  const { data: agentsList } = trpc.whatsapp.getAgents.useQuery(undefined, { enabled: isManager });
+  const assignConversation = trpc.whatsapp.assignConversation.useMutation({
+    onSuccess: () => { refetchConversations(); toast.success("Assigned successfully"); },
     onError: (err) => toast.error(`Failed: ${err.message}`),
   });
 
@@ -352,6 +372,11 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
                           >
                             {conv.lastMessage?.channel === "sms" ? "📱" : "💬"}
                           </span>
+                          <ConversationBadge
+                            conversationStatus={conv.conversationStatus || "open"}
+                            lastMessageDirection={conv.lastMessage?.direction}
+                            isAssigned={!!conv.assignedTo}
+                          />
                         </div>
                         <span className="text-[10px] text-black flex-shrink-0">{timeStr}</span>
                       </div>
@@ -641,9 +666,26 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
               <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Assigned To</p>
                 {currentAssignment ? (
-                  <p className="text-xs text-black font-medium">{currentAssignment.userName}</p>
+                  <p className="text-xs text-black font-medium mb-1">{currentAssignment.userName}</p>
                 ) : (
-                  <p className="text-xs text-black italic">Unassigned</p>
+                  <p className="text-xs text-black italic mb-1">Unassigned</p>
+                )}
+                {isManager && selectedContactId && agentsList && (
+                  <select
+                    value={currentAssignment?.userId || ""}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (val && selectedContactId) {
+                        assignConversation.mutate({ contactId: selectedContactId, assignedUserId: val });
+                      }
+                    }}
+                    className="w-full text-[11px] px-2 py-1.5 border border-gray-300 rounded bg-white text-black"
+                  >
+                    <option value="">Select agent...</option>
+                    {agentsList.map((agent: any) => (
+                      <option key={agent.id} value={agent.id}>{agent.name}</option>
+                    ))}
+                  </select>
                 )}
               </div>
 
