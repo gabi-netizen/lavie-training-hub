@@ -109,7 +109,7 @@ function ConversationBadge({ conversationStatus, lastMessageDirection, isAssigne
     return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-orange-500 text-white">In Progress</span>;
   }
   if (lastMessageDirection === "inbound") {
-    return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-yellow-400 text-black">Interested</span>;
+    return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-yellow-400 text-black">Replied</span>;
   }
   return null;
 }
