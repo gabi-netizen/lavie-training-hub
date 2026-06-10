@@ -495,12 +495,11 @@ export default function RetentionWorkspace() {
                               <Mail className="h-4 w-4" />
                             </a>
 
-                            {/* Open Card (placeholder) */}
+                            {/* Open Card */}
                             <button
                               onClick={() => {
-                                // Placeholder: navigate to contact card when available
                                 if (lead.contactId) {
-                                  window.location.href = `/contacts/${lead.contactId}`;
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
                                 }
                               }}
                               className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-600"

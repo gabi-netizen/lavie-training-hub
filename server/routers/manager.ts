@@ -929,6 +929,43 @@ export const managerRouter = router({
   }),
 
   /**
+   * Get adjacent leads for prev/next navigation on ContactCard.
+   * Returns the ordered list of leads for a given agent, sorted by assignmentId ascending,
+   * along with the current lead index.
+   */
+  getAdjacentLeads: protectedProcedure
+    .input(
+      z.object({
+        agentFilter: z.string(),
+        currentContactId: z.number(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { leads: [], currentIndex: -1, total: 0 };
+
+      const rows = await db.select().from(leadAssignments).orderBy(desc(leadAssignments.id));
+
+      // Filter by agent (same as RetentionWorkspace)
+      let filtered = rows.filter((r) => r.assignedAgent === input.agentFilter);
+
+      // Sort by assignmentId ascending (same as RetentionWorkspace frontend)
+      filtered.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+
+      const leads = filtered.map((row) => ({
+        assignmentId: row.id,
+        contactId: row.contactId ?? null,
+        subscriptionId: row.subscriptionId,
+        customerName: row.customerName ?? "Unknown",
+        workStatus: row.workStatus ?? "new",
+      }));
+
+      const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);
+
+      return { leads, currentIndex, total: leads.length };
+    }),
+
+  /**
    * Get constants for UI dropdowns.
    */
   getConstants: protectedProcedure.query(() => {

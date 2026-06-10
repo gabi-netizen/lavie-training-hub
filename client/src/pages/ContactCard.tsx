@@ -4,7 +4,7 @@
  * Design: Professional 3-column CRM layout matching approved mockup
  * Layout: Left sidebar (identity + gradient card) | Center (history + docs) | Right sidebar (KPIs + info)
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -35,6 +35,10 @@ import {
   Activity,
   Lock,
   ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -114,6 +118,100 @@ const ALL_STATUSES = [
   "new", "open", "working", "assigned", "done_deal", "retained_sub", "cancelled_sub", "closed",
 ] as const;
 
+// ─── Retention Work Status Options (same as RetentionWorkspace) ────────────────
+const RETENTION_STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub", "callback", "no_answer", "not_interested"] as const;
+
+const RETENTION_STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  new: { bg: "bg-green-100", text: "text-green-800", label: "New" },
+  assigned: { bg: "bg-amber-100", text: "text-amber-800", label: "Assigned" },
+  working: { bg: "bg-amber-100", text: "text-amber-800", label: "Working" },
+  in_progress: { bg: "bg-amber-100", text: "text-amber-800", label: "In Progress" },
+  done_deal: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Done Deal" },
+  retained_sub: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Retained Sub" },
+  retained: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Retained" },
+  closed: { bg: "bg-red-100", text: "text-red-800", label: "Closed" },
+  callback: { bg: "bg-blue-100", text: "text-blue-800", label: "Callback" },
+  follow_up: { bg: "bg-blue-100", text: "text-blue-800", label: "Follow Up" },
+  no_answer: { bg: "bg-orange-100", text: "text-orange-800", label: "No Answer" },
+  not_interested: { bg: "bg-gray-100", text: "text-gray-700", label: "Not Interested" },
+};
+
+function getRetentionStatusBadge(status: string) {
+  return RETENTION_STATUS_BADGE[status] || { bg: "bg-gray-100", text: "text-gray-700", label: status };
+}
+
+// ─── Inline Editable Field Component (matches Workspace styling) ──────────────
+function InlineEditableField({
+  label,
+  value,
+  onSave,
+  icon,
+}: {
+  label: string;
+  value: string;
+  onSave: (newVal: string) => void;
+  icon: React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditVal(value);
+  }, [value]);
+
+  const startEdit = () => {
+    setEditVal(value);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const save = () => {
+    onSave(editVal);
+    setEditing(false);
+  };
+
+  const cancel = () => {
+    setEditVal(value);
+    setEditing(false);
+  };
+
+  return (
+    <div className="ws-detail-row">
+      <span className="ws-detail-icon">{icon}</span>
+      {editing ? (
+        <>
+          <input
+            ref={inputRef}
+            type="text"
+            value={editVal}
+            onChange={(e) => setEditVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") cancel();
+            }}
+            onBlur={save}
+            className="ws-detail-input"
+          />
+          <span className="ws-detail-save" onClick={save}>
+            <Check size={14} />
+          </span>
+          <span className="ws-detail-cancel" onClick={cancel}>
+            <X size={14} />
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="ws-detail-text">{value || "—"}</span>
+          <span className="ws-detail-edit" onClick={startEdit} title={`Edit ${label}`}>
+            <Pencil size={12} />
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function ContactCard() {
   const { id } = useParams<{ id: string }>();
@@ -121,6 +219,11 @@ export default function ContactCard() {
   const { user } = useAuth();
 
   const contactId = parseInt(id ?? "0", 10);
+
+  // ─── Retention context from query params ────────────────────────────────────
+  const searchParams = new URLSearchParams(window.location.search);
+  const isFromRetention = searchParams.get("from") === "retention";
+  const retentionSubId = searchParams.get("subId") ?? "";
 
   // CloudTalk call history state
   const [showCloudTalkHistory, setShowCloudTalkHistory] = useState(false);
@@ -140,6 +243,88 @@ export default function ContactCard() {
     { email: contact?.email ?? "" },
     { enabled: !!contact?.email }
   );
+
+  // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
+  const agentName = "Rob"; // Same as RetentionWorkspace
+  const { data: adjacentData } = trpc.manager.getAdjacentLeads.useQuery(
+    { agentFilter: agentName, currentContactId: contactId },
+    { enabled: isFromRetention && !!contactId }
+  );
+
+  const currentLeadIndex = adjacentData?.currentIndex ?? -1;
+  const totalLeads = adjacentData?.total ?? 0;
+  const prevLead = currentLeadIndex > 0 ? adjacentData?.leads[currentLeadIndex - 1] : null;
+  const nextLead = currentLeadIndex >= 0 && currentLeadIndex < totalLeads - 1 ? adjacentData?.leads[currentLeadIndex + 1] : null;
+
+  const navigateToLead = (lead: { contactId: number | null; subscriptionId: string }, idx: number) => {
+    if (lead.contactId) {
+      window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+    }
+  };
+
+  // ─── Retention lead status & note management ────────────────────────────────
+  const assignLeadMutation = trpc.manager.assignLead.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  // Find the current lead's subscription ID and data from retention data
+  const currentRetentionLead = useMemo(() => {
+    if (!retentionData?.leads) return null;
+    if (retentionSubId) {
+      return retentionData.leads.find((l) => l.subscriptionId === retentionSubId) ?? retentionData.leads[0] ?? null;
+    }
+    return retentionData.leads[0] ?? null;
+  }, [retentionData, retentionSubId]);
+
+  const [retentionStatusDropdownOpen, setRetentionStatusDropdownOpen] = useState(false);
+  const [retentionCustomStatusInput, setRetentionCustomStatusInput] = useState("");
+  const [showRetentionCustomInput, setShowRetentionCustomInput] = useState(false);
+  const [agentNoteValue, setAgentNoteValue] = useState("");
+  const [autoAdvance, setAutoAdvance] = useState(true);
+
+  // Sync agent note value from data
+  useEffect(() => {
+    if (currentRetentionLead?.agentNote !== undefined) {
+      setAgentNoteValue(currentRetentionLead.agentNote ?? "");
+    }
+  }, [currentRetentionLead?.agentNote]);
+
+  const handleRetentionStatusChange = (newStatus: string) => {
+    if (!currentRetentionLead) return;
+    assignLeadMutation.mutate({
+      subscriptionId: currentRetentionLead.subscriptionId,
+      workStatus: newStatus,
+    });
+    setRetentionStatusDropdownOpen(false);
+    setShowRetentionCustomInput(false);
+    setRetentionCustomStatusInput("");
+    toast.success(`Lead status → ${getRetentionStatusBadge(newStatus).label}`);
+  };
+
+  const handleAgentNoteSave = () => {
+    if (!currentRetentionLead) return;
+    assignLeadMutation.mutate({
+      subscriptionId: currentRetentionLead.subscriptionId,
+      agentNote: agentNoteValue,
+    });
+  };
+
+  const handleQuickAction = (status: string) => {
+    if (!currentRetentionLead) return;
+    assignLeadMutation.mutate({
+      subscriptionId: currentRetentionLead.subscriptionId,
+      workStatus: status,
+    });
+    toast.success(`Lead marked as ${getRetentionStatusBadge(status).label}`);
+    // Auto-advance to next lead
+    if (autoAdvance && nextLead) {
+      setTimeout(() => {
+        navigateToLead(nextLead, currentLeadIndex + 1);
+      }, 600);
+    }
+  };
 
   const updateMutation = trpc.contacts.update.useMutation({
     onSuccess: () => refetch(),
@@ -324,6 +509,17 @@ export default function ContactCard() {
     clickToCallMutation.mutate({ contactId });
   };
 
+  // ─── Inline edit handlers for email and address ─────────────────────────────
+  const handleSaveEmail = (newEmail: string) => {
+    updateMutation.mutate({ id: contactId, email: newEmail });
+    toast.success("Email updated");
+  };
+
+  const handleSaveAddress = (newAddress: string) => {
+    updateMutation.mutate({ id: contactId, address: newAddress });
+    toast.success("Address updated");
+  };
+
   // Helper: initials from name
   const getInitials = (name: string) =>
     name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -364,16 +560,169 @@ export default function ContactCard() {
     <>
     <div className="min-h-screen" style={{ background: "#f0f2f5" }}>
 
+      {/* ── Retention Navigation Bar (only when from retention) ── */}
+      {isFromRetention && (
+        <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between">
+          <button
+            onClick={() => navigate("/retention-workspace")}
+            className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-blue-700 transition-colors"
+          >
+            <ArrowLeft size={16} />
+            Back to Retention
+          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Previous button */}
+            <button
+              onClick={() => prevLead && navigateToLead(prevLead, currentLeadIndex - 1)}
+              disabled={!prevLead}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-slate-800 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={14} />
+              Prev
+            </button>
+
+            {/* Lead counter */}
+            <span className="text-sm font-semibold text-slate-800">
+              Lead {currentLeadIndex >= 0 ? currentLeadIndex + 1 : "—"} of {totalLeads}
+            </span>
+
+            {/* Next button */}
+            <button
+              onClick={() => nextLead && navigateToLead(nextLead, currentLeadIndex + 1)}
+              disabled={!nextLead}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-slate-800 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          {/* Quick action buttons */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoAdvance}
+                onChange={(e) => setAutoAdvance(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Auto-advance
+            </label>
+            <button
+              onClick={() => handleQuickAction("done_deal")}
+              disabled={!currentRetentionLead || assignLeadMutation.isPending}
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 shadow-sm"
+              style={{ background: "#16a34a" }}
+            >
+              Mark Done Deal
+            </button>
+            <button
+              onClick={() => handleQuickAction("closed")}
+              disabled={!currentRetentionLead || assignLeadMutation.isPending}
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 shadow-sm"
+              style={{ background: "#dc2626" }}
+            >
+              Mark Closed
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Breadcrumb Bar ── */}
       <div className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <button onClick={() => navigate("/contacts")} className="hover:text-blue-700 transition-colors">
-            Customers
-          </button>
-          <ChevronRight size={14} className="text-gray-400" />
-          <span className="text-gray-800 font-semibold">{contact.name}</span>
+          {isFromRetention ? (
+            <>
+              <button onClick={() => navigate("/retention-workspace")} className="hover:text-blue-700 transition-colors text-slate-800 font-medium">
+                Retention Workspace
+              </button>
+              <ChevronRight size={14} className="text-gray-400" />
+              <span className="text-gray-800 font-semibold">{contact.name}</span>
+            </>
+          ) : (
+            <>
+              <button onClick={() => navigate("/contacts")} className="hover:text-blue-700 transition-colors">
+                Customers
+              </button>
+              <ChevronRight size={14} className="text-gray-400" />
+              <span className="text-gray-800 font-semibold">{contact.name}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-4">
+          {/* Retention lead status dropdown (when from retention) */}
+          {isFromRetention && currentRetentionLead && (
+            <div className="relative">
+              <button
+                onClick={() => setRetentionStatusDropdownOpen((v) => !v)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity",
+                  getRetentionStatusBadge(currentRetentionLead.workStatus ?? "new").bg,
+                  getRetentionStatusBadge(currentRetentionLead.workStatus ?? "new").text
+                )}
+              >
+                {getRetentionStatusBadge(currentRetentionLead.workStatus ?? "new").label}
+                <ChevronDown size={10} />
+              </button>
+              {retentionStatusDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-50">
+                  {RETENTION_STATUS_OPTIONS.map((status) => {
+                    const opt = getRetentionStatusBadge(status);
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => handleRetentionStatusChange(status)}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors text-gray-800",
+                          currentRetentionLead.workStatus === status && "bg-gray-100 font-semibold"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    {!showRetentionCustomInput ? (
+                      <button
+                        onClick={() => setShowRetentionCustomInput(true)}
+                        className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 transition-colors font-medium"
+                      >
+                        + Custom Status
+                      </button>
+                    ) : (
+                      <div className="px-2 py-1.5 flex gap-1">
+                        <input
+                          type="text"
+                          value={retentionCustomStatusInput}
+                          onChange={(e) => setRetentionCustomStatusInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && retentionCustomStatusInput.trim()) {
+                              handleRetentionStatusChange(retentionCustomStatusInput.trim().toLowerCase().replace(/\s+/g, "_"));
+                            }
+                          }}
+                          placeholder="Type status..."
+                          className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-indigo-400 text-gray-800"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => {
+                            if (retentionCustomStatusInput.trim()) {
+                              handleRetentionStatusChange(retentionCustomStatusInput.trim().toLowerCase().replace(/\s+/g, "_"));
+                            }
+                          }}
+                          className="text-xs bg-indigo-600 text-white rounded px-2 py-1 hover:bg-indigo-700"
+                        >
+                          OK
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Status dropdown */}
           <div className="relative">
             <button
@@ -575,26 +924,44 @@ export default function ContactCard() {
             </div>
           </div>
 
-          {/* ── White Info Card ── */}
+          {/* ── White Info Card (with inline editing when from retention) ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             {/* Email */}
-            {contact.email && (
+            {(contact.email || isFromRetention) && (
               <div className="mb-4">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Email</p>
-                <p className="text-sm text-gray-700">{contact.email}</p>
+                {isFromRetention ? (
+                  <InlineEditableField
+                    label="Email"
+                    value={contact.email ?? ""}
+                    onSave={handleSaveEmail}
+                    icon={<Mail size={14} />}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-700">{contact.email}</p>
+                )}
               </div>
             )}
 
             {/* Address */}
-            {contact.address && (
+            {(contact.address || isFromRetention) && (
               <div className="mb-4 pt-3 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Shipping Address</p>
-                <p className="text-sm text-gray-700 leading-relaxed">{contact.address}</p>
+                {isFromRetention ? (
+                  <InlineEditableField
+                    label="Address"
+                    value={contact.address ?? ""}
+                    onSave={handleSaveAddress}
+                    icon={<Package size={14} />}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-700 leading-relaxed">{contact.address}</p>
+                )}
               </div>
             )}
 
             {/* Opening Data — info gathered by opening agent */}
-            <div className={cn("pt-3 border-t border-gray-100", !contact.address && !contact.email && "pt-0 border-t-0")}>
+            <div className={cn("pt-3 border-t border-gray-100", !contact.address && !contact.email && !isFromRetention && "pt-0 border-t-0")}>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Opening Info</p>
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between">
@@ -685,6 +1052,23 @@ export default function ContactCard() {
               )}
             </div>
           </div>
+
+          {/* ── Agent Note (Retention) ── */}
+          {isFromRetention && currentRetentionLead && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Agent Note</p>
+              <textarea
+                value={agentNoteValue}
+                onChange={(e) => setAgentNoteValue(e.target.value)}
+                onBlur={handleAgentNoteSave}
+                placeholder="Add your notes about this lead..."
+                className="w-full min-h-[80px] text-sm text-gray-800 border border-gray-200 rounded-lg p-3 resize-y focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 placeholder:text-gray-400"
+              />
+              {assignLeadMutation.isPending && (
+                <p className="text-[10px] text-blue-500 mt-1">Saving...</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ══════════════════════════════════════════════════
