@@ -555,19 +555,37 @@ export default function RetentionWorkspace() {
                                 setEditingNotes((prev) => ({ ...prev, [noteKey]: e.target.value }))
                               }
                               onFocus={() => setExpandedNoteId(`agent-${lead.subscriptionId}`)}
-                              onBlur={() => {
-                                if (noteChanged) {
-                                  handleNoteSave(lead.subscriptionId, currentNote);
-                                }
-                                setTimeout(() => setExpandedNoteId(null), 200);
-                              }}
                               placeholder="Add note..."
                               className={`text-sm border border-gray-200 rounded px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800 transition-all ${
                                 expandedNoteId === `agent-${lead.subscriptionId}` ? "w-[300px] min-h-[80px] absolute z-50 bg-white shadow-xl border-blue-300" : "w-[160px]"
                               }`}
                               rows={expandedNoteId === `agent-${lead.subscriptionId}` ? 4 : 1}
                             />
-                            {noteChanged && (
+                            {/* Buttons when expanded */}
+                            {expandedNoteId === `agent-${lead.subscriptionId}` && (
+                              <div className="absolute z-50 top-[90px] left-0 flex items-center gap-2 mt-1">
+                                <button
+                                  onClick={() => { handleNoteSave(lead.subscriptionId, currentNote); setExpandedNoteId(null); }}
+                                  className="text-xs bg-blue-600 text-white font-medium px-2 py-1 rounded hover:bg-blue-700"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(currentNote); toast.success("Copied!"); }}
+                                  className="text-xs bg-gray-200 text-gray-800 font-medium px-2 py-1 rounded hover:bg-gray-300"
+                                >
+                                  Copy
+                                </button>
+                                <button
+                                  onClick={() => setExpandedNoteId(null)}
+                                  className="text-xs bg-gray-200 text-gray-800 font-medium px-2 py-1 rounded hover:bg-gray-300"
+                                >
+                                  ✕ Close
+                                </button>
+                              </div>
+                            )}
+                            {/* Save indicator when collapsed and changed */}
+                            {noteChanged && expandedNoteId !== `agent-${lead.subscriptionId}` && (
                               <button
                                 onClick={() => handleNoteSave(lead.subscriptionId, currentNote)}
                                 className="text-xs text-blue-600 font-medium hover:underline shrink-0"
