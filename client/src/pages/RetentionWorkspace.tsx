@@ -30,14 +30,27 @@ import { MyClientsTab } from "@/components/MyClientsTab";
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
 
 const LEAD_TYPE_COLORS: Record<string, string> = {
-  "Pre-Cycle-Cancelled": "#22c55e",
-  "Cancel Live Sub": "#2563eb",
-  "Cancel Live Sub (Cycle 1)": "#2563eb",
-  "Cancel Live Sub (Cycle 2+)": "#3b82f6",
+  "Pre-Cycle-Decline": "#3d3d3d",
+  "Pre-Cycle - Decline": "#3d3d3d",
+  "Pre-Cycle-Cancelled": "#d4edbc",
+  "Pre-Cycle- Cancelled": "#d4edbc",
+  "Live-Sub Decline": "#bfe1f6",
+  "Decline Live Sub": "#bfe1f6",
+  "Live Sub Declined 2nd+": "#bfe1f6",
+  "Warm Lead": "#ffe5a0",
+  "Warm lead": "#ffe5a0",
+  "Hot Lead": "#ffe5a0",
+  "Cancel Live Sub": "#0a53a8",
+  "Cancel Live Sub (Cycle 1)": "#0a53a8",
+  "Cancel 2+ Cycle": "#14c07a",
+  "Cancel Live Sub (Cycle 2+)": "#14c07a",
+  "Live Sub": "#e6cff2",
+  "Live Sub 3 Days": "#e6cff2",
+  "Live Sub 7 Days": "#e6cff2",
+  "Live Sub 7 days": "#e6cff2",
+  "Live Sub 14days+": "#e6cff2",
+  "Live Sub 2nd+": "#e6cff2",
   "From Cat to Rob": "#92400e",
-  "Hot Lead": "#eab308",
-  "Pre-Cycle-Decline": "#1a1a1a",
-  "Decline Live Sub": "#7c3aed",
 };
 
 // ─── Work Status Badge Config ────────────────────────────────────────────────
@@ -274,12 +287,17 @@ export default function RetentionWorkspace() {
 
   const LeadTypeBadge = ({ leadType }: { leadType: string }) => {
     const color = LEAD_TYPE_COLORS[leadType] || "#6b7280";
+    // Normalize display: "Live Sub 7 Days", "Live Sub 3 Days", etc. → "Live Sub"
+    const displayLabel = /^Live Sub\s*\d/i.test(leadType) ? "Live Sub" : leadType;
+    // Use dark text for light backgrounds, white text for dark backgrounds
+    const lightBgs = ["#d4edbc", "#bfe1f6", "#ffe5a0", "#e6cff2", "#14c07a"];
+    const textColor = lightBgs.includes(color) ? "#1a1a1a" : "#ffffff";
     return (
       <span
-        className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white"
-        style={{ backgroundColor: color }}
+        className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+        style={{ backgroundColor: color, color: textColor }}
       >
-        {leadType}
+        {displayLabel}
       </span>
     );
   };
