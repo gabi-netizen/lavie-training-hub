@@ -101,6 +101,12 @@ const PRODUCTS_USED_OPTIONS = [
   "2-3 Products",
   "Full Routine (4+)",
   "Nothing",
+  "The Ordinary",
+  "Aveeno",
+  "Medic8",
+  "Medicube",
+  "La Roche Posay",
+  "Dermalogica",
 ];
 
 const TRIAL_KIT_OPTIONS = ["Matinika + Oulala", "Matinika + Ashkara"];
