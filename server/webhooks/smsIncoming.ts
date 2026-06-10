@@ -13,7 +13,7 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { whatsappMessages, contacts } from "../../drizzle/schema";
+import { whatsappMessages, contacts, whatsappConversationAssignments } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { normalisePhone } from "../contacts";
 
@@ -102,6 +102,28 @@ export async function handleSMSIncoming(req: Request, res: Response) {
     });
 
     console.log(`[SMS Incoming] ✓ Message saved — contact: ${matchedContactId ?? "unmatched"}, SID: ${messageSid}`);
+
+    // ─── Auto-assign conversation to the owner agent ─────────────────────────
+    if (matchedContactId && ownerUserId) {
+      try {
+        const [latestAssignment] = await db
+          .select({ assignedUserId: whatsappConversationAssignments.assignedUserId })
+          .from(whatsappConversationAssignments)
+          .where(eq(whatsappConversationAssignments.contactId, matchedContactId))
+          .orderBy(desc(whatsappConversationAssignments.createdAt))
+          .limit(1);
+        if (!latestAssignment || latestAssignment.assignedUserId !== ownerUserId) {
+          await db.insert(whatsappConversationAssignments).values({
+            contactId: matchedContactId,
+            assignedUserId: ownerUserId,
+            assignedByUserId: ownerUserId,
+          });
+          console.log(`[SMS Incoming] Auto-assigned conversation for contact #${matchedContactId} to user #${ownerUserId}`);
+        }
+      } catch (assignErr) {
+        console.error("[SMS Incoming] Auto-assign failed:", assignErr);
+      }
+    }
 
     // ─── Return empty TwiML response ─────────────────────────────────────────
     res.type("text/xml").status(200).send("<Response></Response>");

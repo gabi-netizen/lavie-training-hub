@@ -18,7 +18,7 @@
 
 import type { Request, Response } from "express";
 import { getDb } from "../db";
-import { whatsappMessages, contacts, campaignSends, campaigns } from "../../drizzle/schema";
+import { whatsappMessages, contacts, campaignSends, campaigns, whatsappConversationAssignments } from "../../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { normalisePhone } from "../contacts";
 import crypto from "crypto";
@@ -180,6 +180,29 @@ export async function handleWhatsAppIncoming(req: Request, res: Response) {
     });
 
     console.log(`[WhatsApp Incoming] ✓ Message saved — contact: ${matchedContactId ?? "unmatched"}, SID: ${messageSid}`);
+
+    // ─── Auto-assign conversation to the owner agent ─────────────────────────
+    if (matchedContactId && ownerUserId) {
+      try {
+        // Check if already assigned to this user
+        const [latestAssignment] = await db
+          .select({ assignedUserId: whatsappConversationAssignments.assignedUserId })
+          .from(whatsappConversationAssignments)
+          .where(eq(whatsappConversationAssignments.contactId, matchedContactId))
+          .orderBy(desc(whatsappConversationAssignments.createdAt))
+          .limit(1);
+        if (!latestAssignment || latestAssignment.assignedUserId !== ownerUserId) {
+          await db.insert(whatsappConversationAssignments).values({
+            contactId: matchedContactId,
+            assignedUserId: ownerUserId,
+            assignedByUserId: ownerUserId,
+          });
+          console.log(`[WhatsApp Incoming] Auto-assigned conversation for contact #${matchedContactId} to user #${ownerUserId}`);
+        }
+      } catch (assignErr) {
+        console.error("[WhatsApp Incoming] Auto-assign failed:", assignErr);
+      }
+    }
 
     // ─── Campaign Reply Tracking ─────────────────────────────────────────────
     // Check if this incoming message matches a recent campaign_send (by phone number).

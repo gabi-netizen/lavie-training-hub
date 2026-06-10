@@ -8,6 +8,36 @@ import { getDb } from "../db";
 import { whatsappMessages, contacts, users, whatsappConversationAssignments, whatsappConversations } from "../../drizzle/schema";
 import { eq, and, desc, sql, count, isNull, ne } from "drizzle-orm";
 
+/**
+ * Auto-assign a WhatsApp conversation to an agent.
+ * Creates a new assignment record (latest one wins) if the conversation
+ * is not already assigned to this user.
+ */
+async function autoAssignConversation(contactId: number | null, userId: number): Promise<void> {
+  if (!contactId) return;
+  try {
+    const db = await getDb();
+    if (!db) return;
+    // Check if already assigned to this user (latest assignment)
+    const [latest] = await db
+      .select({ assignedUserId: whatsappConversationAssignments.assignedUserId })
+      .from(whatsappConversationAssignments)
+      .where(eq(whatsappConversationAssignments.contactId, contactId))
+      .orderBy(desc(whatsappConversationAssignments.createdAt))
+      .limit(1);
+    if (latest && latest.assignedUserId === userId) return; // already assigned
+    // Create new assignment
+    await db.insert(whatsappConversationAssignments).values({
+      contactId,
+      assignedUserId: userId,
+      assignedByUserId: userId, // self-assigned via message activity
+    });
+    console.log(`[WhatsApp] Auto-assigned conversation for contact #${contactId} to user #${userId}`);
+  } catch (err) {
+    console.error("[WhatsApp] Auto-assign failed:", err);
+  }
+}
+
 export const whatsappRouter = router({
   // ─── List available WhatsApp templates from Twilio Content API ─────────────
   // Opening: only "op_" or "OP:" prefixed templates
@@ -145,6 +175,8 @@ export const whatsappRouter = router({
             // Don't fail the send if DB save fails — the message was already sent
             console.error("[WhatsApp] Failed to save outbound message to DB:", dbErr);
           }
+          // Auto-assign conversation to the sending agent
+          await autoAssignConversation(contactId, ctx.user.id);
         }
 
         return {
@@ -589,6 +621,8 @@ export const whatsappRouter = router({
           } catch (dbErr) {
             console.error("[WhatsApp] Failed to save free-text message to DB:", dbErr);
           }
+          // Auto-assign conversation to the sending agent
+          await autoAssignConversation(contactId, ctx.user.id);
         }
 
         return {
@@ -1033,6 +1067,8 @@ export const whatsappRouter = router({
           } catch (dbErr) {
             console.error("[Reply/SMS] Failed to save outbound message to DB:", dbErr);
           }
+          // Auto-assign conversation to the sending agent
+          await autoAssignConversation(resolvedContactId, ctx.user.id);
         }
 
         return { success: true, messageSid: data.sid as string, status: data.status as string };
@@ -1067,6 +1103,8 @@ export const whatsappRouter = router({
             } catch (dbErr) {
               console.error("[Reply/WhatsApp] Failed to save outbound message to DB:", dbErr);
             }
+            // Auto-assign conversation to the sending agent
+            await autoAssignConversation(resolvedContactId, ctx.user.id);
           }
 
           return { success: true, messageSid: result.sid, status: result.status };
@@ -1166,6 +1204,8 @@ export const whatsappRouter = router({
         } catch (dbErr) {
           console.error("[SMS] Failed to save outbound message to DB:", dbErr);
         }
+        // Auto-assign conversation to the sending agent
+        await autoAssignConversation(contactId, ctx.user.id);
       }
 
       return { success: true, messageSid: data.sid as string, status: data.status as string };
@@ -1312,6 +1352,8 @@ export const whatsappRouter = router({
         } catch (dbErr) {
           console.error("[SMS Template] Failed to save outbound message to DB:", dbErr);
         }
+        // Auto-assign conversation to the sending agent
+        await autoAssignConversation(contactId, ctx.user.id);
       }
 
       return { success: true, messageSid: data.sid as string, status: data.status as string };
