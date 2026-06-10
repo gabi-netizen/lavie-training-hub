@@ -340,6 +340,16 @@ export default function ContactCard() {
     },
   });
 
+  const updateNoteMutation = trpc.contacts.updateNote.useMutation({
+    onSuccess: () => {
+      setEditingNoteId(null);
+      setEditingNoteText("");
+      refetch();
+      toast.success("Note updated");
+    },
+    onError: () => toast.error("Failed to update note"),
+  });
+
   const syncToACMutation = trpc.contacts.syncToAC.useMutation({
     onSuccess: (data) => {
       if (data.success) toast.success("Synced to ActiveCampaign ✅");
@@ -406,6 +416,8 @@ export default function ContactCard() {
   const [noteType, setNoteType] = useState("connected");
   const [statusOpen, setStatusOpen] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
 
   // Email compose state
   const [emailOpen, setEmailOpen] = useState(false);
@@ -1256,8 +1268,48 @@ export default function ContactCard() {
                                     {outcome.label}
                                   </span>
                                 </div>
-                                {/* Full note text */}
-                                <p className="text-xs text-gray-800 mt-2 leading-relaxed">{note.note}</p>
+                                {/* Full note text - editable */}
+                                {editingNoteId === note.id ? (
+                                  <div className="mt-2">
+                                    <textarea
+                                      value={editingNoteText}
+                                      onChange={(e) => setEditingNoteText(e.target.value)}
+                                      className="w-full text-xs text-gray-800 border border-blue-300 rounded p-2 resize-y min-h-[60px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Escape") {
+                                          setEditingNoteId(null);
+                                          setEditingNoteText("");
+                                        }
+                                      }}
+                                    />
+                                    <div className="flex gap-2 mt-1">
+                                      <button
+                                        onClick={() => updateNoteMutation.mutate({ noteId: note.id, note: editingNoteText })}
+                                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={() => { setEditingNoteId(null); setEditingNoteText(""); }}
+                                        className="text-xs text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="group/note flex items-start gap-1 mt-2">
+                                    <p className="text-xs text-gray-800 leading-relaxed flex-1">{note.note}</p>
+                                    <button
+                                      onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.note); }}
+                                      className="opacity-0 group-hover/note:opacity-100 transition-opacity text-gray-600 hover:text-blue-600 shrink-0 mt-0.5"
+                                      title="Edit note"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

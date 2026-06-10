@@ -45,7 +45,7 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers } from "../../drizzle/schema";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes } from "../../drizzle/schema";
 import {
   createSubscriptionSchedule,
   getCustomerPaymentMethods,
@@ -369,6 +369,23 @@ export const contactsRouter = router({
     )
     .mutation(async ({ input }) => {
       await addCallNote(input);
+      return { success: true };
+    }),
+
+  updateNote: protectedProcedure
+    .input(
+      z.object({
+        noteId: z.number(),
+        note: z.string().min(1),
+        statusAtTime: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { noteId, note, statusAtTime } = input;
+      await db
+        .update(contactCallNotes)
+        .set({ note, ...(statusAtTime !== undefined ? { statusAtTime } : {}) })
+        .where(eq(contactCallNotes.id, noteId));
       return { success: true };
     }),
 
