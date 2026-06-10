@@ -17,6 +17,7 @@ import { campaignsRouter } from "./routers/campaigns";
 import { emailsRouter } from "./routers/emails";
 import { stripeRouter } from "./routers/stripe";
 import { billingRouter } from "./routers/billing";
+import { clientSubscriptionsRouter } from "./routers/clientSubscriptions";
 
 export const appRouter = router({
   system: systemRouter,
@@ -53,6 +54,7 @@ export const appRouter = router({
   emails: emailsRouter,
   stripe: stripeRouter,
   billing: billingRouter,
+  clientSubscriptions: clientSubscriptionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

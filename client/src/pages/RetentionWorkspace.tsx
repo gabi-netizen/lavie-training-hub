@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
+import { MyClientsTab } from "@/components/MyClientsTab";
 
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub",
 
 export default function RetentionWorkspace() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails">("queue");
+  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients">("queue");
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
@@ -430,6 +431,16 @@ export default function RetentionWorkspace() {
         >
           Emails
         </button>
+        <button
+          onClick={() => setActiveTab("clients")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+            activeTab === "clients"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          My Clients
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -442,6 +453,10 @@ export default function RetentionWorkspace() {
         <div style={{ height: "calc(100vh - 220px)", display: "flex" }}>
           <WorkspaceEmailPanel contactId={selectedLeadContactId} visible={activeTab === "emails"} />
         </div>
+      )}
+
+      {activeTab === "clients" && (
+        <MyClientsTab agentName={agentName} />
       )}
 
       {(activeTab === "queue" || activeTab === "callbacks") && (

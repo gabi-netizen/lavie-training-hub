@@ -962,3 +962,52 @@ export const stripeCustomers = mysqlTable("stripe_customers", {
 
 export type StripeCustomer = typeof stripeCustomers.$inferSelect;
 export type InsertStripeCustomer = typeof stripeCustomers.$inferInsert;
+
+// ─── Client Subscriptions (My Clients) ───────────────────────────────────────
+/**
+ * Client subscriptions table — stores subscription records imported from Zoho Billing.
+ * Used in the "My Clients" tab of the Retention Workspace to give agents
+ * a full view of their customer portfolio (live, dunning, cancelled, etc.).
+ */
+export const clientSubscriptions = mysqlTable("client_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Zoho Billing SUBSCRIPTION_ID — unique identifier */
+  subscriptionId: varchar("subscriptionId", { length: 128 }).notNull().unique(),
+  /** Plan name from Zoho (e.g. "12 Installments", "Subscription") */
+  planName: varchar("planName", { length: 256 }),
+  /** Derived plan type: installment, subscription, or one_payment */
+  planType: mysqlEnum("planType", ["installment", "subscription", "one_payment"]).notNull(),
+  /** Customer full name */
+  customerName: varchar("customerName", { length: 256 }).notNull(),
+  /** Customer email */
+  email: varchar("email", { length: 320 }),
+  /** Amount per billing cycle (parsed from £ string) */
+  amount: decimal("amount", { precision: 10, scale: 2 }),
+  /** Recurring amount (numeric from Zoho) */
+  recurringAmount: decimal("recurringAmount", { precision: 10, scale: 2 }),
+  /** Total amount for the full plan (null for subscriptions) */
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }),
+  /** Total billing cycles on the plan (null for subscriptions) */
+  billingCycles: int("billingCycles"),
+  /** Cycles completed so far (calculated) */
+  cyclesCompleted: int("cyclesCompleted"),
+  /** Next billing date */
+  nextBillingOn: date("nextBillingOn"),
+  /** Subscription number (e.g. SUB-14119) */
+  subscriptionNumber: varchar("subscriptionNumber", { length: 64 }),
+  /** Status: live, cancelled, expired, future, unpaid, dunning */
+  status: varchar("status", { length: 32 }).notNull(),
+  /** Campaign ID from Zoho */
+  campaignId: varchar("campaignId", { length: 128 }),
+  /** Date the subscription was activated */
+  activatedOn: date("activatedOn"),
+  /** Sales person / agent name */
+  salesPerson: varchar("salesPerson", { length: 128 }).notNull(),
+  /** FK to contacts table for linking to ContactCard */
+  contactId: int("contactId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ClientSubscription = typeof clientSubscriptions.$inferSelect;
+export type InsertClientSubscription = typeof clientSubscriptions.$inferInsert;

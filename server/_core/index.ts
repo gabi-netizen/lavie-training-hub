@@ -22,6 +22,8 @@ import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
 import { ensureBrandsColumn } from "../ensureBrandsColumn";
 import { ensureEmailTrackingTables } from "../ensureEmailTables";
 import { ensureStripeTables } from "../ensureStripeTables";
+import { ensureClientSubscriptionsTable } from "../ensureClientSubscriptions";
+import { seedClientSubscriptionsFromFile } from "../importClientSubscriptions";
 import { syncUnsyncedContactsToCloudTalk } from "../contacts";
 import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
@@ -318,6 +320,14 @@ async function startServer() {
         console.error("[DB] Error ensuring Stripe tables:", err)
       );
     }, 8000);
+    // Ensure client_subscriptions table exists, then seed data
+    setTimeout(() => {
+      ensureClientSubscriptionsTable()
+        .then(() => seedClientSubscriptionsFromFile())
+        .catch((err) =>
+          console.error("[DB] Error ensuring/seeding client_subscriptions:", err)
+        );
+    }, 9000);
     // Start nightly Cooling Pool cron (23:00 UTC — moves N/A leads to unassigned)
     setTimeout(() => {
       startNightlyCron();

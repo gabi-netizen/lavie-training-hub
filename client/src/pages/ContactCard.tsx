@@ -245,6 +245,17 @@ export default function ContactCard() {
     { enabled: !!contact?.email }
   );
 
+  // Client subscriptions from My Clients table
+  const { data: clientSubs } = trpc.clientSubscriptions.getByContactId.useQuery(
+    { contactId },
+    { enabled: !!contactId }
+  );
+  const { data: clientSubsByEmail } = trpc.clientSubscriptions.getByEmail.useQuery(
+    { email: contact?.email ?? "" },
+    { enabled: !!contact?.email && (!clientSubs || clientSubs.length === 0) }
+  );
+  const contactSubscriptions = (clientSubs && clientSubs.length > 0) ? clientSubs : (clientSubsByEmail ?? []);
+
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
   const agentName = "Rob"; // Same as RetentionWorkspace
   const { data: adjacentData } = trpc.manager.getAdjacentLeads.useQuery(
@@ -1959,6 +1970,45 @@ export default function ContactCard() {
                     <span className="text-xs font-medium text-red-600">{formatDate(zohoData.cancellationDate)}</span>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Client Subscriptions ── */}
+          {contactSubscriptions.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard size={18} className="text-indigo-600" />
+                <span className="text-sm font-bold text-gray-800">Subscriptions</span>
+                <span className="ml-auto text-xs font-semibold text-gray-500">{contactSubscriptions.length}</span>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {contactSubscriptions.map((sub) => (
+                  <div key={sub.subscriptionId} className="border border-gray-100 rounded-lg p-2.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-gray-800">{sub.planName || sub.subscriptionNumber}</span>
+                      <span className={cn(
+                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                        sub.status === "live" ? "bg-green-100 text-green-700" :
+                        sub.status === "dunning" ? "bg-orange-100 text-orange-700" :
+                        sub.status === "cancelled" ? "bg-red-100 text-red-700" :
+                        sub.status === "expired" ? "bg-gray-100 text-gray-700" :
+                        "bg-blue-100 text-blue-700"
+                      )}>
+                        {sub.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-gray-600">
+                      <span>£{parseFloat(sub.amount || "0").toFixed(2)}/cycle</span>
+                      {sub.billingCycles && (
+                        <span>{sub.cyclesCompleted ?? 0}/{sub.billingCycles} paid</span>
+                      )}
+                      {sub.nextBillingOn && (
+                        <span>Next: {new Date(sub.nextBillingOn).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
