@@ -110,6 +110,7 @@ export default function RetentionWorkspace() {
     const [smsBody, setSmsBody] = useState("");
   // Callback modal state
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
@@ -520,32 +521,51 @@ export default function RetentionWorkspace() {
                         </td>
 
                         {/* Customer Note */}
-                        <td className="py-3 px-3">
-                          <p className="text-sm text-gray-800 max-w-[200px] truncate" title={lead.managerNote || ""}>
+                        <td className="py-3 px-3 relative group/note">
+                          <p
+                            className="text-sm text-gray-800 max-w-[200px] truncate cursor-pointer hover:text-blue-600"
+                            onClick={() => setExpandedNoteId(expandedNoteId === `cust-${lead.subscriptionId}` ? null : `cust-${lead.subscriptionId}`)}
+                          >
                             {lead.managerNote
-                              ? lead.managerNote.length > 100
-                                ? lead.managerNote.slice(0, 100) + "..."
+                              ? lead.managerNote.length > 40
+                                ? lead.managerNote.slice(0, 40) + "..."
                                 : lead.managerNote
                               : "—"}
                           </p>
+                          {/* Tooltip on hover */}
+                          {lead.managerNote && lead.managerNote.length > 40 && (
+                            <div className="absolute z-50 left-0 top-full mt-1 hidden group-hover/note:block bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-[350px] whitespace-pre-wrap shadow-lg">
+                              {lead.managerNote}
+                            </div>
+                          )}
+                          {/* Expanded view on click */}
+                          {expandedNoteId === `cust-${lead.subscriptionId}` && lead.managerNote && (
+                            <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-gray-300 rounded-lg px-3 py-2 max-w-[400px] min-w-[250px] whitespace-pre-wrap shadow-xl text-sm text-gray-800">
+                              {lead.managerNote}
+                            </div>
+                          )}
                         </td>
 
                         {/* Agent Note */}
-                        <td className="py-3 px-3">
+                        <td className="py-3 px-3 relative group/anote">
                           <div className="flex items-center gap-1">
                             <textarea
                               value={currentNote}
                               onChange={(e) =>
                                 setEditingNotes((prev) => ({ ...prev, [noteKey]: e.target.value }))
                               }
+                              onFocus={() => setExpandedNoteId(`agent-${lead.subscriptionId}`)}
                               onBlur={() => {
                                 if (noteChanged) {
                                   handleNoteSave(lead.subscriptionId, currentNote);
                                 }
+                                setTimeout(() => setExpandedNoteId(null), 200);
                               }}
                               placeholder="Add note..."
-                              className="text-sm border border-gray-200 rounded px-2 py-1 w-[160px] resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800"
-                              rows={1}
+                              className={`text-sm border border-gray-200 rounded px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800 transition-all ${
+                                expandedNoteId === `agent-${lead.subscriptionId}` ? "w-[300px] min-h-[80px] absolute z-50 bg-white shadow-xl border-blue-300" : "w-[160px]"
+                              }`}
+                              rows={expandedNoteId === `agent-${lead.subscriptionId}` ? 4 : 1}
                             />
                             {noteChanged && (
                               <button
@@ -556,6 +576,12 @@ export default function RetentionWorkspace() {
                               </button>
                             )}
                           </div>
+                          {/* Tooltip on hover for agent note */}
+                          {currentNote && currentNote.length > 20 && expandedNoteId !== `agent-${lead.subscriptionId}` && (
+                            <div className="absolute z-50 left-0 top-full mt-1 hidden group-hover/anote:block bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-[350px] whitespace-pre-wrap shadow-lg">
+                              {currentNote}
+                            </div>
+                          )}
                         </td>
 
                         {/* Actions */}
