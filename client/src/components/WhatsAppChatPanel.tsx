@@ -329,7 +329,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                   >
                     {/* Avatar */}
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${
-                      conv.lastMessage?.channel === "sms"
+                      conv.lastMessage?.direction === "inbound"
                         ? "bg-gradient-to-br from-blue-500 to-indigo-600"
                         : "bg-gradient-to-br from-[#25D366] to-[#128C7E]"
                     }`}>
