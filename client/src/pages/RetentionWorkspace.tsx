@@ -21,6 +21,7 @@ import {
   X,
   Pencil,
   Send,
+  Calendar,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -106,8 +107,10 @@ export default function RetentionWorkspace() {
   const [msgLeadContactId, setMsgLeadContactId] = useState<number | null>(null);
   const [msgLeadPhone, setMsgLeadPhone] = useState("");
   const [msgLeadName, setMsgLeadName] = useState("");
-  const [smsBody, setSmsBody] = useState("");
-
+    const [smsBody, setSmsBody] = useState("");
+  // Callback modal state
+  const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
+  const [callbackDateTime, setCallbackDateTime] = useState("");
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
   const agentName = "Rob";
@@ -196,6 +199,10 @@ export default function RetentionWorkspace() {
     onError: (err: any) => toast.error(`SMS template failed: ${err.message}`),
   });
 
+  const logCallAttemptMutation = trpc.manager.logCallAttempt.useMutation({
+    onSuccess: () => { toast.success("Callback scheduled"); refetch(); },
+    onError: (err: any) => toast.error(err.message || "Failed to schedule callback"),
+  });
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
     onSuccess: () => {
       refetch();
@@ -452,7 +459,7 @@ export default function RetentionWorkspace() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3 w-10">#</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Name</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Email</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3 max-w-[160px]">Email</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Status</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Date</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Lead Type</th>
@@ -486,10 +493,11 @@ export default function RetentionWorkspace() {
                         </td>
 
                         {/* Email */}
-                        <td className="py-3 px-3">
+                        <td className="py-3 px-3 max-w-[160px]">
                           <a
                             href={`mailto:${lead.email}`}
-                            className="text-sm text-blue-600 hover:underline"
+                            className="text-sm text-blue-600 hover:underline truncate block"
+                            title={lead.email}
                           >
                             {lead.email}
                           </a>
@@ -618,6 +626,18 @@ export default function RetentionWorkspace() {
                               disabled={!lead.email}
                             >
                               <Mail className="h-4 w-4" />
+                            </button>
+
+                            {/* Schedule Callback */}
+                            <button
+                              onClick={() => {
+                                setCallbackModal({ subscriptionId: lead.subscriptionId, contactName: lead.customerName || "" });
+                                setCallbackDateTime("");
+                              }}
+                              className="p-1.5 rounded hover:bg-purple-50 transition-colors text-purple-600"
+                              title="Schedule Callback"
+                            >
+                              <Calendar className="h-4 w-4" />
                             </button>
 
                             {/* Open Card */}
@@ -928,6 +948,112 @@ export default function RetentionWorkspace() {
           </div>
         </div>
       )}
+      {/* Schedule Callback Modal */}
+      {callbackModal && (() => {
+        const TIME_SLOTS = [
+          "09:00","09:30","10:00","10:30","11:00","11:30",
+          "12:00","12:30","13:00","13:30","14:00","14:30",
+          "15:00","15:30","16:00","16:30","17:00","17:30",
+          "18:00","18:30","19:00","19:30","20:00"
+        ];
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10);
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+        const in2Days = new Date(today); in2Days.setDate(today.getDate() + 2);
+        const in2DaysStr = in2Days.toISOString().slice(0, 10);
+        const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+        const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+
+        const cbParts = callbackDateTime.split("T");
+        const selectedDate = cbParts[0] || "";
+        const selectedTime = cbParts[1]?.slice(0, 5) || "";
+        const isCustomDate = selectedDate && selectedDate !== todayStr && selectedDate !== tomorrowStr && selectedDate !== in2DaysStr && selectedDate !== nextWeekStr;
+
+        const setDatePart = (dateStr: string) => setCallbackDateTime(dateStr + "T" + (selectedTime || ""));
+        const setTimePart = (timeStr: string) => setCallbackDateTime((selectedDate || todayStr) + "T" + timeStr);
+        const isValid = selectedDate && selectedTime;
+
+        return (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+            onClick={() => setCallbackModal(null)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-2xl p-7 min-w-[380px] max-w-[460px] flex flex-col gap-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-indigo-600" />
+                <span className="font-bold text-lg text-gray-800">Schedule Callback</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Scheduling callback for <strong>{callbackModal.contactName}</strong>
+              </p>
+
+              {/* Date buttons */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-700">Date</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[{label:"Today",val:todayStr},{label:"Tomorrow",val:tomorrowStr},{label:"In 2 Days",val:in2DaysStr},{label:"Next Week",val:nextWeekStr}].map(b => (
+                    <button key={b.val} type="button" onClick={() => setDatePart(b.val)}
+                      className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${
+                        selectedDate === b.val ? "border-indigo-500 bg-indigo-50 text-indigo-600" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                      }`}>{b.label}</button>
+                  ))}
+                  <button type="button" onClick={() => setCallbackDateTime("T" + (selectedTime || ""))}
+                    className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${
+                      isCustomDate ? "border-indigo-500 bg-indigo-50 text-indigo-600" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                    }`}>Custom</button>
+                </div>
+                {(isCustomDate || (!selectedDate && callbackDateTime.startsWith("T"))) && (
+                  <input type="date" value={selectedDate} onChange={(e) => setDatePart(e.target.value)} min={todayStr}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 w-full" />
+                )}
+              </div>
+
+              {/* Time */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-700">Time</label>
+                <select value={selectedTime} onChange={(e) => setTimePart(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold w-full">
+                  <option value="" disabled>Select time...</option>
+                  {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              {/* Summary */}
+              {isValid && (
+                <div className="bg-green-50 border border-green-300 rounded-lg px-3 py-2 text-sm text-green-800 font-semibold text-center">
+                  {new Date(callbackDateTime).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} at {selectedTime}
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setCallbackModal(null)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50">Cancel</button>
+                <button
+                  onClick={() => {
+                    if (!isValid || !callbackModal) return;
+                    const dt = new Date(callbackDateTime);
+                    logCallAttemptMutation.mutate({
+                      subscriptionId: callbackModal.subscriptionId,
+                      agentName: agentName,
+                      result: "callback",
+                      callbackAt: dt.getTime(),
+                      note: `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`,
+                    });
+                    setCallbackModal(null);
+                  }}
+                  disabled={!isValid}
+                  className={`px-5 py-2 rounded-lg border-none font-bold text-sm text-white ${
+                    isValid ? "bg-indigo-600 hover:bg-indigo-700 cursor-pointer" : "bg-indigo-300 cursor-not-allowed"
+                  }`}>Confirm Callback</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
