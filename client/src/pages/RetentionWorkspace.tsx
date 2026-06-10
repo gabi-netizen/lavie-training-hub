@@ -60,7 +60,7 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> 
   assigned: { bg: "bg-amber-100", text: "text-amber-800", label: "Assigned" },
   working: { bg: "bg-amber-100", text: "text-amber-800", label: "Working" },
   in_progress: { bg: "bg-amber-100", text: "text-amber-800", label: "In Progress" },
-  done_deal: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Done Deal" },
+  done_deal: { bg: "bg-blue-500", text: "text-white font-bold", label: "Done Deal" },
   retained_sub: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Retained Sub" },
   retained: { bg: "bg-emerald-100", text: "text-emerald-800", label: "Retained" },
   closed: { bg: "bg-red-100", text: "text-red-800", label: "Closed" },
