@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import {
   Mail,
   ChevronRight,
   MessageSquare,
+  X,
+  Pencil,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -87,6 +89,13 @@ export default function RetentionWorkspace() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
 
+  // Email template modal state
+  const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
+  const [emailLeadContactId, setEmailLeadContactId] = useState<number | null>(null);
+  const [emailLeadName, setEmailLeadName] = useState("");
+  const [emailLeadEmail, setEmailLeadEmail] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
   const agentName = "Rob";
@@ -98,6 +107,38 @@ export default function RetentionWorkspace() {
     },
     { refetchOnWindowFocus: false, refetchInterval: 30_000 }
   );
+
+  // Email template queries
+  const { data: emailTemplates } = trpc.emailTemplates.list.useQuery(
+    undefined,
+    { enabled: emailTemplateOpen }
+  );
+  const { data: selectedTemplate, isLoading: templateDetailLoading } = trpc.emailTemplates.getById.useQuery(
+    { id: selectedTemplateId! },
+    { enabled: selectedTemplateId !== null }
+  );
+  const previewHtml = useMemo(() => {
+    if (!selectedTemplate || !emailLeadName) return null;
+    const body = selectedTemplate.htmlBody
+      .replaceAll("${Customers.First Name}", (emailLeadName ?? "").split(" ")[0] || "[Name]")
+      .replaceAll("${Customers.Customers Owner}", user?.name ?? "[Agent]")
+      .replaceAll("${agentName}", user?.name ?? "[Agent Name]")
+      .replaceAll("${agentEmail}", user?.email ?? "[Agent Email]");
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(body);
+    const formattedBody = hasHtmlTags ? body : body.replace(/\n/g, "<br>");
+    const headerImg = selectedTemplate.headerImageUrl
+      ? `<tr><td style="padding:0;"><img src="${selectedTemplate.headerImageUrl}" alt="Lavie Labs" style="width:100%;height:auto;display:block;" /></td></tr>`
+      : "";
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:32px 0;"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">${headerImg}<tr><td style="padding:32px 32px 24px;"><p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;">${formattedBody}</p></td></tr><tr><td style="padding:0 32px 24px;"><p style="margin:0;font-size:15px;color:#333333;">Warm regards,<br/><strong>${user?.name ?? "[Agent]"}</strong></p></td></tr></table></td></tr></table></body></html>`;
+  }, [selectedTemplate, emailLeadName, user]);
+  const sendTemplateMutation = trpc.emailTemplates.send.useMutation({
+    onSuccess: () => {
+      toast.success("Email sent successfully ✅");
+      setEmailTemplateOpen(false);
+      setSelectedTemplateId(null);
+    },
+    onError: (err) => toast.error(`Failed to send: ${err.message}`),
+  });
 
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
     onSuccess: () => {
@@ -491,15 +532,23 @@ export default function RetentionWorkspace() {
                             </a>
 
                             {/* Email */}
-                            <a
-                              href={lead.email ? `mailto:${lead.email}` : "#"}
+                            <button
+                              onClick={() => {
+                                if (lead.contactId) {
+                                  setEmailLeadContactId(lead.contactId);
+                                  setEmailLeadName(lead.customerName || "");
+                                  setEmailLeadEmail(lead.email || "");
+                                  setEmailTemplateOpen(true);
+                                }
+                              }}
                               className={`p-1.5 rounded hover:bg-gray-100 transition-colors ${
                                 lead.email ? "text-gray-600" : "text-gray-300 pointer-events-none"
                               }`}
                               title="Email"
+                              disabled={!lead.email}
                             >
                               <Mail className="h-4 w-4" />
-                            </a>
+                            </button>
 
                             {/* Open Card */}
                             <button
@@ -523,6 +572,112 @@ export default function RetentionWorkspace() {
             </div>
           )}
         </>
+      )}
+      {/* Email Template Modal */}
+      {emailTemplateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Send Email Template</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  To: <span className="font-medium text-gray-700">{emailLeadName}</span>
+                  {emailLeadEmail
+                    ? <span className="ml-2 text-gray-400">&lt;{emailLeadEmail}&gt;</span>
+                    : <span className="ml-2 text-red-500 text-xs">⚠ No email on file</span>}
+                </p>
+              </div>
+              <button
+                onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+            {/* Body: Template list + Preview */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Left: Template list */}
+              <div className="w-80 border-r border-gray-200 overflow-y-auto">
+                <div className="p-3 border-b border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">CHOOSE TEMPLATE</p>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {emailTemplates?.map((tpl: any) => (
+                    <div
+                      key={tpl.id}
+                      onClick={() => setSelectedTemplateId(tpl.id)}
+                      className={`p-4 cursor-pointer transition-colors ${
+                        selectedTemplateId === tpl.id
+                          ? "bg-blue-50 border-l-4 border-l-blue-500"
+                          : "hover:bg-gray-50 border-l-4 border-l-transparent"
+                      }`}
+                    >
+                      <p className="font-semibold text-sm text-gray-900">{tpl.name}</p>
+                      {tpl.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{tpl.description}</p>}
+                      {tpl.subject && <p className="text-xs text-gray-400 mt-1 italic truncate">{tpl.subject}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Right: Preview */}
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                {!selectedTemplateId && (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                    <Mail size={32} className="opacity-30" />
+                    <p className="text-sm">Select a template to preview</p>
+                  </div>
+                )}
+                {selectedTemplateId && templateDetailLoading && (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading preview…</div>
+                )}
+                {selectedTemplateId && previewHtml && (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                    <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                      <p className="text-xs text-gray-500">
+                        Subject: <span className="font-medium text-gray-700">
+                          {selectedTemplate?.subject
+                            ?.replaceAll("${Customers.First Name}", (emailLeadName ?? "").split(" ")[0] || "[Name]")
+                            .replaceAll("${agentName}", user?.name ?? "[Agent]")}
+                        </span>
+                      </p>
+                    </div>
+                    <iframe
+                      srcDoc={previewHtml}
+                      className="w-full"
+                      style={{ height: "520px", border: "none" }}
+                      title="Email Preview"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
+              <p className="text-xs text-gray-400">
+                Placeholders (name, agent, email) are filled automatically before sending
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setEmailTemplateOpen(false); setSelectedTemplateId(null); }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!selectedTemplateId || !emailLeadContactId) return;
+                    sendTemplateMutation.mutate({ templateId: selectedTemplateId, contactId: emailLeadContactId });
+                  }}
+                  disabled={!selectedTemplateId || sendTemplateMutation.isPending || !emailLeadEmail}
+                  className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sendTemplateMutation.isPending ? "Sending…" : "Send Email"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
