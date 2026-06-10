@@ -300,15 +300,15 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           {/* Table Header */}
           <div
             className="grid items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50"
-            style={{ gridTemplateColumns: "40px 1.5fr 100px 110px 80px 100px 100px 140px" }}
+            style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 95px 100px 130px" }}
           >
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">#</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Created On</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Plan Type</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Next Billing</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Progress</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</div>
           </div>
 
@@ -329,26 +329,22 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   className={`grid items-center gap-2 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
                     isExpanded ? "bg-blue-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "40px 1.5fr 100px 110px 80px 100px 100px 140px" }}
+                  style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 95px 100px 130px" }}
                 >
                   <div className="text-sm text-gray-800 font-medium">{(page - 1) * 50 + idx + 1}</div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-gray-900 truncate">{sub.customerName}</div>
                     <div className="text-xs text-gray-600 truncate">{sub.email || "—"}</div>
                   </div>
-                  <div>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor.bg} ${statusColor.text}`}>
-                      {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
-                    </span>
-                  </div>
+                  <div className="text-sm text-gray-800">{formatDate(sub.createdOn)}</div>
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${planColor.bg} ${planColor.text}`}>
                       {PLAN_TYPE_LABELS[sub.planType] || sub.planType}
                     </span>
                   </div>
                   <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.amount)}</div>
+                  <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.totalAmount)}</div>
                   <div className="text-sm text-gray-800">{formatDate(sub.nextBillingOn)}</div>
-                  <div className="text-sm text-gray-800 font-medium">{progress}</div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEmail(sub.email); }}
