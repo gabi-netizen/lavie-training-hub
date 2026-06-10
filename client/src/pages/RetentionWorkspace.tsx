@@ -100,6 +100,14 @@ export default function RetentionWorkspace() {
   const [freeSubject, setFreeSubject] = useState("");
   const [freeBody, setFreeBody] = useState("");
 
+  // WhatsApp & SMS modal state
+  const [waModalOpen, setWaModalOpen] = useState(false);
+  const [smsModalOpen, setSmsModalOpen] = useState(false);
+  const [msgLeadContactId, setMsgLeadContactId] = useState<number | null>(null);
+  const [msgLeadPhone, setMsgLeadPhone] = useState("");
+  const [msgLeadName, setMsgLeadName] = useState("");
+  const [smsBody, setSmsBody] = useState("");
+
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
   const agentName = "Rob";
@@ -152,6 +160,40 @@ export default function RetentionWorkspace() {
       setFreeBody("");
     },
     onError: (err) => toast.error(`Failed to send: ${err.message}`),
+  });
+
+  // WhatsApp templates & send
+  const { data: whatsappTemplates, isLoading: waTemplatesLoading } = trpc.whatsapp.templates.useQuery(
+    undefined,
+    { enabled: waModalOpen }
+  );
+  const sendWhatsAppMutation = trpc.whatsapp.send.useMutation({
+    onSuccess: () => {
+      toast.success("WhatsApp message sent \u2705");
+      setWaModalOpen(false);
+    },
+    onError: (err) => toast.error(`WhatsApp failed: ${err.message}`),
+  });
+
+  // SMS templates & send
+  const { data: smsTemplates, isLoading: smsTemplatesLoading } = (trpc.whatsapp as any).smsTemplates.useQuery(
+    undefined,
+    { enabled: smsModalOpen }
+  );
+  const sendSmsMutation = (trpc.whatsapp as any).sendSms.useMutation({
+    onSuccess: () => {
+      toast.success("SMS sent \u2705");
+      setSmsModalOpen(false);
+      setSmsBody("");
+    },
+    onError: (err: any) => toast.error(`SMS failed: ${err.message}`),
+  });
+  const sendSmsTemplateMutation = (trpc.whatsapp as any).sendSmsTemplate.useMutation({
+    onSuccess: () => {
+      toast.success("SMS template sent \u2705");
+      setSmsModalOpen(false);
+    },
+    onError: (err: any) => toast.error(`SMS template failed: ${err.message}`),
   });
 
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
@@ -522,28 +564,42 @@ export default function RetentionWorkspace() {
                             </a>
 
                             {/* WhatsApp */}
-                            <a
-                              href={lead.phone ? `https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}` : "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => {
+                                if (lead.contactId && lead.phone) {
+                                  setMsgLeadContactId(lead.contactId);
+                                  setMsgLeadPhone(lead.phone);
+                                  setMsgLeadName(lead.customerName || "");
+                                  setWaModalOpen(true);
+                                }
+                              }}
                               className={`p-1.5 rounded hover:bg-green-50 transition-colors ${
                                 lead.phone ? "text-green-600" : "text-gray-300 pointer-events-none"
                               }`}
                               title="WhatsApp"
+                              disabled={!lead.phone}
                             >
                               <MessageCircle className="h-4 w-4" />
-                            </a>
+                            </button>
 
                             {/* SMS */}
-                            <a
-                              href={lead.phone ? `sms:${lead.phone}` : "#"}
+                            <button
+                              onClick={() => {
+                                if (lead.contactId && lead.phone) {
+                                  setMsgLeadContactId(lead.contactId);
+                                  setMsgLeadPhone(lead.phone);
+                                  setMsgLeadName(lead.customerName || "");
+                                  setSmsModalOpen(true);
+                                }
+                              }}
                               className={`p-1.5 rounded hover:bg-blue-50 transition-colors ${
                                 lead.phone ? "text-blue-600" : "text-gray-300 pointer-events-none"
                               }`}
                               title="SMS"
+                              disabled={!lead.phone}
                             >
                               <MessageSquare className="h-4 w-4" />
-                            </a>
+                            </button>
 
                             {/* Email */}
                             <button
@@ -744,6 +800,129 @@ export default function RetentionWorkspace() {
                     {sendTemplateMutation.isPending ? "Sending…" : "Send Email"}
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Template Modal */}
+      {waModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setWaModalOpen(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <span>📱</span> Send WhatsApp Template
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">To: {msgLeadName} ({msgLeadPhone})</p>
+              </div>
+              <button onClick={() => setWaModalOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
+                <X size={16} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {!msgLeadPhone ? (
+                <p className="text-sm text-red-600">⚠ No phone number on file</p>
+              ) : waTemplatesLoading ? (
+                <p className="text-sm text-gray-500">Loading templates…</p>
+              ) : !whatsappTemplates || whatsappTemplates.length === 0 ? (
+                <p className="text-sm text-gray-500">No WhatsApp templates found in Twilio</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {whatsappTemplates.filter((tpl: any) => {
+                    const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
+                    const hasPrefix = allPrefixes.some((p) => tpl.friendly_name.startsWith(p));
+                    return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                  }).map((tpl: any) => (
+                    <button
+                      key={tpl.sid}
+                      onClick={() => {
+                        if (sendWhatsAppMutation.isPending || !msgLeadContactId) return;
+                        sendWhatsAppMutation.mutate({ contactId: msgLeadContactId, contentSid: tpl.sid });
+                      }}
+                      disabled={sendWhatsAppMutation.isPending}
+                      className="p-3 text-left border border-gray-200 rounded-lg hover:border-green-500 transition-colors disabled:opacity-50"
+                    >
+                      <p className="text-sm font-semibold text-gray-900">{tpl.friendly_name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{tpl.language || 'en'} • Click to send</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMS Modal */}
+      {smsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setSmsModalOpen(false); setSmsBody(""); }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <span>💬</span> Send SMS
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">To: {msgLeadName} ({msgLeadPhone})</p>
+              </div>
+              <button onClick={() => { setSmsModalOpen(false); setSmsBody(""); }} className="p-2 rounded-lg hover:bg-gray-100">
+                <X size={16} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+              {/* SMS Templates */}
+              <div>
+                <p className="text-xs font-bold text-blue-600 mb-2">📋 Quick Templates</p>
+                {smsTemplatesLoading ? (
+                  <p className="text-xs text-gray-500">Loading templates…</p>
+                ) : smsTemplates && smsTemplates.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {smsTemplates.filter((tpl: any) => {
+                      const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
+                      const hasPrefix = allPrefixes.some((p: string) => tpl.friendly_name.startsWith(p));
+                      return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                    }).map((tpl: any) => (
+                      <button
+                        key={tpl.sid}
+                        onClick={() => {
+                          if (sendSmsTemplateMutation.isPending || !msgLeadContactId) return;
+                          sendSmsTemplateMutation.mutate({ contactId: msgLeadContactId, contentSid: tpl.sid, templateName: tpl.friendly_name });
+                        }}
+                        disabled={sendSmsTemplateMutation.isPending}
+                        className="p-2 text-left border border-gray-200 rounded-lg hover:border-blue-500 transition-colors disabled:opacity-50"
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{tpl.friendly_name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{tpl.language || 'en'} • Click to send</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              {/* Custom SMS */}
+              <div>
+                <p className="text-xs font-bold text-blue-600 mb-2">✏️ Or type a custom message</p>
+                <textarea
+                  value={smsBody}
+                  onChange={(e) => setSmsBody(e.target.value)}
+                  placeholder="Type your SMS message..."
+                  maxLength={1600}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  style={{ minHeight: "80px" }}
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-xs text-gray-500">{smsBody.length}/1600</span>
+                  <button
+                    onClick={() => {
+                      if (!smsBody.trim() || sendSmsMutation.isPending || !msgLeadContactId) return;
+                      sendSmsMutation.mutate({ contactId: msgLeadContactId, body: smsBody.trim() });
+                    }}
+                    disabled={!smsBody.trim() || sendSmsMutation.isPending}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendSmsMutation.isPending ? "Sending…" : "Send SMS"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
