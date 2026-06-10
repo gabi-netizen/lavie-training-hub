@@ -316,4 +316,114 @@ export const emailsRouter = router({
 
       return { success: true };
     }),
+
+  /**
+   * Send an email to any address (not just a contact).
+   * If a contact with that email exists, logs against them. Otherwise logs with contactId=0.
+   */
+  sendDirect: protectedProcedure
+    .input(
+      z.object({
+        toEmail: z.string().email("Invalid email address"),
+        subject: z.string().min(1, "Subject is required"),
+        body: z.string().min(1, "Message body is required"),
+        contactId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+
+      const agentName = ctx.user.name ?? "Lavie Labs";
+      const agentEmail = ctx.user.email ?? "trial@lavielabs.com";
+
+      // Try to find contact by email if contactId not provided
+      let resolvedContactId = input.contactId ?? 0;
+      if (!input.contactId) {
+        const [found] = await db
+          .select({ id: contacts.id })
+          .from(contacts)
+          .where(eq(contacts.email, input.toEmail))
+          .limit(1);
+        if (found) resolvedContactId = found.id;
+      }
+
+      // Build the HTML email
+      const hasHtmlTags = /<[a-z][\s\S]*>/i.test(input.body);
+      const formattedBody = hasHtmlTags ? input.body : input.body.replace(/\n/g, "<br>");
+
+      const htmlBody = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="padding:32px 32px 24px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;">${formattedBody}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#555555;">Should you need anything please don't hesitate to respond to this email. Alternatively email <a href="mailto:support@lavielabs.com" style="color:#2b5cab;text-decoration:underline;">support@lavielabs.com</a></p>
+              <p style="margin:0;font-size:15px;color:#333333;">Warm regards,<br/><strong>${agentName}</strong></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+      // Insert email log
+      const [insertResult] = await db.insert(emailLogs).values({
+        contactId: resolvedContactId,
+        templateId: 0,
+        templateName: "Freeform (New Email)",
+        sentByUserId: ctx.user.id,
+        sentByName: agentName,
+        subject: input.subject,
+        toEmail: input.toEmail,
+        htmlBody: htmlBody,
+        fromEmail: agentEmail,
+        postmarkMessageId: null,
+      }).$returningId();
+
+      const emailLogId = insertResult.id;
+
+      // Inject tracking
+      let trackedHtml = rewriteLinksForTracking(htmlBody, emailLogId);
+      trackedHtml = injectTrackingPixel(trackedHtml, emailLogId);
+
+      // Send via Gmail SMTP
+      const fromAddress = `${agentName} <trial@lavielabs.com>`;
+      try {
+        const result = await sendViaGmail({
+          from: fromAddress,
+          to: input.toEmail,
+          subject: input.subject,
+          htmlBody: trackedHtml,
+          replyTo: agentEmail,
+        });
+
+        await db
+          .update(emailLogs)
+          .set({ postmarkMessageId: result.MessageID ?? null })
+          .where(eq(emailLogs.id, emailLogId));
+      } catch (err) {
+        await db.delete(emailLogs).where(eq(emailLogs.id, emailLogId));
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send email: ${(err as Error).message}`,
+        });
+      }
+
+      return { success: true, emailLogId };
+    }),
 });

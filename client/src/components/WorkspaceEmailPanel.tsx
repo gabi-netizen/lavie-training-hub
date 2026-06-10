@@ -20,6 +20,7 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
   const [composing, setComposing] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [toEmail, setToEmail] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Fetch emails for the selected contact
@@ -34,13 +35,29 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
     { enabled: !!contactId && visible }
   );
 
-  // Send email mutation
+  // Send email mutation (to contact)
   const sendEmail = trpc.emails.send.useMutation({
     onSuccess: () => {
       toast.success("Email sent successfully!");
       setComposing(false);
       setSubject("");
       setBody("");
+      setToEmail("");
+      refetchEmails();
+    },
+    onError: (err) => {
+      toast.error(`Failed to send email: ${err.message}`);
+    },
+  });
+
+  // Send email mutation (to any address)
+  const sendDirectEmail = trpc.emails.sendDirect.useMutation({
+    onSuccess: () => {
+      toast.success("Email sent successfully!");
+      setComposing(false);
+      setSubject("");
+      setBody("");
+      setToEmail("");
       refetchEmails();
     },
     onError: (err) => {
@@ -81,22 +98,120 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
   }, [notifications]);
 
   const handleSend = () => {
-    if (!contactId) return;
     if (!subject.trim() || !body.trim()) {
       toast.error("Please fill in both subject and message body");
       return;
     }
-    sendEmail.mutate({ contactId, subject, body });
+    // Determine the target email
+    const targetEmail = toEmail.trim() || contactInfo?.email || "";
+    if (!targetEmail) {
+      toast.error("Please enter a recipient email address");
+      return;
+    }
+    // If we have a contactId and the email matches the contact, use the contact-based send
+    if (contactId && contactInfo?.email && targetEmail === contactInfo.email) {
+      sendEmail.mutate({ contactId, subject, body });
+    } else {
+      // Use sendDirect for any email address
+      sendDirectEmail.mutate({ toEmail: targetEmail, subject, body, contactId: contactId ?? undefined });
+    }
   };
 
   if (!contactId) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", padding: 40 }}>
-        <div style={{ textAlign: "center", color: "#000" }}>
-          <Mail size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
-          <p style={{ fontSize: 16, fontWeight: 600, color: "#000" }}>Select a contact to view emails</p>
-          <p style={{ fontSize: 14, color: "#000", marginTop: 4 }}>Choose a contact from the list on the left</p>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        {/* Header with New Email button */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 16px", borderBottom: "1px solid #e2e8f0", background: "#fff",
+        }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#000" }}>Emails</h3>
+          <button
+            onClick={() => setComposing(!composing)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", borderRadius: 6, border: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 600,
+              background: composing ? "#fee2e2" : "#2563eb",
+              color: composing ? "#991b1b" : "#fff",
+            }}
+          >
+            {composing ? <><X size={14} /> Cancel</> : <><Send size={14} /> New Email</>}
+          </button>
         </div>
+
+        {/* Compose Form */}
+        {composing ? (
+          <div style={{ padding: 16, borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>To</label>
+              <input
+                type="email"
+                value={toEmail}
+                onChange={(e) => setToEmail(e.target.value)}
+                placeholder="Enter email address..."
+                style={{
+                  width: "100%", padding: "8px 12px", borderRadius: 6,
+                  border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>Subject</label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Email subject..."
+                style={{
+                  width: "100%", padding: "8px 12px", borderRadius: 6,
+                  border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#000", marginBottom: 4 }}>Message</label>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your message here..."
+                rows={6}
+                style={{
+                  width: "100%", padding: "10px 12px", borderRadius: 6,
+                  border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
+                  resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={handleSend}
+                disabled={sendDirectEmail.isPending || !subject.trim() || !body.trim() || !toEmail.trim()}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "9px 20px", borderRadius: 6, border: "none", cursor: "pointer",
+                  fontSize: 13, fontWeight: 600,
+                  background: sendDirectEmail.isPending ? "#000" : "#2563eb",
+                  color: "#fff",
+                  opacity: (!subject.trim() || !body.trim() || !toEmail.trim()) ? 0.5 : 1,
+                }}
+              >
+                <Send size={14} />
+                {sendDirectEmail.isPending ? "Sending..." : "Send Email"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, padding: 40 }}>
+            <div style={{ textAlign: "center", color: "#000" }}>
+              <Mail size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
+              <p style={{ fontSize: 16, fontWeight: 600, color: "#000" }}>Select a contact to view emails</p>
+              <p style={{ fontSize: 14, color: "#000", marginTop: 4 }}>Or click "New Email" to send to any address</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -140,13 +255,14 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
               To
             </label>
             <input
-              type="text"
-              value={contactInfo?.email ?? ""}
-              disabled
+              type="email"
+              value={toEmail || contactInfo?.email || ""}
+              onChange={(e) => setToEmail(e.target.value)}
+              placeholder="Enter email address..."
               style={{
                 width: "100%", padding: "8px 12px", borderRadius: 6,
                 border: "1px solid #e2e8f0", fontSize: 13, color: "#000",
-                background: "#f1f5f9", boxSizing: "border-box",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -185,18 +301,18 @@ export function WorkspaceEmailPanel({ contactId, visible }: WorkspaceEmailPanelP
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button
               onClick={handleSend}
-              disabled={sendEmail.isPending || !subject.trim() || !body.trim()}
+              disabled={sendEmail.isPending || sendDirectEmail.isPending || !subject.trim() || !body.trim()}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "9px 20px", borderRadius: 6, border: "none", cursor: "pointer",
                 fontSize: 13, fontWeight: 600,
-                background: sendEmail.isPending ? "#94a3b8" : "#2563eb",
+                background: (sendEmail.isPending || sendDirectEmail.isPending) ? "#000" : "#2563eb",
                 color: "#fff",
                 opacity: (!subject.trim() || !body.trim()) ? 0.5 : 1,
               }}
             >
               <Send size={14} />
-              {sendEmail.isPending ? "Sending..." : "Send Email"}
+              {(sendEmail.isPending || sendDirectEmail.isPending) ? "Sending..." : "Send Email"}
             </button>
           </div>
           <p style={{ margin: "8px 0 0", fontSize: 11, color: "#000" }}>
