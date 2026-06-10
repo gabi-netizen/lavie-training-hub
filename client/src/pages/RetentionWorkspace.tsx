@@ -217,6 +217,12 @@ export default function RetentionWorkspace() {
     [leadsData]
   );
 
+  // Extract contactIds from leads for filtering Messages/Emails tabs
+  const agentContactIds = useMemo(
+    () => allLeads.filter((l) => l.contactId).map((l) => l.contactId as number),
+    [allLeads]
+  );
+
   // Tab filtering - show ALL leads in queue
   const queueLeads = useMemo(
     () => allLeads,
@@ -429,7 +435,7 @@ export default function RetentionWorkspace() {
       {/* Tab Content */}
       {activeTab === "messages" && (
         <div style={{ height: "calc(100vh - 220px)", display: "flex" }}>
-          <WhatsAppChatPanel open={true} onClose={() => setActiveTab("queue")} inline />
+          <WhatsAppChatPanel open={true} onClose={() => setActiveTab("queue")} inline contactIds={agentContactIds} />
         </div>
       )}
       {activeTab === "emails" && (

@@ -214,6 +214,7 @@ export const whatsappRouter = router({
       z.object({
         tab: z.enum(["unassigned", "mine", "all"]).default("all"),
         includeResolved: z.boolean().default(false),
+        contactIds: z.array(z.number()).optional(),
       }).optional()
     )
     .query(async ({ ctx, input }) => {
@@ -359,6 +360,16 @@ export const whatsappRouter = router({
           const status = statusMap.get(k.contactId);
           if (!status) return true;
           return status.status !== "resolved";
+        });
+      }
+
+      // Filter by specific contactIds (used by Retention Workspace to show only agent's contacts)
+      const contactIdsFilter = input?.contactIds;
+      if (contactIdsFilter && contactIdsFilter.length > 0) {
+        const contactIdSet = new Set(contactIdsFilter);
+        filteredKeys = filteredKeys.filter((k) => {
+          if (k.type === "phone") return false; // exclude unmatched when filtering by contactIds
+          return contactIdSet.has(k.contactId);
         });
       }
 

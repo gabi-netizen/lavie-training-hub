@@ -100,9 +100,11 @@ interface WhatsAppChatPanelProps {
   onClose: () => void;
   /** When true, renders inline (no modal overlay). Used as a Workspace tab. */
   inline?: boolean;
+  /** Filter conversations to only show these contactIds (used by Retention Workspace) */
+  contactIds?: number[];
 }
 
-export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelProps) {
+export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAppChatPanelProps) {
   const { user } = useAuth();
   const isManager = !user?.team;
 
@@ -121,7 +123,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
   // ─── tRPC Queries ──────────────────────────────────────────────────────────
   const { data: conversations, refetch: refetchConversations } =
     trpc.whatsapp.conversations.useQuery(
-      { tab: isManager ? "all" : "mine", includeResolved },
+      { tab: contactIds ? "all" : (isManager ? "all" : "mine"), includeResolved, contactIds },
       { enabled: open, refetchInterval: open ? 10000 : false }
     );
 
