@@ -1026,7 +1026,11 @@ export default function ContactCard() {
                     <p className="text-sm text-gray-500">No WhatsApp templates found</p>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      {whatsappTemplates.map((tpl: any) => (
+                      {whatsappTemplates.filter((tpl: any) => {
+                        const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
+                        const hasPrefix = allPrefixes.some((p) => tpl.friendly_name.startsWith(p));
+                        return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                      }).map((tpl: any) => (
                         <button
                           key={tpl.sid}
                           onClick={() => {
@@ -1070,7 +1074,11 @@ export default function ContactCard() {
                       <p className="text-xs text-gray-500">Loading templates…</p>
                     ) : smsTemplates && smsTemplates.length > 0 ? (
                       <div className="flex flex-col gap-2">
-                        {smsTemplates.map((tpl: any) => (
+                        {smsTemplates.filter((tpl: any) => {
+                          const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
+                          const hasPrefix = allPrefixes.some((p: string) => tpl.friendly_name.startsWith(p));
+                          return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                        }).map((tpl: any) => (
                           <button
                             key={tpl.sid}
                             onClick={() => {
