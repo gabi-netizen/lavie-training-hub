@@ -84,7 +84,8 @@ export default function RetentionWorkspace() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
 
   // Fetch leads for the current agent
-  const agentName = user?.name || "";
+  // TODO: Once retention flow is live, revert to user?.name filtering
+  const agentName = "Rob";
   const { data: leadsData, refetch } = trpc.manager.getLeads.useQuery(
     {
       agentFilter: agentName,
