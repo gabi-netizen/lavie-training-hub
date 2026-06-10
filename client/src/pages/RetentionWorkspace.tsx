@@ -549,49 +549,60 @@ export default function RetentionWorkspace() {
                         {/* Agent Note */}
                         <td className="py-3 px-3 relative group/anote">
                           <div className="flex items-center gap-1">
-                            <textarea
-                              value={currentNote}
-                              onChange={(e) =>
-                                setEditingNotes((prev) => ({ ...prev, [noteKey]: e.target.value }))
-                              }
-                              onFocus={() => setExpandedNoteId(`agent-${lead.subscriptionId}`)}
-                              placeholder="Add note..."
-                              className={`text-sm border border-gray-200 rounded px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800 transition-all ${
-                                expandedNoteId === `agent-${lead.subscriptionId}` ? "w-[300px] min-h-[80px] absolute z-50 bg-white shadow-xl border-blue-300" : "w-[160px]"
-                              }`}
-                              rows={expandedNoteId === `agent-${lead.subscriptionId}` ? 4 : 1}
-                            />
-                            {/* Buttons when expanded */}
-                            {expandedNoteId === `agent-${lead.subscriptionId}` && (
-                              <div className="absolute z-50 top-[90px] left-0 flex items-center gap-2 mt-1">
-                                <button
-                                  onClick={() => { handleNoteSave(lead.subscriptionId, currentNote); setExpandedNoteId(null); }}
-                                  className="text-xs bg-blue-600 text-white font-medium px-2 py-1 rounded hover:bg-blue-700"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => { navigator.clipboard.writeText(currentNote); toast.success("Copied!"); }}
-                                  className="text-xs bg-black text-white font-medium px-2 py-1 rounded hover:bg-gray-900"
-                                >
-                                  Copy
-                                </button>
-                                <button
-                                  onClick={() => setExpandedNoteId(null)}
-                                  className="text-xs bg-black text-white font-medium px-2 py-1 rounded hover:bg-gray-900"
-                                >
-                                  ✕ Close
-                                </button>
+                            {expandedNoteId === `agent-${lead.subscriptionId}` ? (
+                              <div className="absolute z-50 left-0 top-0 w-[380px] bg-white border border-blue-300 rounded-lg shadow-xl p-3">
+                                <textarea
+                                  value={currentNote}
+                                  onChange={(e) =>
+                                    setEditingNotes((prev) => ({ ...prev, [noteKey]: e.target.value }))
+                                  }
+                                  autoFocus
+                                  placeholder="Add note..."
+                                  className="text-sm w-full border border-gray-200 rounded px-2 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800 min-h-[100px]"
+                                  rows={5}
+                                />
+                                <div className="flex items-center gap-2 mt-2">
+                                  <button
+                                    onClick={() => { handleNoteSave(lead.subscriptionId, currentNote); setExpandedNoteId(null); }}
+                                    className="text-xs bg-blue-600 text-white font-medium px-3 py-1.5 rounded hover:bg-blue-700"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setExpandedNoteId(`agent-${lead.subscriptionId}`)}
+                                    className="text-xs bg-black text-white font-medium px-3 py-1.5 rounded hover:bg-gray-900"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => setExpandedNoteId(null)}
+                                    className="text-xs bg-black text-white font-medium px-3 py-1.5 rounded hover:bg-gray-900"
+                                  >
+                                    Close
+                                  </button>
+                                </div>
                               </div>
-                            )}
-                            {/* Save indicator when collapsed and changed */}
-                            {noteChanged && expandedNoteId !== `agent-${lead.subscriptionId}` && (
-                              <button
-                                onClick={() => handleNoteSave(lead.subscriptionId, currentNote)}
-                                className="text-xs text-blue-600 font-medium hover:underline shrink-0"
-                              >
-                                Save
-                              </button>
+                            ) : (
+                              <>
+                                <textarea
+                                  value={currentNote}
+                                  onChange={(e) =>
+                                    setEditingNotes((prev) => ({ ...prev, [noteKey]: e.target.value }))
+                                  }
+                                  onFocus={() => setExpandedNoteId(`agent-${lead.subscriptionId}`)}
+                                  placeholder="Add note..."
+                                  className="text-sm border border-gray-200 rounded px-2 py-1 w-[160px] resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-800"
+                                  rows={1}
+                                />
+                                {noteChanged && (
+                                  <button
+                                    onClick={() => handleNoteSave(lead.subscriptionId, currentNote)}
+                                    className="text-xs text-blue-600 font-medium hover:underline shrink-0"
+                                  >
+                                    Save
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                           {/* Tooltip on hover for agent note */}
