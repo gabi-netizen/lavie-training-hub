@@ -297,7 +297,7 @@ export default function RetentionWorkspace() {
           {badge.label}
         </button>
         {isOpen && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
+          <div className="absolute top-full left-0 mt-1 z-[200] bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
             {STATUS_OPTIONS.map((status) => {
               const opt = getStatusBadge(status);
               return (
@@ -453,7 +453,7 @@ export default function RetentionWorkspace() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
