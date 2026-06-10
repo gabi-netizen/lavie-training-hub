@@ -370,7 +370,7 @@ export function WhatsAppChatPanel({ open, onClose, inline }: WhatsAppChatPanelPr
                               deleteConversation.mutate({ contactId: conv.contactId, phoneNumber: conv.contactId === null ? conv.fromNumber : undefined });
                             }
                           }}
-                          className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors ml-1"
+                          className="flex-shrink-0 text-black hover:text-red-500 transition-colors ml-1"
                           title="Delete conversation"
                         >
                           <Trash2 size={14} />
