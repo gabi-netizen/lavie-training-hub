@@ -463,7 +463,7 @@ export default function ContactCard() {
       <div className="flex items-center justify-center h-64 text-gray-800" style={{ background: "#f0f2f5" }}>
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Loading contact…</p>
+          <p className="text-sm text-gray-800">Loading contact…</p>
         </div>
       </div>
     );
@@ -631,7 +631,7 @@ export default function ContactCard() {
 
       {/* ── Breadcrumb Bar ── */}
       <div className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           {isFromRetention ? (
             <>
               <button onClick={() => navigate("/retention-workspace")} className="hover:text-blue-700 transition-colors text-slate-800 font-medium">
@@ -883,7 +883,7 @@ export default function ContactCard() {
 
           {/* ── Quick Contact Card ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Quick Contact</p>
+            <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Quick Contact</p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => {
@@ -929,7 +929,7 @@ export default function ContactCard() {
             {/* Email */}
             {(contact.email || isFromRetention) && (
               <div className="mb-4">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Email</p>
+                <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Email</p>
                 {isFromRetention ? (
                   <InlineEditableField
                     label="Email"
@@ -946,7 +946,7 @@ export default function ContactCard() {
             {/* Address */}
             {(contact.address || isFromRetention) && (
               <div className="mb-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Shipping Address</p>
+                <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Shipping Address</p>
                 {isFromRetention ? (
                   <InlineEditableField
                     label="Address"
@@ -962,22 +962,22 @@ export default function ContactCard() {
 
             {/* Opening Data — info gathered by opening agent */}
             <div className={cn("pt-3 border-t border-gray-100", !contact.address && !contact.email && !isFromRetention && "pt-0 border-t-0")}>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Opening Info</p>
+              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Opening Info</p>
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Age</span>
+                  <span className="text-xs text-gray-700">Age</span>
                   <span className="text-xs font-medium text-gray-700">{contact.skinType || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Current Brand</span>
+                  <span className="text-xs text-gray-700">Current Brand</span>
                   <span className="text-xs font-medium text-gray-700">{contact.concern || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Products Used</span>
+                  <span className="text-xs text-gray-700">Products Used</span>
                   <span className="text-xs font-medium text-gray-700">{contact.routine || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Trial Kit</span>
+                  <span className="text-xs text-gray-700">Trial Kit</span>
                   <span className="text-xs font-medium text-gray-700">{contact.trialKit || "—"}</span>
                 </div>
               </div>
@@ -986,7 +986,7 @@ export default function ContactCard() {
             {/* Opening Agent Notes */}
             {(contact as any).callNotes?.length > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Opening Agent Notes</p>
+                <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Opening Agent Notes</p>
                 <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-xs text-gray-700 leading-relaxed">
                   {(contact as any).callNotes[0]?.note || ""}
                 </div>
@@ -996,7 +996,7 @@ export default function ContactCard() {
             {/* Imported Notes (reason for cancellation) */}
             {contact.importedNotes && (
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Customer Note</p>
+                <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Customer Note</p>
                 <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 text-xs text-gray-700 leading-relaxed">
                   {contact.importedNotes}
                 </div>
@@ -1006,7 +1006,7 @@ export default function ContactCard() {
             {/* AI Coach Recording */}
             {(contact as any).latestCallAnalysis && (
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">AI Coach Recording</p>
+                <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">AI Coach Recording</p>
                 <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-gray-700">
@@ -1034,19 +1034,19 @@ export default function ContactCard() {
             <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
               {contact.source && (
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Source</span>
+                  <span className="text-xs text-gray-700">Source</span>
                   <span className="text-xs font-medium text-gray-700">{contact.source}</span>
                 </div>
               )}
               {contact.agentName && (
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Opening Agent</span>
+                  <span className="text-xs text-gray-700">Opening Agent</span>
                   <span className="text-xs font-medium text-gray-700">{contact.agentName}</span>
                 </div>
               )}
               {contact.leadDate && (
                 <div className="flex justify-between">
-                  <span className="text-xs text-gray-400">Lead Date</span>
+                  <span className="text-xs text-gray-700">Lead Date</span>
                   <span className="text-xs font-medium text-gray-700">{formatDate(contact.leadDate)}</span>
                 </div>
               )}
@@ -1056,13 +1056,13 @@ export default function ContactCard() {
           {/* ── Agent Note (Retention) ── */}
           {isFromRetention && currentRetentionLead && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Agent Note</p>
+              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Agent Note</p>
               <textarea
                 value={agentNoteValue}
                 onChange={(e) => setAgentNoteValue(e.target.value)}
                 onBlur={handleAgentNoteSave}
                 placeholder="Add your notes about this lead..."
-                className="w-full min-h-[80px] text-sm text-gray-800 border border-gray-200 rounded-lg p-3 resize-y focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 placeholder:text-gray-400"
+                className="w-full min-h-[80px] text-sm text-gray-800 border border-gray-200 rounded-lg p-3 resize-y focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 placeholder:text-gray-500"
               />
               {assignLeadMutation.isPending && (
                 <p className="text-[10px] text-blue-500 mt-1">Saving...</p>
@@ -1087,7 +1087,7 @@ export default function ContactCard() {
                   "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerTopTab === "history"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 <Clock size={16} />
@@ -1099,7 +1099,7 @@ export default function ContactCard() {
                   "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerTopTab === "transactions"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 <CreditCard size={16} />
@@ -1111,7 +1111,7 @@ export default function ContactCard() {
                   "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerTopTab === "shipments"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 <Archive size={16} />
@@ -1123,7 +1123,7 @@ export default function ContactCard() {
                   "flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerTopTab === "notes"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 <FileText size={16} />
@@ -1149,7 +1149,7 @@ export default function ContactCard() {
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   placeholder="What happened? Key objections, outcome, next steps…"
-                  className="min-h-[88px] text-sm resize-none border-gray-200 text-gray-800 placeholder:text-gray-400 bg-white focus-visible:ring-blue-400"
+                  className="min-h-[88px] text-sm resize-none border-gray-200 text-gray-800 placeholder:text-gray-500 bg-white focus-visible:ring-blue-400"
                 />
                 <div className="flex items-center gap-3 mt-3">
                   <Select value={noteType} onValueChange={setNoteType}>
@@ -1178,7 +1178,7 @@ export default function ContactCard() {
                   </Button>
                   <button
                     onClick={() => setShowNoteForm(false)}
-                    className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                    className="text-xs text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1192,7 +1192,7 @@ export default function ContactCard() {
               {centerTopTab === "history" && (
                 <div className="flex flex-col">
                   {contact.callNotes.length === 0 && retentionLeads.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <PhoneOff size={36} className="mb-3 opacity-50" />
                       <p className="text-sm font-medium">No call notes yet</p>
                       <p className="text-xs mt-1">Click "+ Add Entry" to log your first call</p>
@@ -1240,7 +1240,7 @@ export default function ContactCard() {
                                 {/* Meta row */}
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   <span className="w-1.5 h-1.5 rounded-full inline-block bg-gray-400" />
-                                  <span className="text-xs text-gray-500">{formatDate(note.createdAt)}</span>
+                                  <span className="text-xs text-gray-700">{formatDate(note.createdAt)}</span>
                                   {note.agentName && (
                                     <>
                                       <span className="text-gray-300 text-xs">&bull;</span>
@@ -1257,7 +1257,7 @@ export default function ContactCard() {
                                   </span>
                                 </div>
                                 {/* Full note text */}
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">{note.note}</p>
+                                <p className="text-xs text-gray-800 mt-2 leading-relaxed">{note.note}</p>
                               </div>
                             </div>
                           </div>
@@ -1270,7 +1270,7 @@ export default function ContactCard() {
                       <>
                         {contact.callNotes.length > 0 && (
                           <div className="border-t border-gray-200 my-4 pt-4">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Retention Leads</p>
+                            <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-3">Retention Leads</p>
                           </div>
                         )}
                         {retentionLeads.map((lead, idx) => {
@@ -1322,11 +1322,11 @@ export default function ContactCard() {
                                       </p>
                                     )}
                                     {lead.agentNote && (
-                                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                      <p className="text-xs text-gray-800 mt-1 leading-relaxed">
                                         Agent note: {lead.agentNote}
                                       </p>
                                     )}
-                                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
+                                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-600">
                                       {lead.totalSpend > 0 && <span>£{lead.totalSpend.toFixed(2)} spent</span>}
                                       {lead.cyclesCompleted > 0 && <span>Cycle {lead.cyclesCompleted}</span>}
                                       {lead.billingStatus && <span>{lead.billingStatus}</span>}
@@ -1346,7 +1346,7 @@ export default function ContactCard() {
 
               {/* Transactions tab */}
               {centerTopTab === "transactions" && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                   <CreditCard size={36} className="mb-3 opacity-40" />
                   <p className="text-sm font-medium">Transactions</p>
                   <p className="text-xs mt-1">Coming soon — transaction data will appear here</p>
@@ -1355,7 +1355,7 @@ export default function ContactCard() {
 
               {/* Shipments tab */}
               {centerTopTab === "shipments" && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                   <Archive size={36} className="mb-3 opacity-40" />
                   <p className="text-sm font-medium">Shipments</p>
                   <p className="text-xs mt-1">Coming soon — shipment tracking will appear here</p>
@@ -1366,7 +1366,7 @@ export default function ContactCard() {
               {centerTopTab === "notes" && (
                 <div>
                   {retentionLeads.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <FileText size={36} className="mb-3 opacity-40" />
                       <p className="text-sm font-medium">Notes</p>
                       <p className="text-xs mt-1">No retention notes available</p>
@@ -1374,7 +1374,7 @@ export default function ContactCard() {
                   ) : (
                     <div className="flex flex-col gap-4">
                       {retentionLeads.filter((l) => l.managerNote || l.agentNote).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                           <FileText size={36} className="mb-3 opacity-40" />
                           <p className="text-sm font-medium">No notes</p>
                           <p className="text-xs mt-1">No manager or agent notes on retention leads</p>
@@ -1388,24 +1388,24 @@ export default function ContactCard() {
                                 <span className="text-xs font-semibold text-gray-700">
                                   {lead.leadType || "Retention Lead"}
                                 </span>
-                                <span className="text-[10px] text-gray-400">
+                                <span className="text-[10px] text-gray-600">
                                   {lead.createdAt ? formatDate(lead.createdAt) : ""}
                                 </span>
                               </div>
                               {lead.managerNote && (
                                 <div className="mb-2">
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Customer Message</p>
+                                  <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Customer Message</p>
                                   <p className="text-sm text-gray-700 leading-relaxed">{lead.managerNote}</p>
                                 </div>
                               )}
                               {lead.agentNote && (
                                 <div className={lead.managerNote ? "pt-2 border-t border-gray-100" : ""}>
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Agent Note</p>
+                                  <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Agent Note</p>
                                   <p className="text-sm text-gray-700 leading-relaxed">{lead.agentNote}</p>
                                 </div>
                               )}
                               {lead.assignedAgent && (
-                                <p className="text-[10px] text-gray-400 mt-2">Assigned to: {lead.assignedAgent}</p>
+                                <p className="text-[10px] text-gray-600 mt-2">Assigned to: {lead.assignedAgent}</p>
                               )}
                             </div>
                           ))
@@ -1428,7 +1428,7 @@ export default function ContactCard() {
                   "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerBottomTab === "documents"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 Documents
@@ -1439,7 +1439,7 @@ export default function ContactCard() {
                   "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerBottomTab === "activities"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 Activities
@@ -1450,7 +1450,7 @@ export default function ContactCard() {
                   "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerBottomTab === "cloudtalk"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 CloudTalk History
@@ -1461,7 +1461,7 @@ export default function ContactCard() {
                   "px-4 py-3 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
                   centerBottomTab === "privacy"
                     ? "text-blue-700 border-blue-700 font-semibold"
-                    : "text-gray-500 border-transparent hover:text-gray-700"
+                    : "text-gray-700 border-transparent hover:text-gray-900"
                 )}
               >
                 Data Privacy
@@ -1472,7 +1472,7 @@ export default function ContactCard() {
             <div className="p-5">
               {/* Documents */}
               {centerBottomTab === "documents" && (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-12 text-gray-600">
                   <FileText size={28} className="mb-2 opacity-40" />
                   <p className="text-sm">No documents uploaded yet</p>
                 </div>
@@ -1480,7 +1480,7 @@ export default function ContactCard() {
 
               {/* Activities */}
               {centerBottomTab === "activities" && (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-12 text-gray-600">
                   <Activity size={28} className="mb-2 opacity-40" />
                   <p className="text-sm">No recent activities to display</p>
                 </div>
@@ -1490,7 +1490,7 @@ export default function ContactCard() {
               {centerBottomTab === "cloudtalk" && (
                 <div>
                   {!contact.phone ? (
-                    <div className="flex flex-col items-center py-12 text-gray-400">
+                    <div className="flex flex-col items-center py-12 text-gray-600">
                       <PhoneOff size={28} className="mb-2 opacity-40" />
                       <p className="text-sm">No phone number on file</p>
                     </div>
@@ -1500,13 +1500,13 @@ export default function ContactCard() {
                       Loading call history…
                     </div>
                   ) : !cloudTalkHistory || cloudTalkHistory.calls.length === 0 ? (
-                    <div className="flex flex-col items-center py-12 text-gray-400">
+                    <div className="flex flex-col items-center py-12 text-gray-600">
                       <PhoneOff size={28} className="mb-2 opacity-40" />
                       <p className="text-sm">No CloudTalk calls found for this number</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      <p className="text-xs text-gray-400 mb-1">
+                      <p className="text-xs text-gray-600 mb-1">
                         {cloudTalkHistory.totalCount} total calls
                       </p>
                       {cloudTalkHistory.calls.map((call) => {
@@ -1539,7 +1539,7 @@ export default function ContactCard() {
                                       <span className="text-xs text-gray-500">· {call.agent.name}</span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-gray-400 mt-0.5">
+                                  <p className="text-xs text-gray-600 mt-0.5">
                                     {call.date ? new Date(call.date).toLocaleString("en-GB") : ""}
                                   </p>
                                 </div>
@@ -1583,7 +1583,7 @@ export default function ContactCard() {
 
               {/* Data Privacy */}
               {centerBottomTab === "privacy" && (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-12 text-gray-600">
                   <Lock size={28} className="mb-2 opacity-40" />
                   <p className="text-sm">Data privacy settings coming soon</p>
                 </div>
@@ -1606,8 +1606,8 @@ export default function ContactCard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV Plan</p>
-              <p className={`font-bold mt-0.5 ${(zohoData?.ltvPlan || retentionTotalSpend) > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "20px" }}>
+              <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">LTV Plan</p>
+              <p className={`font-bold mt-0.5 ${(zohoData?.ltvPlan || retentionTotalSpend) > 0 ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "20px" }}>
                 {zohoData?.ltvPlan ? `£${zohoData.ltvPlan.toFixed(2)}` : retentionTotalSpend > 0 ? `£${retentionTotalSpend.toFixed(2)}` : "—"}
               </p>
             </div>
@@ -1619,8 +1619,8 @@ export default function ContactCard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">LTV Paid</p>
-              <p className={`font-bold mt-0.5 ${zohoData?.ltvPaid ? "text-green-700" : "text-gray-400"}`} style={{ fontSize: "20px" }}>
+              <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">LTV Paid</p>
+              <p className={`font-bold mt-0.5 ${zohoData?.ltvPaid ? "text-green-700" : "text-gray-600"}`} style={{ fontSize: "20px" }}>
                 {zohoData?.ltvPaid ? `£${zohoData.ltvPaid.toFixed(2)}` : "—"}
               </p>
             </div>
@@ -1630,16 +1630,16 @@ export default function ContactCard() {
           <div className="grid grid-cols-2 gap-3">
             {/* Cycle */}
             <div className="bg-white rounded-2xl shadow-sm p-3.5 flex flex-col items-center text-center border border-gray-100">
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Cycle</p>
-              <p className={`font-bold mt-0.5 ${(zohoData?.billingCycleCount || retentionMaxCycle) > 0 ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
+              <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">Cycle</p>
+              <p className={`font-bold mt-0.5 ${(zohoData?.billingCycleCount || retentionMaxCycle) > 0 ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "22px" }}>
                 {zohoData?.billingCycleCount ? zohoData.billingCycleCount : retentionMaxCycle > 0 ? retentionMaxCycle : "—"}
               </p>
             </div>
 
             {/* Monthly Amount */}
             <div className="bg-white rounded-2xl shadow-sm p-3.5 flex flex-col items-center text-center border border-gray-100">
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Monthly</p>
-              <p className={`font-bold mt-0.5 ${zohoData?.monthlyAmount ? "text-gray-800" : "text-gray-400"}`} style={{ fontSize: "22px" }}>
+              <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">Monthly</p>
+              <p className={`font-bold mt-0.5 ${zohoData?.monthlyAmount ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "22px" }}>
                 {zohoData?.monthlyAmount ? `£${zohoData.monthlyAmount.toFixed(2)}` : "—"}
               </p>
             </div>
@@ -1688,7 +1688,7 @@ export default function ContactCard() {
                 <span className="text-sm font-bold text-gray-800">Risk Score</span>
               </div>
             </div>
-            <p className="text-xs text-gray-400">No data yet</p>
+            <p className="text-xs text-gray-600">No data yet</p>
           </div>
 
           {/* ── Products History ── */}
@@ -1723,12 +1723,12 @@ export default function ContactCard() {
                       <span className="w-2 h-2 rounded-full inline-block bg-gray-400" />
                       <span className="text-sm text-gray-700">{plan}</span>
                     </div>
-                    <span className="text-[10px] text-gray-400">Retention</span>
+                    <span className="text-[10px] text-gray-600">Retention</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400">No products recorded</p>
+              <p className="text-xs text-gray-600">No products recorded</p>
             )}
           </div>
 
@@ -1797,18 +1797,18 @@ export default function ContactCard() {
                   </div>
                 );
               }
-              return <p className="text-xs text-gray-400">No agent assigned</p>;
+              return <p className="text-xs text-gray-600">No agent assigned</p>;
             })()}
           </div>
 
           {/* ── Call Stats (if notes exist) ── */}
           {contact.callNotes.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Call Stats</p>
+              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-3">Call Stats</p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-gray-50 p-3 text-center">
                   <p className="text-xl font-bold text-gray-700">{contact.callNotes.length}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Total Calls</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">Total Calls</p>
                 </div>
                 <div className="rounded-xl bg-green-50 p-3 text-center">
                   <p className="text-xl font-bold text-green-600">
@@ -1844,13 +1844,13 @@ export default function ContactCard() {
               value={emailSubject}
               onChange={(e) => setEmailSubject(e.target.value)}
               placeholder="Subject"
-              className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+              className="text-sm bg-white border-gray-200 text-gray-800 placeholder:text-gray-500 focus-visible:ring-blue-400"
             />
             <Textarea
               value={emailBody}
               onChange={(e) => setEmailBody(e.target.value)}
               placeholder="Write your message here…"
-              className="min-h-[140px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-blue-400"
+              className="min-h-[140px] text-sm resize-none bg-white border-gray-200 text-gray-800 placeholder:text-gray-500 focus-visible:ring-blue-400"
             />
           </div>
           <div className="px-5 pb-5 flex items-center gap-3 justify-end">
@@ -1891,7 +1891,7 @@ export default function ContactCard() {
               <p className="text-sm text-gray-500 mt-0.5">
                 To: <span className="font-medium text-gray-700">{contact.name}</span>
                 {contact.email
-                  ? <span className="ml-2 text-gray-400">&lt;{contact.email}&gt;</span>
+                  ? <span className="ml-2 text-gray-600">&lt;{contact.email}&gt;</span>
                   : <span className="ml-2 text-red-500 text-xs">⚠ No email on file</span>}
               </p>
             </div>
@@ -1959,10 +1959,10 @@ export default function ContactCard() {
               )}
 
               {templatesLoading && (
-                <div className="text-sm text-gray-400 text-center py-8">Loading…</div>
+                <div className="text-sm text-gray-600 text-center py-8">Loading…</div>
               )}
               {!templatesLoading && (!emailTemplates || emailTemplates.length === 0) && (
-                <div className="text-sm text-gray-400 text-center py-8">No templates yet</div>
+                <div className="text-sm text-gray-600 text-center py-8">No templates yet</div>
               )}
               <div className="flex flex-col gap-2">
                 {emailTemplates?.map((tpl) => (
@@ -1979,7 +1979,7 @@ export default function ContactCard() {
                     {tpl.description && (
                       <p className="text-xs text-gray-500 mt-1 leading-snug">{tpl.description}</p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1 truncate italic">{tpl.subject}</p>
+                    <p className="text-xs text-gray-600 mt-1 truncate italic">{tpl.subject}</p>
                   </button>
                 ))}
               </div>
@@ -1988,13 +1988,13 @@ export default function ContactCard() {
             {/* Right: Preview */}
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               {!selectedTemplateId && (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-2">
                   <Mail size={32} className="opacity-30" />
                   <p className="text-sm">Select a template to preview</p>
                 </div>
               )}
               {selectedTemplateId && templateDetailLoading && (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading preview…</div>
+                <div className="flex items-center justify-center h-full text-gray-600 text-sm">Loading preview…</div>
               )}
               {selectedTemplateId && previewHtml && (
                 <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
@@ -2020,7 +2020,7 @@ export default function ContactCard() {
 
           {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-600">
               Placeholders (name, agent, email) are filled automatically before sending
             </p>
             <div className="flex gap-3">
