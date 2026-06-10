@@ -60,7 +60,9 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
   const [nextBillingFilter, setNextBillingFilter] = useState("");
-  const [activatedFilter, setActivatedFilter] = useState("");
+  const [createdOnFilter, setCreatedOnFilter] = useState("this_month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [amountFilter, setAmountFilter] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -83,7 +85,9 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
       status: statusFilter || undefined,
       planType: (planTypeFilter as "installment" | "subscription" | "one_payment") || undefined,
       nextBillingRange: (nextBillingFilter as "this_week" | "this_month" | "overdue") || undefined,
-      activatedRange: (activatedFilter as "this_month" | "last_month" | "last_3_months") || undefined,
+      createdOnRange: (createdOnFilter !== "custom" && createdOnFilter ? createdOnFilter as "today" | "yesterday" | "last_7_days" | "this_month" | "last_month" | "last_3_months" : undefined),
+      createdOnFrom: (createdOnFilter === "custom" && customFrom) ? customFrom : undefined,
+      createdOnTo: (createdOnFilter === "custom" && customTo) ? customTo : undefined,
       amountMin: amountRange.min,
       amountMax: amountRange.max,
       page,
@@ -102,7 +106,9 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
     setStatusFilter("");
     setPlanTypeFilter("");
     setNextBillingFilter("");
-    setActivatedFilter("");
+    setCreatedOnFilter("");
+    setCustomFrom("");
+    setCustomTo("");
     setAmountFilter("");
     setPage(1);
   };
@@ -200,15 +206,36 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           <option value="overdue">Overdue</option>
         </select>
         <select
-          value={activatedFilter}
-          onChange={(e) => { setActivatedFilter(e.target.value); setPage(1); }}
+          value={createdOnFilter}
+          onChange={(e) => { setCreatedOnFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
         >
-          <option value="this_month">Activated This Month</option>
+          <option value="this_month">Created This Month</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="last_7_days">Last 7 Days</option>
           <option value="last_month">Last Month</option>
           <option value="last_3_months">Last 3 Months</option>
+          <option value="custom">Custom Date</option>
           <option value="">All Time</option>
         </select>
+        {createdOnFilter === "custom" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => { setCustomFrom(e.target.value); setPage(1); }}
+              className="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+            />
+            <span className="text-sm text-gray-800">to</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => { setCustomTo(e.target.value); setPage(1); }}
+              className="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+            />
+          </div>
+        )}
         <select
           value={amountFilter}
           onChange={(e) => { setAmountFilter(e.target.value); setPage(1); }}

@@ -1001,6 +1001,8 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
   campaignId: varchar("campaignId", { length: 128 }),
   /** Date the subscription was activated */
   activatedOn: date("activatedOn"),
+  /** Date the deal was created/closed */
+  createdOn: date("createdOn"),
   /** Sales person / agent name */
   salesPerson: varchar("salesPerson", { length: 128 }).notNull(),
   /** FK to contacts table for linking to ContactCard */

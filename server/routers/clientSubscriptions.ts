@@ -27,7 +27,9 @@ export const clientSubscriptionsRouter = router({
         status: z.string().optional(),
         planType: z.enum(["installment", "subscription", "one_payment"]).optional(),
         nextBillingRange: z.enum(["this_week", "this_month", "overdue"]).optional(),
-        activatedRange: z.enum(["this_month", "last_month", "last_3_months"]).optional(),
+        createdOnRange: z.enum(["today", "yesterday", "last_7_days", "this_month", "last_month", "last_3_months"]).optional(),
+        createdOnFrom: z.string().optional(),
+        createdOnTo: z.string().optional(),
         amountMin: z.number().optional(),
         amountMax: z.number().optional(),
         page: z.number().default(1),
@@ -77,20 +79,36 @@ export const clientSubscriptionsRouter = router({
         conditions.push(lte(clientSubscriptions.amount, String(input.amountMax)));
       }
 
-      // Activated date range filter
-      if (input.activatedRange) {
+      // Created On date range filter
+      if (input.createdOnFrom && input.createdOnTo) {
+        // Custom date range
+        conditions.push(gte(clientSubscriptions.createdOn, new Date(input.createdOnFrom)));
+        conditions.push(lte(clientSubscriptions.createdOn, new Date(input.createdOnTo)));
+      } else if (input.createdOnRange) {
         const now = new Date();
-        if (input.activatedRange === "this_month") {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (input.createdOnRange === "today") {
+          conditions.push(gte(clientSubscriptions.createdOn, today));
+        } else if (input.createdOnRange === "yesterday") {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          conditions.push(gte(clientSubscriptions.createdOn, yesterday));
+          conditions.push(lte(clientSubscriptions.createdOn, yesterday));
+        } else if (input.createdOnRange === "last_7_days") {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          conditions.push(gte(clientSubscriptions.createdOn, weekAgo));
+        } else if (input.createdOnRange === "this_month") {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          conditions.push(gte(clientSubscriptions.activatedOn, startOfMonth));
-        } else if (input.activatedRange === "last_month") {
+          conditions.push(gte(clientSubscriptions.createdOn, startOfMonth));
+        } else if (input.createdOnRange === "last_month") {
           const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-          conditions.push(gte(clientSubscriptions.activatedOn, startOfLastMonth));
-          conditions.push(lte(clientSubscriptions.activatedOn, endOfLastMonth));
-        } else if (input.activatedRange === "last_3_months") {
+          conditions.push(gte(clientSubscriptions.createdOn, startOfLastMonth));
+          conditions.push(lte(clientSubscriptions.createdOn, endOfLastMonth));
+        } else if (input.createdOnRange === "last_3_months") {
           const start3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-          conditions.push(gte(clientSubscriptions.activatedOn, start3Months));
+          conditions.push(gte(clientSubscriptions.createdOn, start3Months));
         }
       }
 

@@ -32,6 +32,7 @@ export async function ensureClientSubscriptionsTable() {
         status varchar(32) NOT NULL,
         campaignId varchar(128),
         activatedOn date,
+        createdOn date,
         salesPerson varchar(128) NOT NULL,
         contactId int,
         createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
