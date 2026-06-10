@@ -972,10 +972,10 @@ export default function ContactCard() {
             <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => {
-                  if (!contact.phone) { toast.error("No phone number on file"); return; }
+                  if (!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
                   setWaModalOpen(true);
                 }}
-                disabled={!contact.phone}
+                disabled={!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-green-800 text-white text-xs font-bold transition-colors hover:bg-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -996,10 +996,10 @@ export default function ContactCard() {
               </button>
               <button
                 onClick={() => {
-                  if (!contact.phone) { toast.error("No phone number on file"); return; }
+                  if (!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
                   setSmsModalOpen(true);
                 }}
-                disabled={!contact.phone}
+                disabled={!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-blue-600 text-white text-xs font-bold transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <MessageSquare size={16} />
@@ -1024,14 +1024,14 @@ export default function ContactCard() {
                     <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                       <span>📱</span> Send WhatsApp Template
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone})</p>
+                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone || zohoData?.phone || currentRetentionLead?.phone})</p>
                   </div>
                   <button onClick={() => setWaModalOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
                     <X size={16} className="text-gray-500" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  {!contact.phone ? (
+                  {!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone ? (
                     <p className="text-sm text-red-600">⚠ No phone number on file</p>
                   ) : waTemplatesLoading ? (
                     <p className="text-sm text-gray-500">Loading templates…</p>
@@ -1073,7 +1073,7 @@ export default function ContactCard() {
                     <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                       <span>💬</span> Send SMS
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone})</p>
+                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone || zohoData?.phone || currentRetentionLead?.phone})</p>
                   </div>
                   <button onClick={() => { setSmsModalOpen(false); setSmsBody(""); }} className="p-2 rounded-lg hover:bg-gray-100">
                     <X size={16} className="text-gray-500" />

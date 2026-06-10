@@ -5,7 +5,7 @@ import { listWhatsAppTemplates, sendWhatsAppMessage, sendWhatsAppFreeText, fetch
 import { getContact } from "../contacts";
 import { normalisePhone } from "../contacts";
 import { getDb } from "../db";
-import { whatsappMessages, contacts, users, whatsappConversationAssignments, whatsappConversations } from "../../drizzle/schema";
+import { whatsappMessages, contacts, users, whatsappConversationAssignments, whatsappConversations, leadAssignments } from "../../drizzle/schema";
 import { eq, and, desc, sql, count, isNull, ne } from "drizzle-orm";
 
 /**
@@ -104,7 +104,18 @@ export const whatsappRouter = router({
         });
       }
 
-      if (!contact.phone) {
+      // Fallback: if contact has no phone, check lead_assignments by email
+      let phoneToUse = contact.phone;
+      if (!phoneToUse && contact.email) {
+        try {
+          const db2 = await getDb();
+          if (db2) {
+            const [lead] = await db2.select({ phone: leadAssignments.phone }).from(leadAssignments).where(eq(leadAssignments.email, contact.email!)).limit(1);
+            if (lead?.phone) phoneToUse = lead.phone;
+          }
+        } catch (_e) { /* ignore */ }
+      }
+      if (!phoneToUse) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Contact does not have a phone number",
@@ -112,7 +123,7 @@ export const whatsappRouter = router({
       }
 
       // Normalise the phone number to E.164 (UK-focused)
-      const normalisedPhone = normalisePhone(contact.phone);
+      const normalisedPhone = normalisePhone(phoneToUse);
       if (!normalisedPhone) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -565,7 +576,18 @@ export const whatsappRouter = router({
         });
       }
 
-      if (!contact.phone) {
+      // Fallback: if contact has no phone, check lead_assignments by email
+      let phoneToUse = contact.phone;
+      if (!phoneToUse && contact.email) {
+        try {
+          const db2 = await getDb();
+          if (db2) {
+            const [lead] = await db2.select({ phone: leadAssignments.phone }).from(leadAssignments).where(eq(leadAssignments.email, contact.email!)).limit(1);
+            if (lead?.phone) phoneToUse = lead.phone;
+          }
+        } catch (_e) { /* ignore */ }
+      }
+      if (!phoneToUse) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Contact does not have a phone number",
@@ -573,7 +595,7 @@ export const whatsappRouter = router({
       }
 
       // Normalise the phone number to E.164
-      const normalisedPhone = normalisePhone(contact.phone);
+      const normalisedPhone = normalisePhone(phoneToUse);
       if (!normalisedPhone) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -985,10 +1007,21 @@ export const whatsappRouter = router({
         if (!contact) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
         }
-        if (!contact.phone) {
+        // Fallback: if contact has no phone, check lead_assignments
+        let phoneToUse = contact.phone;
+        if (!phoneToUse) {
+          try {
+            const db2 = await getDb();
+            if (db2) {
+              const [lead] = await db2.select({ phone: leadAssignments.phone }).from(leadAssignments).where(eq(leadAssignments.email, contact.email!)).limit(1);
+              if (lead?.phone) phoneToUse = lead.phone;
+            }
+          } catch (_e) { /* ignore */ }
+        }
+        if (!phoneToUse) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
         }
-        const normalisedPhone = normalisePhone(contact.phone);
+        const normalisedPhone = normalisePhone(phoneToUse);
         if (!normalisedPhone) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
         }
@@ -1129,17 +1162,26 @@ export const whatsappRouter = router({
       if (!contact) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
       }
-      if (!contact.phone) {
+            // Fallback: if contact has no phone, check lead_assignments
+      let phoneToUse = contact.phone;
+      if (!phoneToUse) {
+        try {
+          const db2 = await getDb();
+          if (db2) {
+            const [lead] = await db2.select({ phone: leadAssignments.phone }).from(leadAssignments).where(eq(leadAssignments.email, contact.email!)).limit(1);
+            if (lead?.phone) phoneToUse = lead.phone;
+          }
+        } catch (_e) { /* ignore */ }
+      }
+      if (!phoneToUse) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
       }
-
       // Normalise to E.164
-      const normalisedPhone = normalisePhone(contact.phone);
+      const normalisedPhone = normalisePhone(phoneToUse);
       if (!normalisedPhone) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
       }
       const e164Phone = normalisedPhone.startsWith("+") ? normalisedPhone : `+${normalisedPhone}`;
-
       // Twilio credentials
       const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
       const authToken = process.env.TWILIO_AUTH_TOKEN || "";
@@ -1260,11 +1302,22 @@ export const whatsappRouter = router({
       if (!contact) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
       }
-      if (!contact.phone) {
+      // Fallback: if contact has no phone, check lead_assignments
+      let phoneToUse = contact.phone;
+      if (!phoneToUse) {
+        try {
+          const db2 = await getDb();
+          if (db2) {
+            const [lead] = await db2.select({ phone: leadAssignments.phone }).from(leadAssignments).where(eq(leadAssignments.email, contact.email!)).limit(1);
+            if (lead?.phone) phoneToUse = lead.phone;
+          }
+        } catch (_e) { /* ignore */ }
+      }
+      if (!phoneToUse) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Contact does not have a phone number" });
       }
-
-      const normalisedPhone = normalisePhone(contact.phone);
+      // Normalise to E.164
+      const normalisedPhone = normalisePhone(phoneToUse);
       if (!normalisedPhone) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Could not normalise contact phone number" });
       }
