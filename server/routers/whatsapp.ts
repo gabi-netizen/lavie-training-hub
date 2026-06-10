@@ -423,12 +423,31 @@ export const whatsappRouter = router({
           );
         }
 
-        const [unreadResult] = await db
+                const [unreadResult] = await db
           .select({ count: count() })
           .from(whatsappMessages)
           .where(unreadConditions);
-
         const unreadCount = unreadResult?.count ?? 0;
+
+        // Check if customer has ever replied (any inbound message exists)
+        let inboundConditions;
+        if (key.type === "contact") {
+          inboundConditions = and(
+            eq(whatsappMessages.contactId, key.contactId),
+            eq(whatsappMessages.direction, "inbound")
+          );
+        } else {
+          inboundConditions = and(
+            sql`${whatsappMessages.contactId} IS NULL`,
+            eq(whatsappMessages.fromNumber, key.phone),
+            eq(whatsappMessages.direction, "inbound")
+          );
+        }
+        const [inboundResult] = await db
+          .select({ count: count() })
+          .from(whatsappMessages)
+          .where(inboundConditions);
+        const hasCustomerReplied = (inboundResult?.count ?? 0) > 0;
 
         // Get contact info if available
         let contactInfo = null;
@@ -474,6 +493,7 @@ export const whatsappRouter = router({
           assignedTo,
           conversationStatus,
           snoozedUntil,
+          hasCustomerReplied,
         });
       }
 

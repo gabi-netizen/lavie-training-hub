@@ -101,9 +101,12 @@ function StatusDot({ status }: { status: string }) {
   return <span className={`inline-block w-2 h-2 rounded-full ${colors[status] || "bg-gray-400"}`} />;
 }
 
-function ConversationBadge({ conversationStatus, lastMessageDirection, isAssigned }: { conversationStatus: string; lastMessageDirection?: string; isAssigned: boolean }) {
+function ConversationBadge({ conversationStatus, lastMessageDirection, isAssigned, hasCustomerReplied }: { conversationStatus: string; lastMessageDirection?: string; isAssigned: boolean; hasCustomerReplied: boolean }) {
   if (conversationStatus === "resolved") {
     return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-black text-white">Resolved</span>;
+  }
+  if (!hasCustomerReplied) {
+    return null;
   }
   if (isAssigned && lastMessageDirection === "outbound") {
     return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-orange-500 text-white">In Progress</span>;
@@ -656,6 +659,7 @@ export default function WhatsAppControl() {
                           conversationStatus={conv.conversationStatus || "open"}
                           lastMessageDirection={conv.lastMessage?.direction}
                           isAssigned={!!conv.assignedTo}
+                          hasCustomerReplied={conv.hasCustomerReplied ?? false}
                         />
                       </div>
                       <span className="text-[10px] text-black flex-shrink-0">{timeStr}</span>
