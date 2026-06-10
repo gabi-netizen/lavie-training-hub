@@ -873,7 +873,7 @@ export default function SupportTickets() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</SelectItem>
-                  <SelectItem value="Cancel Live Sub">Cancel Live Sub</SelectItem>
+                  <SelectItem value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</SelectItem>
                   <SelectItem value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</SelectItem>
                   <SelectItem value="From Cat to Rob">From Cat to Rob</SelectItem>
                   <SelectItem value="Pre-Cycle-Decline">Pre-Cycle-Decline</SelectItem>
