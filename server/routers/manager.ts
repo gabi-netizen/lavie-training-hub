@@ -1499,6 +1499,16 @@ Rapport Killers (AVOID):
 - Saved by Retention: customer cancelled but we saved them with a better offer
 - Win-back: customer left, calling to bring them back with special offer
 
+=== PAYMENT STATUS RULES (CRITICAL) ===
+When reporting payment/charge status to agents, ALWAYS state the EXACT status from Stripe. Never simplify to just "paid" or "not paid". The statuses are:
+- "succeeded" = Payment went through successfully. Customer was charged.
+- "incomplete" = Customer started the payment process but did NOT complete it. Card was NOT charged. This is NOT the same as "not paid" — tell the agent: "Payment status is INCOMPLETE — the customer started checkout but didn't finish. They were NOT charged yet."
+- "pending" = Payment is being processed, not yet confirmed.
+- "failed" = Payment was attempted but the card was declined.
+- "refunded" = Payment was made but later refunded.
+- "canceled" = Payment was canceled before completion.
+IMPORTANT: If a customer has MULTIPLE charges (e.g. two "incomplete" attempts), report ALL of them with dates. This helps the agent understand what happened.
+
 === IMPORTANT DATA TERMINOLOGY ===
 - For OPENING agents: "deals" / "עסקאות" / "sales" / "openings" = the total number of TRIALS opened (all classifications: still_in_trial + cancelled_before_payment + live + saved_by_retention etc). Every trial counts as a deal/sale for Opening agents.
 - For RETENTION agents: "deals" = leads with workStatus='done_deal' or 'retained_sub'
