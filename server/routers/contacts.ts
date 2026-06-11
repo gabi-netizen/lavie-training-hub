@@ -825,6 +825,28 @@ export const contactsRouter = router({
         }
       }
 
+      // Auto-lookup postcode via Google Geocoding if missing
+      if (stripeAddress && !stripeAddress.postal_code && address) {
+        try {
+          const geoKey = process.env.GOOGLE_GEOCODING_API_KEY;
+          if (geoKey) {
+            const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address + " UK")}&key=${geoKey}`;
+            const geoRes = await fetch(geoUrl);
+            const geoData = await geoRes.json() as any;
+            if (geoData.status === "OK" && geoData.results?.[0]) {
+              const components = geoData.results[0].address_components || [];
+              const postcodeComp = components.find((c: any) => c.types?.includes("postal_code"));
+              if (postcodeComp) {
+                stripeAddress.postal_code = postcodeComp.long_name;
+                console.log(`[Geocoding] Found postcode ${postcodeComp.long_name} for address: ${address}`);
+              }
+            }
+          }
+        } catch (geoErr) {
+          console.error("[Geocoding] Error looking up postcode:", geoErr);
+        }
+      }
+
             // Create a Stripe Customer with address (needed for Zoho Billing token)
       const customer = await stripe.customers.create({
         name,
@@ -1022,6 +1044,28 @@ export const contactsRouter = router({
           } else {
             stripeAddress = { line1: address, country: "GB" };
           }
+        }
+      }
+
+      // Auto-lookup postcode via Google Geocoding if missing
+      if (stripeAddress && !stripeAddress.postal_code && address) {
+        try {
+          const geoKey = process.env.GOOGLE_GEOCODING_API_KEY;
+          if (geoKey) {
+            const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address + " UK")}&key=${geoKey}`;
+            const geoRes = await fetch(geoUrl);
+            const geoData = await geoRes.json() as any;
+            if (geoData.status === "OK" && geoData.results?.[0]) {
+              const components = geoData.results[0].address_components || [];
+              const postcodeComp = components.find((c: any) => c.types?.includes("postal_code"));
+              if (postcodeComp) {
+                stripeAddress.postal_code = postcodeComp.long_name;
+                console.log(`[Geocoding] Found postcode ${postcodeComp.long_name} for address: ${address}`);
+              }
+            }
+          }
+        } catch (geoErr) {
+          console.error("[Geocoding] Error looking up postcode:", geoErr);
         }
       }
 
