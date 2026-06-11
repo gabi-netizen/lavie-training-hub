@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, lazy, Suspense } from "react";
-
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -654,10 +654,10 @@ export default function SupportTickets() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  // View mode: "tickets", "retention", "blocked", "blockedSubjects", or "whatsapp"
-  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | null;
-  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp">(urlTab || "tickets");
-  const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp") => {
+  // View mode: "tickets", "retention", "blocked", "blockedSubjects", "whatsapp", or "butler"
+  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler" | null;
+  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler">(urlTab || "tickets");
+  const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler") => {
     setViewModeState(mode);
     window.history.replaceState(null, "", `/support-tickets?tab=${mode}`);
   };
@@ -1003,6 +1003,18 @@ export default function SupportTickets() {
                   Retention
                 </span>
               </button>
+              {(user?.role === "admin" || user?.team === "retention" || !user?.team) && (
+                <button
+                  onClick={() => setViewMode("butler")}
+                  className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                    viewMode === "butler"
+                      ? "bg-purple-600 text-white"
+                      : "bg-white text-purple-600 hover:bg-purple-50"
+                  }`}
+                >
+                  My Personal Butler
+                </button>
+              )}
               {isManager && (
                 <button
                   onClick={() => setViewMode("whatsapp")}
@@ -1093,6 +1105,13 @@ export default function SupportTickets() {
             </p>
             <BlockedSubjectsSection />
           </div>
+        </div>
+      )}
+
+      {/* Personal Butler View */}
+      {viewMode === "butler" && (
+        <div className="px-3 sm:px-6 py-6">
+          <PersonalButlerTab />
         </div>
       )}
 

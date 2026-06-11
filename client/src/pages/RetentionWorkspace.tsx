@@ -26,6 +26,7 @@ import {
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
 import { MyClientsTab } from "@/components/MyClientsTab";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub",
 
 export default function RetentionWorkspace() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients">("queue");
+  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients" | "butler">("queue");
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
@@ -459,6 +460,18 @@ export default function RetentionWorkspace() {
         >
           My Clients
         </button>
+        {(user?.role === "admin" || user?.team === "retention" || !user?.team) && (
+          <button
+            onClick={() => setActiveTab("butler")}
+            className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
+              activeTab === "butler"
+                ? "border-purple-600 text-purple-700"
+                : "border-transparent text-purple-600 hover:text-purple-800"
+            }`}
+          >
+            My Personal Butler
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -475,6 +488,10 @@ export default function RetentionWorkspace() {
 
       {activeTab === "clients" && (
         <MyClientsTab agentName={agentName} />
+      )}
+
+      {activeTab === "butler" && (
+        <PersonalButlerTab />
       )}
 
       {(activeTab === "queue" || activeTab === "callbacks") && (

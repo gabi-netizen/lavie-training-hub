@@ -12,6 +12,7 @@ import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts } from "../../drizzle/schema";
 import { eq, like, or, and, desc, sql, isNull } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
+import OpenAI from "openai";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -975,4 +976,79 @@ export const managerRouter = router({
       callResults: CALL_RESULTS as unknown as string[],
     };
   }),
+
+  /**
+   * AI Personal Butler — answers agent questions using their lead data.
+   */
+  askButler: protectedProcedure
+    .input(z.object({ question: z.string().min(1).max(2000) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const userName = ctx.user!.name || "Agent";
+
+      // Fetch agent's lead stats
+      const agentLeads = await db
+        .select()
+        .from(leadAssignments)
+        .where(eq(leadAssignments.assignedAgent, userName))
+        .limit(200);
+
+      const totalLeads = agentLeads.length;
+      const doneDeals = agentLeads.filter((l) => l.workStatus === "done_deal").length;
+      const newLeads = agentLeads.filter((l) => l.workStatus === "new").length;
+      const workingLeads = agentLeads.filter((l) => l.workStatus === "working").length;
+      const callbackLeads = agentLeads.filter((l) => l.workStatus === "callback").length;
+      const closedLeads = agentLeads.filter((l) => l.workStatus === "closed").length;
+
+      // Get recent call attempts
+      const recentCalls = await db
+        .select()
+        .from(callAttempts)
+        .where(eq(callAttempts.agentName, userName))
+        .orderBy(desc(callAttempts.id))
+        .limit(50);
+
+      // Build context for the AI
+      const dataContext = `
+Agent: ${userName}
+Date: ${new Date().toLocaleDateString("en-GB")}
+
+--- LEAD SUMMARY ---
+Total Leads Assigned: ${totalLeads}
+New (untouched): ${newLeads}
+Working: ${workingLeads}
+Callbacks Pending: ${callbackLeads}
+Done Deals: ${doneDeals}
+Closed (lost): ${closedLeads}
+
+--- RECENT LEADS (last 20) ---
+${agentLeads.slice(0, 20).map((l) => `- ${l.customerName || "Unknown"} | ${l.email || ""} | Type: ${l.leadType || ""} | Status: ${l.workStatus || "new"} | Note: ${l.agentNote || "-"}`).join("\n")}
+
+--- RECENT CALL ATTEMPTS (last 20) ---
+${recentCalls.slice(0, 20).map((c) => `- ${c.result || "unknown"} | Note: ${c.note || "-"} | Date: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}
+`;
+
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "system",
+            content: `You are a personal assistant (butler) for a retention agent at Lavie Labs, a UK skincare company. You have access to their lead data and performance metrics. Answer questions helpfully and concisely. Format numbers clearly. Use the data provided to give accurate answers. If you don't have enough data to answer, say so honestly. Keep responses short and actionable. Use bold (**text**) for key numbers.`,
+          },
+          {
+            role: "user",
+            content: `Here is my current data:\n${dataContext}\n\nMy question: ${input.question}`,
+          },
+        ],
+      });
+
+      const answer = response.choices[0]?.message?.content || "I couldn't generate a response. Please try again.";
+
+      return { answer };
+    }),
 });
