@@ -654,10 +654,10 @@ export default function SupportTickets() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  // View mode: "tickets", "retention", "blocked", "blockedSubjects", "whatsapp", or "butler"
-  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler" | null;
-  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler">(urlTab || "tickets");
-  const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler") => {
+  // View mode: "tickets", "retention", "blocked", "blockedSubjects", "whatsapp", "butler", or "butlerUsage"
+  const urlTab = new URLSearchParams(window.location.search).get("tab") as "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler" | "butlerUsage" | null;
+  const [viewMode, setViewModeState] = useState<"tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler" | "butlerUsage">(urlTab || "tickets");
+  const setViewMode = (mode: "tickets" | "retention" | "blocked" | "blockedSubjects" | "whatsapp" | "butler" | "butlerUsage") => {
     setViewModeState(mode);
     window.history.replaceState(null, "", `/support-tickets?tab=${mode}`);
   };
@@ -1057,6 +1057,18 @@ export default function SupportTickets() {
                       Subjects
                     </span>
                   </button>
+                  <button
+                    onClick={() => setViewMode("butlerUsage")}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                      viewMode === "butlerUsage"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-white text-indigo-600 hover:bg-indigo-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      ⚡ Butler Usage
+                    </span>
+                  </button>
                 </>
               )}
             </div>
@@ -1112,6 +1124,9 @@ export default function SupportTickets() {
           <PersonalButlerTab />
         </div>
       )}
+
+      {/* Butler Usage View (admin only) */}
+      {viewMode === "butlerUsage" && <ButlerUsagePanel />}
 
       {/* WhatsApp Control View */}
       {viewMode === "whatsapp" && (
@@ -1697,6 +1712,116 @@ export default function SupportTickets() {
             )}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+// ─── Butler Usage Panel (admin only) ─────────────────────────────────────────
+function ButlerUsagePanel() {
+  const [period, setPeriod] = useState<"today" | "7days" | "30days" | "all">("30days");
+  const { data, isLoading } = trpc.manager.getButlerUsage.useQuery({ period });
+
+  return (
+    <div className="px-3 sm:px-6 py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">⚡ Butler Token Usage</h2>
+          <p className="text-sm text-gray-600 mt-1">Monitor AI token consumption per agent</p>
+        </div>
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as any)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium"
+        >
+          <option value="today">Today</option>
+          <option value="7days">Last 7 Days</option>
+          <option value="30days">Last 30 Days</option>
+          <option value="all">All Time</option>
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-40">
+          <p className="text-gray-500">Loading usage data...</p>
+        </div>
+      ) : data ? (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <p className="text-sm text-gray-600">Total Questions</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.questions}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <p className="text-sm text-gray-600">Total Tokens</p>
+              <p className="text-2xl font-bold text-gray-900">{data.totals.tokens.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <p className="text-sm text-gray-600">Estimated Cost</p>
+              <p className="text-2xl font-bold text-green-700">${data.totals.cost}</p>
+            </div>
+          </div>
+
+          {/* Per Agent Table */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+            <div className="px-4 py-3 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Usage Per Agent</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-bold text-gray-700">Agent</th>
+                    <th className="text-center px-4 py-2 font-bold text-gray-700">Questions</th>
+                    <th className="text-center px-4 py-2 font-bold text-gray-700">Tokens</th>
+                    <th className="text-center px-4 py-2 font-bold text-gray-700">Cost ($)</th>
+                    <th className="text-center px-4 py-2 font-bold text-gray-700">Last Used</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.perAgent.map((agent) => (
+                    <tr key={agent.name} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{agent.name}</td>
+                      <td className="px-4 py-3 text-center text-gray-800">{agent.questions}</td>
+                      <td className="px-4 py-3 text-center text-gray-800">{agent.totalTokens.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-center text-green-700 font-medium">${agent.totalCost}</td>
+                      <td className="px-4 py-3 text-center text-gray-600">
+                        {agent.lastUsed ? new Date(agent.lastUsed).toLocaleDateString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Recent Questions */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Recent Questions (last 50)</h3>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {data.recentQuestions.map((q, i) => (
+                <div key={i} className="px-4 py-3 border-t border-gray-50 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900 text-sm">{q.userName}</span>
+                    <span className="text-xs text-gray-500">
+                      {q.date ? new Date(q.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mt-1 truncate">{q.question}</p>
+                  <div className="flex gap-3 mt-1">
+                    <span className="text-xs text-gray-500">{q.tokens?.toLocaleString()} tokens</span>
+                    <span className="text-xs text-green-600">${q.cost}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <p className="text-gray-500">No usage data available.</p>
       )}
     </div>
   );

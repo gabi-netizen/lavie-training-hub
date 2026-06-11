@@ -1013,3 +1013,18 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
 
 export type ClientSubscription = typeof clientSubscriptions.$inferSelect;
 export type InsertClientSubscription = typeof clientSubscriptions.$inferInsert;
+
+// ─── Butler Usage Log ────────────────────────────────────────────────────────
+export const butlerUsageLog = mysqlTable("butler_usage_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  userName: varchar("user_name", { length: 128 }).notNull(),
+  question: text("question").notNull(),
+  promptTokens: int("prompt_tokens").notNull().default(0),
+  completionTokens: int("completion_tokens").notNull().default(0),
+  totalTokens: int("total_tokens").notNull().default(0),
+  estimatedCostUsd: varchar("estimated_cost_usd", { length: 20 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type ButlerUsageLog = typeof butlerUsageLog.$inferSelect;
+export type InsertButlerUsageLog = typeof butlerUsageLog.$inferInsert;

@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials } from "../../drizzle/schema";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog } from "../../drizzle/schema";
 import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
@@ -1453,6 +1453,12 @@ Rapport Killers (AVOID):
 - Saved by Retention: customer cancelled but we saved them with a better offer
 - Win-back: customer left, calling to bring them back with special offer
 
+=== IMPORTANT DATA TERMINOLOGY ===
+- For OPENING agents: "deals" / "עסקאות" / "sales" / "openings" = the total number of TRIALS opened (all classifications: still_in_trial + cancelled_before_payment + live + saved_by_retention etc). Every trial counts as a deal/sale for Opening agents.
+- For RETENTION agents: "deals" = leads with workStatus='done_deal' or 'retained_sub'
+- When asked "how many deals did [Opening agent] close yesterday" — count ALL their trials from that date in opening_trials table, regardless of classification.
+- "Conversion" = only trials that matured AND became live/saved. This is different from total trials opened.
+
 Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.`,
           },
           {
@@ -1464,6 +1470,111 @@ Format: Keep responses short and actionable. Use bold (**text**) for key numbers
 
       const answer = response.choices[0]?.message?.content || "I couldn't generate a response. Please try again.";
 
+      // ─── Log usage to butler_usage_log ───────────────────────────────────────
+      try {
+        const usage = response.usage;
+        const promptTokens = usage?.prompt_tokens || 0;
+        const completionTokens = usage?.completion_tokens || 0;
+        const totalTokens = usage?.total_tokens || 0;
+        // GPT-4o-mini pricing: $0.15/1M input, $0.60/1M output
+        const costUsd = (promptTokens * 0.00000015) + (completionTokens * 0.0000006);
+
+        await db.insert(butlerUsageLog).values({
+          userId: ctx.user.id,
+          userName: userName,
+          question: input.question.substring(0, 500),
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          estimatedCostUsd: costUsd.toFixed(6),
+        });
+      } catch (e) {
+        // Usage logging failed silently — don't break the response
+      }
+
       return { answer };
+    }),
+
+  // ─── Butler Usage Stats (admin only) ─────────────────────────────────────────
+  getButlerUsage: adminProcedure
+    .input(z.object({
+      period: z.enum(["today", "7days", "30days", "all"]).optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB not available");
+      const period = input?.period || "30days";
+
+      let dateFilter = "";
+      const now = new Date();
+      if (period === "today") {
+        dateFilter = now.toISOString().split("T")[0];
+      } else if (period === "7days") {
+        const d = new Date(now); d.setDate(d.getDate() - 7);
+        dateFilter = d.toISOString().split("T")[0];
+      } else if (period === "30days") {
+        const d = new Date(now); d.setDate(d.getDate() - 30);
+        dateFilter = d.toISOString().split("T")[0];
+      }
+
+      let rows: any[];
+      if (dateFilter) {
+        rows = await db
+          .select()
+          .from(butlerUsageLog)
+          .where(gte(butlerUsageLog.createdAt, new Date(dateFilter)))
+          .orderBy(desc(butlerUsageLog.createdAt));
+      } else {
+        rows = await db
+          .select()
+          .from(butlerUsageLog)
+          .orderBy(desc(butlerUsageLog.createdAt));
+      }
+
+      // Aggregate per agent
+      const agentMap = new Map<string, { questions: number; totalTokens: number; totalCost: number; lastUsed: Date | null }>();
+      for (const row of rows) {
+        const agent = row.userName || "Unknown";
+        if (!agentMap.has(agent)) {
+          agentMap.set(agent, { questions: 0, totalTokens: 0, totalCost: 0, lastUsed: null });
+        }
+        const entry = agentMap.get(agent)!;
+        entry.questions++;
+        entry.totalTokens += row.totalTokens || 0;
+        entry.totalCost += parseFloat(row.estimatedCostUsd || "0");
+        if (!entry.lastUsed || (row.createdAt && row.createdAt > entry.lastUsed)) {
+          entry.lastUsed = row.createdAt;
+        }
+      }
+
+      const perAgent = Array.from(agentMap.entries())
+        .map(([name, data]) => ({
+          name,
+          questions: data.questions,
+          totalTokens: data.totalTokens,
+          totalCost: data.totalCost.toFixed(4),
+          lastUsed: data.lastUsed?.toISOString() || null,
+        }))
+        .sort((a, b) => b.questions - a.questions);
+
+      const totalQuestions = rows.length;
+      const totalTokensAll = rows.reduce((sum, r) => sum + (r.totalTokens || 0), 0);
+      const totalCostAll = rows.reduce((sum, r) => sum + parseFloat(r.estimatedCostUsd || "0"), 0);
+
+      return {
+        perAgent,
+        totals: {
+          questions: totalQuestions,
+          tokens: totalTokensAll,
+          cost: totalCostAll.toFixed(4),
+        },
+        recentQuestions: rows.slice(0, 50).map((r) => ({
+          userName: r.userName,
+          question: r.question,
+          tokens: r.totalTokens,
+          cost: r.estimatedCostUsd,
+          date: r.createdAt?.toISOString() || null,
+        })),
+      };
     }),
 });
