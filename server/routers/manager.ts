@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts, clientSubscriptions } from "../../drizzle/schema";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs } from "../../drizzle/schema";
 import { eq, like, or, and, desc, sql, isNull } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
@@ -1053,6 +1053,58 @@ export const managerRouter = router({
         }
       }
 
+      // Fetch AI Coach call analyses (recent 30)
+      let callAnalysesContext = "";
+      try {
+        const analyses = await db
+          .select()
+          .from(callAnalyses)
+          .orderBy(desc(callAnalyses.id))
+          .limit(30);
+        if (analyses.length > 0) {
+          callAnalysesContext = `\n--- AI COACH - RECENT CALL ANALYSES (last 30) ---\n${analyses.map((a) => `- ${a.repName || "Unknown"} | ${a.customerName || "?"} | Score: ${a.overallScore || "-"}/10 | Close: ${a.closeStatus || "-"} | Duration: ${a.durationSeconds ? Math.round(a.durationSeconds / 60) + "min" : "-"} | Date: ${a.callDate ? new Date(a.callDate).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
+        }
+      } catch (e) { /* table might not exist */ }
+
+      // Fetch Support Tickets (recent 30)
+      let ticketsContext = "";
+      try {
+        const tickets = await db
+          .select()
+          .from(supportTickets)
+          .orderBy(desc(supportTickets.id))
+          .limit(30);
+        if (tickets.length > 0) {
+          ticketsContext = `\n--- SUPPORT TICKETS (last 30) ---\n${tickets.map((t) => `- ${t.fromName || t.fromEmail || "Unknown"} | Subject: ${t.subject || "-"} | Category: ${t.category || "-"} | Status: ${t.status || "open"} | Date: ${t.receivedAt ? new Date(t.receivedAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
+        }
+      } catch (e) { /* table might not exist */ }
+
+      // Fetch WhatsApp messages (recent 30)
+      let whatsappContext = "";
+      try {
+        const messages = await db
+          .select()
+          .from(whatsappMessages)
+          .orderBy(desc(whatsappMessages.id))
+          .limit(30);
+        if (messages.length > 0) {
+          whatsappContext = `\n--- WHATSAPP MESSAGES (last 30) ---\n${messages.map((m) => `- ${m.direction === "inbound" ? "FROM" : "TO"} ${m.toNumber || m.fromNumber || "?"} | ${(m.body || "").substring(0, 80)} | Status: ${m.status || "-"}`).join("\n")}\n`;
+        }
+      } catch (e) { /* table might not exist */ }
+
+      // Fetch Email logs (recent 30)
+      let emailContext = "";
+      try {
+        const emails = await db
+          .select()
+          .from(emailLogs)
+          .orderBy(desc(emailLogs.id))
+          .limit(30);
+        if (emails.length > 0) {
+          emailContext = `\n--- SENT EMAILS (last 30) ---\n${emails.map((e) => `- To: ${e.toEmail || "?"} | Template: ${e.templateName || "-"} | Subject: ${e.subject || "-"} | Sent by: ${e.sentByName || "-"}`).join("\n")}\n`;
+        }
+      } catch (e) { /* table might not exist */ }
+
       // Build context for the AI
       const dataContext = `
 User asking: ${userName}
@@ -1084,7 +1136,7 @@ ${allSubs.slice(0, 50).map((s) => `- ${s.customerName} | ${s.email || ""} | Plan
 
 --- RECENT CALL ATTEMPTS (last 30) ---
 ${recentCalls.slice(0, 30).map((c) => `- Agent: ${c.agentName || "?"} | Result: ${c.result || "unknown"} | Note: ${c.note || "-"} | Date: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}
-${stripeContext}`;
+${stripeContext}${callAnalysesContext}${ticketsContext}${whatsappContext}${emailContext}`;
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
