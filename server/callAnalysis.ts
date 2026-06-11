@@ -1065,7 +1065,44 @@ If you detect an instalment deal, do NOT penalise the rep for not mentioning can
 2. FULL OFFER DETAILS (tcRead): The rep must VERBALLY READ OUT ALL of: £4.95 postage, 21-day free trial, £44.90 every 60 days, 48 Hour Premium Delivery with signature, and the right to cancel/pause/stop/amend at any time. Missing any of these = tcRead=false → deduct 20-30 from complianceScore. For Instalment deals, Cancellation Clarity is N/A.
 3. CANCELLATION CLARITY: The rep must give some clear indication that the customer can cancel, stop, pause, or amend at any time. Flag only if the rep gives NO indication at all. N/A for Instalment deals.
 4. Perfect compliance (subscriptionMisrepresented=false, tcRead=true) = complianceScore 90-100.
-5. If subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else.`;
+5. If subscriptionMisrepresented=true → complianceScore MUST be 0-20. This overrides everything else.
+
+=== SALE QUALITY RULES (CRITICAL — affects overallScore) ===
+This is one of the MOST IMPORTANT metrics. A high-quality sale is built on PRODUCT VALUE and CUSTOMER CONFIDENCE. A low-quality sale relies on "you can cancel anytime" as the main selling point.
+
+SCORING GUIDE for saleQualityScore:
+- 90-100: Rep focused entirely on product benefits, customer's skin concerns, results, and built genuine excitement. Cancellation mentioned ONCE at the end as a brief safety net ("and of course, you're always in control").
+- 70-89: Rep mostly focused on product value but mentioned cancellation 2 times. Still sold on the product, not on the exit.
+- 50-69: Rep mentioned cancellation 3+ times OR used it as a primary selling tool ("there's no risk because you can cancel"). The customer was sold on the EXIT, not on the PRODUCT.
+- 30-49: Rep repeatedly emphasised cancellation/no-commitment as the main reason to buy. Little to no product value building. Customer has no reason to stay after trial.
+- 0-29: Rep's entire pitch was "it's free, no commitment, cancel anytime" with almost no product education. This is the WORST type of sale — customer will cancel immediately.
+
+RED FLAG SCENARIOS (deduct heavily):
+1. "Cancel safety net as the close": Rep says "just try it, if you don't like it cancel" instead of building excitement about results
+2. "No-commitment loop": Rep says "no commitment" or "cancel anytime" 3+ times in the call
+3. "Fear of the subscription": Rep over-explains cancellation because THEY are uncomfortable with the subscription model
+4. "Selling the exit, not the product": Rep spends more time explaining how to leave than why to stay
+5. "Empty trial pitch": Rep says "it's free for 21 days" without explaining WHY the product is worth keeping after 21 days
+6. "Weak product knowledge": Rep can't explain what makes the product medical-grade, what Hyaluronic Acid does, or why it's different from high-street
+7. "No personalisation": Rep doesn't connect the product to the customer's specific skin concern (mentioned in Magic Wand or discovery)
+8. "Rushing to close without building value": Rep jumps to "£4.95 postage" before the customer is excited about the product
+
+GREEN FLAG SCENARIOS (reward heavily):
+1. "Product-first close": Rep builds excitement about results THEN mentions the trial as a way to experience it
+2. "Confidence language": "You're going to love this" / "Your skin will thank you" / "Most ladies can't go back to high-street after trying this"
+3. "Personalised pitch": Rep connects Matinika's 32% HA directly to the customer's dryness/ageing concern
+4. "Future pacing": "Imagine waking up in 2 weeks and your skin feels completely different"
+5. "Social proof": "Thousands of women have switched from high-street to medical-grade and never looked back"
+6. "Minimal cancellation mention": Only says it once, briefly, at the end — not as a selling point
+7. "Value stacking": Rep explains ALL products and their benefits before mentioning price
+8. "Emotional connection": Rep makes the customer FEEL what the product will do, not just list ingredients
+
+IMPACT ON overallScore:
+- If saleQualityScore < 50 AND dealClosed=true → this is a LOW-QUALITY SALE. Deduct 15-25 from overallScore. The deal will likely cancel within 21 days.
+- If saleQualityScore < 30 → deduct 25-35 from overallScore regardless of whether deal closed. This rep needs immediate coaching.
+- If saleQualityScore > 85 AND dealClosed=true → this is a HIGH-QUALITY SALE. Add 5-10 bonus to overallScore. This customer will likely stay.
+
+In managerReview: If saleQualityScore < 70, one of the 2-3 review items MUST address the sale quality issue with specific quotes and coaching on how to sell on value instead of cancellation.`;
 
   const prompt = `${LAVIE_SCRIPT_CONTEXT}
 ${callTypeContext}
@@ -1108,6 +1145,9 @@ ${stagesJson}
   "authenticityQuote": "<the most scripted-sounding or most authentic moment, or null>",
   "objectionHandlingScore": <number 0-100 — if there was an objection, how well did the rep handle it? Did they use the script? Did they give up too quickly? If no objection occurred, return 100.>,
   "objectionHandlingQuote": "<the objection and the rep's response, or null if no objection>",
+  "saleQualityScore": <number 0-100 — CRITICAL metric. Measures how well the rep sold on PRODUCT VALUE vs relying on cancellation/no-commitment language. See SALE QUALITY RULES below.>,
+  "saleQualityIssues": ["<specific issue found, or empty array if none>"],
+  "saleQualityQuote": "<the most relevant quote showing good or bad sale quality, or null>",
 ${complianceFields}${extraFields}
 ${isRetentionLongCall ? `
   "customerDifficultyScore": <number 1-10. 1 = hardest customer (hostile, refusing, threatening, wants to cancel immediately). 10 = easiest customer (agrees immediately, friendly, no objections). Rate based on the customer's tone, resistance level, and objections throughout the call.>,
