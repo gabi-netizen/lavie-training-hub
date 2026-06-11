@@ -1465,7 +1465,9 @@ Rapport Killers (AVOID):
 - When asked "how many deals did [Opening agent] close yesterday" — count ALL their trials from that date in opening_trials table, regardless of classification.
 - "Conversion" = only trials that matured AND became live/saved. This is different from total trials opened.
 
-Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.`,
+Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.
+
+LANGUAGE: ALWAYS respond in English, regardless of what language the user asks in. All scripts, pitches, and data are in English because agents speak English with customers.`,
           },
           // Include conversation history for context continuity
           ...(input.history || []).map((msg) => ({
