@@ -309,10 +309,10 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           >
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">#</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Created On</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Activated On</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Plan Type</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Deposit</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Next Billing</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</div>
@@ -342,14 +342,14 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                     <div className="text-sm font-semibold text-gray-900 truncate">{sub.customerName}</div>
                     <div className="text-xs text-gray-600 truncate">{sub.email || "—"}</div>
                   </div>
-                  <div className="text-sm text-gray-800">{formatDate(sub.createdOn)}</div>
+                  <div className="text-sm text-gray-800">{formatDate((sub as any).activatedOn || sub.createdOn)}</div>
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${planColor.bg} ${planColor.text}`}>
                       {PLAN_TYPE_LABELS[sub.planType] || sub.planType}
                     </span>
                   </div>
-                  <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.amount)}</div>
                   <div className="text-sm font-medium text-emerald-700">{formatCurrency(((sub as any).setupFee ? parseFloat((sub as any).setupFee) : 0) + ((sub as any).recurringAmount ? parseFloat((sub as any).recurringAmount) : (sub.amount ? parseFloat(String(sub.amount)) : 0)))}</div>
+                  <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.amount)}</div>
                   <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.totalAmount)}</div>
                   <div className="text-sm text-gray-800">{formatDate(sub.nextBillingOn)}</div>
                   <div className="flex items-center gap-1">
