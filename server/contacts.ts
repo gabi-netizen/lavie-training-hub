@@ -331,6 +331,12 @@ export async function updateContact(
 ) {
   const db = await getDb();
   if (!db) return null;
+  // If status is being changed to no_answer, increment naCount and set lastNaAt
+  if (updates.status === "no_answer") {
+    await db.execute(
+      sql`UPDATE contacts SET naCount = COALESCE(naCount, 0) + 1, lastNaAt = NOW() WHERE id = ${id}`
+    );
+  }
   await db.update(contacts).set(updates).where(eq(contacts.id, id));
   return getContact(id);
 }
@@ -559,10 +565,17 @@ export async function bulkUpdateStatus(
   if (!ids.length) return { updated: 0 };
   const db = await getDb();
   if (!db) return { updated: 0 };
-  await db
-    .update(contacts)
-    .set({ status: newStatus })
-    .where(inArray(contacts.id, ids));
+  // If bulk-setting to no_answer, also increment naCount and set lastNaAt
+  if (newStatus === "no_answer") {
+    await db.execute(
+      sql`UPDATE contacts SET naCount = COALESCE(naCount, 0) + 1, lastNaAt = NOW(), status = 'no_answer' WHERE id IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`
+    );
+  } else {
+    await db
+      .update(contacts)
+      .set({ status: newStatus })
+      .where(inArray(contacts.id, ids));
+  }
   return { updated: ids.length };
 }
 

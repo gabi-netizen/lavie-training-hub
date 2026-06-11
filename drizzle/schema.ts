@@ -194,6 +194,10 @@ export const contacts = mysqlTable("contacts", {
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   /** Timestamp when SMS outreach was sent to this contact (for auto-reset logic) */
   smsOutreachSentAt: timestamp("smsOutreachSentAt"),
+  /** Number of times this contact was marked as No Answer */
+  naCount: int("naCount").default(0).notNull(),
+  /** Timestamp of the last time this contact was marked as No Answer */
+  lastNaAt: timestamp("lastNaAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
