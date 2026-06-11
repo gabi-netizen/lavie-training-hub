@@ -305,13 +305,14 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           {/* Table Header */}
           <div
             className="grid items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50"
-            style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 95px 100px 130px" }}
+            style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 80px 95px 100px 130px" }}
           >
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">#</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Created On</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Plan Type</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Deposit</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Next Billing</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</div>
@@ -334,7 +335,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   className={`grid items-center gap-2 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
                     isExpanded ? "bg-blue-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 95px 100px 130px" }}
+                  style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 80px 95px 100px 130px" }}
                 >
                   <div className="text-sm text-gray-800 font-medium">{(page - 1) * 50 + idx + 1}</div>
                   <div className="min-w-0">
@@ -348,6 +349,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                     </span>
                   </div>
                   <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.amount)}</div>
+                  <div className="text-sm font-medium text-emerald-700">{formatCurrency(((sub as any).setupFee ? parseFloat((sub as any).setupFee) : 0) + ((sub as any).recurringAmount ? parseFloat((sub as any).recurringAmount) : (sub.amount ? parseFloat(String(sub.amount)) : 0)))}</div>
                   <div className="text-sm font-medium text-gray-800">{formatCurrency(sub.totalAmount)}</div>
                   <div className="text-sm text-gray-800">{formatDate(sub.nextBillingOn)}</div>
                   <div className="flex items-center gap-1">

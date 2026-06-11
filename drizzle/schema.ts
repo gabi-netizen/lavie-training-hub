@@ -989,6 +989,8 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
   email: varchar("email", { length: 320 }),
   /** Amount per billing cycle (parsed from £ string) */
   amount: decimal("amount", { precision: 10, scale: 2 }),
+  /** Setup fee (one-time charge at subscription start) */
+  setupFee: decimal("setupFee", { precision: 10, scale: 2 }),
   /** Recurring amount (numeric from Zoho) */
   recurringAmount: decimal("recurringAmount", { precision: 10, scale: 2 }),
   /** Total amount for the full plan (null for subscriptions) */

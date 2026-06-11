@@ -254,6 +254,7 @@ export const clientSubscriptionsRouter = router({
             customerName: z.string(),
             email: z.string().nullable(),
             amount: z.number().nullable(),
+            setupFee: z.number().nullable(),
             recurringAmount: z.number().nullable(),
             totalAmount: z.number().nullable(),
             billingCycles: z.number().nullable(),

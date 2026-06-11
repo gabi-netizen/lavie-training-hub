@@ -22,6 +22,7 @@ export interface ClientSubscriptionImportRow {
   customerName: string;
   email: string | null;
   amount: number | null;
+  setupFee: number | null;
   recurringAmount: number | null;
   totalAmount: number | null;
   billingCycles: number | null;
@@ -65,6 +66,7 @@ export async function importClientSubscriptionsData(
             customerName: row.customerName,
             email: row.email,
             amount: row.amount != null ? String(row.amount) : null,
+            setupFee: row.setupFee != null ? String(row.setupFee) : null,
             recurringAmount: row.recurringAmount != null ? String(row.recurringAmount) : null,
             totalAmount: row.totalAmount != null ? String(row.totalAmount) : null,
             billingCycles: row.billingCycles,
@@ -83,6 +85,7 @@ export async function importClientSubscriptionsData(
               customerName: row.customerName,
               email: row.email,
               amount: row.amount != null ? String(row.amount) : null,
+              setupFee: row.setupFee != null ? String(row.setupFee) : null,
               recurringAmount: row.recurringAmount != null ? String(row.recurringAmount) : null,
               totalAmount: row.totalAmount != null ? String(row.totalAmount) : null,
               billingCycles: row.billingCycles,

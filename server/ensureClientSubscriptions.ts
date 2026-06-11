@@ -23,6 +23,7 @@ export async function ensureClientSubscriptionsTable() {
         customerName varchar(256) NOT NULL,
         email varchar(320),
         amount decimal(10,2),
+        setupFee decimal(10,2),
         recurringAmount decimal(10,2),
         totalAmount decimal(10,2),
         billingCycles int,
