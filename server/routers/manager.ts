@@ -1110,9 +1110,19 @@ export const managerRouter = router({
                           if (pmRes.ok) {
                             const pm = await pmRes.json();
                             const bd = trialCharge.billing_details || {};
-                            const addr = bd.address || {};
-                            const fullAddress = [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country].filter(Boolean).join(", ");
-                            stripeContext += `\n--- PAYMENT TOKEN FOR ZOHO BILLING ---\nPayment Method ID (Token): ${pm.id}\nCard: ${pm.card?.brand} ****${pm.card?.last4} (exp ${pm.card?.exp_month}/${pm.card?.exp_year})\nStripe Customer ID: ${custId}\nCustomer Name: ${bd.name || "Not provided"}\nCustomer Email: ${bd.email || targetEmail}\nCustomer Address: ${fullAddress || "Not provided"}\nUse this token + details above to create subscription in Zoho Billing.\n`;
+                            // Try billing_details address first, then fall back to Customer object address
+                            let addr = bd.address || {};
+                            let fullAddress = [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country].filter(Boolean).join(", ");
+                            // If billing_details only has country, pull address from Customer object
+                            if (!addr.line1 && customers[0]?.address) {
+                              const custAddr = customers[0].address;
+                              fullAddress = [custAddr.line1, custAddr.line2, custAddr.city, custAddr.state, custAddr.postal_code, custAddr.country].filter(Boolean).join(", ");
+                            }
+                            // Customer name: prefer billing_details, fallback to Customer object
+                            const custName = bd.name || customers[0]?.name || "Not provided";
+                            // Customer email: prefer billing_details, fallback to Customer object, then targetEmail
+                            const custEmail = bd.email || customers[0]?.email || targetEmail;
+                            stripeContext += `\n--- PAYMENT TOKEN FOR ZOHO BILLING ---\nPayment Method ID (Token): ${pm.id}\nCard: ${pm.card?.brand} ****${pm.card?.last4} (exp ${pm.card?.exp_month}/${pm.card?.exp_year})\nStripe Customer ID: ${custId}\nCustomer Name: ${custName}\nCustomer Email: ${custEmail}\nCustomer Address: ${fullAddress || "Not provided"}\nUse this token + details above to create subscription in Zoho Billing.\n`;
                           }
                         }
                       }
