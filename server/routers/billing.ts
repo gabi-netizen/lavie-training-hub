@@ -20,7 +20,7 @@ const ZOHO_ORG_ID = "778500587";
 let cachedToken: string | null = null;
 let tokenExpiresAt = 0;
 
-async function getAccessToken(): Promise<string> {
+export async function getAccessToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiresAt) {
     return cachedToken;
   }
@@ -50,7 +50,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 // ─── Zoho API Helper ─────────────────────────────────────────────────────────
-async function zohoGet(path: string): Promise<any> {
+export async function zohoGet(path: string): Promise<any> {
   const token = await getAccessToken();
   const url = `${ZOHO_API_BASE}${path}`;
 

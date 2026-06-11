@@ -1028,28 +1028,76 @@ export const managerRouter = router({
       const cancelledSubs = allSubs.filter((s) => s.status === "cancelled").length;
       const totalSubsAmount = allSubs.filter((s) => s.status === "live").reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0);
 
-      // Check Stripe for recent payment info if question mentions payment/card/stripe/charge
+      // ─── STRIPE API (real-time) ───────────────────────────────────────────────
       let stripeContext = "";
-      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum"];
       const questionLower = input.question.toLowerCase();
+      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum", "dispute", "chargeback", "invoice", "subscription"];
       if (paymentKeywords.some((kw) => questionLower.includes(kw))) {
         try {
           const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
           if (stripeKey) {
-            // Search for customer by name/email mentioned in the question
-            const res = await fetch("https://api.stripe.com/v1/charges?limit=10", {
-              headers: { Authorization: `Bearer ${stripeKey}` },
-            });
-            if (res.ok) {
-              const data = await res.json();
-              const recentCharges = data.data?.slice(0, 5) || [];
-              if (recentCharges.length > 0) {
-                stripeContext = `\n--- RECENT STRIPE CHARGES (last 5) ---\n${recentCharges.map((c: any) => `- £${(c.amount / 100).toFixed(2)} | ${c.status} | ${c.billing_details?.name || "Unknown"} | ${new Date(c.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+            const stripeHeaders = { Authorization: `Bearer ${stripeKey}` };
+
+            // Recent charges (last 15)
+            const chargesRes = await fetch("https://api.stripe.com/v1/charges?limit=15", { headers: stripeHeaders });
+            if (chargesRes.ok) {
+              const chargesData = await chargesRes.json();
+              const charges = chargesData.data || [];
+              if (charges.length > 0) {
+                stripeContext += `\n--- STRIPE RECENT CHARGES (last 15) ---\n${charges.map((c: any) => `- £${(c.amount / 100).toFixed(2)} | ${c.status}${c.refunded ? " (REFUNDED)" : ""} | ${c.billing_details?.name || "Unknown"} | ${c.billing_details?.email || ""} | ${new Date(c.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+              }
+            }
+
+            // Recent disputes
+            const disputesRes = await fetch("https://api.stripe.com/v1/disputes?limit=10", { headers: stripeHeaders });
+            if (disputesRes.ok) {
+              const disputesData = await disputesRes.json();
+              const disputes = disputesData.data || [];
+              if (disputes.length > 0) {
+                stripeContext += `\n--- STRIPE DISPUTES (last 10) ---\n${disputes.map((d: any) => `- £${(d.amount / 100).toFixed(2)} | Status: ${d.status} | Reason: ${d.reason} | ${new Date(d.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+              }
+            }
+
+            // Recent refunds
+            const refundsRes = await fetch("https://api.stripe.com/v1/refunds?limit=10", { headers: stripeHeaders });
+            if (refundsRes.ok) {
+              const refundsData = await refundsRes.json();
+              const refunds = refundsData.data || [];
+              if (refunds.length > 0) {
+                stripeContext += `\n--- STRIPE REFUNDS (last 10) ---\n${refunds.map((r: any) => `- £${(r.amount / 100).toFixed(2)} | Status: ${r.status} | Reason: ${r.reason || "-"} | ${new Date(r.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
               }
             }
           }
         } catch (e) {
           // Stripe check failed silently
+        }
+      }
+
+      // ─── ZOHO BILLING API (real-time) ──────────────────────────────────────────
+      let zohoContext = "";
+      const zohoKeywords = ["zoho", "billing", "subscription", "cancel", "dunning", "plan", "renew", "מנוי", "ביטול", "חיוב", "installment", "cycle"];
+      if (zohoKeywords.some((kw) => questionLower.includes(kw))) {
+        try {
+          const { zohoGet } = await import("./billing");
+
+          // Get recent subscriptions (live + cancelled)
+          const liveRes = await zohoGet("/subscriptions?per_page=25&page=1&status=live");
+          const liveSubs2 = liveRes.subscriptions || [];
+
+          if (liveSubs2.length > 0) {
+            zohoContext += `\n--- ZOHO BILLING - LIVE SUBSCRIPTIONS (last 25) ---\n${liveSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"}`).join("\n")}\n`;
+          }
+
+          // If question mentions cancel/dunning, fetch those too
+          if (["cancel", "ביטול", "dunning"].some((kw) => questionLower.includes(kw))) {
+            const cancelRes = await zohoGet("/subscriptions?per_page=15&page=1&status=cancelled");
+            const cancelledSubs2 = cancelRes.subscriptions || [];
+            if (cancelledSubs2.length > 0) {
+              zohoContext += `\n--- ZOHO BILLING - RECENTLY CANCELLED (last 15) ---\n${cancelledSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
+            }
+          }
+        } catch (e) {
+          // Zoho check failed silently
         }
       }
 
@@ -1296,7 +1344,7 @@ ${allSubs.slice(0, 50).map((s) => `- ${s.customerName} | ${s.email || ""} | Plan
 
 --- RECENT CALL ATTEMPTS (last 30) ---
 ${recentCalls.slice(0, 30).map((c) => `- Agent: ${c.agentName || "?"} | Result: ${c.result || "unknown"} | Note: ${c.note || "-"} | Date: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}
-${stripeContext}${callAnalysesContext}${ticketsContext}${whatsappContext}${emailContext}`;
+${stripeContext}${zohoContext}${callAnalysesContext}${ticketsContext}${whatsappContext}${emailContext}`;
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
