@@ -1003,7 +1003,7 @@ export const managerRouter = router({
       const closedLeads = allLeads.filter((l) => l.workStatus === "closed").length;
 
       // Per-agent breakdown
-      const agentNames = [...new Set(allLeads.map((l) => l.assignedAgent).filter(Boolean))];
+      const agentNames = Array.from(new Set(allLeads.map((l) => l.assignedAgent).filter(Boolean))) as string[];
       const agentBreakdown = agentNames.map((agent) => {
         const agentLeads = allLeads.filter((l) => l.assignedAgent === agent);
         return `${agent}: ${agentLeads.length} leads (${agentLeads.filter((l) => l.workStatus === "done_deal").length} deals, ${agentLeads.filter((l) => l.workStatus === "new").length} new, ${agentLeads.filter((l) => l.workStatus === "working").length} working, ${agentLeads.filter((l) => l.workStatus === "callback").length} callbacks, ${agentLeads.filter((l) => l.workStatus === "closed").length} closed)`;
