@@ -725,6 +725,19 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                     "{(analysis as any).saleQualityQuote.length > 80 ? (analysis as any).saleQualityQuote.substring(0, 80) + '...' : (analysis as any).saleQualityQuote}"
                   </p>
                 )}
+                {/* Cancel & Money counters */}
+                <div className="flex flex-col gap-0.5 mt-2">
+                  {(analysis as any).cancelMentionCount != null && (
+                    <p className={`text-[10px] font-medium ${(analysis as any).cancelMentionCount >= 2 ? 'text-red-600' : (analysis as any).cancelMentionCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {(analysis as any).cancelMentionCount >= 2 ? '❌' : (analysis as any).cancelMentionCount === 1 ? '⚠️' : '✅'} Cancel mentioned: {(analysis as any).cancelMentionCount}x
+                    </p>
+                  )}
+                  {(analysis as any).moneyOverValueCount != null && (
+                    <p className={`text-[10px] font-medium ${(analysis as any).moneyOverValueCount >= 2 ? 'text-red-600' : (analysis as any).moneyOverValueCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {(analysis as any).moneyOverValueCount >= 2 ? '💰' : '✅'} Money over value: {(analysis as any).moneyOverValueCount}x
+                    </p>
+                  )}
+                </div>
               </div>
             )}
             {/* Fallback: show Talk Ratio if no saleQuality data yet */}

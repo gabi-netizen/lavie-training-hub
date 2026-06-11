@@ -1148,6 +1148,8 @@ ${stagesJson}
   "saleQualityScore": <number 0-100 — CRITICAL metric. Measures how well the rep sold on PRODUCT VALUE vs relying on cancellation/no-commitment language. See SALE QUALITY RULES below.>,
   "saleQualityIssues": ["<specific issue found, or empty array if none>"],
   "saleQualityQuote": "<the most relevant quote showing good or bad sale quality, or null>",
+  "cancelMentionCount": <number — how many times the REP mentioned cancel/cancellation/no commitment/no obligation/you can stop/you can pause during the call. Count ONLY rep's words, not customer's. 0 = never mentioned, 1 = acceptable (brief safety net), 2+ = red flag>,
+  "moneyOverValueCount": <number — how many times the REP talked about price/cost/money/cheap/affordable/only £X WITHOUT immediately connecting it to product value or results. Saying "£4.95 for premium delivery" is fine. Saying "it's only £4.95, that's nothing" without explaining WHY the product is worth it = money talk. Count instances where price was the selling point instead of value>,
 ${complianceFields}${extraFields}
 ${isRetentionLongCall ? `
   "customerDifficultyScore": <number 1-10. 1 = hardest customer (hostile, refusing, threatening, wants to cancel immediately). 10 = easiest customer (agrees immediately, friendly, no objections). Rate based on the customer's tone, resistance level, and objections throughout the call.>,
