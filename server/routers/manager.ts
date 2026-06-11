@@ -1498,7 +1498,7 @@ Format: Keep responses short and actionable. Use bold (**text**) for key numbers
   // ─── Butler Usage Stats (admin only) ─────────────────────────────────────────
   getButlerUsage: adminProcedure
     .input(z.object({
-      period: z.enum(["today", "7days", "30days", "all"]).optional(),
+      period: z.enum(["today", "7days", "thisMonth", "lastMonth", "30days", "all"]).optional(),
     }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -1506,19 +1506,33 @@ Format: Keep responses short and actionable. Use bold (**text**) for key numbers
       const period = input?.period || "30days";
 
       let dateFilter = "";
+      let dateFilterEnd = "";
       const now = new Date();
       if (period === "today") {
         dateFilter = now.toISOString().split("T")[0];
       } else if (period === "7days") {
         const d = new Date(now); d.setDate(d.getDate() - 7);
         dateFilter = d.toISOString().split("T")[0];
+      } else if (period === "thisMonth") {
+        dateFilter = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      } else if (period === "lastMonth") {
+        const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        dateFilter = lm.toISOString().split("T")[0];
+        const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        dateFilterEnd = lmEnd.toISOString().split("T")[0];
       } else if (period === "30days") {
         const d = new Date(now); d.setDate(d.getDate() - 30);
         dateFilter = d.toISOString().split("T")[0];
       }
 
       let rows: any[];
-      if (dateFilter) {
+      if (dateFilter && dateFilterEnd) {
+        rows = await db
+          .select()
+          .from(butlerUsageLog)
+          .where(and(gte(butlerUsageLog.createdAt, new Date(dateFilter)), lte(butlerUsageLog.createdAt, new Date(dateFilterEnd + "T23:59:59"))))
+          .orderBy(desc(butlerUsageLog.createdAt));
+      } else if (dateFilter) {
         rows = await db
           .select()
           .from(butlerUsageLog)

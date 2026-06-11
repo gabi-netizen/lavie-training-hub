@@ -1719,7 +1719,7 @@ export default function SupportTickets() {
 
 // ─── Butler Usage Panel (admin only) ─────────────────────────────────────────
 function ButlerUsagePanel() {
-  const [period, setPeriod] = useState<"today" | "7days" | "30days" | "all">("30days");
+  const [period, setPeriod] = useState<"today" | "7days" | "thisMonth" | "lastMonth" | "30days" | "all">("thisMonth");
   const { data, isLoading } = trpc.manager.getButlerUsage.useQuery({ period });
 
   return (
@@ -1736,6 +1736,8 @@ function ButlerUsagePanel() {
         >
           <option value="today">Today</option>
           <option value="7days">Last 7 Days</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
           <option value="30days">Last 30 Days</option>
           <option value="all">All Time</option>
         </select>
