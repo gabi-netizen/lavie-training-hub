@@ -27,6 +27,7 @@ import {
   Phone,
   RefreshCw,
   Loader2,
+  Copy,
 } from "lucide-react";
 
 const PAGE_SIZE = 16;
@@ -816,8 +817,21 @@ export default function CallCenterDashboard() {
                      </div>
 
                     {/* Phone */}
-                    <div>
+                    <div className="flex items-center gap-1">
                       <div className="text-[13px] text-gray-900 truncate">{(call as any).externalNumber || call.contactPhone || "—"}</div>
+                      {((call as any).externalNumber || call.contactPhone) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText((call as any).externalNumber || call.contactPhone || "");
+                            toast.success("Phone number copied");
+                          }}
+                          className="p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
+                          title="Copy phone number"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Agent */}
