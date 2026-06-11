@@ -1109,7 +1109,10 @@ export const managerRouter = router({
                           const pmRes = await fetch(`https://api.stripe.com/v1/payment_methods/${trialCharge.payment_method}`, { headers: stripeHeaders });
                           if (pmRes.ok) {
                             const pm = await pmRes.json();
-                            stripeContext += `\n--- PAYMENT TOKEN FOR ZOHO BILLING ---\nPayment Method ID (Token): ${pm.id}\nCard: ${pm.card?.brand} ****${pm.card?.last4} (exp ${pm.card?.exp_month}/${pm.card?.exp_year})\nStripe Customer ID: ${custId}\nUse this token to create subscription in Zoho Billing.\n`;
+                            const bd = trialCharge.billing_details || {};
+                            const addr = bd.address || {};
+                            const fullAddress = [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country].filter(Boolean).join(", ");
+                            stripeContext += `\n--- PAYMENT TOKEN FOR ZOHO BILLING ---\nPayment Method ID (Token): ${pm.id}\nCard: ${pm.card?.brand} ****${pm.card?.last4} (exp ${pm.card?.exp_month}/${pm.card?.exp_year})\nStripe Customer ID: ${custId}\nCustomer Name: ${bd.name || "Not provided"}\nCustomer Email: ${bd.email || targetEmail}\nCustomer Address: ${fullAddress || "Not provided"}\nUse this token + details above to create subscription in Zoho Billing.\n`;
                           }
                         }
                       }
@@ -1528,11 +1531,14 @@ IMPORTANT: If a customer has MULTIPLE charges (e.g. two "incomplete" attempts), 
 === PAYMENT TOKEN EXTRACTION ===
 When an agent asks for a customer's "token" / "payment method" / "card token" / "pm_" — you have access to it from Stripe.
 The token is the Payment Method ID (pm_xxx) from the customer's succeeded £4.95 charge. It is automatically extracted and shown in the data below as "PAYMENT TOKEN FOR ZOHO BILLING".
-When showing the token to the agent, format it clearly:
+When showing the token to the agent, ALWAYS include ALL details needed for Zoho Billing:
 - Payment Method Token: pm_xxx
 - Card: visa ****1234 (exp 8/2027)
 - Stripe Customer ID: cus_xxx
-The agent uses this token to manually create the subscription in Zoho Billing.
+- Customer Name: [full name from billing details]
+- Customer Email: [email]
+- Customer Address: [full address - line1, city, postcode, country]
+The agent needs ALL of these to create the subscription in Zoho Billing. Never show just the token without the name, email, and address.
 
 === IMPORTANT DATA TERMINOLOGY ===
 - For OPENING agents: "deals" / "עסקאות" / "sales" / "openings" = the total number of TRIALS opened (all classifications: still_in_trial + cancelled_before_payment + live + saved_by_retention etc). Every trial counts as a deal/sale for Opening agents.
