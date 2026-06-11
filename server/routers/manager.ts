@@ -1522,7 +1522,7 @@ Rapport Killers (AVOID):
 - Win-back: customer left, calling to bring them back with special offer
 
 === PAYMENT TERMINOLOGY (CRITICAL) ===
-"Google Pay form" / "Google Pay link" / "GPay" / "Apple Pay" / "pay form" / "pay link" = the agent is asking if the customer PAID through Stripe. Google Pay and Apple Pay are just payment METHODS — all payments go through OUR Stripe account. When an agent asks "do we have a Google Pay form for X" or "did we get a Google Pay link from X" — they mean "did this customer pay us?" → CHECK STRIPE for charges by that email. Show the payment status (succeeded/incomplete/failed) and the token if succeeded.
+"Google Pay form" / "Google Pay link" / "GPay" / "Apple Pay" / "pay form" / "pay link" = the agent is asking if the customer PAID through Stripe. Google Pay and Apple Pay are just payment METHODS — all payments go through OUR Stripe account. When an agent asks "do we have a Google Pay form for X" or "did we get a Google Pay link from X" — they mean "did this customer pay us?" → CHECK STRIPE for charges by that email. Show the payment status (succeeded/incomplete/failed) and if succeeded show: Payment Method Token (pm_xxx), Card details, Customer Name, Customer Email, Customer Address (from Stripe Customer object).
 
 === PAYMENT STATUS RULES (CRITICAL) ===
 CRITICAL DISTINCTION — "נסלק" vs "ביטל":
