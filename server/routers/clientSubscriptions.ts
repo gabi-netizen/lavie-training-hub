@@ -79,36 +79,36 @@ export const clientSubscriptionsRouter = router({
         conditions.push(lte(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2))`, input.amountMax));
       }
 
-      // Deal Date (activatedOn) range filter
+      // Created On (deal date) range filter
       if (input.createdOnFrom && input.createdOnTo) {
         // Custom date range
-        conditions.push(gte(clientSubscriptions.activatedOn, new Date(input.createdOnFrom)));
-        conditions.push(lte(clientSubscriptions.activatedOn, new Date(input.createdOnTo)));
+        conditions.push(gte(clientSubscriptions.createdOn, new Date(input.createdOnFrom)));
+        conditions.push(lte(clientSubscriptions.createdOn, new Date(input.createdOnTo)));
       } else if (input.createdOnRange) {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         if (input.createdOnRange === "today") {
-          conditions.push(gte(clientSubscriptions.activatedOn, today));
+          conditions.push(gte(clientSubscriptions.createdOn, today));
         } else if (input.createdOnRange === "yesterday") {
           const yesterday = new Date(today);
           yesterday.setDate(yesterday.getDate() - 1);
-          conditions.push(gte(clientSubscriptions.activatedOn, yesterday));
-          conditions.push(lte(clientSubscriptions.activatedOn, yesterday));
+          conditions.push(gte(clientSubscriptions.createdOn, yesterday));
+          conditions.push(lte(clientSubscriptions.createdOn, yesterday));
         } else if (input.createdOnRange === "last_7_days") {
           const weekAgo = new Date(today);
           weekAgo.setDate(weekAgo.getDate() - 7);
-          conditions.push(gte(clientSubscriptions.activatedOn, weekAgo));
+          conditions.push(gte(clientSubscriptions.createdOn, weekAgo));
         } else if (input.createdOnRange === "this_month") {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          conditions.push(gte(clientSubscriptions.activatedOn, startOfMonth));
+          conditions.push(gte(clientSubscriptions.createdOn, startOfMonth));
         } else if (input.createdOnRange === "last_month") {
           const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-          conditions.push(gte(clientSubscriptions.activatedOn, startOfLastMonth));
-          conditions.push(lte(clientSubscriptions.activatedOn, endOfLastMonth));
+          conditions.push(gte(clientSubscriptions.createdOn, startOfLastMonth));
+          conditions.push(lte(clientSubscriptions.createdOn, endOfLastMonth));
         } else if (input.createdOnRange === "last_3_months") {
           const start3Months = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-          conditions.push(gte(clientSubscriptions.activatedOn, start3Months));
+          conditions.push(gte(clientSubscriptions.createdOn, start3Months));
         }
       }
 
@@ -151,7 +151,7 @@ export const clientSubscriptionsRouter = router({
         .select()
         .from(clientSubscriptions)
         .where(whereClause)
-        .orderBy(desc(clientSubscriptions.activatedOn))
+        .orderBy(desc(clientSubscriptions.createdOn))
         .limit(input.perPage)
         .offset(offset);
 

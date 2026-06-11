@@ -214,7 +214,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           onChange={(e) => { setCreatedOnFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
         >
-          <option value="this_month">Deal This Month</option>
+          <option value="this_month">Created This Month</option>
           <option value="today">Today</option>
           <option value="yesterday">Yesterday</option>
           <option value="last_7_days">Last 7 Days</option>
@@ -309,7 +309,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           >
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">#</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Deal Date</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Created On</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Plan Type</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</div>
@@ -341,7 +341,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                     <div className="text-sm font-semibold text-gray-900 truncate">{sub.customerName}</div>
                     <div className="text-xs text-gray-600 truncate">{sub.email || "—"}</div>
                   </div>
-                  <div className="text-sm text-gray-800">{formatDate(sub.activatedOn)}</div>
+                  <div className="text-sm text-gray-800">{formatDate(sub.createdOn)}</div>
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${planColor.bg} ${planColor.text}`}>
                       {PLAN_TYPE_LABELS[sub.planType] || sub.planType}
@@ -421,7 +421,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Activated On</div>
-                        <div className="text-sm font-medium text-gray-900">{formatDate(sub.activatedOn)}</div>
+                        <div className="text-sm font-medium text-gray-900">{formatDate(sub.createdOn)}</div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Next Billing</div>
