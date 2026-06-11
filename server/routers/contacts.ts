@@ -783,15 +783,30 @@ export const contactsRouter = router({
         contactId: z.number(),
         name: z.string().min(1),
         email: z.string().email(),
+        address: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const { contactId, name, email } = input;
+      const { contactId, name, email, address } = input;
 
-      // Create a Stripe Customer
+      // Parse address into Stripe format (stored as "line1, city, postcode" or free text)
+      let stripeAddress: { line1?: string; city?: string; postal_code?: string; country?: string } | undefined;
+      if (address) {
+        const parts = address.split(",").map((p: string) => p.trim());
+        if (parts.length >= 3) {
+          stripeAddress = { line1: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], postal_code: parts[parts.length - 1], country: "GB" };
+        } else if (parts.length === 2) {
+          stripeAddress = { line1: parts[0], postal_code: parts[1], country: "GB" };
+        } else {
+          stripeAddress = { line1: address, country: "GB" };
+        }
+      }
+
+      // Create a Stripe Customer with address (needed for Zoho Billing token)
       const customer = await stripe.customers.create({
         name,
         email,
+        ...(stripeAddress ? { address: stripeAddress } : {}),
         metadata: { contactId: String(contactId) },
       });
 
