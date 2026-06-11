@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts } from "../../drizzle/schema";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions } from "../../drizzle/schema";
 import { eq, like, or, and, desc, sql, isNull } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
@@ -978,7 +978,7 @@ export const managerRouter = router({
   }),
 
   /**
-   * AI Personal Butler — answers agent questions using their lead data.
+   * AI Personal Butler — answers agent questions using their lead data + subscriptions + Stripe.
    */
   askButler: protectedProcedure
     .input(z.object({ question: z.string().min(1).max(2000) }))
@@ -1008,7 +1008,45 @@ export const managerRouter = router({
         .from(callAttempts)
         .where(eq(callAttempts.agentName, userName))
         .orderBy(desc(callAttempts.id))
-        .limit(50);
+        .limit(30);
+
+      // Fetch agent's client subscriptions
+      const agentSubs = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(eq(clientSubscriptions.salesPerson, userName))
+        .orderBy(desc(clientSubscriptions.id))
+        .limit(100);
+
+      const liveSubs = agentSubs.filter((s) => s.status === "live").length;
+      const dunningSubs = agentSubs.filter((s) => s.status === "dunning").length;
+      const cancelledSubs = agentSubs.filter((s) => s.status === "cancelled").length;
+      const totalSubsAmount = agentSubs.filter((s) => s.status === "live").reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0);
+
+      // Check Stripe for recent payment info if question mentions payment/card/stripe/charge
+      let stripeContext = "";
+      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum"];
+      const questionLower = input.question.toLowerCase();
+      if (paymentKeywords.some((kw) => questionLower.includes(kw))) {
+        try {
+          const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
+          if (stripeKey) {
+            // Search for customer by name/email mentioned in the question
+            const res = await fetch("https://api.stripe.com/v1/charges?limit=10", {
+              headers: { Authorization: `Bearer ${stripeKey}` },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const recentCharges = data.data?.slice(0, 5) || [];
+              if (recentCharges.length > 0) {
+                stripeContext = `\n--- RECENT STRIPE CHARGES (last 5) ---\n${recentCharges.map((c: any) => `- £${(c.amount / 100).toFixed(2)} | ${c.status} | ${c.billing_details?.name || "Unknown"} | ${new Date(c.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+              }
+            }
+          }
+        } catch (e) {
+          // Stripe check failed silently
+        }
+      }
 
       // Build context for the AI
       const dataContext = `
@@ -1023,22 +1061,53 @@ Callbacks Pending: ${callbackLeads}
 Done Deals: ${doneDeals}
 Closed (lost): ${closedLeads}
 
---- RECENT LEADS (last 20) ---
-${agentLeads.slice(0, 20).map((l) => `- ${l.customerName || "Unknown"} | ${l.email || ""} | Type: ${l.leadType || ""} | Status: ${l.workStatus || "new"} | Note: ${l.agentNote || "-"}`).join("\n")}
+--- CLIENT SUBSCRIPTIONS SUMMARY ---
+Total Clients: ${agentSubs.length}
+Live: ${liveSubs}
+Dunning: ${dunningSubs}
+Cancelled: ${cancelledSubs}
+Total Monthly Revenue (live): £${totalSubsAmount.toFixed(2)}
+
+--- RECENT LEADS (last 30) ---
+${agentLeads.slice(0, 30).map((l) => `- ${l.customerName || "Unknown"} | ${l.email || ""} | Phone: ${l.phone || ""} | Type: ${l.leadType || ""} | Status: ${l.workStatus || "new"} | Note: ${l.agentNote || "-"}`).join("\n")}
+
+--- CLIENT SUBSCRIPTIONS (last 30) ---
+${agentSubs.slice(0, 30).map((s) => `- ${s.customerName} | ${s.email || ""} | Plan: ${s.planName || s.planType} | £${s.amount || "0"}/cycle | Total: £${s.totalAmount || "-"} | Status: ${s.status} | Cycles: ${s.cyclesCompleted || 0}/${s.billingCycles || "∞"} | Next: ${s.nextBillingOn || "-"}`).join("\n")}
 
 --- RECENT CALL ATTEMPTS (last 20) ---
 ${recentCalls.slice(0, 20).map((c) => `- ${c.result || "unknown"} | Note: ${c.note || "-"} | Date: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}
-`;
+${stripeContext}`;
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 1000,
+        max_tokens: 1500,
         messages: [
           {
             role: "system",
-            content: `You are a personal assistant (butler) for a retention agent at Lavie Labs, a UK skincare company. You have access to their lead data and performance metrics. Answer questions helpfully and concisely. Format numbers clearly. Use the data provided to give accurate answers. If you don't have enough data to answer, say so honestly. Keep responses short and actionable. Use bold (**text**) for key numbers.`,
+            content: `You are a personal sales & retention assistant (butler) for an agent at Lavie Labs, a UK skincare company. You have access to their lead data, client subscriptions, call history, and payment information.
+
+Your job:
+1. Answer data questions quickly and accurately (stats, customer info, payment status)
+2. Help during live calls — give quick tips, objection handling, upsell suggestions
+3. Provide retention strategies based on the customer's history
+4. Help with sales techniques and scripts when asked
+
+Key product knowledge:
+- Lavie Labs sells premium skincare (Matinika, Retinol)
+- Trial: £4.95 (Starter Kit, 21 days)
+- Subscription: £44.90/month after trial
+- Installment plans: various (£420 split into payments)
+- Common objections: too expensive, didn't see results, forgot about it, want to cancel
+
+Retention tips to suggest:
+- Downsell: offer reduced price or skip a month
+- Education: explain how long skincare takes to show results (4-6 weeks)
+- Empathy: acknowledge their concern before offering solutions
+- Urgency: "I can offer this discount only on this call"
+
+Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If on a live call, give bullet-point quick answers.`,
           },
           {
             role: "user",

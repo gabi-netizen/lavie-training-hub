@@ -1003,18 +1003,16 @@ export default function SupportTickets() {
                   Retention
                 </span>
               </button>
-              {(user?.role === "admin" || user?.team === "retention" || !user?.team) && (
-                <button
-                  onClick={() => setViewMode("butler")}
-                  className={`px-3 py-1.5 text-xs font-bold transition-colors ${
-                    viewMode === "butler"
-                      ? "bg-purple-600 text-white"
-                      : "bg-white text-purple-600 hover:bg-purple-50"
-                  }`}
-                >
-                  My Personal Butler
-                </button>
-              )}
+              <button
+                onClick={() => setViewMode("butler")}
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                  viewMode === "butler"
+                    ? "bg-purple-600 text-white"
+                    : "bg-white text-purple-600 hover:bg-purple-50"
+                }`}
+              >
+                My Personal Butler
+              </button>
               {isManager && (
                 <button
                   onClick={() => setViewMode("whatsapp")}

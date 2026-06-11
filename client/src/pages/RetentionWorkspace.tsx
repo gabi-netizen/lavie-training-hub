@@ -460,18 +460,16 @@ export default function RetentionWorkspace() {
         >
           My Clients
         </button>
-        {(user?.role === "admin" || user?.team === "retention" || !user?.team) && (
-          <button
-            onClick={() => setActiveTab("butler")}
-            className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
-              activeTab === "butler"
-                ? "border-purple-600 text-purple-700"
-                : "border-transparent text-purple-600 hover:text-purple-800"
-            }`}
-          >
-            My Personal Butler
-          </button>
-        )}
+        <button
+          onClick={() => setActiveTab("butler")}
+          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
+            activeTab === "butler"
+              ? "border-purple-600 text-purple-700"
+              : "border-transparent text-purple-600 hover:text-purple-800"
+          }`}
+        >
+          My Personal Butler
+        </button>
       </div>
 
       {/* Tab Content */}
