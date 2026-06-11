@@ -1082,7 +1082,7 @@ export const managerRouter = router({
 
       // ─── STRIPE API (real-time) ───────────────────────────────────────────────
       let stripeContext = "";
-      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum", "dispute", "chargeback", "invoice", "subscription", "תשלום", "כרטיס", "סליקה", "החזר", "דיספיוט", "חשבונית"];
+      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum", "dispute", "chargeback", "invoice", "subscription", "תשלום", "כרטיס", "סליקה", "החזר", "דיספיוט", "חשבונית", "token", "תוקן", "pm_", "payment method"];
       if (paymentKeywords.some((kw) => questionLower.includes(kw)) || targetEmail) {
         try {
           const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
@@ -1102,7 +1102,16 @@ export const managerRouter = router({
                       const custChargesData = await custChargesRes.json();
                       const custCharges = custChargesData.data || [];
                       if (custCharges.length > 0) {
-                        stripeContext += `\n--- STRIPE CHARGES FOR ${targetEmail} (${custCharges.length} found) ---\n${custCharges.map((c: any) => `- \u00a3${(c.amount / 100).toFixed(2)} | ${c.status}${c.refunded ? " (REFUNDED)" : ""} | ${c.billing_details?.name || "Unknown"} | ${c.billing_details?.email || ""} | ${new Date(c.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+                        stripeContext += `\n--- STRIPE CHARGES FOR ${targetEmail} (${custCharges.length} found) ---\n${custCharges.map((c: any) => `- \u00a3${(c.amount / 100).toFixed(2)} | ${c.status}${c.refunded ? " (REFUNDED)" : ""} | ${c.billing_details?.name || "Unknown"} | ${c.billing_details?.email || ""} | PaymentMethod: ${c.payment_method || "-"} | ${new Date(c.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+                        // Extract payment method token from the most recent succeeded £4.95 charge
+                        const trialCharge = custCharges.find((c: any) => c.amount === 495 && c.status === "succeeded" && c.payment_method);
+                        if (trialCharge && trialCharge.payment_method) {
+                          const pmRes = await fetch(`https://api.stripe.com/v1/payment_methods/${trialCharge.payment_method}`, { headers: stripeHeaders });
+                          if (pmRes.ok) {
+                            const pm = await pmRes.json();
+                            stripeContext += `\n--- PAYMENT TOKEN FOR ZOHO BILLING ---\nPayment Method ID (Token): ${pm.id}\nCard: ${pm.card?.brand} ****${pm.card?.last4} (exp ${pm.card?.exp_month}/${pm.card?.exp_year})\nStripe Customer ID: ${custId}\nUse this token to create subscription in Zoho Billing.\n`;
+                          }
+                        }
                       }
                     }
                   }
@@ -1515,6 +1524,15 @@ When reporting payment/charge status to agents, ALWAYS state the EXACT status fr
 - "refunded" = Payment was made but later refunded.
 - "canceled" = Payment was canceled before completion.
 IMPORTANT: If a customer has MULTIPLE charges (e.g. two "incomplete" attempts), report ALL of them with dates. This helps the agent understand what happened.
+
+=== PAYMENT TOKEN EXTRACTION ===
+When an agent asks for a customer's "token" / "payment method" / "card token" / "pm_" — you have access to it from Stripe.
+The token is the Payment Method ID (pm_xxx) from the customer's succeeded £4.95 charge. It is automatically extracted and shown in the data below as "PAYMENT TOKEN FOR ZOHO BILLING".
+When showing the token to the agent, format it clearly:
+- Payment Method Token: pm_xxx
+- Card: visa ****1234 (exp 8/2027)
+- Stripe Customer ID: cus_xxx
+The agent uses this token to manually create the subscription in Zoho Billing.
 
 === IMPORTANT DATA TERMINOLOGY ===
 - For OPENING agents: "deals" / "עסקאות" / "sales" / "openings" = the total number of TRIALS opened (all classifications: still_in_trial + cancelled_before_payment + live + saved_by_retention etc). Every trial counts as a deal/sale for Opening agents.
