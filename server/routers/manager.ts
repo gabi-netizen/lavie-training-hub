@@ -1181,7 +1181,7 @@ export const managerRouter = router({
               const searchRes = await zohoGet(`/subscriptions?per_page=50&page=1&search_text=${encodeURIComponent(targetName)}`);
               const searchSubs = searchRes.subscriptions || [];
               if (searchSubs.length > 0) {
-                zohoContext += `\n--- ZOHO BILLING - SUBSCRIPTIONS FOR "${targetName}" (${searchSubs.length} found) ---\n${searchSubs.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Status: ${s.status} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
+                zohoContext += `\n--- ZOHO BILLING - SUBSCRIPTIONS FOR "${targetName}" (${searchSubs.length} found) ---\n${searchSubs.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Status: ${s.status} | Agent: ${s.salesperson_name || "-"} | Shipping Type: ${s.cf_shipping_type || s.custom_field_hash?.cf_shipping_type || "-"} | Total: £${s.cf_total_amount || s.custom_field_hash?.cf_total_amount || s.amount} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
                 customerSearchDone = true;
               }
             } catch (e) { /* search failed */ }
@@ -1191,7 +1191,7 @@ export const managerRouter = router({
               const searchRes = await zohoGet(`/subscriptions?per_page=50&page=1&search_text=${encodeURIComponent(targetEmail)}`);
               const searchSubs = searchRes.subscriptions || [];
               if (searchSubs.length > 0) {
-                zohoContext += `\n--- ZOHO BILLING - SUBSCRIPTIONS FOR "${targetEmail}" (${searchSubs.length} found) ---\n${searchSubs.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Status: ${s.status} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
+                zohoContext += `\n--- ZOHO BILLING - SUBSCRIPTIONS FOR "${targetEmail}" (${searchSubs.length} found) ---\n${searchSubs.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Status: ${s.status} | Agent: ${s.salesperson_name || "-"} | Shipping Type: ${s.cf_shipping_type || s.custom_field_hash?.cf_shipping_type || "-"} | Total: £${s.cf_total_amount || s.custom_field_hash?.cf_total_amount || s.amount} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
                 customerSearchDone = true;
               }
             } catch (e) { /* search failed */ }
@@ -1202,7 +1202,7 @@ export const managerRouter = router({
             const liveRes = await zohoGet("/subscriptions?per_page=25&page=1&status=live");
             const liveSubs2 = liveRes.subscriptions || [];
             if (liveSubs2.length > 0) {
-              zohoContext += `\n--- ZOHO BILLING - LIVE SUBSCRIPTIONS (last 25) ---\n${liveSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"}`).join("\n")}\n`;
+              zohoContext += `\n--- ZOHO BILLING - LIVE SUBSCRIPTIONS (last 25) ---\n${liveSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Shipping Type: ${s.cf_shipping_type || s.custom_field_hash?.cf_shipping_type || "-"} | Total: £${s.cf_total_amount || s.custom_field_hash?.cf_total_amount || s.amount} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"}`).join("\n")}\n`;
             }
           }
 
@@ -1211,7 +1211,7 @@ export const managerRouter = router({
             const cancelRes = await zohoGet("/subscriptions?per_page=15&page=1&status=cancelled");
             const cancelledSubs2 = cancelRes.subscriptions || [];
             if (cancelledSubs2.length > 0) {
-              zohoContext += `\n--- ZOHO BILLING - RECENTLY CANCELLED (last 15) ---\n${cancelledSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
+              zohoContext += `\n--- ZOHO BILLING - RECENTLY CANCELLED (last 15) ---\n${cancelledSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Shipping Type: ${s.cf_shipping_type || s.custom_field_hash?.cf_shipping_type || "-"} | Total: £${s.cf_total_amount || s.custom_field_hash?.cf_total_amount || s.amount} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
             }
           }
         } catch (e) {
@@ -1550,11 +1550,39 @@ When showing the token to the agent, ALWAYS include ALL details needed for Zoho 
 - Customer Address: [full address - line1, city, postcode, country]
 The agent needs ALL of these to create the subscription in Zoho Billing. Never show just the token without the name, email, and address.
 
-=== IMPORTANT DATA TERMINOLOGY ===
-- For OPENING agents: "deals" / "עסקאות" / "sales" / "openings" = the total number of TRIALS opened (all classifications: still_in_trial + cancelled_before_payment + live + saved_by_retention etc). Every trial counts as a deal/sale for Opening agents.
-- For RETENTION agents: "deals" = leads with workStatus='done_deal' or 'retained_sub'
-- When asked "how many deals did [Opening agent] close yesterday" — count ALL their trials from that date in opening_trials table, regardless of classification.
-- "Conversion" = only trials that matured AND became live/saved. This is different from total trials opened.
+=== ZOHO BILLING BUSINESS LOGIC ===
+
+WHAT COUNTS AS A "DEAL":
+- RETENTION DEAL (Rob, Guy, James): A subscription or installment was CREATED in Zoho Billing with Shipping Type = "First Shippable" OR "All Shippable". If Shipping Type = "Not Shippable" → NOT a deal!
+- OPENING DEAL (Ava, Debbie, Shola, etc.): Customer paid £4.95 shipping + subscription of £44.90 was created. Every trial counts as a deal for Opening agents.
+- RETENTION DEAL in detail: The original £44.90 subscription was cancelled by the customer, and the retention agent created a NEW subscription or installment (or updated salesperson_name to their name on the existing sub).
+
+TOTAL VALUE OF A DEAL:
+- Subscription = the recurring amount (e.g. £44.90/month, £29.90/month)
+- Installment = the Total Amount of the installment plan (e.g. £420 total)
+
+HOW TO KNOW A DEAL BELONGS TO AN AGENT:
+- By the "salesperson_name" field in Zoho Billing subscriptions. This is the ONLY source of truth.
+
+"DEALS TODAY" DEFINITION:
+- A subscription or installment was CREATED TODAY (created_time field) with Shipping Type: "First Shippable" OR "All Shippable"
+- NOT "status changed today". NOT "payment collected today". It's CREATED today.
+
+CRITICAL FIELD — SHIPPING TYPE:
+- "First Shippable" = new deal (first shipment goes out) ✅
+- "All Shippable" = new deal (all shipments go out) ✅
+- "Not Shippable" = NOT a deal (no physical product shipped) ❌
+- ALWAYS check this field before counting something as a deal!
+
+WHEN ROB "SAVES" A CUSTOMER — TWO SCENARIOS:
+1. Customer stays with current subscription → salesperson_name is updated to Rob on the existing subscription
+2. Customer agrees to reduced amount → original subscription is cancelled → NEW subscription created with reduced recurring amount → Rob set as salesperson
+
+IMPORTANT DATA TERMINOLOGY:
+- For OPENING agents: "deals" / "עסקאות" / "sales" / "openings" = total TRIALS opened. Every trial counts as a deal/sale.
+- For RETENTION agents: "deals" = subscriptions/installments created with their name as salesperson AND Shipping Type is First/All Shippable
+- "Conversion" = only trials that matured AND became live/saved. Different from total trials opened.
+- When asked "how many deals did [agent] close today/yesterday" — check Zoho Billing for subscriptions created on that date with that salesperson AND correct Shipping Type.
 
 Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.
 
