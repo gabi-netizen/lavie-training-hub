@@ -9,8 +9,8 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs } from "../../drizzle/schema";
-import { eq, like, or, and, desc, sql, isNull } from "drizzle-orm";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials } from "../../drizzle/schema";
+import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
 
@@ -1212,12 +1212,65 @@ export const managerRouter = router({
         }
       } catch (e) { /* table might not exist */ }
 
+      // ─── OPENING TRIALS DATA (from opening_trials table — synced from Zoho) ───
+      let openingContext = "";
+      try {
+        // Get current month in YYYY-MM format
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split("T")[0];
+        const todayStr = now.toISOString().split("T")[0];
+
+        // Fetch all opening trials for current month
+        const monthTrials = await db
+          .select()
+          .from(openingTrials)
+          .where(eq(openingTrials.month, currentMonth));
+
+        if (monthTrials.length > 0) {
+          // Per-agent summary for the month
+          const openingAgentMap = new Map<string, { total: number; today: number; yesterday: number; classifications: Record<string, number> }>();
+          for (const t of monthTrials) {
+            const agent = t.agentName || "Unknown";
+            if (!openingAgentMap.has(agent)) {
+              openingAgentMap.set(agent, { total: 0, today: 0, yesterday: 0, classifications: {} });
+            }
+            const entry = openingAgentMap.get(agent)!;
+            entry.total++;
+            const tDate = typeof t.createdDate === "string" ? t.createdDate : (t.createdDate as Date)?.toISOString?.().split("T")[0] || "";
+            if (tDate === todayStr) entry.today++;
+            if (tDate === yesterdayStr) entry.yesterday++;
+            const cls = t.classification || "unknown";
+            entry.classifications[cls] = (entry.classifications[cls] || 0) + 1;
+          }
+
+          const openingAgentBreakdown = Array.from(openingAgentMap.entries())
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([agent, data]) => {
+              const clsStr = Object.entries(data.classifications).map(([k, v]) => `${k}:${v}`).join(", ");
+              return `${agent}: ${data.total} trials this month (today: ${data.today}, yesterday: ${data.yesterday}) [${clsStr}]`;
+            }).join("\n");
+
+          // Total summary
+          const totalTrialsMonth = monthTrials.length;
+          const totalToday = monthTrials.filter((t) => { const d = typeof t.createdDate === "string" ? t.createdDate : (t.createdDate as Date)?.toISOString?.().split("T")[0] || ""; return d === todayStr; }).length;
+          const totalYesterday = monthTrials.filter((t) => { const d = typeof t.createdDate === "string" ? t.createdDate : (t.createdDate as Date)?.toISOString?.().split("T")[0] || ""; return d === yesterdayStr; }).length;
+          const stillInTrial = monthTrials.filter((t) => t.classification === "still_in_trial").length;
+          const matured = totalTrialsMonth - stillInTrial;
+          const converted = monthTrials.filter((t) => ["live", "saved_by_retention", "cancelled_after_payment"].includes(t.classification)).length;
+
+          openingContext = `\n--- OPENING TRIALS (${currentMonth}) — from Zoho Subscriptions ---\nTotal Trials This Month: ${totalTrialsMonth}\nToday (${todayStr}): ${totalToday}\nYesterday (${yesterdayStr}): ${totalYesterday}\nStill in Trial: ${stillInTrial}\nMatured: ${matured}\nConverted: ${converted}\nConversion Rate: ${matured > 0 ? ((converted / matured) * 100).toFixed(1) + "%" : "N/A"}\n\nPer Opening Agent:\n${openingAgentBreakdown}\n\nRecent Trials (last 20):\n${monthTrials.slice(-20).map((t) => `- ${t.agentName} | ${t.customerName || "?"} | ${t.createdDate} | ${t.classification} | Plan: ${t.planName || "-"}`).join("\n")}\n`;
+        }
+      } catch (e) { /* opening_trials table might not exist */ }
+
       // Build context for the AI
       const dataContext = `
 User asking: ${userName}
 Date: ${new Date().toLocaleDateString("en-GB")}
 
---- OVERALL LEAD SUMMARY ---
+--- OVERALL RETENTION LEAD SUMMARY ---
 Total Leads: ${totalLeads}
 New (untouched): ${newLeads}
 Working: ${workingLeads}
@@ -1225,9 +1278,9 @@ Callbacks Pending: ${callbackLeads}
 Done Deals: ${doneDeals}
 Closed (lost): ${closedLeads}
 
---- PER-AGENT BREAKDOWN ---
+--- RETENTION PER-AGENT BREAKDOWN ---
 ${agentBreakdown}
-
+${openingContext}
 --- CLIENT SUBSCRIPTIONS SUMMARY ---
 Total Clients: ${allSubs.length}
 Live: ${liveSubs}
@@ -1235,7 +1288,7 @@ Dunning: ${dunningSubs}
 Cancelled: ${cancelledSubs}
 Total Monthly Revenue (live): £${totalSubsAmount.toFixed(2)}
 
---- ALL LEADS (last 100) ---
+--- ALL RETENTION LEADS (last 100) ---
 ${allLeads.slice(0, 100).map((l) => `- ${l.customerName || "Unknown"} | ${l.email || ""} | Phone: ${l.phone || ""} | Type: ${l.leadType || ""} | Status: ${l.workStatus || "new"} | Agent: ${l.assignedAgent || "unassigned"} | Note: ${l.agentNote || "-"}`).join("\n")}
 
 --- CLIENT SUBSCRIPTIONS (last 50) ---
