@@ -68,6 +68,12 @@ interface CallAnalysisReport {
     feedback: string;
     suggestion: string;
   }[] | null;
+  // Sale Quality (Opening calls only)
+  saleQualityScore?: number | null;
+  saleQualityIssues?: string[] | null;
+  saleQualityQuote?: string | null;
+  cancelMentionCount?: number | null;
+  moneyOverValueCount?: number | null;
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -603,7 +609,7 @@ export default function SharedCallView() {
                 { label: "Overall Score", value: report.overallScore, icon: <Star className="w-5 h-5" /> },
                 { label: "Script Compliance", value: report.scriptComplianceScore, icon: <CheckCircle2 className="w-5 h-5" /> },
                 { label: "Tone & Confidence", value: report.toneScore, icon: <Mic className="w-5 h-5" /> },
-                ...((analysis.callType === 'cold_call' || analysis.callType === 'opening') ? [{ label: "Sale Quality", value: (analysis as any).saleQualityScore ?? null, icon: <ShieldCheck className="w-5 h-5" /> }] : []),
+                ...((analysis.callType === 'cold_call' || analysis.callType === 'opening') ? [{ label: "Sale Quality", value: report.saleQualityScore ?? null, icon: <ShieldCheck className="w-5 h-5" /> }] : []),
                 { label: "Compliance", value: report.complianceScore ?? null, icon: <AlertTriangle className="w-5 h-5" /> },
               ].filter(c => c.value !== null).map(({ label, value, icon }) => (
                 <Card key={label} className={`bg-white border ${scoreBg(value ?? 0)} ${label === 'Compliance' && report.subscriptionMisrepresented ? 'ring-2 ring-red-500' : ''}`}>

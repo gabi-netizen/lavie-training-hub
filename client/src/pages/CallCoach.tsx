@@ -96,6 +96,12 @@ interface CallAnalysisReport {
     feedback: string;
     suggestion: string;
   }[] | null;
+  // Sale Quality (Opening calls only)
+  saleQualityScore?: number | null;
+  saleQualityIssues?: string[] | null;
+  saleQualityQuote?: string | null;
+  cancelMentionCount?: number | null;
+  moneyOverValueCount?: number | null;
 }
 
 // ─── CALL TYPE BADGE ─────────────────────────────────────────────────────────
@@ -600,7 +606,8 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
   const custPct = repPct != null ? 100 - repPct : null;
 
   // Product Value Score (replaces Talk Ratio in the top-right)
-  const saleQuality = (analysis as any).saleQualityScore != null ? Math.round((analysis as any).saleQualityScore) : null;
+  const _parsedReport = analysis.analysisJson ? (() => { try { return JSON.parse(analysis.analysisJson); } catch { return {}; } })() : {};
+  const saleQuality = _parsedReport.saleQualityScore != null ? Math.round(_parsedReport.saleQualityScore) : null;
   let pvColor = "text-emerald-600";
   let pvLabel = "Strong product value";
   if (saleQuality != null && saleQuality < 50) { pvColor = "text-red-600"; pvLabel = "Weak — selling on cancellation"; }
@@ -721,21 +728,21 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                   </div>
                 </div>
                 <p className={`text-xs font-semibold mt-1 ${pvColor}`}>{pvLabel}</p>
-                {(analysis as any).saleQualityQuote && (
+                {_parsedReport.saleQualityQuote && (
                   <p className="text-[10px] text-gray-600 italic mt-1 max-w-[180px] leading-tight">
-                    "{(analysis as any).saleQualityQuote.length > 80 ? (analysis as any).saleQualityQuote.substring(0, 80) + '...' : (analysis as any).saleQualityQuote}"
+                    "{_parsedReport.saleQualityQuote.length > 80 ? _parsedReport.saleQualityQuote.substring(0, 80) + '...' : _parsedReport.saleQualityQuote}"
                   </p>
                 )}
                 {/* Cancel & Money counters */}
                 <div className="flex flex-col gap-0.5 mt-2">
-                  {(analysis as any).cancelMentionCount != null && (
-                    <p className={`text-[10px] font-medium ${(analysis as any).cancelMentionCount >= 2 ? 'text-red-600' : (analysis as any).cancelMentionCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {(analysis as any).cancelMentionCount >= 2 ? '❌' : (analysis as any).cancelMentionCount === 1 ? '⚠️' : '✅'} Cancel mentioned: {(analysis as any).cancelMentionCount}x
+                  {_parsedReport.cancelMentionCount != null && (
+                    <p className={`text-[10px] font-medium ${_parsedReport.cancelMentionCount >= 2 ? 'text-red-600' : _parsedReport.cancelMentionCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {_parsedReport.cancelMentionCount >= 2 ? '❌' : _parsedReport.cancelMentionCount === 1 ? '⚠️' : '✅'} Cancel mentioned: {_parsedReport.cancelMentionCount}x
                     </p>
                   )}
-                  {(analysis as any).moneyOverValueCount != null && (
-                    <p className={`text-[10px] font-medium ${(analysis as any).moneyOverValueCount >= 2 ? 'text-red-600' : (analysis as any).moneyOverValueCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {(analysis as any).moneyOverValueCount >= 2 ? '💰' : '✅'} Money over value: {(analysis as any).moneyOverValueCount}x
+                  {_parsedReport.moneyOverValueCount != null && (
+                    <p className={`text-[10px] font-medium ${_parsedReport.moneyOverValueCount >= 2 ? 'text-red-600' : _parsedReport.moneyOverValueCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {_parsedReport.moneyOverValueCount >= 2 ? '💰' : '✅'} Money over value: {_parsedReport.moneyOverValueCount}x
                     </p>
                   )}
                 </div>
@@ -1223,7 +1230,7 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                 { label: "Overall Score", value: report.overallScore, icon: <Star className="w-5 h-5" /> },
                 { label: "Script Compliance", value: report.scriptComplianceScore, icon: <CheckCircle2 className="w-5 h-5" /> },
                 { label: "Tone & Confidence", value: report.toneScore, icon: <Mic className="w-5 h-5" /> },
-                ...((analysis.callType === 'cold_call' || analysis.callType === 'opening') ? [{ label: "Sale Quality", value: (analysis as any).saleQualityScore ?? null, icon: <ShieldCheck className="w-5 h-5" /> }] : []),
+                ...((analysis.callType === 'cold_call' || analysis.callType === 'opening') ? [{ label: "Sale Quality", value: report.saleQualityScore ?? null, icon: <ShieldCheck className="w-5 h-5" /> }] : []),
                 { label: "Compliance", value: report.complianceScore ?? null, icon: <AlertTriangle className="w-5 h-5" /> },
               ].filter(c => c.value !== null).map(({ label, value, icon }) => (
                 <Card key={label} className={`bg-gray-50 border ${scoreBg(value ?? 0)} ${label === 'Compliance' && report.subscriptionMisrepresented ? 'ring-2 ring-red-500' : ''}`}>
