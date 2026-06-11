@@ -3399,7 +3399,7 @@ export default function Workspace() {
                 {/* Divider */}
                 <div style={{ flex: 1 }} />
 
-                {/* My Personal Butler — AI assistant */}
+                {/* Sir Carlton — AI assistant */}
                 <button
                   onClick={() => setActiveTab("butler")}
                   style={{
@@ -3415,7 +3415,7 @@ export default function Workspace() {
                   onMouseEnter={(e) => { if (activeTab !== "butler") { e.currentTarget.style.background = "#f5f3ff"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(124,58,237,0.15)"; } }}
                   onMouseLeave={(e) => { if (activeTab !== "butler") { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; } }}
                 >
-                  🤖 My Personal Butler
+                  🤖 Sir Carlton
                 </button>
 
                 {/* How to Use */}

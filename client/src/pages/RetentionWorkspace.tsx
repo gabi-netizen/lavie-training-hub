@@ -474,7 +474,7 @@ export default function RetentionWorkspace() {
               : "border-transparent text-purple-600 hover:text-purple-800"
           }`}
         >
-          My Personal Butler
+          Sir Carlton
         </button>
       </div>
 

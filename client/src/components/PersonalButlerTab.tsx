@@ -181,7 +181,7 @@ export function PersonalButlerTab() {
                   fontSize: 12, fontWeight: 600, marginBottom: 4,
                   color: msg.role === "assistant" ? "#7c3aed" : "#374151",
                 }}>
-                  {msg.role === "assistant" ? "Butler" : "You"}
+                  {msg.role === "assistant" ? "Sir Carlton" : "You"}
                 </div>
                 <div style={{
                   fontSize: 14, lineHeight: 1.6, color: "#111827",
@@ -205,7 +205,7 @@ export function PersonalButlerTab() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: "#7c3aed" }}>
-                  Butler
+                  Sir Carlton
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ display: "flex", gap: 4 }}>
@@ -244,7 +244,7 @@ export function PersonalButlerTab() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask your butler anything..."
+              placeholder="Ask Sir Carlton anything..."
               disabled={isLoading}
               rows={1}
               style={{
@@ -270,7 +270,7 @@ export function PersonalButlerTab() {
             </button>
           </div>
           <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 8 }}>
-            Butler has access to your leads, clients, calls, WhatsApp, emails & Stripe data
+            Sir Carlton has access to your leads, clients, calls, WhatsApp, emails & Stripe data
           </p>
         </div>
       </div>
