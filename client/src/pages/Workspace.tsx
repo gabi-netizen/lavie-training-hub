@@ -1590,6 +1590,10 @@ function StripePaymentSection({
       setError("Contact must have an email address to process payment.");
       return;
     }
+    if (!contact.address) {
+      setError("Contact must have an address to process payment. Please add the address first.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setClientSecret(null);
