@@ -1034,10 +1034,51 @@ export const managerRouter = router({
       const cancelledSubs = allSubs.filter((s) => s.status === "cancelled").length;
       const totalSubsAmount = allSubs.filter((s) => s.status === "live").reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0);
 
+      // ─── EXTRACT CUSTOMER IDENTIFIERS (used by Zoho/Stripe/targeted search) ───
+      const questionLower = input.question.toLowerCase();
+      let targetContactIds: number[] = [];
+      let targetName = "";
+      let targetEmail = "";
+      let targetPhone = "";
+
+      // Check if question mentions a known customer name from DB
+      const allCustomerNames = [
+        ...allLeads.map((l) => l.customerName).filter(Boolean),
+        ...allSubs.map((s) => s.customerName).filter(Boolean),
+      ] as string[];
+      const uniqueNames = Array.from(new Set(allCustomerNames));
+      for (const name of uniqueNames) {
+        if (name && name.length > 2 && questionLower.includes(name.toLowerCase())) {
+          targetName = name;
+          break;
+        }
+      }
+      // Check for email patterns in the question
+      const emailMatch = input.question.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/i);
+      if (emailMatch) targetEmail = emailMatch[0];
+      // Check for phone patterns
+      const phoneMatch = input.question.match(/\+?[\d\s-]{10,15}/);
+      if (phoneMatch) targetPhone = phoneMatch[0].replace(/\s/g, "");
+
+      // If we found a target, look up their contactId(s)
+      if (targetName || targetEmail || targetPhone) {
+        try {
+          const conditions = [];
+          if (targetName) conditions.push(like(contacts.name, `%${targetName}%`));
+          if (targetEmail) conditions.push(eq(contacts.email, targetEmail));
+          if (targetPhone) conditions.push(like(contacts.phone, `%${targetPhone}%`));
+          const matchedContacts = await db
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(conditions.length > 1 ? or(...conditions) : conditions[0])
+            .limit(5);
+          targetContactIds = matchedContacts.map((c) => c.id);
+        } catch (e) { /* contacts table might not exist */ }
+      }
+
       // ─── STRIPE API (real-time) ───────────────────────────────────────────────
       let stripeContext = "";
-      const questionLower = input.question.toLowerCase();
-      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum", "dispute", "chargeback", "invoice", "subscription"];
+      const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum", "dispute", "chargeback", "invoice", "subscription", "תשלום", "כרטיס", "סליקה", "החזר", "דיספיוט", "חשבונית"];
       if (paymentKeywords.some((kw) => questionLower.includes(kw))) {
         try {
           const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
@@ -1081,21 +1122,45 @@ export const managerRouter = router({
 
       // ─── ZOHO BILLING API (real-time) ──────────────────────────────────────────
       let zohoContext = "";
-      const zohoKeywords = ["zoho", "billing", "subscription", "cancel", "dunning", "plan", "renew", "מנוי", "ביטול", "חיוב", "installment", "cycle"];
+      const zohoKeywords = ["zoho", "billing", "subscription", "cancel", "dunning", "plan", "renew", "מנוי", "ביטול", "חיוב", "installment", "cycle", "deal", "deals", "עסקה", "עסקאות", "customer", "לקוח", "לקוחה", "לקוחות", "revenue", "הכנסות", "כמה", "how many", "total", "סהכ", "status", "סטטוס", "active", "פעיל", "live", "sold", "מכר", "close", "סגר"];
       if (zohoKeywords.some((kw) => questionLower.includes(kw))) {
         try {
           const { zohoGet } = await import("./billing");
 
-          // Get recent subscriptions (live + cancelled)
-          const liveRes = await zohoGet("/subscriptions?per_page=25&page=1&status=live");
-          const liveSubs2 = liveRes.subscriptions || [];
+          // ── Customer-specific search: if question mentions a name, search Zoho directly ──
+          let customerSearchDone = false;
+          if (targetName) {
+            try {
+              const searchRes = await zohoGet(`/subscriptions?per_page=50&page=1&search_text=${encodeURIComponent(targetName)}`);
+              const searchSubs = searchRes.subscriptions || [];
+              if (searchSubs.length > 0) {
+                zohoContext += `\n--- ZOHO BILLING - SUBSCRIPTIONS FOR "${targetName}" (${searchSubs.length} found) ---\n${searchSubs.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Status: ${s.status} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
+                customerSearchDone = true;
+              }
+            } catch (e) { /* search failed */ }
+          }
+          if (targetEmail && !customerSearchDone) {
+            try {
+              const searchRes = await zohoGet(`/subscriptions?per_page=50&page=1&search_text=${encodeURIComponent(targetEmail)}`);
+              const searchSubs = searchRes.subscriptions || [];
+              if (searchSubs.length > 0) {
+                zohoContext += `\n--- ZOHO BILLING - SUBSCRIPTIONS FOR "${targetEmail}" (${searchSubs.length} found) ---\n${searchSubs.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Status: ${s.status} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"} | Cancelled: ${s.cancelled_at || "-"}`).join("\n")}\n`;
+                customerSearchDone = true;
+              }
+            } catch (e) { /* search failed */ }
+          }
 
-          if (liveSubs2.length > 0) {
-            zohoContext += `\n--- ZOHO BILLING - LIVE SUBSCRIPTIONS (last 25) ---\n${liveSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"}`).join("\n")}\n`;
+          // ── General: Get recent live subscriptions ──
+          if (!customerSearchDone) {
+            const liveRes = await zohoGet("/subscriptions?per_page=25&page=1&status=live");
+            const liveSubs2 = liveRes.subscriptions || [];
+            if (liveSubs2.length > 0) {
+              zohoContext += `\n--- ZOHO BILLING - LIVE SUBSCRIPTIONS (last 25) ---\n${liveSubs2.map((s: any) => `- ${s.customer_name} | ${s.email || ""} | Plan: ${s.plan_name} | £${s.amount} | Agent: ${s.salesperson_name || "-"} | Created: ${s.created_time?.split("T")[0] || "-"} | Next: ${s.next_billing_at || "-"}`).join("\n")}\n`;
+            }
           }
 
           // If question mentions cancel/dunning, fetch those too
-          if (["cancel", "ביטול", "dunning"].some((kw) => questionLower.includes(kw))) {
+          if (["cancel", "ביטול", "dunning", "cancelled", "מבוטל"].some((kw) => questionLower.includes(kw))) {
             const cancelRes = await zohoGet("/subscriptions?per_page=15&page=1&status=cancelled");
             const cancelledSubs2 = cancelRes.subscriptions || [];
             if (cancelledSubs2.length > 0) {
@@ -1105,56 +1170,6 @@ export const managerRouter = router({
         } catch (e) {
           // Zoho check failed silently
         }
-      }
-
-      // ─── SMART TARGETED SEARCH ───────────────────────────────────────────────
-      // Instead of loading all messages/emails, we detect if the question mentions
-      // a specific customer (name/email/phone) and load ONLY their history.
-      // For general questions, we load summary counts only.
-
-      // Extract potential customer identifiers from the question
-      const questionWords = input.question.toLowerCase();
-      // Try to find a customer name in the question by matching against known leads/subs
-      let targetContactIds: number[] = [];
-      let targetName = "";
-      let targetEmail = "";
-      let targetPhone = "";
-
-      // Check if question mentions a known customer name
-      const allCustomerNames = [
-        ...allLeads.map((l) => l.customerName).filter(Boolean),
-        ...allSubs.map((s) => s.customerName).filter(Boolean),
-      ] as string[];
-      const uniqueNames = Array.from(new Set(allCustomerNames));
-      for (const name of uniqueNames) {
-        if (name && questionWords.includes(name.toLowerCase())) {
-          targetName = name;
-          break;
-        }
-      }
-
-      // Also check for email patterns in the question
-      const emailMatch = input.question.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/i);
-      if (emailMatch) targetEmail = emailMatch[0];
-
-      // Check for phone patterns
-      const phoneMatch = input.question.match(/\+?[\d\s-]{10,15}/);
-      if (phoneMatch) targetPhone = phoneMatch[0].replace(/\s/g, "");
-
-      // If we found a target, look up their contactId(s)
-      if (targetName || targetEmail || targetPhone) {
-        try {
-          const conditions = [];
-          if (targetName) conditions.push(like(contacts.name, `%${targetName}%`));
-          if (targetEmail) conditions.push(eq(contacts.email, targetEmail));
-          if (targetPhone) conditions.push(like(contacts.phone, `%${targetPhone}%`));
-          const matchedContacts = await db
-            .select({ id: contacts.id })
-            .from(contacts)
-            .where(conditions.length > 1 ? or(...conditions) : conditions[0])
-            .limit(5);
-          targetContactIds = matchedContacts.map((c) => c.id);
-        } catch (e) { /* contacts table might not exist */ }
       }
 
       // Fetch AI Coach call analyses (recent 50)
