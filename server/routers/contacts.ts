@@ -789,16 +789,26 @@ export const contactsRouter = router({
     .mutation(async ({ input }) => {
       const { contactId, name, email, address } = input;
 
-      // Parse address into Stripe format (stored as "line1, city, postcode" or free text)
+      // Parse address into Stripe format — handles both comma-separated and free text with UK postcode
       let stripeAddress: { line1?: string; city?: string; postal_code?: string; country?: string } | undefined;
       if (address) {
         const parts = address.split(",").map((p: string) => p.trim());
         if (parts.length >= 3) {
+          // Comma-separated: "line1, city, postcode"
           stripeAddress = { line1: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], postal_code: parts[parts.length - 1], country: "GB" };
         } else if (parts.length === 2) {
           stripeAddress = { line1: parts[0], postal_code: parts[1], country: "GB" };
         } else {
-          stripeAddress = { line1: address, country: "GB" };
+          // No commas — try to extract UK postcode from the end (e.g. "40 Everready Creasent TF4 3GL" or "TF43GL")
+          const ukPostcodeRegex = /([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$/i;
+          const match = address.trim().match(ukPostcodeRegex);
+          if (match) {
+            const postcode = match[1].trim();
+            const line1 = address.slice(0, address.length - match[0].length).trim();
+            stripeAddress = { line1: line1 || address, postal_code: postcode, country: "GB" };
+          } else {
+            stripeAddress = { line1: address, country: "GB" };
+          }
         }
       }
 
