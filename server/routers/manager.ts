@@ -1053,55 +1053,162 @@ export const managerRouter = router({
         }
       }
 
-      // Fetch AI Coach call analyses (recent 30)
+      // ─── SMART TARGETED SEARCH ───────────────────────────────────────────────
+      // Instead of loading all messages/emails, we detect if the question mentions
+      // a specific customer (name/email/phone) and load ONLY their history.
+      // For general questions, we load summary counts only.
+
+      // Extract potential customer identifiers from the question
+      const questionWords = input.question.toLowerCase();
+      // Try to find a customer name in the question by matching against known leads/subs
+      let targetContactIds: number[] = [];
+      let targetName = "";
+      let targetEmail = "";
+      let targetPhone = "";
+
+      // Check if question mentions a known customer name
+      const allCustomerNames = [
+        ...allLeads.map((l) => l.customerName).filter(Boolean),
+        ...allSubs.map((s) => s.customerName).filter(Boolean),
+      ] as string[];
+      const uniqueNames = Array.from(new Set(allCustomerNames));
+      for (const name of uniqueNames) {
+        if (name && questionWords.includes(name.toLowerCase())) {
+          targetName = name;
+          break;
+        }
+      }
+
+      // Also check for email patterns in the question
+      const emailMatch = input.question.match(/[\w.-]+@[\w.-]+\.[a-z]{2,}/i);
+      if (emailMatch) targetEmail = emailMatch[0];
+
+      // Check for phone patterns
+      const phoneMatch = input.question.match(/\+?[\d\s-]{10,15}/);
+      if (phoneMatch) targetPhone = phoneMatch[0].replace(/\s/g, "");
+
+      // If we found a target, look up their contactId(s)
+      if (targetName || targetEmail || targetPhone) {
+        try {
+          const conditions = [];
+          if (targetName) conditions.push(like(contacts.name, `%${targetName}%`));
+          if (targetEmail) conditions.push(eq(contacts.email, targetEmail));
+          if (targetPhone) conditions.push(like(contacts.phone, `%${targetPhone}%`));
+          const matchedContacts = await db
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(conditions.length > 1 ? or(...conditions) : conditions[0])
+            .limit(5);
+          targetContactIds = matchedContacts.map((c) => c.id);
+        } catch (e) { /* contacts table might not exist */ }
+      }
+
+      // Fetch AI Coach call analyses (recent 50)
       let callAnalysesContext = "";
       try {
         const analyses = await db
           .select()
           .from(callAnalyses)
           .orderBy(desc(callAnalyses.id))
-          .limit(30);
+          .limit(50);
         if (analyses.length > 0) {
-          callAnalysesContext = `\n--- AI COACH - RECENT CALL ANALYSES (last 30) ---\n${analyses.map((a) => `- ${a.repName || "Unknown"} | ${a.customerName || "?"} | Score: ${a.overallScore || "-"}/10 | Close: ${a.closeStatus || "-"} | Duration: ${a.durationSeconds ? Math.round(a.durationSeconds / 60) + "min" : "-"} | Date: ${a.callDate ? new Date(a.callDate).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
+          callAnalysesContext = `\n--- AI COACH - RECENT CALL ANALYSES (last 50) ---\n${analyses.map((a) => `- ${a.repName || "Unknown"} | ${a.customerName || "?"} | Score: ${a.overallScore || "-"}/10 | Close: ${a.closeStatus || "-"} | Type: ${a.callType || "-"} | Duration: ${a.durationSeconds ? Math.round(a.durationSeconds / 60) + "min" : "-"} | Date: ${a.callDate ? new Date(a.callDate).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
         }
       } catch (e) { /* table might not exist */ }
 
-      // Fetch Support Tickets (recent 30)
+      // Fetch Support Tickets — targeted if customer found, otherwise recent 30
       let ticketsContext = "";
       try {
-        const tickets = await db
-          .select()
-          .from(supportTickets)
-          .orderBy(desc(supportTickets.id))
-          .limit(30);
+        let tickets;
+        if (targetEmail || targetName) {
+          const tConditions = [];
+          if (targetEmail) tConditions.push(eq(supportTickets.fromEmail, targetEmail));
+          if (targetName) tConditions.push(like(supportTickets.fromName, `%${targetName}%`));
+          tickets = await db
+            .select()
+            .from(supportTickets)
+            .where(tConditions.length > 1 ? or(...tConditions) : tConditions[0])
+            .orderBy(desc(supportTickets.id))
+            .limit(50);
+        } else {
+          tickets = await db
+            .select()
+            .from(supportTickets)
+            .orderBy(desc(supportTickets.id))
+            .limit(30);
+        }
         if (tickets.length > 0) {
-          ticketsContext = `\n--- SUPPORT TICKETS (last 30) ---\n${tickets.map((t) => `- ${t.fromName || t.fromEmail || "Unknown"} | Subject: ${t.subject || "-"} | Category: ${t.category || "-"} | Status: ${t.status || "open"} | Date: ${t.receivedAt ? new Date(t.receivedAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
+          ticketsContext = `\n--- SUPPORT TICKETS${targetName ? " for " + targetName : ""} (${tickets.length}) ---\n${tickets.map((t) => `- ${t.fromName || t.fromEmail || "Unknown"} | Subject: ${t.subject || "-"} | Category: ${t.category || "-"} | Status: ${t.status || "open"} | Date: ${t.receivedAt ? new Date(t.receivedAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
         }
       } catch (e) { /* table might not exist */ }
 
-      // Fetch WhatsApp messages (recent 30)
+      // Fetch WhatsApp messages — targeted if customer found, otherwise recent summary
       let whatsappContext = "";
       try {
-        const messages = await db
-          .select()
-          .from(whatsappMessages)
-          .orderBy(desc(whatsappMessages.id))
-          .limit(30);
+        let messages;
+        if (targetContactIds.length > 0) {
+          // Get ALL messages for this specific customer
+          messages = await db
+            .select()
+            .from(whatsappMessages)
+            .where(sql`${whatsappMessages.contactId} IN (${sql.join(targetContactIds.map(id => sql`${id}`), sql`, `)})`)
+            .orderBy(desc(whatsappMessages.id))
+            .limit(100);
+        } else if (targetPhone) {
+          // Search by phone number
+          messages = await db
+            .select()
+            .from(whatsappMessages)
+            .where(or(
+              like(whatsappMessages.fromNumber, `%${targetPhone}%`),
+              like(whatsappMessages.toNumber, `%${targetPhone}%`)
+            ))
+            .orderBy(desc(whatsappMessages.id))
+            .limit(100);
+        } else {
+          // General: just count + last 10 for overview
+          messages = await db
+            .select()
+            .from(whatsappMessages)
+            .orderBy(desc(whatsappMessages.id))
+            .limit(10);
+        }
         if (messages.length > 0) {
-          whatsappContext = `\n--- WHATSAPP MESSAGES (last 30) ---\n${messages.map((m) => `- ${m.direction === "inbound" ? "FROM" : "TO"} ${m.toNumber || m.fromNumber || "?"} | ${(m.body || "").substring(0, 80)} | Status: ${m.status || "-"}`).join("\n")}\n`;
+          const label = targetName || targetPhone ? ` for ${targetName || targetPhone}` : " (recent 10)";
+          whatsappContext = `\n--- WHATSAPP MESSAGES${label} (${messages.length}) ---\n${messages.map((m) => `- ${m.direction === "inbound" ? "FROM" : "TO"} ${m.toNumber || m.fromNumber || "?"} | ${(m.body || "").substring(0, 120)} | ${m.createdAt ? new Date(m.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
         }
       } catch (e) { /* table might not exist */ }
 
-      // Fetch Email logs (recent 30)
+      // Fetch Email logs — targeted if customer found, otherwise recent summary
       let emailContext = "";
       try {
-        const emails = await db
-          .select()
-          .from(emailLogs)
-          .orderBy(desc(emailLogs.id))
-          .limit(30);
+        let emails;
+        if (targetContactIds.length > 0) {
+          // Get ALL emails for this specific customer
+          emails = await db
+            .select()
+            .from(emailLogs)
+            .where(sql`${emailLogs.contactId} IN (${sql.join(targetContactIds.map(id => sql`${id}`), sql`, `)})`)
+            .orderBy(desc(emailLogs.id))
+            .limit(50);
+        } else if (targetEmail) {
+          emails = await db
+            .select()
+            .from(emailLogs)
+            .where(eq(emailLogs.toEmail, targetEmail))
+            .orderBy(desc(emailLogs.id))
+            .limit(50);
+        } else {
+          // General: just last 10 for overview
+          emails = await db
+            .select()
+            .from(emailLogs)
+            .orderBy(desc(emailLogs.id))
+            .limit(10);
+        }
         if (emails.length > 0) {
-          emailContext = `\n--- SENT EMAILS (last 30) ---\n${emails.map((e) => `- To: ${e.toEmail || "?"} | Template: ${e.templateName || "-"} | Subject: ${e.subject || "-"} | Sent by: ${e.sentByName || "-"}`).join("\n")}\n`;
+          const label = targetName || targetEmail ? ` for ${targetName || targetEmail}` : " (recent 10)";
+          emailContext = `\n--- SENT EMAILS${label} (${emails.length}) ---\n${emails.map((em) => `- To: ${em.toEmail || "?"} | Template: ${em.templateName || "-"} | Subject: ${em.subject || "-"} | Sent by: ${em.sentByName || "-"} | Opened: ${em.openCount > 0 ? "Yes (" + em.openCount + "x)" : "No"} | Date: ${em.sentAt ? new Date(em.sentAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}\n`;
         }
       } catch (e) { /* table might not exist */ }
 
