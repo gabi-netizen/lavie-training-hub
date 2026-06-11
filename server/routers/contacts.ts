@@ -786,9 +786,9 @@ export const contactsRouter = router({
         address: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
       const { contactId, name, email, address } = input;
-
+      const agentName = ctx.user.name ?? "Agent";
       // Parse address into Stripe format — handles both comma-separated and free text with UK postcode
       let stripeAddress: { line1?: string; city?: string; postal_code?: string; country?: string } | undefined;
       if (address) {
@@ -812,20 +812,19 @@ export const contactsRouter = router({
         }
       }
 
-      // Create a Stripe Customer with address (needed for Zoho Billing token)
+            // Create a Stripe Customer with address (needed for Zoho Billing token)
       const customer = await stripe.customers.create({
         name,
         email,
         ...(stripeAddress ? { address: stripeAddress } : {}),
-        metadata: { contactId: String(contactId) },
+        metadata: { contactId: String(contactId), agentName },
       });
-
       // Create a PaymentIntent for £4.95 (495 pence) attached to the customer
       const paymentIntent = await stripe.paymentIntents.create({
         amount: 495,
         currency: "gbp",
         customer: customer.id,
-        metadata: { contactId: String(contactId) },
+        metadata: { contactId: String(contactId), agentName },
         payment_method_types: ["card"],
       });
 
@@ -985,14 +984,68 @@ export const contactsRouter = router({
         contactId: z.number(),
         name: z.string().min(1),
         email: z.string().email(),
+        address: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      const { contactId, name, email } = input;
+    .mutation(async ({ input, ctx }) => {
+      const { contactId, name, email, address } = input;
+      const agentName = ctx.user.name ?? "Agent";
 
-      const PAYMENT_LINK = "https://buy.stripe.com/cNi3cvgcR4879BDgSSb3q0r";
+      // Parse address into Stripe format
+      let stripeAddress: { line1?: string; city?: string; postal_code?: string; country?: string } | undefined;
+      if (address) {
+        const parts = address.split(",").map((p: string) => p.trim());
+        if (parts.length >= 3) {
+          stripeAddress = { line1: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], postal_code: parts[parts.length - 1], country: "GB" };
+        } else if (parts.length === 2) {
+          stripeAddress = { line1: parts[0], postal_code: parts[1], country: "GB" };
+        } else {
+          const ukPostcodeRegex = /([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$/i;
+          const match = address.trim().match(ukPostcodeRegex);
+          if (match) {
+            const postcode = match[1].trim();
+            const line1 = address.slice(0, address.length - match[0].length).trim();
+            stripeAddress = { line1: line1 || address, postal_code: postcode, country: "GB" };
+          } else {
+            stripeAddress = { line1: address, country: "GB" };
+          }
+        }
+      }
 
-      // Build HTML email body (replaces Postmark template)
+      // Create a Stripe Customer with address so the payment method will include it
+      const customer = await stripe.customers.create({
+        name,
+        email,
+        ...(stripeAddress ? { address: stripeAddress } : {}),
+        metadata: { contactId: String(contactId), agentName },
+      });
+
+      // Create a Checkout Session tied to this customer (£4.95)
+      const session = await stripe.checkout.sessions.create({
+        customer: customer.id,
+        payment_method_types: ["card"],
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "gbp",
+              product_data: { name: "Lavie Labs Starter Kit" },
+              unit_amount: 495,
+            },
+            quantity: 1,
+          },
+        ],
+        payment_intent_data: {
+          metadata: { contactId: String(contactId), agentName },
+          setup_future_usage: "off_session",
+        },
+        success_url: "https://training.lavielabs.com/payment-success",
+        cancel_url: "https://training.lavielabs.com/payment-cancelled",
+      });
+
+      const PAYMENT_LINK = session.url!;
+
+      // Build HTML email body
       const htmlBody = `<!DOCTYPE html>
 <html>
 <head>
@@ -1033,12 +1086,6 @@ export const contactsRouter = router({
       } catch (err) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to send email: " + (err as Error).message });
       }
-
-      // ─── DEPRECATED Postmark version (kept for reference) ───
-      // const POSTMARK_TOKEN = process.env.POSTMARK_SERVER_TOKEN || process.env.POSTMARK_API_KEY;
-      // if (!POSTMARK_TOKEN) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "POSTMARK token not configured" });
-      // const TEMPLATE_ID = 45041782;
-      // const res = await fetch("https://api.postmarkapp.com/email/withTemplate", { ... });
 
       return { success: true };
     }),

@@ -1546,6 +1546,7 @@ function StripePaymentSection({
       contactId: contact.id,
       name: contact.name,
       email: contact.email,
+      address: contact.address || undefined,
     });
   };
 
