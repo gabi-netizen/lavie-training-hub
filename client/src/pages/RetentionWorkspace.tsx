@@ -127,6 +127,7 @@ export default function RetentionWorkspace() {
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
+  const [callbackNote, setCallbackNote] = useState("");
   // Fetch leads for the current agent
   // TODO: Once retention flow is live, revert to user?.name filtering
   const agentName = "Rob";
@@ -429,6 +430,11 @@ export default function RetentionWorkspace() {
           }`}
         >
           My Callbacks
+          {callbackLeads.length > 0 && (
+            <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white ${callbacksTodayCount > 0 ? 'bg-red-600' : 'bg-indigo-500'}`}>
+              {callbackLeads.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab("messages")}
@@ -1151,6 +1157,18 @@ export default function RetentionWorkspace() {
                 </div>
               )}
 
+              {/* Optional note */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-700">Note <span className="font-normal text-gray-400">(optional)</span></label>
+                <textarea
+                  value={callbackNote}
+                  onChange={(e) => setCallbackNote(e.target.value)}
+                  placeholder="e.g. Asked to call after 3pm, was interested but busy..."
+                  rows={2}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full resize-y font-sans"
+                />
+              </div>
+
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setCallbackModal(null)}
                   className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50">Cancel</button>
@@ -1158,14 +1176,18 @@ export default function RetentionWorkspace() {
                   onClick={() => {
                     if (!isValid || !callbackModal) return;
                     const dt = new Date(callbackDateTime);
+                    const noteText = callbackNote
+                      ? `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime} — Note: ${callbackNote}`
+                      : `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`;
                     logCallAttemptMutation.mutate({
                       subscriptionId: callbackModal.subscriptionId,
                       agentName: agentName,
                       result: "callback",
                       callbackAt: dt.getTime(),
-                      note: `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`,
+                      note: noteText,
                     });
                     setCallbackModal(null);
+                    setCallbackNote("");
                   }}
                   disabled={!isValid}
                   className={`px-5 py-2 rounded-lg border-none font-bold text-sm text-white ${

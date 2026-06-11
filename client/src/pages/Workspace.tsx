@@ -2715,6 +2715,7 @@ export default function Workspace() {
   // ── Callback scheduler modal state ──
   const [callbackModal, setCallbackModal] = useState<{ contactId: number; contactName: string } | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
+  const [callbackNote, setCallbackNote] = useState("");
 
   // ── Callbacks-due popup state ──
   const [callbacksDueOpen, setCallbacksDueOpen] = useState(false);
@@ -2978,7 +2979,9 @@ export default function Workspace() {
     const dt = new Date(callbackDateTime);
     // Format: "17-Apr-2026 14:30"
     const formatted = dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(/ /g, "-") + " " + dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    const noteAppend = `CALLBACK Scheduled on ${formatted}`;
+    const noteAppend = callbackNote
+      ? `CALLBACK Scheduled on ${formatted} — Note: ${callbackNote}`
+      : `CALLBACK Scheduled on ${formatted}`;
     // Get existing notes for this contact
     const existingContact = (contacts as any[]).find((c) => c.id === contactId);
     const existingNotes = existingContact?.callNotes ?? "";
@@ -3002,6 +3005,7 @@ export default function Workspace() {
     if (nextContact) setActiveId(nextContact.id);
     setCallbackModal(null);
     setCallbackDateTime("");
+    setCallbackNote("");
   };
 
   const handleFieldChange = (contactId: number, field: string, value: any) => {
@@ -3664,9 +3668,24 @@ export default function Workspace() {
                 </div>
               )}
 
+              {/* Optional note */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Note <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span></label>
+                <textarea
+                  value={callbackNote}
+                  onChange={(e) => setCallbackNote(e.target.value)}
+                  placeholder="e.g. Asked to call after 3pm, was interested but busy..."
+                  rows={2}
+                  style={{
+                    border: "1.5px solid #d1d5db", borderRadius: 8, padding: "8px 12px",
+                    fontSize: 14, color: "#1f2937", outline: "none", width: "100%",
+                    resize: "vertical", fontFamily: "inherit"
+                  }}
+                />
+              </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
                 <button
-                  onClick={() => setCallbackModal(null)}
+                  onClick={() => { setCallbackModal(null); setCallbackNote(""); }}
                   style={{
                     padding: "8px 18px", borderRadius: 8, border: "1.5px solid #d1d5db",
                     background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer"
