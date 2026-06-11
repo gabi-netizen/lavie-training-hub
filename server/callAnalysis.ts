@@ -1133,6 +1133,7 @@ ${stagesJson}
   "dealClosed": <bool — TRUE only if the customer actually agreed to purchase AND provided payment details, confirmed they filled in the payment form, or payment went through successfully. FALSE if the rep attempted to close but the customer declined, said they would think about it, asked to call back, or the call ended without confirmed payment.>,
   "magicWandUsed": <bool>,
   "customerName": "<first name of the customer if mentioned in the call, otherwise null>",
+  "customerType": "<classify the customer's attitude during the call. Choose ONE: 'Cooperative — friendly, agreed easily' / 'Skeptical — asked many questions, needed convincing' / 'Cancel-focused — kept asking about cancellation/commitment' / 'Price-sensitive — concerned about cost' / 'Enthusiastic — excited about the product' / 'Hesitant — unsure, needed reassurance' / 'Hostile — rude or aggressive' / 'Distracted — busy, not fully engaged'. Pick the one that best describes their overall attitude>",
   "rapportScore": <number 0-100 — how well did the rep build personal connection? Did they ask personal questions, respond warmly, use the customer's name?>,
   "rapportQuote": "<best or worst rapport moment — a direct quote from the call, or null>",
   "excitementScore": <number 0-100 — how enthusiastically did the rep describe the product? Did they use vivid language like 'feel', 'imagine', 'wake up with'? Or was it dry and technical?>,

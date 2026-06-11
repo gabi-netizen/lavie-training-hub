@@ -197,11 +197,44 @@ async function addAutoCallNote(
   agentName: string,
   analysisId: number,
   summary: string,
-  score: number
+  score: number,
+  report?: any
 ) {
   const db = await getDb();
   if (!db) return;
-  const note = `🤖 AI Coach Analysis (auto)\nScore: ${score}/100\n\n${summary}\n\n[View full analysis: /call-coach/${analysisId}]`;
+
+  // Build rich note with customer profile for retention team
+  let noteLines = [`🤖 AI Coach Analysis (auto)`, `Score: ${score}/100`];
+
+  // Customer type — helps retention understand who this person is
+  if (report?.customerType) {
+    noteLines.push(`\n👤 Customer Type: ${report.customerType}`);
+  }
+
+  // Sale quality — how the rep sold
+  if (report?.saleQualityScore != null) {
+    const sqLabel = report.saleQualityScore >= 85 ? "Excellent — sold on product value" :
+                    report.saleQualityScore >= 70 ? "Good — mostly value-focused" :
+                    report.saleQualityScore >= 50 ? "Average — mixed value & cancellation talk" :
+                    "Weak — relied on cancellation/no-commitment";
+    noteLines.push(`🎯 Sale Quality: ${report.saleQualityScore}/100 (${sqLabel})`);
+  }
+
+  // Cancel mentions
+  if (report?.cancelMentionCount != null && report.cancelMentionCount >= 2) {
+    noteLines.push(`⚠️ Cancel mentioned ${report.cancelMentionCount}x during the call`);
+  }
+
+  // Key quote showing how the rep sold
+  if (report?.saleQualityQuote) {
+    noteLines.push(`💬 Key moment: "${report.saleQualityQuote}"`);
+  }
+
+  // Summary
+  noteLines.push(`\n${summary}`);
+  noteLines.push(`\n[View full analysis: /call-coach/${analysisId}]`);
+
+  const note = noteLines.join("\n");
   await db.insert(contactCallNotes).values({
     contactId,
     userId,
@@ -462,7 +495,8 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
                 agent!.name ?? "AI Coach",
                 analysisId,
                 report.summary ?? "Call analyzed",
-                analysis.overallScore ?? 0
+                analysis.overallScore ?? 0,
+                report
               );
               console.log(`[CloudTalk Webhook] Added auto note to contact #${contact.id}`);
             }
