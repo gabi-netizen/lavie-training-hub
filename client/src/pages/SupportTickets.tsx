@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, lazy, Suspense } from "react";
+import React, { useState, useMemo, useRef, useEffect, lazy, Suspense } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
@@ -688,6 +688,12 @@ export default function SupportTickets() {
 
   // Send to Retention modal state
   const [sendToRetentionTicket, setSendToRetentionTicket] = useState<any | null>(null);
+  const [retentionLeadType, setRetentionLeadType] = useState("Pre-Cycle-Cancelled");
+  const [retentionAgent, setRetentionAgent] = useState("Rob");
+  const [retentionCustomerName, setRetentionCustomerName] = useState("");
+  const [retentionEmail, setRetentionEmail] = useState("");
+  const [retentionPhone, setRetentionPhone] = useState("");
+  const [retentionNote, setRetentionNote] = useState("");
 
   // Multi-select
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -816,36 +822,39 @@ export default function SupportTickets() {
   const isAdmin = user?.role === "admin";
 
   // ─── Send to Retention Modal ─────────────────────────────────────────────
+  // Reset modal fields when a new ticket is opened
+  useEffect(() => {
+    if (sendToRetentionTicket) {
+      setRetentionLeadType("Pre-Cycle-Cancelled");
+      setRetentionAgent("Rob");
+      setRetentionCustomerName(sendToRetentionTicket.fromName || "");
+      setRetentionEmail(sendToRetentionTicket.fromEmail || "");
+      setRetentionPhone("");
+      setRetentionNote((sendToRetentionTicket.body || "").slice(0, 200));
+    }
+  }, [sendToRetentionTicket]);
+
+  const createLeadMutation = trpc.manager.createLead.useMutation({
+    onSuccess: () => {
+      toast.success("Sent to Retention");
+      if (sendToRetentionTicket) updateTicket.mutate({ id: sendToRetentionTicket.id, status: "resolved" });
+      setSendToRetentionTicket(null);
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   const SendToRetentionModal = () => {
     const ticket = sendToRetentionTicket;
     if (!ticket) return null;
 
-    const [leadType, setLeadType] = useState("Pre-Cycle-Cancelled");
-    const [agent, setAgent] = useState("Rob");
-    const [customerName, setCustomerName] = useState(ticket.fromName || "");
-    const [email, setEmail] = useState(ticket.fromEmail || "");
-    const [phone, setPhone] = useState("");
-    const [customerNote, setCustomerNote] = useState(
-      (ticket.body || "").slice(0, 200)
-    );
-
-    const createLeadMutation = trpc.manager.createLead.useMutation({
-      onSuccess: () => {
-        toast.success("Sent to Retention");
-        updateTicket.mutate({ id: ticket.id, status: "resolved" });
-        setSendToRetentionTicket(null);
-      },
-      onError: (e: { message: string }) => toast.error(e.message),
-    });
-
     const handleSubmit = () => {
       createLeadMutation.mutate({
-        customerName,
-        email,
-        phone,
-        leadType,
-        assignedAgent: agent,
-        managerNote: customerNote,
+        customerName: retentionCustomerName,
+        email: retentionEmail,
+        phone: retentionPhone,
+        leadType: retentionLeadType,
+        assignedAgent: retentionAgent,
+        managerNote: retentionNote,
         leadCategory: "subscription",
       });
     };
@@ -867,7 +876,7 @@ export default function SupportTickets() {
             {/* Lead Type */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Lead Type</label>
-              <Select value={leadType} onValueChange={setLeadType}>
+              <Select value={retentionLeadType} onValueChange={setRetentionLeadType}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -875,7 +884,7 @@ export default function SupportTickets() {
                   <SelectItem value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</SelectItem>
                   <SelectItem value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</SelectItem>
                   <SelectItem value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</SelectItem>
-                  <SelectItem value="From Cat to Rob">From Cat to Rob</SelectItem>
+                  <SelectItem value="Cat to Rob">Cat to Rob</SelectItem>
                   <SelectItem value="Pre-Cycle-Decline">Pre-Cycle-Decline</SelectItem>
                   <SelectItem value="Hot Lead">Hot Lead</SelectItem>
                   <SelectItem value="Decline Live Sub">Decline Live Sub</SelectItem>
@@ -886,7 +895,7 @@ export default function SupportTickets() {
             {/* Agent */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Agent</label>
-              <Select value={agent} onValueChange={setAgent}>
+              <Select value={retentionAgent} onValueChange={setRetentionAgent}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -902,8 +911,8 @@ export default function SupportTickets() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Customer Name</label>
               <Input
-                value={customerName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerName(e.target.value)}
+                value={retentionCustomerName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRetentionCustomerName(e.target.value)}
                 placeholder="Customer name"
               />
             </div>
@@ -912,8 +921,8 @@ export default function SupportTickets() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
               <Input
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                value={retentionEmail}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRetentionEmail(e.target.value)}
                 placeholder="customer@example.com"
               />
             </div>
@@ -922,8 +931,8 @@ export default function SupportTickets() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Phone</label>
               <Input
-                value={phone}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+                value={retentionPhone}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRetentionPhone(e.target.value)}
                 placeholder="+44..."
               />
             </div>
@@ -932,8 +941,8 @@ export default function SupportTickets() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Customer Note</label>
               <Textarea
-                value={customerNote}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomerNote(e.target.value)}
+                value={retentionNote}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRetentionNote(e.target.value)}
                 placeholder="Notes from the ticket..."
                 rows={3}
               />
