@@ -1068,22 +1068,47 @@ export const managerRouter = router({
           if (targetEmail) conditions.push(eq(contacts.email, targetEmail));
           if (targetPhone) conditions.push(like(contacts.phone, `%${targetPhone}%`));
           const matchedContacts = await db
-            .select({ id: contacts.id })
+            .select({ id: contacts.id, email: contacts.email })
             .from(contacts)
             .where(conditions.length > 1 ? or(...conditions) : conditions[0])
             .limit(5);
           targetContactIds = matchedContacts.map((c) => c.id);
+          // If we found a contact by name but don't have email yet, grab it
+          if (!targetEmail && matchedContacts.length > 0 && matchedContacts[0].email) {
+            targetEmail = matchedContacts[0].email;
+          }
         } catch (e) { /* contacts table might not exist */ }
       }
 
       // ─── STRIPE API (real-time) ───────────────────────────────────────────────
       let stripeContext = "";
       const paymentKeywords = ["payment", "card", "stripe", "charge", "paid", "declined", "refund", "transaction", "slik", "slika", "tashlum", "dispute", "chargeback", "invoice", "subscription", "תשלום", "כרטיס", "סליקה", "החזר", "דיספיוט", "חשבונית"];
-      if (paymentKeywords.some((kw) => questionLower.includes(kw))) {
+      if (paymentKeywords.some((kw) => questionLower.includes(kw)) || targetEmail) {
         try {
           const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
           if (stripeKey) {
             const stripeHeaders = { Authorization: `Bearer ${stripeKey}` };
+            // Customer-specific search by email
+            if (targetEmail) {
+              try {
+                const custRes = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(targetEmail)}&limit=5`, { headers: stripeHeaders });
+                if (custRes.ok) {
+                  const custData = await custRes.json();
+                  const customers = custData.data || [];
+                  if (customers.length > 0) {
+                    const custId = customers[0].id;
+                    const custChargesRes = await fetch(`https://api.stripe.com/v1/charges?customer=${custId}&limit=25`, { headers: stripeHeaders });
+                    if (custChargesRes.ok) {
+                      const custChargesData = await custChargesRes.json();
+                      const custCharges = custChargesData.data || [];
+                      if (custCharges.length > 0) {
+                        stripeContext += `\n--- STRIPE CHARGES FOR ${targetEmail} (${custCharges.length} found) ---\n${custCharges.map((c: any) => `- \u00a3${(c.amount / 100).toFixed(2)} | ${c.status}${c.refunded ? " (REFUNDED)" : ""} | ${c.billing_details?.name || "Unknown"} | ${c.billing_details?.email || ""} | ${new Date(c.created * 1000).toLocaleDateString("en-GB")}`).join("\n")}\n`;
+                      }
+                    }
+                  }
+                }
+              } catch (e) { /* customer search failed */ }
+            }
 
             // Recent charges (last 15)
             const chargesRes = await fetch("https://api.stripe.com/v1/charges?limit=15", { headers: stripeHeaders });
