@@ -24,6 +24,7 @@ import {
   MessageCircle, BookOpen, Package, Loader2
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
 import {
   Popover,
@@ -2675,7 +2676,7 @@ export default function Workspace() {
   const [localDoneItems, setLocalDoneItems] = useState<Record<number, string>>({});
   const [listFilter, setListFilter] = useState<string>("active");
 
-  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails">("pitch");
+  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails" | "butler">("pitch");
   const managerMode = activeTab === "manager";
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(() => {
     const saved = localStorage.getItem('ws_selectedAgentId');
@@ -3389,24 +3390,24 @@ export default function Workspace() {
                 {/* Divider */}
                 <div style={{ flex: 1 }} />
 
-                {/* £4.95 Payments — utility link, pushed to the right */}
-                <a
-                  href="https://dashboard.stripe.com/payments?status%5B%5D=successful&amount%5Bgte%5D=495&amount%5Blte%5D=495"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* My Personal Butler — AI assistant */}
+                <button
+                  onClick={() => setActiveTab("butler")}
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", textDecoration: "none",
-                    background: "transparent", color: "#111827",
-                    borderBottom: "2px solid transparent",
+                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+                    background: activeTab === "butler" ? "#7c3aed" : "transparent",
+                    color: activeTab === "butler" ? "#fff" : "#7c3aed",
+                    boxShadow: activeTab === "butler" ? "0 1px 4px rgba(124,58,237,0.3)" : "none",
+                    borderBottom: activeTab === "butler" ? "2px solid #7c3aed" : "2px solid transparent",
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.10)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; }}
+                  onMouseEnter={(e) => { if (activeTab !== "butler") { e.currentTarget.style.background = "#f5f3ff"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(124,58,237,0.15)"; } }}
+                  onMouseLeave={(e) => { if (activeTab !== "butler") { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; } }}
                 >
-                  <CreditCard size={14} /> £4.95 Payments
-                </a>
+                  🤖 My Personal Butler
+                </button>
 
                 {/* How to Use */}
                 <button
@@ -3464,6 +3465,10 @@ export default function Workspace() {
               ) : activeTab === "emails" ? (
                 <div style={{ margin: "-12px -16px -16px", height: "calc(100% + 28px)", display: "flex" }}>
                   <WorkspaceEmailPanel contactId={activeId} visible={activeTab === "emails"} />
+                </div>
+              ) : activeTab === "butler" ? (
+                <div style={{ margin: "-12px -16px -16px", height: "calc(100% + 28px)", display: "flex" }}>
+                  <PersonalButlerTab />
                 </div>
               ) : (
                 <AgentPitchPanel />
