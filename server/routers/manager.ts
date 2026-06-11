@@ -988,40 +988,45 @@ export const managerRouter = router({
 
       const userName = ctx.user!.name || "Agent";
 
-      // Fetch agent's lead stats
-      const agentLeads = await db
+      // Fetch ALL leads (no agent filter - butler sees everything)
+      const allLeads = await db
         .select()
         .from(leadAssignments)
-        .where(eq(leadAssignments.assignedAgent, userName))
-        .limit(200);
+        .orderBy(desc(leadAssignments.id))
+        .limit(500);
 
-      const totalLeads = agentLeads.length;
-      const doneDeals = agentLeads.filter((l) => l.workStatus === "done_deal").length;
-      const newLeads = agentLeads.filter((l) => l.workStatus === "new").length;
-      const workingLeads = agentLeads.filter((l) => l.workStatus === "working").length;
-      const callbackLeads = agentLeads.filter((l) => l.workStatus === "callback").length;
-      const closedLeads = agentLeads.filter((l) => l.workStatus === "closed").length;
+      const totalLeads = allLeads.length;
+      const doneDeals = allLeads.filter((l) => l.workStatus === "done_deal").length;
+      const newLeads = allLeads.filter((l) => l.workStatus === "new").length;
+      const workingLeads = allLeads.filter((l) => l.workStatus === "working").length;
+      const callbackLeads = allLeads.filter((l) => l.workStatus === "callback").length;
+      const closedLeads = allLeads.filter((l) => l.workStatus === "closed").length;
 
-      // Get recent call attempts
+      // Per-agent breakdown
+      const agentNames = [...new Set(allLeads.map((l) => l.assignedAgent).filter(Boolean))];
+      const agentBreakdown = agentNames.map((agent) => {
+        const agentLeads = allLeads.filter((l) => l.assignedAgent === agent);
+        return `${agent}: ${agentLeads.length} leads (${agentLeads.filter((l) => l.workStatus === "done_deal").length} deals, ${agentLeads.filter((l) => l.workStatus === "new").length} new, ${agentLeads.filter((l) => l.workStatus === "working").length} working, ${agentLeads.filter((l) => l.workStatus === "callback").length} callbacks, ${agentLeads.filter((l) => l.workStatus === "closed").length} closed)`;
+      }).join("\n");
+
+      // Get ALL recent call attempts
       const recentCalls = await db
         .select()
         .from(callAttempts)
-        .where(eq(callAttempts.agentName, userName))
         .orderBy(desc(callAttempts.id))
-        .limit(30);
+        .limit(50);
 
-      // Fetch agent's client subscriptions
-      const agentSubs = await db
+      // Fetch ALL client subscriptions
+      const allSubs = await db
         .select()
         .from(clientSubscriptions)
-        .where(eq(clientSubscriptions.salesPerson, userName))
         .orderBy(desc(clientSubscriptions.id))
-        .limit(100);
+        .limit(300);
 
-      const liveSubs = agentSubs.filter((s) => s.status === "live").length;
-      const dunningSubs = agentSubs.filter((s) => s.status === "dunning").length;
-      const cancelledSubs = agentSubs.filter((s) => s.status === "cancelled").length;
-      const totalSubsAmount = agentSubs.filter((s) => s.status === "live").reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0);
+      const liveSubs = allSubs.filter((s) => s.status === "live").length;
+      const dunningSubs = allSubs.filter((s) => s.status === "dunning").length;
+      const cancelledSubs = allSubs.filter((s) => s.status === "cancelled").length;
+      const totalSubsAmount = allSubs.filter((s) => s.status === "live").reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0);
 
       // Check Stripe for recent payment info if question mentions payment/card/stripe/charge
       let stripeContext = "";
@@ -1050,32 +1055,35 @@ export const managerRouter = router({
 
       // Build context for the AI
       const dataContext = `
-Agent: ${userName}
+User asking: ${userName}
 Date: ${new Date().toLocaleDateString("en-GB")}
 
---- LEAD SUMMARY ---
-Total Leads Assigned: ${totalLeads}
+--- OVERALL LEAD SUMMARY ---
+Total Leads: ${totalLeads}
 New (untouched): ${newLeads}
 Working: ${workingLeads}
 Callbacks Pending: ${callbackLeads}
 Done Deals: ${doneDeals}
 Closed (lost): ${closedLeads}
 
+--- PER-AGENT BREAKDOWN ---
+${agentBreakdown}
+
 --- CLIENT SUBSCRIPTIONS SUMMARY ---
-Total Clients: ${agentSubs.length}
+Total Clients: ${allSubs.length}
 Live: ${liveSubs}
 Dunning: ${dunningSubs}
 Cancelled: ${cancelledSubs}
 Total Monthly Revenue (live): £${totalSubsAmount.toFixed(2)}
 
---- RECENT LEADS (last 30) ---
-${agentLeads.slice(0, 30).map((l) => `- ${l.customerName || "Unknown"} | ${l.email || ""} | Phone: ${l.phone || ""} | Type: ${l.leadType || ""} | Status: ${l.workStatus || "new"} | Note: ${l.agentNote || "-"}`).join("\n")}
+--- ALL LEADS (last 100) ---
+${allLeads.slice(0, 100).map((l) => `- ${l.customerName || "Unknown"} | ${l.email || ""} | Phone: ${l.phone || ""} | Type: ${l.leadType || ""} | Status: ${l.workStatus || "new"} | Agent: ${l.assignedAgent || "unassigned"} | Note: ${l.agentNote || "-"}`).join("\n")}
 
---- CLIENT SUBSCRIPTIONS (last 30) ---
-${agentSubs.slice(0, 30).map((s) => `- ${s.customerName} | ${s.email || ""} | Plan: ${s.planName || s.planType} | £${s.amount || "0"}/cycle | Total: £${s.totalAmount || "-"} | Status: ${s.status} | Cycles: ${s.cyclesCompleted || 0}/${s.billingCycles || "∞"} | Next: ${s.nextBillingOn || "-"}`).join("\n")}
+--- CLIENT SUBSCRIPTIONS (last 50) ---
+${allSubs.slice(0, 50).map((s) => `- ${s.customerName} | ${s.email || ""} | Plan: ${s.planName || s.planType} | £${s.amount || "0"}/cycle | Total: £${s.totalAmount || "-"} | Status: ${s.status} | Cycles: ${s.cyclesCompleted || 0}/${s.billingCycles || "∞"} | Next: ${s.nextBillingOn || "-"} | Agent: ${s.salesPerson || "-"}`).join("\n")}
 
---- RECENT CALL ATTEMPTS (last 20) ---
-${recentCalls.slice(0, 20).map((c) => `- ${c.result || "unknown"} | Note: ${c.note || "-"} | Date: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}
+--- RECENT CALL ATTEMPTS (last 30) ---
+${recentCalls.slice(0, 30).map((c) => `- Agent: ${c.agentName || "?"} | Result: ${c.result || "unknown"} | Note: ${c.note || "-"} | Date: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "-"}`).join("\n")}
 ${stripeContext}`;
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
