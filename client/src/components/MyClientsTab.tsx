@@ -13,11 +13,20 @@ interface MyClientsTabProps {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   live: { bg: "bg-green-100", text: "text-green-800" },
-  dunning: { bg: "bg-orange-100", text: "text-orange-800" },
-  cancelled: { bg: "bg-red-100", text: "text-red-800" },
+  dunning: { bg: "bg-red-100", text: "text-red-800" },
+  cancelled: { bg: "bg-gray-200", text: "text-gray-700" },
   expired: { bg: "bg-gray-200", text: "text-gray-700" },
   future: { bg: "bg-blue-100", text: "text-blue-800" },
-  unpaid: { bg: "bg-yellow-100", text: "text-yellow-800" },
+  unpaid: { bg: "bg-orange-100", text: "text-orange-800" },
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  live: "Live",
+  dunning: "Decline",
+  cancelled: "Cancelled",
+  expired: "Expired",
+  future: "Future",
+  unpaid: "Unpaid",
 };
 
 const PLAN_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -305,12 +314,13 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           {/* Table Header */}
           <div
             className="grid items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50"
-            style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 80px 95px 100px 130px" }}
+            style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 80px 90px 80px 95px 100px 130px" }}
           >
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">#</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Activated On</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Plan Type</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Deposit</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</div>
@@ -335,7 +345,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   className={`grid items-center gap-2 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
                     isExpanded ? "bg-blue-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 90px 80px 95px 100px 130px" }}
+                  style={{ gridTemplateColumns: "40px 1.5fr 95px 110px 80px 90px 80px 95px 100px 130px" }}
                 >
                   <div className="text-sm text-gray-800 font-medium">{(page - 1) * 50 + idx + 1}</div>
                   <div className="min-w-0">
@@ -346,6 +356,11 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${planColor.bg} ${planColor.text}`}>
                       {PLAN_TYPE_LABELS[sub.planType] || sub.planType}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor.bg} ${statusColor.text}`}>
+                      {STATUS_LABELS[sub.status] || sub.status}
                     </span>
                   </div>
                   <div className="text-sm font-medium text-emerald-700">{formatCurrency(((sub as any).setupFee ? parseFloat((sub as any).setupFee) : 0) + ((sub as any).recurringAmount ? parseFloat((sub as any).recurringAmount) : (sub.amount ? parseFloat(String(sub.amount)) : 0)))}</div>
