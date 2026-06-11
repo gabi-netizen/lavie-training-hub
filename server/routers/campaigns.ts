@@ -338,6 +338,28 @@ export const campaignsRouter = router({
         }
       }
 
+      // ── SMS Outreach: update source and smsOutreachSentAt for successfully sent contacts ──
+      if (campaign.channel === "sms" && sentCount > 0) {
+        const sentContactIds = matchedContacts
+          .filter((c) => {
+            // Only include contacts that were successfully sent
+            const normPhone = normalisePhone(c.phone);
+            return !!normPhone;
+          })
+          .map((c) => c.id);
+
+        if (sentContactIds.length > 0) {
+          await db
+            .update(contacts)
+            .set({
+              source: "sms outreach",
+              smsOutreachSentAt: new Date(),
+            })
+            .where(inArray(contacts.id, sentContactIds));
+          console.log(`[Campaigns] Updated ${sentContactIds.length} contacts with source="sms outreach" and smsOutreachSentAt`);
+        }
+      }
+
       // Update campaign to completed
       await db
         .update(campaigns)

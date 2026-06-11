@@ -507,6 +507,36 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     bulkReturnMutation.mutate({ ids: Array.from(selectedIds) });
   };
 
+  // ─── Bulk Change Status ──────────────────────────────────────────────────
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>("");
+  const bulkUpdateStatusMutation = trpc.contacts.bulkUpdateStatus.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.updated} contact${result.updated !== 1 ? 's' : ''} status updated.`);
+      utils.contacts.list.invalidate();
+      utils.contacts.count.invalidate();
+      setSelectedIds(new Set());
+      setBulkStatusValue("");
+    },
+    onError: (err) => {
+      toast.error(`Status update failed: ${err.message}`);
+    },
+  });
+  const handleBulkStatusChange = (newStatus: string) => {
+    if (!newStatus) return;
+    bulkUpdateStatusMutation.mutate({
+      ids: Array.from(selectedIds),
+      status: newStatus as any,
+    });
+  };
+
+  const BULK_STATUS_OPTIONS = [
+    { value: "new", label: "New" },
+    { value: "no_answer", label: "No Answer" },
+    { value: "working", label: "In Progress" },
+    { value: "done_deal", label: "Done Deals" },
+    { value: "assigned", label: "Callback Set" },
+  ] as const;
+
   const activeFilters = [filterLeadType, filterStatus, filterAgent, filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo].filter(Boolean).length;
 
   // Stats
@@ -979,6 +1009,21 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             Clear
           </Button>
           <div className="ml-auto flex items-center gap-2">
+            <Select
+              value={bulkStatusValue}
+              onValueChange={(val) => handleBulkStatusChange(val)}
+            >
+              <SelectTrigger className="h-8 w-[160px] bg-white border-indigo-300 text-slate-800 font-semibold text-sm">
+                <SelectValue placeholder="Change Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {BULK_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-slate-800">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               size="sm"
               className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 px-4 font-semibold"

@@ -192,6 +192,8 @@ export const contacts = mysqlTable("contacts", {
   brands: varchar("brands", { length: 512 }),
   /** Stripe Customer ID — set after successful payment */
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  /** Timestamp when SMS outreach was sent to this contact (for auto-reset logic) */
+  smsOutreachSentAt: timestamp("smsOutreachSentAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

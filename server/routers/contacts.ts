@@ -17,6 +17,7 @@ import {
   bulkDeleteContacts,
   bulkAssignContacts,
   bulkReturnToSystem,
+  bulkUpdateStatus,
   normalisePhone,
   getCallbacksDue,
   getAllCallbacks,
@@ -758,8 +759,20 @@ export const contactsRouter = router({
         ids: z.array(z.number()).min(1),
       })
     )
-    .mutation(async ({ input }) => {
+        .mutation(async ({ input }) => {
       return bulkReturnToSystem(input.ids);
+    }),
+
+  // ─── Bulk Change Status ────────────────────────────────────────────────────
+  bulkUpdateStatus: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.number()).min(1),
+        status: z.enum(CONTACT_STATUSES),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return bulkUpdateStatus(input.ids, input.status);
     }),
 
   // ─── Get overdue callbacks (callbackAt <= now) ────────────────────────────

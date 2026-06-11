@@ -102,6 +102,17 @@ export async function listContacts({
   const db = await getDb();
   if (!db) return [];
 
+  // ── SMS Outreach Auto-Reset: lazy evaluation ──────────────────────────────────
+  // Contacts that received SMS outreach and have been 'no_answer' for 12+ hours
+  // are automatically reset back to 'new' so they re-enter the calling queue.
+  try {
+    await db.execute(
+      sql`UPDATE contacts SET status = 'new' WHERE status = 'no_answer' AND smsOutreachSentAt IS NOT NULL AND smsOutreachSentAt <= NOW() - INTERVAL 12 HOUR`
+    );
+  } catch (_e) {
+    // Silently ignore if column doesn't exist yet (pre-migration)
+  }
+
   const conditions = [];
 
   if (search) {
@@ -538,6 +549,21 @@ export async function bulkReturnToSystem(
     .set({ agentName: null as any, agentEmail: null as any })
     .where(inArray(contacts.id, ids));
   return { returned: ids.length };
+}
+
+// ─── Bulk Update Status ──────────────────────────────────────────────────────
+export async function bulkUpdateStatus(
+  ids: number[],
+  newStatus: ContactStatus
+): Promise<{ updated: number }> {
+  if (!ids.length) return { updated: 0 };
+  const db = await getDb();
+  if (!db) return { updated: 0 };
+  await db
+    .update(contacts)
+    .set({ status: newStatus })
+    .where(inArray(contacts.id, ids));
+  return { updated: ids.length };
 }
 
 // ─── Bulk CloudTalk Sync (startup / catch-up) ─────────────────────────────────
