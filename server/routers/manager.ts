@@ -1467,7 +1467,7 @@ Rapport Killers (AVOID):
 
 Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.
 
-LANGUAGE: ALWAYS respond in English, regardless of what language the user asks in. All scripts, pitches, and data are in English because agents speak English with customers.`,
+LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However, when quoting scripts, pitches, or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations, not the scripts themselves.`,
           },
           // Include conversation history for context continuity
           ...(input.history || []).map((msg) => ({
