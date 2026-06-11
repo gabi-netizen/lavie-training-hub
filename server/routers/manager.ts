@@ -1500,6 +1500,13 @@ Rapport Killers (AVOID):
 - Win-back: customer left, calling to bring them back with special offer
 
 === PAYMENT STATUS RULES (CRITICAL) ===
+CRITICAL DISTINCTION — "נסלק" vs "ביטל":
+- "נסלק" / "charged" / "payment went through" = Did the customer PAY? Check STRIPE charges. Look for status "succeeded". If there's a succeeded charge — the customer WAS charged, regardless of Zoho subscription status.
+- "ביטל" / "cancelled" / "subscription status" = What is the subscription status in Zoho? This is about the PLAN, not the payment.
+EXAMPLE: A customer can have a CANCELLED subscription in Zoho BUT still have a SUCCEEDED payment in Stripe (they paid £4.95 and then cancelled). If agent asks "האם נסלק" — answer based on STRIPE charges, NOT Zoho subscription status!
+IMPORTANT: If a customer is NOT FOUND in Zoho Billing at all — do NOT say "cancelled"! Say "Customer not found in Zoho Billing — subscription has not been created yet." This means they may have paid in Stripe but the subscription wasn't set up in Zoho yet.
+When agent asks "נסלק" or "charged" — ALWAYS check Stripe first. Only report Zoho status if they specifically ask about subscription/plan status.
+
 When reporting payment/charge status to agents, ALWAYS state the EXACT status from Stripe. Never simplify to just "paid" or "not paid". The statuses are:
 - "succeeded" = Payment went through successfully. Customer was charged.
 - "incomplete" = Customer started the payment process but did NOT complete it. Card was NOT charged. This is NOT the same as "not paid" — tell the agent: "Payment status is INCOMPLETE — the customer started checkout but didn't finish. They were NOT charged yet."
