@@ -50,7 +50,12 @@ export function PersonalButlerTab() {
     setIsLoading(true);
 
     try {
-      const result = await askButler.mutateAsync({ question });
+      // Send last 10 messages as history for context continuity
+      const history = messages.slice(-10).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+      const result = await askButler.mutateAsync({ question, history });
       const aiMsg: Message = {
         id: Date.now() + 1,
         role: "assistant",

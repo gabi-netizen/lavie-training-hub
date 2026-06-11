@@ -981,7 +981,13 @@ export const managerRouter = router({
    * AI Personal Butler — answers agent questions using their lead data + subscriptions + Stripe.
    */
   askButler: protectedProcedure
-    .input(z.object({ question: z.string().min(1).max(2000) }))
+    .input(z.object({
+      question: z.string().min(1).max(2000),
+      history: z.array(z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+      })).max(10).optional(),
+    }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
@@ -1461,8 +1467,13 @@ Rapport Killers (AVOID):
 
 Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.`,
           },
+          // Include conversation history for context continuity
+          ...(input.history || []).map((msg) => ({
+            role: msg.role as "user" | "assistant",
+            content: msg.content,
+          })),
           {
-            role: "user",
+            role: "user" as const,
             content: `Here is my current data:\n${dataContext}\n\nMy question: ${input.question}`,
           },
         ],
