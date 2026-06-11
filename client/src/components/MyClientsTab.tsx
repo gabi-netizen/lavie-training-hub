@@ -97,7 +97,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
   );
 
   const subscriptions = data?.subscriptions ?? [];
-  const summary = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, billingThisWeek: 0 };
+  const summary = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, billingThisWeek: 0 };
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / 50);
 
@@ -140,7 +140,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total Clients</div>
           <div className="text-2xl font-bold text-gray-900">{summary.total}</div>
@@ -156,6 +156,10 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
         <div className="bg-white border border-red-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Cancelled</div>
           <div className="text-2xl font-bold text-red-700">{summary.cancelled}</div>
+        </div>
+        <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-sm">
+          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Future</div>
+          <div className="text-2xl font-bold text-blue-700">{summary.future}</div>
         </div>
         <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Billing This Week</div>
@@ -210,7 +214,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           onChange={(e) => { setCreatedOnFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
         >
-          <option value="this_month">Created This Month</option>
+          <option value="this_month">Deal This Month</option>
           <option value="today">Today</option>
           <option value="yesterday">Yesterday</option>
           <option value="last_7_days">Last 7 Days</option>
@@ -246,6 +250,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           <option value="20_40">£20 - £40</option>
           <option value="40_80">£40 - £80</option>
           <option value="over_80">Over £80</option>
+          <option value="total_value">Total Value (Installments)</option>
         </select>
         <button
           onClick={resetFilters}
@@ -304,7 +309,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           >
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">#</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Created On</div>
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Deal Date</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Plan Type</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Monthly</div>
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</div>
@@ -336,7 +341,7 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                     <div className="text-sm font-semibold text-gray-900 truncate">{sub.customerName}</div>
                     <div className="text-xs text-gray-600 truncate">{sub.email || "—"}</div>
                   </div>
-                  <div className="text-sm text-gray-800">{formatDate(sub.createdOn)}</div>
+                  <div className="text-sm text-gray-800">{formatDate(sub.activatedOn)}</div>
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${planColor.bg} ${planColor.text}`}>
                       {PLAN_TYPE_LABELS[sub.planType] || sub.planType}
