@@ -105,13 +105,32 @@ export async function listContacts({
   const conditions = [];
 
   if (search) {
-    conditions.push(
-      or(
-        like(contacts.name, `%${search}%`),
-        like(contacts.phone, `%${search}%`),
-        like(contacts.email, `%${search}%`)
-      )
-    );
+    // Normalize phone search: strip +, spaces, dashes for flexible matching
+    const isPhoneSearch = /^[\+\d\s\-()]{6,}$/.test(search.trim());
+    if (isPhoneSearch) {
+      const stripped = search.replace(/[\s\-\+\(\)]/g, "");
+      // Try multiple formats: raw search, stripped digits, without leading 44, with leading 44
+      const phoneVariants = [search, stripped];
+      if (stripped.startsWith("44")) phoneVariants.push(stripped.slice(2)); // 447903... → 7903...
+      if (stripped.startsWith("0")) phoneVariants.push("44" + stripped.slice(1)); // 07903... → 447903...
+      if (!stripped.startsWith("44") && !stripped.startsWith("0")) phoneVariants.push("44" + stripped); // 7903... → 447903...
+      const phoneConditions = phoneVariants.map(v => like(contacts.phone, `%${v}%`));
+      conditions.push(
+        or(
+          like(contacts.name, `%${search}%`),
+          like(contacts.email, `%${search}%`),
+          ...phoneConditions
+        )
+      );
+    } else {
+      conditions.push(
+        or(
+          like(contacts.name, `%${search}%`),
+          like(contacts.phone, `%${search}%`),
+          like(contacts.email, `%${search}%`)
+        )
+      );
+    }
   }
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
   if (status) conditions.push(eq(contacts.status, status as ContactStatus));
@@ -182,13 +201,32 @@ export async function countContacts({
   if (!db) return 0;
   const conditions = [];
   if (search) {
-    conditions.push(
-      or(
-        like(contacts.name, `%${search}%`),
-        like(contacts.phone, `%${search}%`),
-        like(contacts.email, `%${search}%`)
-      )
-    );
+    // Normalize phone search: strip +, spaces, dashes for flexible matching
+    const isPhoneSearch = /^[\+\d\s\-()]{6,}$/.test(search.trim());
+    if (isPhoneSearch) {
+      const stripped = search.replace(/[\s\-\+\(\)]/g, "");
+      // Try multiple formats: raw search, stripped digits, without leading 44, with leading 44
+      const phoneVariants = [search, stripped];
+      if (stripped.startsWith("44")) phoneVariants.push(stripped.slice(2)); // 447903... → 7903...
+      if (stripped.startsWith("0")) phoneVariants.push("44" + stripped.slice(1)); // 07903... → 447903...
+      if (!stripped.startsWith("44") && !stripped.startsWith("0")) phoneVariants.push("44" + stripped); // 7903... → 447903...
+      const phoneConditions = phoneVariants.map(v => like(contacts.phone, `%${v}%`));
+      conditions.push(
+        or(
+          like(contacts.name, `%${search}%`),
+          like(contacts.email, `%${search}%`),
+          ...phoneConditions
+        )
+      );
+    } else {
+      conditions.push(
+        or(
+          like(contacts.name, `%${search}%`),
+          like(contacts.phone, `%${search}%`),
+          like(contacts.email, `%${search}%`)
+        )
+      );
+    }
   }
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
   if (status) conditions.push(eq(contacts.status, status as ContactStatus));
