@@ -448,7 +448,16 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                   style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Customer Name */}
-                  <div className="text-sm font-semibold text-slate-900 truncate" title={sub.customerName}>
+                  <div
+                    className="text-sm font-semibold text-blue-700 truncate cursor-pointer hover:underline"
+                    title={sub.customerName}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (sub.contactId) {
+                        window.location.href = `/contacts/${sub.contactId}?from=retention&subId=${encodeURIComponent(sub.subscriptionId)}`;
+                      }
+                    }}
+                  >
                     {sub.customerName}
                   </div>
                   {/* Plan Name */}
