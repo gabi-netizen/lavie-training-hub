@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Phone, MessageCircle, Mail, ChevronDown, ChevronUp, Calendar, RotateCcw, RefreshCw } from "lucide-react";
+import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -258,23 +258,23 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           {/* Table Header — 16 columns */}
           <div
             className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1800px]"
-            style={{ gridTemplateColumns: "150px 180px 140px 70px 80px 75px 60px 55px 90px 75px 130px 90px 90px 90px 90px 100px" }}
+            style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Customer</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Email</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Plan Name</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Setup Fee</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Status</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Created</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Activated</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Deposit</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Recurring</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Total</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Cycles</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Cur.</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Next Billing</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Status</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Campaign</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Created</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Activated</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Last Billed</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Campaign</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Cancelled</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Actions</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Email</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Phone</div>
           </div>
 
@@ -293,53 +293,21 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1800px] ${
                     isExpanded ? "bg-blue-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "150px 180px 140px 70px 80px 75px 60px 55px 90px 75px 130px 90px 90px 90px 90px 100px" }}
+                  style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Customer Name */}
                   <div className="text-sm font-semibold text-slate-900 truncate" title={sub.customerName}>
                     {sub.customerName}
                   </div>
-                  {/* Email */}
-                  <div className="text-xs text-slate-700 truncate" title={sub.email}>
-                    {sub.email || "—"}
-                  </div>
                   {/* Plan Name */}
                   <div className="text-xs text-slate-800 truncate" title={sub.planName}>
                     {sub.planName || "—"}
-                  </div>
-                  {/* Setup Fee */}
-                  <div className="text-xs font-medium text-slate-800">
-                    {formatCurrency(sub.setupFee)}
-                  </div>
-                  {/* Recurring Amount */}
-                  <div className="text-xs font-medium text-slate-800">
-                    {formatCurrency(sub.recurringAmount)}
-                  </div>
-                  {/* Total Amount */}
-                  <div className="text-xs font-medium text-slate-800">
-                    {formatCurrency(sub.totalAmount)}
-                  </div>
-                  {/* Billing Cycles */}
-                  <div className="text-xs text-slate-800">
-                    {sub.billingCycles != null ? sub.billingCycles : "∞"}
-                  </div>
-                  {/* Current Billing Cycle */}
-                  <div className="text-xs text-slate-800">
-                    {sub.currentBillingCycle != null ? sub.currentBillingCycle : "—"}
-                  </div>
-                  {/* Next Billing On */}
-                  <div className="text-xs text-slate-800">
-                    {formatDate(sub.nextBillingOn)}
                   </div>
                   {/* Status */}
                   <div>
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColor.bg} ${statusColor.text}`}>
                       {statusLabel}
                     </span>
-                  </div>
-                  {/* Campaign ID */}
-                  <div className="text-xs text-slate-700 truncate" title={sub.campaignId || ""}>
-                    {sub.campaignId || "—"}
                   </div>
                   {/* Created On */}
                   <div className="text-xs text-slate-800">
@@ -349,13 +317,66 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   <div className="text-xs text-slate-800">
                     {formatDate(sub.activatedOn)}
                   </div>
+                  {/* Deposit (Setup Fee + first Recurring) */}
+                  <div className="text-xs font-medium text-slate-800">
+                    {formatCurrency((sub.setupFee || 0) + (sub.recurringAmount || 0))}
+                  </div>
+                  {/* Recurring Amount */}
+                  <div className="text-xs font-medium text-slate-800">
+                    {formatCurrency(sub.recurringAmount)}
+                  </div>
+                  {/* Total Amount */}
+                  <div className="text-xs font-medium text-slate-800">
+                    {formatCurrency(sub.totalAmount)}
+                  </div>
+                  {/* Cycles (X/Y) */}
+                  <div className="text-xs text-slate-800">
+                    {sub.currentBillingCycle != null && sub.billingCycles != null
+                      ? `${sub.currentBillingCycle}/${sub.billingCycles}`
+                      : sub.billingCycles != null
+                      ? `—/${sub.billingCycles}`
+                      : "∞"}
+                  </div>
+                  {/* Next Billing On */}
+                  <div className="text-xs text-slate-800">
+                    {formatDate(sub.nextBillingOn)}
+                  </div>
                   {/* Last Billed On */}
                   <div className="text-xs text-slate-800">
                     {formatDate(sub.lastBilledOn)}
                   </div>
+                  {/* Campaign ID */}
+                  <div className="text-xs text-slate-700 truncate" title={sub.campaignId || ""}>
+                    {sub.campaignId || "—"}
+                  </div>
                   {/* Cancelled Date */}
                   <div className="text-xs text-slate-800">
                     {formatDate(sub.cancelledDate)}
+                  </div>
+                  {/* Actions */}
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => handleCall(sub.phone)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Call">
+                      <Phone className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleWhatsApp(sub.phone)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="WhatsApp">
+                      <MessageCircle className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleWhatsApp(sub.phone)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="SMS">
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleEmail(sub.email)} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Email">
+                      <Mail className="w-4 h-4" />
+                    </button>
+                    <button className="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Calendar">
+                      <Calendar className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)} className="p-1 text-gray-500 hover:bg-gray-100 rounded" title="Expand">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {/* Email */}
+                  <div className="text-xs text-slate-700 truncate" title={sub.email}>
+                    {sub.email || "—"}
                   </div>
                   {/* Phone */}
                   <div className="text-xs text-slate-700 truncate" title={sub.phone || ""}>
