@@ -101,7 +101,18 @@ const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub",
 
 export default function RetentionWorkspace() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients" | "butler">("queue");
+  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients" | "butler">(() => {
+    const saved = sessionStorage.getItem("retention-workspace-tab");
+    if (saved && ["queue", "callbacks", "messages", "emails", "clients", "butler"].includes(saved)) {
+      return saved as any;
+    }
+    return "queue";
+  });
+
+  // Persist active tab to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("retention-workspace-tab", activeTab);
+  }, [activeTab]);
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
