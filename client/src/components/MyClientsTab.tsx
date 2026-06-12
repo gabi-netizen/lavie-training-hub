@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
 
@@ -670,9 +670,14 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                       return (
                         <div className="mb-4 inline-block border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Products Ordered</div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="grid grid-cols-[1fr_50px] gap-x-4 gap-y-1">
+                            <div className="text-xs font-bold text-slate-500">Product</div>
+                            <div className="text-xs font-bold text-slate-500 text-center">Qty</div>
                             {productEntries.map(([name, qty]) => (
-                              <span key={name} className="text-sm font-medium text-slate-800">{name} <span className="text-xs font-bold text-blue-700">x{qty}</span></span>
+                              <React.Fragment key={name}>
+                                <div className="text-sm font-medium text-slate-800">{name}</div>
+                                <div className="text-sm font-bold text-blue-700 text-center">{qty}</div>
+                              </React.Fragment>
                             ))}
                           </div>
                           <div className="mt-2 text-sm text-slate-700 border-t border-gray-100 pt-2">
