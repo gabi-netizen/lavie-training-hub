@@ -73,6 +73,7 @@ export async function zohoGet(path: string): Promise<any> {
 // ─── Subscription Data Cache (5 minutes) ────────────────────────────────────
 interface ZohoSubscription {
   subscription_id: string;
+  subscription_number: string;
   customer_id: string;
   customer_name: string;
   email: string;
@@ -83,13 +84,35 @@ interface ZohoSubscription {
   interval: number;
   interval_unit: string;
   next_billing_at: string;
+  last_billing_at: string;
+  activated_at: string;
+  cancelled_at: string;
+  expires_at: string;
   salesperson_name: string;
   created_time: string;
   cf_recurring_amount: string;
   cf_next_renewal_amount: string;
+  cf_setup_fee: string;
+  cf_campaign_id: string;
+  cf_current_billing_cycle: string;
+  cf_shipping_type: string;
+  cf_matinika_20ml: string;
+  cf_matinika_60ml: string;
+  cf_ashkara_eye_serum_5ml: string;
+  cf_bb_oulala_30_ml: string;
+  cf_bosem_micro_exploiting_60ml: string;
+  cf_bosem_micro_exfoliating_20m: string;
+  cf_brightening_gel_30ml: string;
+  cf_brightening_gel_dropper_5ml: string;
+  cf_brightening_gel_starter: string;
+  cf_d_ashkara_15ml: string;
+  cf_hydrolift: string;
+  cf_skin_immortality_50ml: string;
+  cf_oulala_booster_serum_10ml: string;
   current_term_starts_at: string;
   current_term_ends_at: string;
   trial_ends_at: string;
+  [key: string]: any;
 }
 
 // Helper: determine if a plan is an installment
@@ -601,11 +624,16 @@ export const billingRouter = router({
           unpaid: allForSalesperson.filter((s) => s.status?.toLowerCase() === "unpaid").length,
         };
 
-        // Sort by created_time descending (newest first) as a proxy for activated_at
-        // (activated_at requires detail fetch; created_time is available in list)
+        // Filter out "Not Shippable" using cf_shipping_type from list data
+        filtered = filtered.filter((sub) => {
+          const shippingType = (sub.cf_shipping_type || "").toLowerCase();
+          return shippingType !== "not shippable";
+        });
+
+        // Sort by activated_at descending (newest first), fallback to created_time
         filtered.sort((a, b) => {
-          const dateA = a.created_time ? new Date(a.created_time).getTime() : 0;
-          const dateB = b.created_time ? new Date(b.created_time).getTime() : 0;
+          const dateA = a.activated_at ? new Date(a.activated_at).getTime() : (a.created_time ? new Date(a.created_time).getTime() : 0);
+          const dateB = b.activated_at ? new Date(b.activated_at).getTime() : (b.created_time ? new Date(b.created_time).getTime() : 0);
           return dateB - dateA;
         });
 
@@ -615,50 +643,67 @@ export const billingRouter = router({
         const end = start + input.perPage;
         const pageData = filtered.slice(start, end);
 
-        // Fetch details for current page subscriptions (batch)
-        // This gives us custom fields, products, shipping type, etc.
-        const detailResults = await Promise.allSettled(
-          pageData.map((sub) => fetchSubscriptionDetail(sub.subscription_id))
-        );
-
+        // Build subscriptions directly from list data (all fields available)
         const subscriptions: MyClientSubscription[] = [];
 
-        for (let i = 0; i < pageData.length; i++) {
-          const listSub = pageData[i];
-          const detailResult = detailResults[i];
-          const detail = detailResult.status === "fulfilled" ? detailResult.value : null;
+        for (const listSub of pageData) {
+          // Parse setup fee from cf_setup_fee
+          const setupFeeStr = listSub.cf_setup_fee || "";
+          const setupFee = setupFeeStr ? parseFloat(setupFeeStr) : null;
 
-          // Check shipping type — exclude "Not Shippable" unless customer also has "First Shippable"
-          if (detail) {
-            const shippingType = getCustomFieldValue(detail, "Shipping Type");
-            if (shippingType.toLowerCase() === "not shippable") {
-              // Skip this record — it's not a real deal
-              continue;
-            }
+          // Recurring amount from cf_recurring_amount or amount
+          const recurringAmountStr = listSub.cf_recurring_amount || "";
+          const recurringAmount = recurringAmountStr ? parseFloat(recurringAmountStr) : (listSub.amount || null);
+
+          // Total amount: for installments, calculate from setup_fee + (recurring * billing_cycles)
+          // Billing cycles: derive from expires_at and activated_at, or from plan_name
+          let billingCycles: number | null = null;
+          const planName = listSub.plan_name || "";
+          const cyclesMatch = planName.match(/(\d+)\s*Installment/i);
+          if (cyclesMatch) {
+            billingCycles = parseInt(cyclesMatch[1]);
           }
 
-          // Extract data from detail if available, fallback to list data
-          const setupFee = detail?.plan?.setup_fee ?? null;
-          const billingCycles = detail?.plan?.billing_cycles ?? null;
-          const activatedAt = detail?.activated_at || null;
-          const lastBillingAt = detail?.last_billing_at || null;
-          const cancelledAt = detail?.cancelled_at || null;
-          const subscriptionNumber = detail?.subscription_number || null;
-          const phone = detail?.phone || listSub.phone || null;
+          // Total amount calculation
+          let totalAmount: number | null = null;
+          if (billingCycles && recurringAmount) {
+            totalAmount = (setupFee || 0) + (recurringAmount * billingCycles);
+            totalAmount = Math.round(totalAmount * 100) / 100;
+          }
 
-          // Extract custom fields
-          const campaignId = detail ? getCustomFieldValue(detail, "Campaign ID") : null;
-          const totalAmountStr = detail ? getCustomFieldValue(detail, "Total Amount") : null;
-          const currentBillingCycleStr = detail ? getCustomFieldValue(detail, "Current Billing Cycle") : null;
-          const recurringAmountStr = detail ? (getCustomFieldValue(detail, "Recurring Amount") || detail.amount?.toString()) : null;
-
-          // Parse amounts
-          const recurringAmount = recurringAmountStr ? parseFloat(recurringAmountStr) : (listSub.amount || null);
-          const totalAmount = totalAmountStr ? parseFloat(totalAmountStr) : null;
+          // Current billing cycle from cf_current_billing_cycle
+          const currentBillingCycleStr = listSub.cf_current_billing_cycle || "";
           const currentBillingCycle = currentBillingCycleStr ? parseInt(currentBillingCycleStr) : null;
 
-          // Extract products
-          const products = detail ? extractProducts(detail) : {};
+          // Campaign ID
+          const campaignId = listSub.cf_campaign_id || null;
+
+          // Extract products from cf_ fields on the list object
+          const products: Record<string, number> = {};
+          const productFieldMap: Record<string, string> = {
+            cf_matinika_20ml: "Matinika 20ml",
+            cf_matinika_60ml: "Matinika 60ml",
+            cf_ashkara_eye_serum_5ml: "Ashkara Eye Serum 5ml",
+            cf_bb_oulala_30_ml: "BB oulala 30 ml",
+            cf_bosem_micro_exploiting_60ml: "Bosem Micro Exploiting 60ml",
+            cf_bosem_micro_exfoliating_20m: "Bosem Micro-Exfoliating 20ml",
+            cf_brightening_gel_30ml: "Brightening Gel 30ml",
+            cf_brightening_gel_dropper_5ml: "Brightening Gel Dropper 5ml",
+            cf_brightening_gel_starter: "Brightening Gel starter",
+            cf_d_ashkara_15ml: "D Ashkara 15ml",
+            cf_hydrolift: "Hydrolift",
+            cf_skin_immortality_50ml: "Skin Immortality 50ml",
+            cf_oulala_booster_serum_10ml: "Oulala Booster Serum 10ml",
+          };
+          for (const [cfKey, productName] of Object.entries(productFieldMap)) {
+            const val = listSub[cfKey];
+            if (val) {
+              const qty = parseFloat(val);
+              if (!isNaN(qty) && qty > 0) {
+                products[productName] = qty;
+              }
+            }
+          }
 
           subscriptions.push({
             subscriptionId: listSub.subscription_id,
@@ -667,19 +712,19 @@ export const billingRouter = router({
             planName: listSub.plan_name || "",
             setupFee: setupFee !== null && !isNaN(setupFee) ? setupFee : null,
             recurringAmount: recurringAmount !== null && !isNaN(recurringAmount) ? recurringAmount : null,
-            totalAmount: totalAmount !== null && !isNaN(totalAmount) ? totalAmount : null,
-            billingCycles: billingCycles,
+            totalAmount,
+            billingCycles,
             currentBillingCycle: currentBillingCycle !== null && !isNaN(currentBillingCycle) ? currentBillingCycle : null,
             nextBillingOn: listSub.next_billing_at || null,
             status: listSub.status?.toLowerCase() || "",
-            campaignId: campaignId || null,
+            campaignId,
             createdOn: listSub.created_time || null,
-            activatedOn: activatedAt || null,
-            lastBilledOn: lastBillingAt || null,
-            cancelledDate: cancelledAt || null,
-            phone: phone || null,
+            activatedOn: listSub.activated_at || null,
+            lastBilledOn: listSub.last_billing_at || null,
+            cancelledDate: listSub.cancelled_at || null,
+            phone: listSub.phone || null,
             products,
-            subscriptionNumber,
+            subscriptionNumber: listSub.subscription_number || null,
           });
         }
 
