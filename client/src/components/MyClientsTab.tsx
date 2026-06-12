@@ -397,8 +397,8 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                         <div className="text-sm font-medium text-slate-900">{sub.planName || "—"}</div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Setup Fee</div>
-                        <div className="text-sm font-medium text-slate-900">{formatCurrency(sub.setupFee)}</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Deposit</div>
+                        <div className="text-sm font-medium text-slate-900">{formatCurrency((sub.setupFee || 0) + (sub.recurringAmount || 0))}</div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Recurring Amount</div>
