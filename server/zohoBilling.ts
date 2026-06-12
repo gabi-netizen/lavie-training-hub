@@ -88,6 +88,8 @@ export interface ZohoBillingData {
   nextBillingDate: string | null;
   cancellationDate: string | null;
   shippingAddress: string | null;
+  invoices?: any[];
+  allSubscriptions?: any[];
 }
 
 /**
@@ -108,6 +110,8 @@ export async function getZohoBillingDataByEmail(email: string): Promise<ZohoBill
     nextBillingDate: null,
     cancellationDate: null,
     shippingAddress: null,
+    invoices: [],
+    allSubscriptions: [],
   };
 
   if (!email) return empty;
@@ -154,15 +158,15 @@ export async function getZohoBillingDataByEmail(email: string): Promise<ZohoBill
     const nextBillingDate = primarySub?.next_billing_at ?? null;
     const cancellationDate = primarySub?.cancelled_at ?? null;
 
-    // LTV Plan = total plan value (interval price * billing cycles, or sub_total if available)
+    // LTV Plan = sum of ALL subscriptions (including deposit/Starter Kit)
     let ltvPlan = 0;
-    if (primarySub) {
-      if (primarySub.sub_total) {
-        ltvPlan = primarySub.sub_total;
-      } else if (primarySub.amount && primarySub.billing_cycles) {
-        ltvPlan = primarySub.amount * primarySub.billing_cycles;
+    for (const sub of subscriptions) {
+      if (sub.sub_total) {
+        ltvPlan += sub.sub_total;
+      } else if (sub.amount && sub.billing_cycles) {
+        ltvPlan += sub.amount * sub.billing_cycles;
       } else {
-        ltvPlan = primarySub.amount ?? 0;
+        ltvPlan += sub.amount ?? 0;
       }
     }
 
@@ -207,6 +211,18 @@ export async function getZohoBillingDataByEmail(email: string): Promise<ZohoBill
       trialStartDate = validDates[0].toISOString().split("T")[0];
     }
 
+    // Format invoices to include item names/description if available
+    const formattedInvoices = invoices.map((inv: any) => {
+      // Invoices list API might not include line items, but description or items could be available
+      return {
+        invoice_date: inv.invoice_date || inv.date,
+        invoice_number: inv.invoice_number || inv.number,
+        total: inv.total || inv.invoice_total || 0,
+        status: inv.status,
+        description: inv.description || inv.item_name || (inv.invoice_items && inv.invoice_items.length > 0 ? inv.invoice_items[0].name : "Subscription Charge")
+      };
+    });
+
     return {
       found: true,
       customerId,
@@ -221,6 +237,8 @@ export async function getZohoBillingDataByEmail(email: string): Promise<ZohoBill
       nextBillingDate,
       cancellationDate,
       shippingAddress,
+      invoices: formattedInvoices,
+      allSubscriptions: subscriptions,
     };
   } catch (err) {
     console.error(`[ZohoBilling] Error fetching data for ${email}:`, err);

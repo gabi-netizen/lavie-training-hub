@@ -1178,18 +1178,18 @@ export default function ContactCard() {
             )}
 
             {/* Address */}
-            {(contact.address || isFromRetention) && (
+            {(contact.address || zohoData?.shippingAddress || isFromRetention) && (
               <div className="mb-4 pt-3 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Shipping Address</p>
                 {isFromRetention ? (
                   <InlineEditableField
                     label="Address"
-                    value={contact.address ?? ""}
+                    value={contact.address ?? zohoData?.shippingAddress ?? ""}
                     onSave={handleSaveAddress}
                     icon={<Package size={14} />}
                   />
                 ) : (
-                  <p className="text-sm text-gray-700 leading-relaxed">{contact.address}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{contact.address || zohoData?.shippingAddress}</p>
                 )}
               </div>
             )}
@@ -1640,10 +1640,52 @@ export default function ContactCard() {
 
               {/* Transactions tab */}
               {centerTopTab === "transactions" && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-600">
-                  <CreditCard size={36} className="mb-3 opacity-40" />
-                  <p className="text-sm font-medium">Transactions</p>
-                  <p className="text-xs mt-1">Coming soon — transaction data will appear here</p>
+                <div>
+                  {(!zohoData?.invoices || zohoData.invoices.length === 0) ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+                      <CreditCard size={36} className="mb-3 opacity-40" />
+                      <p className="text-sm font-medium">Transactions</p>
+                      <p className="text-xs mt-1">No transaction data available</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-100">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Date</th>
+                            <th className="px-4 py-3 font-semibold">Invoice #</th>
+                            <th className="px-4 py-3 font-semibold">Amount</th>
+                            <th className="px-4 py-3 font-semibold">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {zohoData.invoices.map((inv: any, idx: number) => (
+                            <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50">
+                              <td className="px-4 py-3 text-gray-800">
+                                {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="px-4 py-3 text-gray-800 font-medium">
+                                {inv.invoice_number || "—"}
+                              </td>
+                              <td className="px-4 py-3 text-gray-800 font-semibold">
+                                £{Number(inv.total || 0).toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={cn(
+                                  "px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                  inv.status === "paid" ? "bg-green-100 text-green-800" :
+                                  inv.status === "void" ? "bg-gray-100 text-gray-800" :
+                                  "bg-red-100 text-red-800"
+                                )}>
+                                  {inv.status || "Unknown"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2030,9 +2072,21 @@ export default function ContactCard() {
               <Package size={18} style={{ color: "#1565c0" }} />
               <span className="text-sm font-bold" style={{ color: "#1565c0" }}>Products History</span>
             </div>
-            {(zohoData?.planName || retentionPlans.length > 0 || contact.trialKit) ? (
+            {(zohoData?.allSubscriptions?.length || zohoData?.planName || retentionPlans.length > 0 || contact.trialKit) ? (
               <div className="flex flex-col gap-2.5">
-                {zohoData?.planName && (
+                {zohoData?.allSubscriptions && zohoData.allSubscriptions.length > 0 ? (
+                  zohoData.allSubscriptions.map((sub: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: sub.status === "live" ? "#4caf50" : "#9e9e9e" }} />
+                        <span className="text-sm text-gray-800">{sub.plan?.name || sub.product_name || "Unknown Plan"}</span>
+                      </div>
+                      <span className={cn("text-xs font-semibold", sub.status === "live" ? "text-green-600" : "text-gray-600")}>
+                        {sub.status === "live" ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  ))
+                ) : zohoData?.planName ? (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#4caf50" }} />
@@ -2040,7 +2094,7 @@ export default function ContactCard() {
                     </div>
                     <span className="text-xs font-semibold text-green-600">Zoho</span>
                   </div>
-                )}
+                ) : null}
                 {contact.trialKit && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
