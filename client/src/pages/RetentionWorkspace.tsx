@@ -491,7 +491,34 @@ export default function RetentionWorkspace() {
       )}
 
       {activeTab === "clients" && (
-        <MyClientsTab agentName={agentName} />
+        <MyClientsTab
+          agentName={agentName}
+          onWhatsApp={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setWaModalOpen(true);
+          }}
+          onSms={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setSmsModalOpen(true);
+          }}
+          onEmail={(contactId, name, email) => {
+            setEmailLeadContactId(contactId);
+            setEmailLeadName(name);
+            setEmailLeadEmail(email);
+            setEmailTemplateOpen(true);
+          }}
+          onCallback={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName });
+            setCallbackDateTime("");
+          }}
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
       )}
 
       {activeTab === "butler" && (

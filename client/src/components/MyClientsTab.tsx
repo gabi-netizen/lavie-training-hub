@@ -6,6 +6,11 @@ import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, Refresh
 
 interface MyClientsTabProps {
   agentName: string;
+  onWhatsApp?: (contactId: number, phone: string, name: string) => void;
+  onSms?: (contactId: number, phone: string, name: string) => void;
+  onEmail?: (contactId: number, name: string, email: string) => void;
+  onCallback?: (subscriptionId: string, contactName: string) => void;
+  onOpenCard?: (contactId: number, subscriptionId: string) => void;
 }
 
 interface MyClientSubscription {
@@ -28,6 +33,7 @@ interface MyClientSubscription {
   phone: string | null;
   products: Record<string, number>;
   subscriptionNumber: string | null;
+  contactId: number | null;
 }
 
 // ─── Status Badge Colors ────────────────────────────────────────────────────────
@@ -72,19 +78,71 @@ function formatCurrency(amount: number | null | undefined): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export function MyClientsTab({ agentName }: MyClientsTabProps) {
-  const [search, setSearch] = useState("");
+export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onOpenCard }: MyClientsTabProps) {
+  const [dateRangePreset, setDateRangePreset] = useState("all"); // all, today, yesterday, last7, thisMonth, lastMonth, custom
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Calculate date range based on preset
+  const getDateRange = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+
+    switch (dateRangePreset) {
+      case "today":
+        return { from: todayStr, to: todayStr };
+      case "yesterday": {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split("T")[0];
+        return { from: yesterdayStr, to: yesterdayStr };
+      }
+      case "last7": {
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
+        return { from: sevenDaysAgoStr, to: todayStr };
+      }
+      case "thisMonth": {
+        const firstOfMonth = new Date(today);
+        firstOfMonth.setDate(1);
+        const firstOfMonthStr = firstOfMonth.toISOString().split("T")[0];
+        return { from: firstOfMonthStr, to: todayStr };
+      }
+      case "lastMonth": {
+        const firstOfThisMonth = new Date(today);
+        firstOfThisMonth.setDate(1);
+        const lastOfLastMonth = new Date(firstOfThisMonth);
+        lastOfLastMonth.setDate(0); // last day of previous month
+        const firstOfLastMonth = new Date(lastOfLastMonth);
+        firstOfLastMonth.setDate(1);
+        const firstOfLastMonthStr = firstOfLastMonth.toISOString().split("T")[0];
+        const lastOfLastMonthStr = lastOfLastMonth.toISOString().split("T")[0];
+        return { from: firstOfLastMonthStr, to: lastOfLastMonthStr };
+      }
+      case "custom":
+        return { from: customDateFrom || undefined, to: customDateTo || undefined };
+      default:
+        return { from: undefined, to: undefined };
+    }
+  };
+
+  const dateRange = getDateRange();
 
   const { data, isLoading, refetch, isFetching } = trpc.billing.getMyClientsData.useQuery(
     {
       salesperson: agentName,
-      search: search || undefined,
       status: statusFilter || undefined,
       planType: planTypeFilter || undefined,
+      search: search || undefined,
+      dateFrom: dateRange.from,
+      dateTo: dateRange.to,
       page,
       perPage: 50,
     },
@@ -97,28 +155,61 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
   const totalPages = Math.ceil(totalCount / 50);
 
   const resetFilters = () => {
-    setSearch("");
+    setDateRangePreset("all");
+    setCustomDateFrom("");
+    setCustomDateTo("");
     setStatusFilter("");
     setPlanTypeFilter("");
+    setSearch("");
     setPage(1);
   };
 
-  const handleWhatsApp = (phone: string | null) => {
-    if (phone) {
-      const cleaned = phone.replace(/[^0-9+]/g, "");
-      window.open(`https://wa.me/${cleaned.replace("+", "")}`, "_blank");
-    }
-  };
-
-  const handleEmail = (email: string | null) => {
-    if (email) {
-      window.open(`mailto:${email}`, "_blank");
-    }
-  };
+  // ─── Action Handlers ────────────────────────────────────────────────────────
 
   const handleCall = (phone: string | null) => {
     if (phone) {
       window.open(`tel:${phone}`, "_blank");
+    }
+  };
+
+  const handleWhatsApp = (sub: MyClientSubscription) => {
+    if (sub.phone && sub.contactId && onWhatsApp) {
+      onWhatsApp(sub.contactId, sub.phone, sub.customerName);
+    } else if (sub.phone) {
+      // Fallback to wa.me link if no contactId
+      const cleaned = sub.phone.replace(/[^0-9+]/g, "");
+      window.open(`https://wa.me/${cleaned.replace("+", "")}`, "_blank");
+    }
+  };
+
+  const handleSms = (sub: MyClientSubscription) => {
+    if (sub.phone && sub.contactId && onSms) {
+      onSms(sub.contactId, sub.phone, sub.customerName);
+    }
+    // If no contactId → disabled (no fallback for SMS)
+  };
+
+  const handleEmail = (sub: MyClientSubscription) => {
+    if (sub.contactId && onEmail) {
+      onEmail(sub.contactId, sub.customerName, sub.email);
+    } else if (sub.email) {
+      // Fallback to mailto if no contactId
+      window.open(`mailto:${sub.email}`, "_blank");
+    }
+  };
+
+  const handleCalendar = (sub: MyClientSubscription) => {
+    if (onCallback) {
+      onCallback(sub.subscriptionId, sub.customerName);
+    }
+  };
+
+  const handleOpenCard = (sub: MyClientSubscription) => {
+    if (sub.contactId && onOpenCard) {
+      onOpenCard(sub.contactId, sub.subscriptionId);
+    } else {
+      // Fallback: expand row if no contactId
+      setExpandedRow(expandedRow === sub.subscriptionId ? null : sub.subscriptionId);
     }
   };
 
@@ -164,18 +255,59 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter Bar — Reordered: Date Range, Status, Plan Type, Search, Reset, Refresh */}
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <input
-          type="text"
-          placeholder="Search name or email..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
-        />
+        {/* Date Range Dropdown */}
+        <select
+          value={dateRangePreset}
+          onChange={(e) => {
+            setDateRangePreset(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
+        >
+          <option value="all">All Dates</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="last7">Last 7 Days</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
+          <option value="custom">Custom Date</option>
+        </select>
+
+        {/* Custom Date Inputs (shown when "Custom Date" is selected) */}
+        {dateRangePreset === "custom" && (
+          <>
+            <input
+              type="date"
+              value={customDateFrom}
+              onChange={(e) => {
+                setCustomDateFrom(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
+              placeholder="From"
+            />
+            <input
+              type="date"
+              value={customDateTo}
+              onChange={(e) => {
+                setCustomDateTo(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
+              placeholder="To"
+            />
+          </>
+        )}
+
+        {/* Status Dropdown */}
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
           className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
         >
           <option value="">All Status</option>
@@ -186,9 +318,14 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           <option value="future">Future</option>
           <option value="unpaid">Unpaid</option>
         </select>
+
+        {/* Plan Type Dropdown */}
         <select
           value={planTypeFilter}
-          onChange={(e) => { setPlanTypeFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setPlanTypeFilter(e.target.value);
+            setPage(1);
+          }}
           className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
         >
           <option value="">All Plan Types</option>
@@ -196,6 +333,20 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           <option value="subscription">Subscription</option>
           <option value="one_payment">One Payment</option>
         </select>
+
+        {/* Search Input — Smaller, fixed width */}
+        <input
+          type="text"
+          placeholder="Search name or email..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="w-[200px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+        />
+
+        {/* Reset Button */}
         <button
           onClick={resetFilters}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -203,6 +354,8 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
           <RotateCcw className="w-3.5 h-3.5" />
           Reset
         </button>
+
+        {/* Refresh Button */}
         <button
           onClick={() => refetch()}
           disabled={isFetching}
@@ -355,22 +508,65 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                   </div>
                   {/* Actions */}
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => handleCall(sub.phone)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Call">
+                    {/* Phone — always tel: link */}
+                    <button
+                      onClick={() => handleCall(sub.phone)}
+                      className="p-1.5 rounded hover:bg-green-50 transition-colors text-green-600"
+                      title="Call"
+                    >
                       <Phone className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleWhatsApp(sub.phone)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="WhatsApp">
+
+                    {/* WhatsApp — modal if contactId, fallback to wa.me */}
+                    <button
+                      onClick={() => handleWhatsApp(sub)}
+                      className={`p-1.5 rounded hover:bg-green-50 transition-colors ${
+                        sub.contactId ? "text-green-600" : "text-slate-800"
+                      }`}
+                      title="WhatsApp"
+                    >
                       <MessageCircle className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleWhatsApp(sub.phone)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="SMS">
+
+                    {/* SMS — modal if contactId, disabled otherwise */}
+                    <button
+                      onClick={() => handleSms(sub)}
+                      disabled={!sub.contactId || !sub.phone}
+                      className={`p-1.5 rounded hover:bg-blue-50 transition-colors ${
+                        sub.contactId && sub.phone ? "text-blue-600" : "text-slate-800 opacity-50 cursor-not-allowed"
+                      }`}
+                      title="SMS"
+                    >
                       <MessageSquare className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleEmail(sub.email)} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="Email">
+
+                    {/* Email — modal if contactId, fallback to mailto */}
+                    <button
+                      onClick={() => handleEmail(sub)}
+                      disabled={!sub.email}
+                      className={`p-1.5 rounded hover:bg-gray-100 transition-colors ${
+                        sub.email ? "text-gray-600" : "text-gray-300 pointer-events-none"
+                      }`}
+                      title="Email"
+                    >
                       <Mail className="w-4 h-4" />
                     </button>
-                    <button className="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Calendar">
+
+                    {/* Calendar — schedule callback */}
+                    <button
+                      onClick={() => handleCalendar(sub)}
+                      className="p-1.5 rounded hover:bg-purple-50 transition-colors text-purple-600"
+                      title="Schedule Callback"
+                    >
                       <Calendar className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)} className="p-1 text-gray-500 hover:bg-gray-100 rounded" title="Expand">
+
+                    {/* ChevronRight — open card or expand */}
+                    <button
+                      onClick={() => handleOpenCard(sub)}
+                      className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-600"
+                      title="Open card"
+                    >
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -504,16 +700,30 @@ export function MyClientsTab({ agentName }: MyClientsTabProps) {
                         <Phone className="w-3.5 h-3.5" /> Call
                       </button>
                       <button
-                        onClick={() => handleWhatsApp(sub.phone)}
+                        onClick={() => handleWhatsApp(sub)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
                       >
                         <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                       </button>
                       <button
-                        onClick={() => handleEmail(sub.email)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                        onClick={() => handleSms(sub)}
+                        disabled={!sub.contactId || !sub.phone}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" /> SMS
+                      </button>
+                      <button
+                        onClick={() => handleEmail(sub)}
+                        disabled={!sub.email}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Mail className="w-3.5 h-3.5" /> Email
+                      </button>
+                      <button
+                        onClick={() => handleCalendar(sub)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
+                      >
+                        <Calendar className="w-3.5 h-3.5" /> Callback
                       </button>
                     </div>
                   </div>

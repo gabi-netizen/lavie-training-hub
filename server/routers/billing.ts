@@ -370,6 +370,7 @@ interface MyClientSubscription {
   phone: string | null;
   products: Record<string, number>;
   subscriptionNumber: string | null;
+  contactId: number | null;
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -567,6 +568,8 @@ export const billingRouter = router({
         status: z.string().optional(),
         planType: z.string().optional(),
         search: z.string().optional(),
+        dateFrom: z.string().optional(), // YYYY-MM-DD format
+        dateTo: z.string().optional(),   // YYYY-MM-DD format
         page: z.number().int().positive().default(1),
         perPage: z.number().int().positive().max(100).default(50),
         forceRefresh: z.boolean().optional(),
@@ -627,6 +630,14 @@ export const billingRouter = router({
               like(clientSubscriptions.email, searchTerm)
             )
           );
+        }
+
+        if (input.dateFrom) {
+          conditions.push(sql`${clientSubscriptions.createdOn} >= ${input.dateFrom}`);
+        }
+
+        if (input.dateTo) {
+          conditions.push(sql`${clientSubscriptions.createdOn} <= ${input.dateTo}`);
         }
 
         const whereClause = and(...conditions);
@@ -694,6 +705,7 @@ export const billingRouter = router({
           phone: row.phone,
           products: (row.products as Record<string, number>) ?? {},
           subscriptionNumber: row.subscriptionNumber,
+          contactId: row.contactId ?? null,
         }));
 
         const end = offset + input.perPage;

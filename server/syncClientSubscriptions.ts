@@ -11,8 +11,8 @@
  *  - On-demand via the tRPC triggerSync endpoint (Refresh button)
  */
 import { getDb } from "./db";
-import { clientSubscriptions } from "../drizzle/schema";
-import { sql } from "drizzle-orm";
+import { clientSubscriptions, contacts } from "../drizzle/schema";
+import { sql, eq, or, like, isNull, and } from "drizzle-orm";
 import { getAccessToken, zohoGet } from "./routers/billing";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -296,6 +296,14 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
     lastSyncAt = new Date();
     lastSyncCount = synced;
     console.log(`[ZohoSync] Sync complete: ${synced} upserted, ${errors} errors.`);
+
+    // ─── Auto-link subscriptions to contacts ─────────────────────────────
+    try {
+      await autoLinkSubscriptionsToContacts(db);
+    } catch (linkErr: any) {
+      console.error(`[ZohoSync] Auto-link error: ${linkErr.message}`);
+    }
+
     return { synced, errors };
   } catch (err: any) {
     console.error(`[ZohoSync] Fatal sync error: ${err.message}`);
@@ -303,6 +311,107 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
   } finally {
     isSyncing = false;
   }
+}
+
+// ─── Auto-Link Subscriptions to Contacts ───────────────────────────────────
+
+/**
+ * For all client_subscriptions without a contactId, try to find a matching
+ * contact by email or phone. If no match, create a new contact (department: retention)
+ * and link it. This mirrors autoLinkLeadsToContacts() in manager.ts.
+ */
+async function autoLinkSubscriptionsToContacts(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>
+) {
+  // Get all unlinked subscriptions that have email or phone
+  const unlinked = await db
+    .select({
+      subscriptionId: clientSubscriptions.subscriptionId,
+      customerName: clientSubscriptions.customerName,
+      email: clientSubscriptions.email,
+      phone: clientSubscriptions.phone,
+    })
+    .from(clientSubscriptions)
+    .where(
+      and(
+        isNull(clientSubscriptions.contactId),
+        or(
+          sql`${clientSubscriptions.email} IS NOT NULL AND ${clientSubscriptions.email} != ''`,
+          sql`${clientSubscriptions.phone} IS NOT NULL AND ${clientSubscriptions.phone} != ''`
+        )
+      )
+    );
+
+  if (unlinked.length === 0) return;
+  console.log(`[ZohoSync] Auto-linking ${unlinked.length} unlinked subscriptions to contacts...`);
+
+  let linked = 0;
+  let created = 0;
+
+  for (const sub of unlinked) {
+    try {
+      let existingContact: { id: number } | undefined;
+
+      // 1. Match by email
+      if (sub.email) {
+        const byEmail = await db
+          .select({ id: contacts.id })
+          .from(contacts)
+          .where(eq(contacts.email, sub.email))
+          .limit(1);
+        existingContact = byEmail[0];
+      }
+
+      // 2. Fall back to phone
+      if (!existingContact && sub.phone) {
+        const normalizedPhone = sub.phone.replace(/[\s\-().+]/g, "");
+        const byPhone = await db
+          .select({ id: contacts.id })
+          .from(contacts)
+          .where(
+            or(
+              like(contacts.phone, `%${normalizedPhone}%`),
+              like(contacts.phone, `%${sub.phone}%`)
+            )
+          )
+          .limit(1);
+        existingContact = byPhone[0];
+      }
+
+      if (existingContact) {
+        // Link to existing contact
+        await db
+          .update(clientSubscriptions)
+          .set({ contactId: existingContact.id })
+          .where(eq(clientSubscriptions.subscriptionId, sub.subscriptionId));
+        linked++;
+      } else {
+        // Create a new contact and link it
+        const [result] = await db.insert(contacts).values({
+          name: sub.customerName || "Unknown",
+          email: sub.email || null,
+          phone: sub.phone || null,
+          department: "retention",
+          status: "new",
+        });
+        const newContactId = (result as any).insertId as number;
+        if (newContactId) {
+          await db
+            .update(clientSubscriptions)
+            .set({ contactId: newContactId })
+            .where(eq(clientSubscriptions.subscriptionId, sub.subscriptionId));
+          created++;
+        }
+      }
+    } catch (e: any) {
+      // Non-fatal: log and continue
+      if (linked + created <= 3) {
+        console.error(`[ZohoSync] Auto-link error for ${sub.subscriptionId}: ${e.message}`);
+      }
+    }
+  }
+
+  console.log(`[ZohoSync] Auto-link complete: ${linked} linked to existing, ${created} new contacts created.`);
 }
 
 // ─── Interval Management ────────────────────────────────────────────────────
