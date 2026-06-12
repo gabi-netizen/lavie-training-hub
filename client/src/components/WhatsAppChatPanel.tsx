@@ -133,7 +133,7 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
   const [includeResolved, setIncludeResolved] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
-  const [replyChannel, setReplyChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [replyChannel, setReplyChannel] = useState<"whatsapp" | "sms" | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -256,7 +256,7 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !hasSelectedConversation) return;
+    if (!messageInput.trim() || !hasSelectedConversation || !replyChannel) return;
     // Allow sending to unmatched conversations (contactId null) using phoneNumber fallback
     if (selectedContactId !== null) {
       replyMutation.mutate({ contactId: selectedContactId, body: messageInput.trim(), channel: replyChannel });
@@ -339,6 +339,7 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
                       setSelectedContactId(conv.contactId);
                       setSelectedPhoneNumber(conv.contactId === null ? conv.fromNumber : undefined);
                       setHasSelectedConversation(true);
+                      setReplyChannel(null);
                     }}
                     className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-200 transition-colors ${
                       isSelected ? "bg-[#25D366]/10 border-l-2 border-l-[#25D366]" : "hover:bg-gray-100"
@@ -585,8 +586,8 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={windowInfo.expired && replyChannel === "whatsapp" ? "24h window expired — use a WhatsApp template" : replyChannel === "sms" ? "Type your SMS message..." : "Type a message..."}
-                    disabled={windowInfo.expired && replyChannel === "whatsapp"}
+                    placeholder={replyChannel === null ? "Select WhatsApp or SMS to reply..." : windowInfo.expired && replyChannel === "whatsapp" ? "24h window expired — use a WhatsApp template" : replyChannel === "sms" ? "Type your SMS message..." : "Type a message..."}
+                    disabled={replyChannel === null || (windowInfo.expired && replyChannel === "whatsapp")}
                     rows={1}
                     className="flex-1 resize-none bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-black placeholder-black/40 focus:outline-none focus:border-[#25D366] disabled:opacity-50 disabled:cursor-not-allowed max-h-24"
                     style={{ minHeight: "36px" }}
@@ -595,7 +596,7 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
                   {/* Send button */}
                   <button
                     onClick={handleSendMessage}
-                    disabled={!messageInput.trim() || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending || (selectedContactId === null && !selectedPhoneNumber)}
+                    disabled={!messageInput.trim() || replyChannel === null || (replyChannel === "whatsapp" && windowInfo.expired) || replyMutation.isPending || (selectedContactId === null && !selectedPhoneNumber)}
                     className={`p-2 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                       replyChannel === "sms" ? "bg-blue-600 hover:bg-blue-500" : "bg-[#25D366] hover:bg-[#1fb855]"
                     }`}
