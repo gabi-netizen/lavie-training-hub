@@ -88,11 +88,18 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
+  // Format date as YYYY-MM-DD in LOCAL timezone (avoids UTC shift bug)
+  const toLocalDateStr = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   // Calculate date range based on preset
   const getDateRange = () => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = toLocalDateStr(today);
 
     switch (dateRangePreset) {
       case "today":
@@ -100,31 +107,23 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
       case "yesterday": {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
-        return { from: yesterdayStr, to: yesterdayStr };
+        return { from: toLocalDateStr(yesterday), to: toLocalDateStr(yesterday) };
       }
       case "last7": {
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
-        return { from: sevenDaysAgoStr, to: todayStr };
+        return { from: toLocalDateStr(sevenDaysAgo), to: todayStr };
       }
       case "thisMonth": {
-        const firstOfMonth = new Date(today);
-        firstOfMonth.setDate(1);
-        const firstOfMonthStr = firstOfMonth.toISOString().split("T")[0];
-        return { from: firstOfMonthStr, to: todayStr };
+        const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { from: toLocalDateStr(firstOfMonth), to: todayStr };
       }
       case "lastMonth": {
-        const firstOfThisMonth = new Date(today);
-        firstOfThisMonth.setDate(1);
+        const firstOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastOfLastMonth = new Date(firstOfThisMonth);
         lastOfLastMonth.setDate(0); // last day of previous month
-        const firstOfLastMonth = new Date(lastOfLastMonth);
-        firstOfLastMonth.setDate(1);
-        const firstOfLastMonthStr = firstOfLastMonth.toISOString().split("T")[0];
-        const lastOfLastMonthStr = lastOfLastMonth.toISOString().split("T")[0];
-        return { from: firstOfLastMonthStr, to: lastOfLastMonthStr };
+        const firstOfLastMonth = new Date(lastOfLastMonth.getFullYear(), lastOfLastMonth.getMonth(), 1);
+        return { from: toLocalDateStr(firstOfLastMonth), to: toLocalDateStr(lastOfLastMonth) };
       }
       case "custom":
         return { from: customDateFrom || undefined, to: customDateTo || undefined };
