@@ -128,12 +128,22 @@ export async function getZohoBillingDataByEmail(email: string): Promise<ZohoBill
     // Extract phone
     const phone = customer.phone || customer.mobile || null;
 
-    // Extract shipping address
+    // Extract shipping address - need detail endpoint as list returns null
     let shippingAddress: string | null = null;
-    const addr = customer.shipping_address;
-    if (addr) {
-      const parts = [addr.street, addr.street2, addr.city, addr.state, addr.zip, addr.country].filter(Boolean);
-      shippingAddress = parts.length > 0 ? parts.join(", ") : null;
+    try {
+      const customerDetail = await zohoGet(`/customers/${customerId}`);
+      const addr = customerDetail?.customer?.shipping_address || customerDetail?.customer?.billing_address;
+      if (addr) {
+        const parts = [addr.street, addr.street2, addr.city, addr.state, addr.zip, addr.country].filter(Boolean);
+        shippingAddress = parts.length > 0 ? parts.join(", ") : null;
+      }
+    } catch (e) {
+      // Fallback to list endpoint address
+      const addr = customer.shipping_address;
+      if (addr) {
+        const parts = [addr.street, addr.street2, addr.city, addr.state, addr.zip, addr.country].filter(Boolean);
+        shippingAddress = parts.length > 0 ? parts.join(", ") : null;
+      }
     }
 
     // 2. Get subscriptions
