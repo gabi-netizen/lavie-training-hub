@@ -487,6 +487,7 @@ export const whatsappRouter = router({
             body: latestMessage.body,
             status: latestMessage.status,
             createdAt: latestMessage.createdAt,
+            channel: latestMessage.channel,
           },
           unreadCount,
           fromNumber: phoneIdentifier ?? (latestMessage.direction === "inbound" ? latestMessage.fromNumber : latestMessage.toNumber),
