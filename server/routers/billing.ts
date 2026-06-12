@@ -630,10 +630,10 @@ export const billingRouter = router({
           return shippingType !== "not shippable";
         });
 
-        // Sort by activated_at descending (newest first), fallback to created_time
+        // Sort by created_time descending (newest first)
         filtered.sort((a, b) => {
-          const dateA = a.activated_at ? new Date(a.activated_at).getTime() : (a.created_time ? new Date(a.created_time).getTime() : 0);
-          const dateB = b.activated_at ? new Date(b.activated_at).getTime() : (b.created_time ? new Date(b.created_time).getTime() : 0);
+          const dateA = a.created_time ? new Date(a.created_time).getTime() : 0;
+          const dateB = b.created_time ? new Date(b.created_time).getTime() : 0;
           return dateB - dateA;
         });
 
