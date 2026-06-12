@@ -135,9 +135,10 @@ function MessageStatus({ status }: { status: string }) {
 
 // ─── 24h Window Helper ───────────────────────────────────────────────────────
 function get24hWindowRemaining(messages: any[]): { expired: boolean; remaining: string | null } {
-  const lastInbound = [...messages].reverse().find((m) => m.direction === "inbound");
-  if (!lastInbound) return { expired: true, remaining: null };
-  const lastInboundTime = new Date(lastInbound.createdAt).getTime();
+  // Only consider inbound WhatsApp messages for the 24h window (SMS has no such restriction)
+  const lastWhatsAppInbound = [...messages].reverse().find((m) => m.direction === "inbound" && m.channel === "whatsapp");
+  if (!lastWhatsAppInbound) return { expired: true, remaining: null };
+  const lastInboundTime = new Date(lastWhatsAppInbound.createdAt).getTime();
   const windowEnd = lastInboundTime + 24 * 60 * 60 * 1000;
   const now = Date.now();
   if (now > windowEnd) return { expired: true, remaining: null };
@@ -327,17 +328,8 @@ export default function WhatsAppControl() {
     onError: (err) => toast.error(`Failed: ${err.message}`),
   });
 
-  // ─── Auto-detect reply channel from last inbound message ───────────────────
-  useEffect(() => {
-    if (messages && messages.length > 0) {
-      const lastInbound = [...messages].reverse().find((m: any) => m.direction === "inbound");
-      if (lastInbound && lastInbound.channel) {
-        setReplyChannel(lastInbound.channel as "whatsapp" | "sms");
-      } else {
-        setReplyChannel("whatsapp");
-      }
-    }
-  }, [messages, selectedContactId]);
+  // ─── Reply channel defaults to WhatsApp (agent manually switches to SMS if needed) ───────────────────
+  // Auto-detect logic removed: agents should consciously choose the reply channel
 
   // ─── Play notification sound on new inbound message ────────────────────────
   useEffect(() => {
@@ -647,9 +639,9 @@ export default function WhatsAppControl() {
                         <span className="text-sm font-medium text-black truncate">
                           {displayName}
                         </span>
-                        {/* Channel icon: 💬 green = WhatsApp, 📱 blue = SMS */}
+                        {/* Channel icon: 💬 green = WhatsApp, 📱 blue = SMS — PROMINENT */}
                         <span
-                          className={`flex-shrink-0 text-[11px] leading-none ${
+                          className={`flex-shrink-0 text-[16px] leading-none font-bold ${
                             conv.lastMessage?.channel === "sms" ? "text-blue-600" : "text-[#25D366]"
                           }`}
                           title={conv.lastMessage?.channel === "sms" ? "SMS" : "WhatsApp"}
@@ -817,14 +809,14 @@ export default function WhatsAppControl() {
                           <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
                             {msg.body}
                           </p>
-                          {/* Time + status */}
+                          {/* Time + channel indicator + status */}
                           <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
                             {msg.channel === "sms" ? (
-                              <SmartphoneIcon size={10} className="text-blue-600" />
+                              <SmartphoneIcon size={12} className="text-blue-600 flex-shrink-0" />
                             ) : (
-                              <MessageCircle size={10} className="text-green-600" />
+                              <MessageCircle size={12} className="text-green-600 flex-shrink-0" />
                             )}
-                            <span className="text-[10px] text-black">{formatTime(msgDate)}</span>
+                            <span className="text-[10px] text-slate-800">{formatTime(msgDate)}</span>
                             {isOutbound && <MessageStatus status={msg.status} />}
                           </div>
                           <button
