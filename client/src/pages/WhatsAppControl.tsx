@@ -734,14 +734,14 @@ export default function WhatsAppControl() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* 24h window indicator */}
-                {windowInfo.remaining && (
+                {/* 24h window indicator — only relevant for WhatsApp */}
+                {windowInfo.remaining && replyChannel === "whatsapp" && (
                   <span className="text-[10px] px-2 py-0.5 rounded bg-green-100 text-green-800 border border-green-300">
                     <Clock size={10} className="inline mr-1" />
                     {windowInfo.remaining}
                   </span>
                 )}
-                {windowInfo.expired && (
+                {windowInfo.expired && replyChannel === "whatsapp" && (
                   <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300">
                     24h expired
                   </span>
