@@ -665,23 +665,20 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                     {/* Products */}
                     {productEntries.length > 0 && (() => {
                       const totalProducts = productEntries.reduce((sum, [, qty]) => sum + qty, 0);
-                      const recurringAmount = sub.recurringAmount ?? 0;
-                      const avgPerProduct = totalProducts > 0 ? (recurringAmount / totalProducts) : 0;
+                      const totalValue = sub.totalAmount ?? sub.recurringAmount ?? 0;
+                      const avgPerProduct = totalProducts > 0 ? (totalValue / totalProducts) : 0;
                       return (
-                        <div className="mb-4">
+                        <div className="mb-4 inline-block border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Products Ordered</div>
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap gap-2">
                             {productEntries.map(([name, qty]) => (
-                              <div key={name} className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                <span className="text-sm font-medium text-slate-800">{name}</span>
-                                <span className="ml-auto text-xs font-bold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">x{qty}</span>
-                              </div>
+                              <span key={name} className="text-sm font-medium text-slate-800">{name} <span className="text-xs font-bold text-blue-700">x{qty}</span></span>
                             ))}
                           </div>
-                          <div className="mt-2 flex items-center gap-4 text-sm text-slate-700">
-                            <span className="font-semibold">Total: {totalProducts} products</span>
-                            <span>|</span>
-                            <span className="font-semibold">Avg price/product: £{avgPerProduct.toFixed(2)}</span>
+                          <div className="mt-2 text-sm text-slate-700 border-t border-gray-100 pt-2">
+                            <span className="font-semibold">{totalProducts} products</span>
+                            <span className="mx-2">|</span>
+                            <span className="font-semibold">Avg: £{avgPerProduct.toFixed(2)}/product</span>
                           </div>
                         </div>
                       );
