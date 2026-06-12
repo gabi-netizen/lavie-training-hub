@@ -663,19 +663,29 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                     </div>
 
                     {/* Products */}
-                    {productEntries.length > 0 && (
-                      <div className="mb-4">
-                        <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Products Ordered</div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                          {productEntries.map(([name, qty]) => (
-                            <div key={name} className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                              <span className="text-sm font-medium text-slate-800">{name}</span>
-                              <span className="ml-auto text-xs font-bold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">x{qty}</span>
-                            </div>
-                          ))}
+                    {productEntries.length > 0 && (() => {
+                      const totalProducts = productEntries.reduce((sum, [, qty]) => sum + qty, 0);
+                      const recurringAmount = sub.recurringAmount ?? 0;
+                      const avgPerProduct = totalProducts > 0 ? (recurringAmount / totalProducts) : 0;
+                      return (
+                        <div className="mb-4">
+                          <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Products Ordered</div>
+                          <div className="flex flex-col gap-1">
+                            {productEntries.map(([name, qty]) => (
+                              <div key={name} className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <span className="text-sm font-medium text-slate-800">{name}</span>
+                                <span className="ml-auto text-xs font-bold text-blue-700 bg-blue-50 rounded-full px-2 py-0.5">x{qty}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-2 flex items-center gap-4 text-sm text-slate-700">
+                            <span className="font-semibold">Total: {totalProducts} products</span>
+                            <span>|</span>
+                            <span className="font-semibold">Avg price/product: £{avgPerProduct.toFixed(2)}</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Progress Bar for Installments */}
                     {sub.billingCycles != null && (
