@@ -268,6 +268,7 @@ export default function WhatsAppControl() {
       toast.success("Conversation assigned!");
       setShowAssignModal(false);
       setShowBulkAssignModal(false);
+      setActiveTab("all");
       refetchConversations();
       refetchAssignment();
     },
