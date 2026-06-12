@@ -145,7 +145,7 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
       page,
       perPage: 50,
     },
-    { refetchOnWindowFocus: false }
+    { refetchOnWindowFocus: false, placeholderData: (prev: any) => prev }
   );
 
   const subscriptions: MyClientSubscription[] = data?.subscriptions ?? [];
