@@ -421,7 +421,7 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Deposit</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Recurring</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Total</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Cycles</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Remaining</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Next Billing</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Last Billed</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Campaign</div>
@@ -482,13 +482,16 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                   <div className="text-xs font-medium text-slate-800">
                     {formatCurrency(sub.totalAmount)}
                   </div>
-                  {/* Cycles (X/Y) */}
+                  {/* Remaining Payments */}
                   <div className="text-xs text-slate-800">
-                    {sub.currentBillingCycle != null && sub.billingCycles != null
-                      ? `${sub.currentBillingCycle}/${sub.billingCycles}`
-                      : sub.billingCycles != null
-                      ? `—/${sub.billingCycles}`
-                      : "∞"}
+                    {(() => {
+                      if (sub.billingCycles == null) return "∞";
+                      let paid = sub.currentBillingCycle ?? 0;
+                      // If live/dunning with lastBilledOn but cycle is null/0, at least 1 paid
+                      if (paid === 0 && sub.lastBilledOn && (sub.status === "live" || sub.status === "dunning")) paid = 1;
+                      const remaining = Math.max(0, sub.billingCycles - paid);
+                      return `${remaining} remaining`;
+                    })()}
                   </div>
                   {/* Next Billing On */}
                   <div className="text-xs text-slate-800">
@@ -607,11 +610,13 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Payment Progress</div>
                         <div className="text-sm font-medium text-slate-900">
-                          {sub.currentBillingCycle != null && sub.billingCycles != null
-                            ? `Payment ${sub.currentBillingCycle} of ${sub.billingCycles}`
-                            : sub.currentBillingCycle != null
-                            ? `Payment ${sub.currentBillingCycle} (recurring)`
-                            : "—"}
+                          {(() => {
+                            if (sub.billingCycles == null) return "Recurring (∞)";
+                            let paid = sub.currentBillingCycle ?? 0;
+                            if (paid === 0 && sub.lastBilledOn && (sub.status === "live" || sub.status === "dunning")) paid = 1;
+                            const remaining = Math.max(0, sub.billingCycles - paid);
+                            return `Payment ${paid} of ${sub.billingCycles} (${remaining} remaining)`;
+                          })()}
                         </div>
                       </div>
                       <div>
@@ -674,20 +679,28 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                     )}
 
                     {/* Progress Bar for Installments */}
-                    {sub.billingCycles != null && sub.currentBillingCycle != null && (
+                    {sub.billingCycles != null && (
                       <div className="mb-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-slate-500 uppercase">Payment Progress</span>
-                          <span className="text-xs font-medium text-slate-800">
-                            {sub.currentBillingCycle} / {sub.billingCycles} payments
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-purple-600 h-2.5 rounded-full transition-all"
-                            style={{ width: `${Math.min(100, (sub.currentBillingCycle / sub.billingCycles) * 100)}%` }}
-                          ></div>
-                        </div>
+                        {(() => {
+                          let paid = sub.currentBillingCycle ?? 0;
+                          if (paid === 0 && sub.lastBilledOn && (sub.status === "live" || sub.status === "dunning")) paid = 1;
+                          return (
+                            <>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-semibold text-slate-500 uppercase">Payment Progress</span>
+                                <span className="text-xs font-medium text-slate-800">
+                                  {paid} / {sub.billingCycles} payments
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div
+                                  className="bg-purple-600 h-2.5 rounded-full transition-all"
+                                  style={{ width: `${Math.min(100, (paid / sub.billingCycles) * 100)}%` }}
+                                ></div>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
 
