@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 
 // ─── Zoho Billing API Credentials ────────────────────────────────────────────
 const ZOHO_TOKEN_URL = "https://accounts.zoho.com/oauth/v2/token";
@@ -139,6 +139,210 @@ async function fetchAllSubscriptions(forceRefresh = false): Promise<ZohoSubscrip
 
   subscriptionCache = { data: allSubscriptions, timestamp: Date.now() };
   return allSubscriptions;
+}
+
+// ─── My Clients: All-Status Cache (5 minutes) ──────────────────────────────
+interface AllStatusCacheEntry {
+  data: ZohoSubscription[];
+  timestamp: number;
+}
+
+let allStatusCache: AllStatusCacheEntry | null = null;
+
+/**
+ * Fetch ALL subscriptions from Zoho across all statuses for My Clients tab.
+ * Statuses: live, unpaid, dunning, cancelled, future, expired
+ * Uses separate cache from the billing dashboard cache.
+ */
+async function fetchAllStatusSubscriptions(forceRefresh = false): Promise<ZohoSubscription[]> {
+  if (!forceRefresh && allStatusCache && Date.now() - allStatusCache.timestamp < CACHE_TTL) {
+    return allStatusCache.data;
+  }
+
+  const allSubscriptions: ZohoSubscription[] = [];
+  const statuses = ["live", "unpaid", "dunning", "cancelled", "future", "expired"];
+
+  for (const status of statuses) {
+    let page = 1;
+    let hasMore = true;
+    while (hasMore) {
+      try {
+        const response = await zohoGet(`/subscriptions?per_page=200&page=${page}&status=${status}`);
+        const subscriptions = response.subscriptions ?? [];
+        allSubscriptions.push(...subscriptions);
+        if (subscriptions.length < 200 || !response.page_context?.has_more_page) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } catch (err: any) {
+        // If a status returns error (e.g. no results), skip it
+        console.error(`Failed to fetch subscriptions with status=${status}: ${err.message}`);
+        hasMore = false;
+      }
+    }
+  }
+
+  allStatusCache = { data: allSubscriptions, timestamp: Date.now() };
+  return allSubscriptions;
+}
+
+// ─── Subscription Detail Cache (individual subscription details) ────────────
+interface ZohoSubscriptionDetail {
+  subscription_id: string;
+  subscription_number: string;
+  customer_name: string;
+  email: string;
+  phone: string;
+  plan: {
+    plan_code: string;
+    name: string;
+    setup_fee: number;
+    quantity: number;
+    billing_cycles: number | null;
+  };
+  plan_name: string;
+  amount: number;
+  status: string;
+  interval: number;
+  interval_unit: string;
+  next_billing_at: string;
+  activated_at: string;
+  created_time: string;
+  last_billing_at: string;
+  cancelled_at: string;
+  salesperson_name: string;
+  current_term_starts_at: string;
+  current_term_ends_at: string;
+  custom_fields: Array<{
+    customfield_id: string;
+    label: string;
+    value: string;
+    value_formatted: string;
+    index: number;
+  }>;
+  addons: Array<{
+    addon_code: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  contactpersons: Array<{
+    contactperson_id: string;
+    email: string;
+    phone: string;
+  }>;
+  child_invoice_id: string;
+  currency_code: string;
+  card: {
+    card_id: string;
+    last_four_digits: string;
+    payment_gateway: string;
+  };
+}
+
+interface DetailCacheEntry {
+  data: ZohoSubscriptionDetail;
+  timestamp: number;
+}
+
+const detailCache = new Map<string, DetailCacheEntry>();
+
+/**
+ * Fetch individual subscription detail from Zoho.
+ * Caches for 5 minutes.
+ */
+async function fetchSubscriptionDetail(subscriptionId: string): Promise<ZohoSubscriptionDetail | null> {
+  const cached = detailCache.get(subscriptionId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await zohoGet(`/subscriptions/${subscriptionId}`);
+    const detail = response.subscription;
+    if (detail) {
+      detailCache.set(subscriptionId, { data: detail, timestamp: Date.now() });
+    }
+    return detail ?? null;
+  } catch (err: any) {
+    console.error(`Failed to fetch detail for ${subscriptionId}: ${err.message}`);
+    return null;
+  }
+}
+
+// ─── Product names list (from the export) ───────────────────────────────────
+const PRODUCT_NAMES = [
+  "Ashkara Eye Serum 5ml",
+  "BB oulala 30 ml",
+  "Bosem Micro Exploiting 60ml",
+  "Bosem Micro-Exfoliating 20ml",
+  "Brightening Gel 30ml",
+  "Brightening Gel Dropper 5ml",
+  "Brightening Gel starter",
+  "D Ashkara 15ml",
+  "Eye Serum 15ml",
+  "Facial Cleanser 125ml",
+  "Hydrolift",
+  "Matinika 20ml",
+  "Matinika 60ml",
+  "Skin Immortality 50ml",
+];
+
+/**
+ * Extract custom field value from a subscription detail's custom_fields array.
+ */
+function getCustomFieldValue(detail: ZohoSubscriptionDetail, label: string): string {
+  const field = detail.custom_fields?.find(
+    (f) => f.label?.toLowerCase() === label.toLowerCase()
+  );
+  return field?.value ?? "";
+}
+
+/**
+ * Extract products from subscription detail custom fields.
+ * Product quantities are stored as custom fields with product names as labels.
+ */
+function extractProducts(detail: ZohoSubscriptionDetail): Record<string, number> {
+  const products: Record<string, number> = {};
+  if (!detail.custom_fields) return products;
+
+  for (const field of detail.custom_fields) {
+    // Check if this custom field matches a known product name
+    const matchedProduct = PRODUCT_NAMES.find(
+      (p) => p.toLowerCase() === field.label?.toLowerCase()
+    );
+    if (matchedProduct) {
+      const qty = parseFloat(field.value);
+      if (!isNaN(qty) && qty > 0) {
+        products[matchedProduct] = qty;
+      }
+    }
+  }
+  return products;
+}
+
+// ─── My Clients Data Interface ──────────────────────────────────────────────
+interface MyClientSubscription {
+  subscriptionId: string;
+  customerName: string;
+  email: string;
+  planName: string;
+  setupFee: number | null;
+  recurringAmount: number | null;
+  totalAmount: number | null;
+  billingCycles: number | null;
+  currentBillingCycle: number | null;
+  nextBillingOn: string | null;
+  status: string;
+  campaignId: string | null;
+  createdOn: string | null;
+  activatedOn: string | null;
+  lastBilledOn: string | null;
+  cancelledDate: string | null;
+  phone: string | null;
+  products: Record<string, number>;
+  subscriptionNumber: string | null;
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -319,6 +523,178 @@ export const billingRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to fetch subscriptions list: ${err.message}`,
+        });
+      }
+    }),
+
+  /**
+   * Get My Clients data from Zoho Billing API (all statuses).
+   * Used by the My Clients tab in Retention Workspace.
+   * Fetches all statuses, filters by salesperson, excludes "Not Shippable",
+   * and returns detailed subscription data with summary counts.
+   */
+  getMyClientsData: protectedProcedure
+    .input(
+      z.object({
+        salesperson: z.string().default("Rob"),
+        status: z.string().optional(),
+        planType: z.string().optional(),
+        search: z.string().optional(),
+        page: z.number().int().positive().default(1),
+        perPage: z.number().int().positive().max(100).default(50),
+        forceRefresh: z.boolean().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const allSubscriptions = await fetchAllStatusSubscriptions(input.forceRefresh ?? false);
+
+        // Filter by salesperson
+        let filtered = allSubscriptions.filter(
+          (sub) => (sub.salesperson_name || "").toLowerCase() === input.salesperson.toLowerCase()
+        );
+
+        // Apply status filter
+        if (input.status) {
+          const statusFilter = input.status.toLowerCase();
+          filtered = filtered.filter((sub) => {
+            const s = sub.status?.toLowerCase();
+            if (statusFilter === "cancelled") return s === "cancelled" || s === "canceled";
+            return s === statusFilter;
+          });
+        }
+
+        // Apply plan type filter
+        if (input.planType) {
+          if (input.planType === "subscription") {
+            filtered = filtered.filter((sub) => !isInstallmentPlan(sub.plan_name || "") && !/one\s*payment/i.test(sub.plan_name || ""));
+          } else if (input.planType === "installment") {
+            filtered = filtered.filter((sub) => isInstallmentPlan(sub.plan_name || ""));
+          } else if (input.planType === "one_payment") {
+            filtered = filtered.filter((sub) => /one\s*payment|deposit/i.test(sub.plan_name || ""));
+          }
+        }
+
+        // Apply search filter
+        if (input.search) {
+          const searchLower = input.search.toLowerCase();
+          filtered = filtered.filter(
+            (sub) =>
+              sub.customer_name?.toLowerCase().includes(searchLower) ||
+              sub.email?.toLowerCase().includes(searchLower)
+          );
+        }
+
+        // Compute summary counts BEFORE pagination (but after salesperson filter, before other filters)
+        // We use the full salesperson-filtered list for summary
+        const allForSalesperson = allSubscriptions.filter(
+          (sub) => (sub.salesperson_name || "").toLowerCase() === input.salesperson.toLowerCase()
+        );
+
+        const summary = {
+          total: allForSalesperson.length,
+          live: allForSalesperson.filter((s) => s.status?.toLowerCase() === "live").length,
+          dunning: allForSalesperson.filter((s) => s.status?.toLowerCase() === "dunning").length,
+          cancelled: allForSalesperson.filter((s) => s.status?.toLowerCase() === "cancelled" || s.status?.toLowerCase() === "canceled").length,
+          future: allForSalesperson.filter((s) => s.status?.toLowerCase() === "future").length,
+          expired: allForSalesperson.filter((s) => s.status?.toLowerCase() === "expired").length,
+          unpaid: allForSalesperson.filter((s) => s.status?.toLowerCase() === "unpaid").length,
+        };
+
+        // Sort by created_time descending (newest first) as a proxy for activated_at
+        // (activated_at requires detail fetch; created_time is available in list)
+        filtered.sort((a, b) => {
+          const dateA = a.created_time ? new Date(a.created_time).getTime() : 0;
+          const dateB = b.created_time ? new Date(b.created_time).getTime() : 0;
+          return dateB - dateA;
+        });
+
+        // Paginate
+        const totalFiltered = filtered.length;
+        const start = (input.page - 1) * input.perPage;
+        const end = start + input.perPage;
+        const pageData = filtered.slice(start, end);
+
+        // Fetch details for current page subscriptions (batch)
+        // This gives us custom fields, products, shipping type, etc.
+        const detailResults = await Promise.allSettled(
+          pageData.map((sub) => fetchSubscriptionDetail(sub.subscription_id))
+        );
+
+        const subscriptions: MyClientSubscription[] = [];
+
+        for (let i = 0; i < pageData.length; i++) {
+          const listSub = pageData[i];
+          const detailResult = detailResults[i];
+          const detail = detailResult.status === "fulfilled" ? detailResult.value : null;
+
+          // Check shipping type — exclude "Not Shippable" unless customer also has "First Shippable"
+          if (detail) {
+            const shippingType = getCustomFieldValue(detail, "Shipping Type");
+            if (shippingType.toLowerCase() === "not shippable") {
+              // Skip this record — it's not a real deal
+              continue;
+            }
+          }
+
+          // Extract data from detail if available, fallback to list data
+          const setupFee = detail?.plan?.setup_fee ?? null;
+          const billingCycles = detail?.plan?.billing_cycles ?? null;
+          const activatedAt = detail?.activated_at || null;
+          const lastBillingAt = detail?.last_billing_at || null;
+          const cancelledAt = detail?.cancelled_at || null;
+          const subscriptionNumber = detail?.subscription_number || null;
+          const phone = detail?.phone || listSub.phone || null;
+
+          // Extract custom fields
+          const campaignId = detail ? getCustomFieldValue(detail, "Campaign ID") : null;
+          const totalAmountStr = detail ? getCustomFieldValue(detail, "Total Amount") : null;
+          const currentBillingCycleStr = detail ? getCustomFieldValue(detail, "Current Billing Cycle") : null;
+          const recurringAmountStr = detail ? (getCustomFieldValue(detail, "Recurring Amount") || detail.amount?.toString()) : null;
+
+          // Parse amounts
+          const recurringAmount = recurringAmountStr ? parseFloat(recurringAmountStr) : (listSub.amount || null);
+          const totalAmount = totalAmountStr ? parseFloat(totalAmountStr) : null;
+          const currentBillingCycle = currentBillingCycleStr ? parseInt(currentBillingCycleStr) : null;
+
+          // Extract products
+          const products = detail ? extractProducts(detail) : {};
+
+          subscriptions.push({
+            subscriptionId: listSub.subscription_id,
+            customerName: listSub.customer_name || "",
+            email: listSub.email || "",
+            planName: listSub.plan_name || "",
+            setupFee: setupFee !== null && !isNaN(setupFee) ? setupFee : null,
+            recurringAmount: recurringAmount !== null && !isNaN(recurringAmount) ? recurringAmount : null,
+            totalAmount: totalAmount !== null && !isNaN(totalAmount) ? totalAmount : null,
+            billingCycles: billingCycles,
+            currentBillingCycle: currentBillingCycle !== null && !isNaN(currentBillingCycle) ? currentBillingCycle : null,
+            nextBillingOn: listSub.next_billing_at || null,
+            status: listSub.status?.toLowerCase() || "",
+            campaignId: campaignId || null,
+            createdOn: listSub.created_time || null,
+            activatedOn: activatedAt || null,
+            lastBilledOn: lastBillingAt || null,
+            cancelledDate: cancelledAt || null,
+            phone: phone || null,
+            products,
+            subscriptionNumber,
+          });
+        }
+
+        return {
+          subscriptions,
+          summary,
+          totalCount: totalFiltered,
+          page: input.page,
+          perPage: input.perPage,
+          hasMore: end < totalFiltered,
+        };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch My Clients data: ${err.message}`,
         });
       }
     }),
