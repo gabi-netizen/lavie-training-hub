@@ -158,15 +158,25 @@ export async function getZohoBillingDataByEmail(email: string): Promise<ZohoBill
     const nextBillingDate = primarySub?.next_billing_at ?? null;
     const cancellationDate = primarySub?.cancelled_at ?? null;
 
-    // LTV Plan = sum of ALL subscriptions (including deposit/Starter Kit)
+    // LTV Plan = sum of ALL subscriptions total value (amount × cycles + setup fee)
     let ltvPlan = 0;
     for (const sub of subscriptions) {
-      if (sub.sub_total) {
-        ltvPlan += sub.sub_total;
-      } else if (sub.amount && sub.billing_cycles) {
-        ltvPlan += sub.amount * sub.billing_cycles;
+      const amount = sub.amount ?? 0;
+      const setupFee = parseFloat(sub.cf_setup_fee || "0") || 0;
+      
+      // Try to get billing_cycles: from API field, or extract from plan name (e.g. "12 Installments")
+      let cycles = sub.billing_cycles;
+      if (!cycles) {
+        const nameMatch = (sub.name || "").match(/(\d+)\s*Installment/i);
+        if (nameMatch) cycles = parseInt(nameMatch[1]);
+      }
+      
+      if (cycles && cycles > 1) {
+        // Installment plan: amount × cycles + setup fee
+        ltvPlan += (amount * cycles) + setupFee;
       } else {
-        ltvPlan += sub.amount ?? 0;
+        // Regular subscription or one-off: just the amount + setup fee
+        ltvPlan += amount + setupFee;
       }
     }
 
