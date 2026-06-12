@@ -29,6 +29,7 @@ import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
 import { handleEmailTrackPixel, handleEmailLinkClick } from "../emailTracking";
 import { startNightlyCron } from "../cron/nightlyCoolingPool";
+import { startClientSubscriptionsSync } from "../syncClientSubscriptions";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -320,12 +321,15 @@ async function startServer() {
         console.error("[DB] Error ensuring Stripe tables:", err)
       );
     }, 8000);
-    // Ensure client_subscriptions table exists, then seed data
+    // Ensure client_subscriptions table exists, then start background Zoho sync
     setTimeout(() => {
       ensureClientSubscriptionsTable()
-        .then(() => seedClientSubscriptionsFromFile())
+        .then(() => {
+          // Start background sync: initial sync + every 30 minutes
+          startClientSubscriptionsSync();
+        })
         .catch((err) =>
-          console.error("[DB] Error ensuring/seeding client_subscriptions:", err)
+          console.error("[DB] Error ensuring client_subscriptions / starting sync:", err)
         );
     }, 9000);
     // Start nightly Cooling Pool cron (23:00 UTC — moves N/A leads to unassigned)

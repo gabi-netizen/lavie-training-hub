@@ -7,6 +7,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { getDb } from "../db";
+import { clientSubscriptions } from "../../drizzle/schema";
+import { eq, like, or, and, sql, desc } from "drizzle-orm";
+import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 
 // ─── Zoho Billing API Credentials ────────────────────────────────────────────
 const ZOHO_TOKEN_URL = "https://accounts.zoho.com/oauth/v2/token";
@@ -551,10 +555,10 @@ export const billingRouter = router({
     }),
 
   /**
-   * Get My Clients data from Zoho Billing API (all statuses).
+   * Get My Clients data from the local DB (synced from Zoho Billing).
    * Used by the My Clients tab in Retention Workspace.
-   * Fetches all statuses, filters by salesperson, excludes "Not Shippable",
-   * and returns detailed subscription data with summary counts.
+   * Reads from client_subscriptions table with pagination, search, and status filter.
+   * Background sync keeps the data fresh (every 30 min + on startup).
    */
   getMyClientsData: protectedProcedure
     .input(
@@ -570,171 +574,137 @@ export const billingRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        const allSubscriptions = await fetchAllStatusSubscriptions(input.forceRefresh ?? false);
-
-        // Filter by salesperson
-        let filtered = allSubscriptions.filter(
-          (sub) => (sub.salesperson_name || "").toLowerCase() === input.salesperson.toLowerCase()
-        );
-
-        // Apply status filter
-        if (input.status) {
-          const statusFilter = input.status.toLowerCase();
-          filtered = filtered.filter((sub) => {
-            const s = sub.status?.toLowerCase();
-            if (statusFilter === "cancelled") return s === "cancelled" || s === "canceled";
-            return s === statusFilter;
-          });
-        }
-
-        // Apply plan type filter
-        if (input.planType) {
-          if (input.planType === "subscription") {
-            filtered = filtered.filter((sub) => !isInstallmentPlan(sub.plan_name || "") && !/one\s*payment/i.test(sub.plan_name || ""));
-          } else if (input.planType === "installment") {
-            filtered = filtered.filter((sub) => isInstallmentPlan(sub.plan_name || ""));
-          } else if (input.planType === "one_payment") {
-            filtered = filtered.filter((sub) => /one\s*payment|deposit/i.test(sub.plan_name || ""));
-          }
-        }
-
-        // Apply search filter
-        if (input.search) {
-          const searchLower = input.search.toLowerCase();
-          filtered = filtered.filter(
-            (sub) =>
-              sub.customer_name?.toLowerCase().includes(searchLower) ||
-              sub.email?.toLowerCase().includes(searchLower)
+        // If forceRefresh, trigger a sync in the background (non-blocking)
+        if (input.forceRefresh) {
+          syncClientSubscriptionsFromZoho().catch((err) =>
+            console.error("[ZohoSync] Manual refresh error:", err)
           );
         }
 
-        // Compute summary counts BEFORE pagination (but after salesperson filter, before other filters)
-        // We use the full salesperson-filtered list for summary
-        const allForSalesperson = allSubscriptions.filter(
-          (sub) => (sub.salesperson_name || "").toLowerCase() === input.salesperson.toLowerCase()
-        );
+        const db = await getDb();
+        if (!db) {
+          return {
+            subscriptions: [],
+            summary: { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, expired: 0, unpaid: 0 },
+            totalCount: 0,
+            page: input.page,
+            perPage: input.perPage,
+            hasMore: false,
+          };
+        }
+
+        // Build WHERE conditions
+        const conditions: any[] = [
+          eq(clientSubscriptions.salesPerson, input.salesperson),
+        ];
+
+        if (input.status) {
+          const statusFilter = input.status.toLowerCase();
+          if (statusFilter === "cancelled") {
+            // Match both "cancelled" and "canceled"
+            conditions.push(
+              or(
+                eq(clientSubscriptions.status, "cancelled"),
+                eq(clientSubscriptions.status, "canceled")
+              )
+            );
+          } else {
+            conditions.push(eq(clientSubscriptions.status, statusFilter));
+          }
+        }
+
+        if (input.planType) {
+          if (input.planType === "subscription" || input.planType === "installment" || input.planType === "one_payment") {
+            conditions.push(eq(clientSubscriptions.planType, input.planType));
+          }
+        }
+
+        if (input.search) {
+          const searchTerm = `%${input.search}%`;
+          conditions.push(
+            or(
+              like(clientSubscriptions.customerName, searchTerm),
+              like(clientSubscriptions.email, searchTerm)
+            )
+          );
+        }
+
+        const whereClause = and(...conditions);
+
+        // Get total count for pagination
+        const countResult = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(clientSubscriptions)
+          .where(whereClause);
+        const totalCount = Number(countResult[0]?.count ?? 0);
+
+        // Get paginated results sorted by createdOn descending
+        const offset = (input.page - 1) * input.perPage;
+        const rows = await db
+          .select()
+          .from(clientSubscriptions)
+          .where(whereClause)
+          .orderBy(desc(clientSubscriptions.createdOn))
+          .limit(input.perPage)
+          .offset(offset);
+
+        // Get summary counts (always for the full salesperson, not filtered)
+        const agentCondition = eq(clientSubscriptions.salesPerson, input.salesperson);
+        const summaryResult = await db
+          .select({
+            total: sql<number>`COUNT(*)`,
+            live: sql<number>`SUM(CASE WHEN status = 'live' THEN 1 ELSE 0 END)`,
+            dunning: sql<number>`SUM(CASE WHEN status = 'dunning' THEN 1 ELSE 0 END)`,
+            cancelled: sql<number>`SUM(CASE WHEN status IN ('cancelled','canceled') THEN 1 ELSE 0 END)`,
+            future: sql<number>`SUM(CASE WHEN status = 'future' THEN 1 ELSE 0 END)`,
+            expired: sql<number>`SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)`,
+            unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
+          })
+          .from(clientSubscriptions)
+          .where(agentCondition);
 
         const summary = {
-          total: allForSalesperson.length,
-          live: allForSalesperson.filter((s) => s.status?.toLowerCase() === "live").length,
-          dunning: allForSalesperson.filter((s) => s.status?.toLowerCase() === "dunning").length,
-          cancelled: allForSalesperson.filter((s) => s.status?.toLowerCase() === "cancelled" || s.status?.toLowerCase() === "canceled").length,
-          future: allForSalesperson.filter((s) => s.status?.toLowerCase() === "future").length,
-          expired: allForSalesperson.filter((s) => s.status?.toLowerCase() === "expired").length,
-          unpaid: allForSalesperson.filter((s) => s.status?.toLowerCase() === "unpaid").length,
+          total: Number(summaryResult[0]?.total ?? 0),
+          live: Number(summaryResult[0]?.live ?? 0),
+          dunning: Number(summaryResult[0]?.dunning ?? 0),
+          cancelled: Number(summaryResult[0]?.cancelled ?? 0),
+          future: Number(summaryResult[0]?.future ?? 0),
+          expired: Number(summaryResult[0]?.expired ?? 0),
+          unpaid: Number(summaryResult[0]?.unpaid ?? 0),
         };
 
-        // Filter out "Not Shippable" using cf_shipping_type from list data
-        filtered = filtered.filter((sub) => {
-          const shippingType = (sub.cf_shipping_type || "").toLowerCase();
-          return shippingType !== "not shippable";
-        });
+        // Map DB rows to the MyClientSubscription response format
+        const subscriptions: MyClientSubscription[] = rows.map((row) => ({
+          subscriptionId: row.subscriptionId,
+          customerName: row.customerName,
+          email: row.email || "",
+          planName: row.planName || "",
+          setupFee: row.setupFee ? parseFloat(row.setupFee) : null,
+          recurringAmount: row.recurringAmount ? parseFloat(row.recurringAmount) : null,
+          totalAmount: row.totalAmount ? parseFloat(row.totalAmount) : null,
+          billingCycles: row.billingCycles,
+          currentBillingCycle: row.currentBillingCycle,
+          nextBillingOn: row.nextBillingOn ? String(row.nextBillingOn) : null,
+          status: row.status,
+          campaignId: row.campaignId,
+          createdOn: row.createdOn ? String(row.createdOn) : null,
+          activatedOn: row.activatedOn ? String(row.activatedOn) : null,
+          lastBilledOn: row.lastBilledOn ? String(row.lastBilledOn) : null,
+          cancelledDate: row.cancelledDate ? String(row.cancelledDate) : null,
+          phone: row.phone,
+          products: (row.products as Record<string, number>) ?? {},
+          subscriptionNumber: row.subscriptionNumber,
+        }));
 
-        // Sort by created_time descending (newest first)
-        filtered.sort((a, b) => {
-          const dateA = a.created_time ? new Date(a.created_time).getTime() : 0;
-          const dateB = b.created_time ? new Date(b.created_time).getTime() : 0;
-          return dateB - dateA;
-        });
-
-        // Paginate
-        const totalFiltered = filtered.length;
-        const start = (input.page - 1) * input.perPage;
-        const end = start + input.perPage;
-        const pageData = filtered.slice(start, end);
-
-        // Build subscriptions directly from list data (all fields available)
-        const subscriptions: MyClientSubscription[] = [];
-
-        for (const listSub of pageData) {
-          // Parse setup fee from cf_setup_fee
-          const setupFeeStr = listSub.cf_setup_fee || "";
-          const setupFee = setupFeeStr ? parseFloat(setupFeeStr) : null;
-
-          // Recurring amount from cf_recurring_amount or amount
-          const recurringAmountStr = listSub.cf_recurring_amount || "";
-          const recurringAmount = recurringAmountStr ? parseFloat(recurringAmountStr) : (listSub.amount || null);
-
-          // Total amount: for installments, calculate from setup_fee + (recurring * billing_cycles)
-          // Billing cycles: derive from expires_at and activated_at, or from plan_name
-          let billingCycles: number | null = null;
-          const planName = listSub.plan_name || "";
-          const cyclesMatch = planName.match(/(\d+)\s*Installment/i);
-          if (cyclesMatch) {
-            billingCycles = parseInt(cyclesMatch[1]);
-          }
-
-          // Total amount calculation
-          let totalAmount: number | null = null;
-          if (billingCycles && recurringAmount) {
-            totalAmount = (setupFee || 0) + (recurringAmount * billingCycles);
-            totalAmount = Math.round(totalAmount * 100) / 100;
-          }
-
-          // Current billing cycle from cf_current_billing_cycle
-          const currentBillingCycleStr = listSub.cf_current_billing_cycle || "";
-          const currentBillingCycle = currentBillingCycleStr ? parseInt(currentBillingCycleStr) : null;
-
-          // Campaign ID
-          const campaignId = listSub.cf_campaign_id || null;
-
-          // Extract products from cf_ fields on the list object
-          const products: Record<string, number> = {};
-          const productFieldMap: Record<string, string> = {
-            cf_matinika_20ml: "Matinika 20ml",
-            cf_matinika_60ml: "Matinika 60ml",
-            cf_ashkara_eye_serum_5ml: "Ashkara Eye Serum 5ml",
-            cf_bb_oulala_30_ml: "BB oulala 30 ml",
-            cf_bosem_micro_exploiting_60ml: "Bosem Micro Exploiting 60ml",
-            cf_bosem_micro_exfoliating_20m: "Bosem Micro-Exfoliating 20ml",
-            cf_brightening_gel_30ml: "Brightening Gel 30ml",
-            cf_brightening_gel_dropper_5ml: "Brightening Gel Dropper 5ml",
-            cf_brightening_gel_starter: "Brightening Gel starter",
-            cf_d_ashkara_15ml: "D Ashkara 15ml",
-            cf_hydrolift: "Hydrolift",
-            cf_skin_immortality_50ml: "Skin Immortality 50ml",
-            cf_oulala_booster_serum_10ml: "Oulala Booster Serum 10ml",
-          };
-          for (const [cfKey, productName] of Object.entries(productFieldMap)) {
-            const val = listSub[cfKey];
-            if (val) {
-              const qty = parseFloat(val);
-              if (!isNaN(qty) && qty > 0) {
-                products[productName] = qty;
-              }
-            }
-          }
-
-          subscriptions.push({
-            subscriptionId: listSub.subscription_id,
-            customerName: listSub.customer_name || "",
-            email: listSub.email || "",
-            planName: listSub.plan_name || "",
-            setupFee: setupFee !== null && !isNaN(setupFee) ? setupFee : null,
-            recurringAmount: recurringAmount !== null && !isNaN(recurringAmount) ? recurringAmount : null,
-            totalAmount,
-            billingCycles,
-            currentBillingCycle: currentBillingCycle !== null && !isNaN(currentBillingCycle) ? currentBillingCycle : null,
-            nextBillingOn: listSub.next_billing_at || null,
-            status: listSub.status?.toLowerCase() || "",
-            campaignId,
-            createdOn: listSub.created_time || null,
-            activatedOn: listSub.activated_at || null,
-            lastBilledOn: listSub.last_billing_at || null,
-            cancelledDate: listSub.cancelled_at || null,
-            phone: listSub.phone || null,
-            products,
-            subscriptionNumber: listSub.subscription_number || null,
-          });
-        }
+        const end = offset + input.perPage;
 
         return {
           subscriptions,
           summary,
-          totalCount: totalFiltered,
+          totalCount,
           page: input.page,
           perPage: input.perPage,
-          hasMore: end < totalFiltered,
+          hasMore: end < totalCount,
         };
       } catch (err: any) {
         throw new TRPCError({
@@ -742,5 +712,19 @@ export const billingRouter = router({
           message: `Failed to fetch My Clients data: ${err.message}`,
         });
       }
+    }),
+
+  /**
+   * Manually trigger a Zoho → DB sync for client subscriptions.
+   * Used by the Refresh button in My Clients tab.
+   */
+  triggerClientSubscriptionsSync: protectedProcedure
+    .mutation(async () => {
+      const result = await syncClientSubscriptionsFromZoho();
+      const status = getSyncStatus();
+      return {
+        ...result,
+        lastSyncAt: status.lastSyncAt?.toISOString() ?? null,
+      };
     }),
 });

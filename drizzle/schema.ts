@@ -971,9 +971,10 @@ export type InsertStripeCustomer = typeof stripeCustomers.$inferInsert;
 
 // ─── Client Subscriptions (My Clients) ───────────────────────────────────────
 /**
- * Client subscriptions table — stores subscription records imported from Zoho Billing.
+ * Client subscriptions table — stores subscription records synced from Zoho Billing.
  * Used in the "My Clients" tab of the Retention Workspace to give agents
  * a full view of their customer portfolio (live, dunning, cancelled, etc.).
+ * Background sync runs every 30 minutes + on server startup.
  */
 export const clientSubscriptions = mysqlTable("client_subscriptions", {
   id: int("id").autoincrement().primaryKey(),
@@ -987,6 +988,8 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
   customerName: varchar("customerName", { length: 256 }).notNull(),
   /** Customer email */
   email: varchar("email", { length: 320 }),
+  /** Customer phone number */
+  phone: varchar("phone", { length: 64 }),
   /** Amount per billing cycle (parsed from £ string) */
   amount: decimal("amount", { precision: 10, scale: 2 }),
   /** Setup fee (one-time charge at subscription start) */
@@ -997,10 +1000,14 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }),
   /** Total billing cycles on the plan (null for subscriptions) */
   billingCycles: int("billingCycles"),
-  /** Cycles completed so far (calculated) */
+  /** Current billing cycle from Zoho cf_current_billing_cycle */
+  currentBillingCycle: int("currentBillingCycle"),
+  /** Cycles completed so far (calculated — kept for backward compat) */
   cyclesCompleted: int("cyclesCompleted"),
   /** Next billing date */
   nextBillingOn: date("nextBillingOn"),
+  /** Last billed date */
+  lastBilledOn: date("lastBilledOn"),
   /** Subscription number (e.g. SUB-14119) */
   subscriptionNumber: varchar("subscriptionNumber", { length: 64 }),
   /** Status: live, cancelled, expired, future, unpaid, dunning */
@@ -1011,8 +1018,12 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
   activatedOn: date("activatedOn"),
   /** Date the deal was created/closed */
   createdOn: date("createdOn"),
+  /** Date the subscription was cancelled */
+  cancelledDate: date("cancelledDate"),
   /** Sales person / agent name */
   salesPerson: varchar("salesPerson", { length: 128 }).notNull(),
+  /** JSON object of product quantities: {"Matinika 20ml": 2, ...} */
+  products: json("products"),
   /** FK to contacts table for linking to ContactCard */
   contactId: int("contactId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
