@@ -2079,7 +2079,7 @@ export default function ContactCard() {
                     <div key={idx} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full inline-block" style={{ background: sub.status === "live" ? "#4caf50" : "#9e9e9e" }} />
-                        <span className="text-sm text-gray-800">{sub.plan?.name || sub.product_name || "Unknown Plan"}</span>
+                        <span className="text-sm text-gray-800">{sub.name || sub.plan_name || sub.plan?.name || sub.product_name || "Unknown Plan"}</span>
                       </div>
                       <span className={cn("text-xs font-semibold", sub.status === "live" ? "text-green-600" : "text-gray-600")}>
                         {sub.status === "live" ? "Active" : "Inactive"}
