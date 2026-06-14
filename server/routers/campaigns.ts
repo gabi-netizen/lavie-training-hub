@@ -338,8 +338,8 @@ export const campaignsRouter = router({
         }
       }
 
-      // ── SMS Outreach: update source and smsOutreachSentAt for successfully sent contacts ──
-      if (campaign.channel === "sms" && sentCount > 0) {
+      // ── Update contact source based on campaign channel ──
+      if (sentCount > 0) {
         const sentContactIds = matchedContacts
           .filter((c) => {
             // Only include contacts that were successfully sent
@@ -349,14 +349,25 @@ export const campaignsRouter = router({
           .map((c) => c.id);
 
         if (sentContactIds.length > 0) {
-          await db
-            .update(contacts)
-            .set({
-              source: "sms outreach",
-              smsOutreachSentAt: new Date(),
-            })
-            .where(inArray(contacts.id, sentContactIds));
-          console.log(`[Campaigns] Updated ${sentContactIds.length} contacts with source="sms outreach" and smsOutreachSentAt`);
+          if (campaign.channel === "sms") {
+            await db
+              .update(contacts)
+              .set({
+                source: "sms outreach",
+                smsOutreachSentAt: new Date(),
+              })
+              .where(inArray(contacts.id, sentContactIds));
+            console.log(`[Campaigns] Updated ${sentContactIds.length} contacts with source="sms outreach" and smsOutreachSentAt`);
+          } else {
+            // WhatsApp campaign
+            await db
+              .update(contacts)
+              .set({
+                source: "WhatsApp Campaign",
+              })
+              .where(inArray(contacts.id, sentContactIds));
+            console.log(`[Campaigns] Updated ${sentContactIds.length} contacts with source="WhatsApp Campaign"`);
+          }
         }
       }
 
@@ -416,9 +427,9 @@ export const campaignsRouter = router({
       return { success: true };
     }),
 
-  // ─── Push "read but no reply" contacts to Opening ───────────────────────────
-  // Takes contacts who read the campaign message but didn't reply,
-  // and creates them as leads in the contacts table with source "WhatsApp Campaign".
+  // ─── Push delivered/read contacts to Opening ──────────────────────────────────
+  // Takes contacts whose messages were delivered or read,
+  // and pushes them to opening department with source based on campaign channel.
   pushToOpening: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
@@ -437,23 +448,23 @@ export const campaignsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
       }
 
-      // Get sends that were read but NOT replied
-      const readNotReplied = await db
+      // Get sends that were delivered or read (not just read)
+      const deliveredOrRead = await db
         .select()
         .from(campaignSends)
         .where(
           and(
             eq(campaignSends.campaignId, input.id),
-            eq(campaignSends.status, "read")
+            inArray(campaignSends.status, ["delivered", "read"])
           )
         );
 
-      if (readNotReplied.length === 0) {
-        return { success: true, created: 0, message: "No read-but-not-replied contacts found" };
+      if (deliveredOrRead.length === 0) {
+        return { success: true, created: 0, message: "No delivered or read contacts found" };
       }
 
       // Get the contact IDs that already exist
-      const contactIds = readNotReplied
+      const contactIds = deliveredOrRead
         .filter((s) => s.contactId !== null)
         .map((s) => s.contactId!);
 
@@ -468,9 +479,12 @@ export const campaignsRouter = router({
 
       const existingContactMap = new Map(existingContacts.map((c) => [c.id, c]));
 
+      // Determine source based on campaign channel
+      const campaignSource = campaign.channel === "whatsapp" ? "WhatsApp Campaign" : "SMS Campaign";
+
       let createdCount = 0;
 
-      for (const send of readNotReplied) {
+      for (const send of deliveredOrRead) {
         const existingContact = send.contactId ? existingContactMap.get(send.contactId) : null;
 
         if (existingContact) {
@@ -478,7 +492,7 @@ export const campaignsRouter = router({
           await db
             .update(contacts)
             .set({
-              source: "WhatsApp Campaign",
+              source: campaignSource,
               department: "opening",
               status: "new",
             })
@@ -489,7 +503,7 @@ export const campaignsRouter = router({
           await db.insert(contacts).values({
             name: `Campaign Lead (${send.phoneNumber})`,
             phone: send.phoneNumber,
-            source: "WhatsApp Campaign",
+            source: campaignSource,
             department: "opening",
             status: "new",
           });
