@@ -79,6 +79,8 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Fetch expired subscriptions sorted by lastBilledOn DESC — only installments + deposits
   const { data, isLoading, isFetching, refetch } = trpc.billing.getMyClientsData.useQuery(
@@ -87,6 +89,9 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
       status: "expired",
       planType: "installment_and_deposit",
       search: search || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      dateFilterColumn: "lastBilledOn",
       page,
       perPage: 50,
       sortBy: "lastBilledOn",
@@ -170,8 +175,24 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
           }}
           className="w-[240px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800 placeholder-gray-400"
         />
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-slate-700">Completed:</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+          />
+          <span className="text-xs text-slate-600">to</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-800"
+          />
+        </div>
         <button
-          onClick={() => { setSearch(""); setPage(1); }}
+          onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); setPage(1); }}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -229,19 +250,20 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
-          {/* Table Header — 9 columns */}
+          {/* Table Header — 10 columns */}
           <div
-            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1200px]"
-            style={{ gridTemplateColumns: "40px 150px 170px 140px 90px 90px 90px 90px 140px" }}
+            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1300px]"
+            style={{ gridTemplateColumns: "36px 145px 165px 130px 75px 75px 80px 80px 85px 140px" }}
           >
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">#</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Customer Name</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Email</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Plan Name</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Total Value</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Deposit</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Paid So Far</div>
-            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Outstanding</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Created</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Completed</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Actions</div>
           </div>
 
@@ -255,10 +277,10 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
               <div key={sub.subscriptionId}>
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1200px] ${
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1300px] ${
                     isExpanded ? "bg-purple-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "40px 150px 170px 140px 90px 90px 90px 90px 140px" }}
+                  style={{ gridTemplateColumns: "36px 145px 165px 130px 75px 75px 80px 80px 85px 140px" }}
                 >
                   {/* # */}
                   <div className="text-sm text-gray-800">{(page - 1) * 50 + idx + 1}</div>
@@ -292,21 +314,24 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                     {formatCurrency(sub.totalAmount)}
                   </div>
 
+                  {/* Deposit (setupFee) */}
+                  <div className="text-xs font-medium text-slate-800">
+                    {formatCurrency(sub.setupFee)}
+                  </div>
+
                   {/* Paid So Far */}
                   <div className="text-xs font-medium text-green-700">
                     {formatCurrency(paidSoFar)}
                   </div>
 
-                  {/* Outstanding */}
-                  <div className="text-xs font-medium text-slate-800">
-                    {outstanding != null && outstanding > 0
-                      ? <span className="text-red-700">{formatCurrency(outstanding)}</span>
-                      : <span className="text-green-700">Fully Paid</span>}
-                  </div>
-
                   {/* Created Date */}
                   <div className="text-xs text-slate-800">
                     {formatDate(sub.createdOn)}
+                  </div>
+
+                  {/* Completed (Last Billed On) */}
+                  <div className="text-xs text-slate-800">
+                    {formatDate(sub.lastBilledOn)}
                   </div>
 
                   {/* Actions */}
@@ -353,7 +378,7 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 min-w-[1100px]">
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 min-w-[1300px]">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Subscription #</div>
@@ -364,8 +389,24 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                         <div className="text-sm font-medium text-slate-900">{formatDate(sub.createdOn)}</div>
                       </div>
                       <div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Activated On</div>
+                        <div className="text-sm font-medium text-slate-900">{formatDate(sub.activatedOn)}</div>
+                      </div>
+                      <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Last Billed On</div>
                         <div className="text-sm font-medium text-slate-900">{formatDate(sub.lastBilledOn)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Deposit</div>
+                        <div className="text-sm font-medium text-slate-900">{formatCurrency(sub.setupFee)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Outstanding</div>
+                        <div className="text-sm font-medium text-slate-900">
+                          {outstanding != null && outstanding > 0
+                            ? <span className="text-red-700">{formatCurrency(outstanding)}</span>
+                            : <span className="text-green-700">Fully Paid</span>}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Payment Progress</div>
@@ -382,10 +423,6 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Campaign</div>
                         <div className="text-sm font-medium text-slate-900">{sub.campaignId || "—"}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Activated On</div>
-                        <div className="text-sm font-medium text-slate-900">{formatDate(sub.activatedOn)}</div>
                       </div>
                     </div>
 

@@ -574,6 +574,7 @@ export const billingRouter = router({
         perPage: z.number().int().positive().max(100).default(50),
         forceRefresh: z.boolean().optional(),
         sortBy: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
+        dateFilterColumn: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -644,12 +645,18 @@ export const billingRouter = router({
           );
         }
 
-        if (input.dateFrom) {
-          conditions.push(sql`${clientSubscriptions.createdOn} >= ${input.dateFrom}`);
-        }
-
-        if (input.dateTo) {
-          conditions.push(sql`${clientSubscriptions.createdOn} <= ${input.dateTo}`);
+        if (input.dateFrom || input.dateTo) {
+          const dateCol = input.dateFilterColumn === "lastBilledOn"
+            ? clientSubscriptions.lastBilledOn
+            : input.dateFilterColumn === "cancelledDate"
+              ? clientSubscriptions.cancelledDate
+              : clientSubscriptions.createdOn;
+          if (input.dateFrom) {
+            conditions.push(sql`${dateCol} >= ${input.dateFrom}`);
+          }
+          if (input.dateTo) {
+            conditions.push(sql`${dateCol} <= ${input.dateTo}`);
+          }
         }
 
         const whereClause = and(...conditions);
