@@ -26,6 +26,9 @@ import {
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
 import { MyClientsTab } from "@/components/MyClientsTab";
+import { DeclineTab } from "@/components/DeclineTab";
+import { CancelTab } from "@/components/CancelTab";
+import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
@@ -101,9 +104,9 @@ const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub",
 
 export default function RetentionWorkspace() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients" | "butler">(() => {
+  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients" | "decline" | "cancel" | "endInstalment" | "butler">(() => {
     const saved = sessionStorage.getItem("retention-workspace-tab");
-    if (saved && ["queue", "callbacks", "messages", "emails", "clients", "butler"].includes(saved)) {
+    if (saved && ["queue", "callbacks", "messages", "emails", "clients", "decline", "cancel", "endInstalment", "butler"].includes(saved)) {
       return saved as any;
     }
     return "queue";
@@ -478,6 +481,36 @@ export default function RetentionWorkspace() {
           My Clients
         </button>
         <button
+          onClick={() => setActiveTab("decline")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+            activeTab === "decline"
+              ? "border-red-600 text-red-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Decline
+        </button>
+        <button
+          onClick={() => setActiveTab("cancel")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+            activeTab === "cancel"
+              ? "border-gray-600 text-gray-800"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => setActiveTab("endInstalment")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+            activeTab === "endInstalment"
+              ? "border-purple-600 text-purple-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          End Instalment
+        </button>
+        <button
           onClick={() => setActiveTab("butler")}
           className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
             activeTab === "butler"
@@ -503,6 +536,99 @@ export default function RetentionWorkspace() {
 
       {activeTab === "clients" && (
         <MyClientsTab
+          agentName={agentName}
+          onWhatsApp={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setWaModalOpen(true);
+          }}
+          onSms={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setSmsModalOpen(true);
+          }}
+          onEmail={(contactId, name, email) => {
+            setEmailLeadContactId(contactId);
+            setEmailLeadName(name);
+            setEmailLeadEmail(email);
+            setEmailTemplateOpen(true);
+          }}
+          onCallback={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName });
+            setCallbackDateTime("");
+          }}
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {activeTab === "decline" && (
+        <DeclineTab
+          agentName={agentName}
+          onWhatsApp={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setWaModalOpen(true);
+          }}
+          onSms={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setSmsModalOpen(true);
+          }}
+          onEmail={(contactId, name, email) => {
+            setEmailLeadContactId(contactId);
+            setEmailLeadName(name);
+            setEmailLeadEmail(email);
+            setEmailTemplateOpen(true);
+          }}
+          onCallback={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName });
+            setCallbackDateTime("");
+          }}
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {activeTab === "cancel" && (
+        <CancelTab
+          agentName={agentName}
+          onWhatsApp={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setWaModalOpen(true);
+          }}
+          onSms={(contactId, phone, name) => {
+            setMsgLeadContactId(contactId);
+            setMsgLeadPhone(phone);
+            setMsgLeadName(name);
+            setSmsModalOpen(true);
+          }}
+          onEmail={(contactId, name, email) => {
+            setEmailLeadContactId(contactId);
+            setEmailLeadName(name);
+            setEmailLeadEmail(email);
+            setEmailTemplateOpen(true);
+          }}
+          onCallback={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName });
+            setCallbackDateTime("");
+          }}
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {activeTab === "endInstalment" && (
+        <EndInstalmentTab
           agentName={agentName}
           onWhatsApp={(contactId, phone, name) => {
             setMsgLeadContactId(contactId);

@@ -573,6 +573,7 @@ export const billingRouter = router({
         page: z.number().int().positive().default(1),
         perPage: z.number().int().positive().max(100).default(50),
         forceRefresh: z.boolean().optional(),
+        sortBy: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -649,13 +650,18 @@ export const billingRouter = router({
           .where(whereClause);
         const totalCount = Number(countResult[0]?.count ?? 0);
 
-        // Get paginated results sorted by createdOn descending
+        // Get paginated results sorted by the requested column descending
         const offset = (input.page - 1) * input.perPage;
+        const sortColumn = input.sortBy === "lastBilledOn"
+          ? clientSubscriptions.lastBilledOn
+          : input.sortBy === "cancelledDate"
+            ? clientSubscriptions.cancelledDate
+            : clientSubscriptions.createdOn;
         const rows = await db
           .select()
           .from(clientSubscriptions)
           .where(whereClause)
-          .orderBy(desc(clientSubscriptions.createdOn))
+          .orderBy(desc(sortColumn))
           .limit(input.perPage)
           .offset(offset);
 
@@ -685,7 +691,7 @@ export const billingRouter = router({
         };
 
         // Map DB rows to the MyClientSubscription response format
-        const subscriptions: MyClientSubscription[] = rows.map((row) => ({
+        const subscriptions: MyClientSubscription[] = rows.map((row: any) => ({
           subscriptionId: row.subscriptionId,
           customerName: row.customerName,
           email: row.email || "",
