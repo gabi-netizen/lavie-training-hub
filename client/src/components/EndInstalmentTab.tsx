@@ -250,10 +250,10 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
-          {/* Table Header — 10 columns */}
+          {/* Table Header — 11 columns */}
           <div
-            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1300px]"
-            style={{ gridTemplateColumns: "36px 145px 165px 130px 75px 75px 80px 80px 85px 140px" }}
+            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1400px]"
+            style={{ gridTemplateColumns: "36px 140px 160px 120px 75px 75px 75px 85px 80px 85px 140px" }}
           >
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">#</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Customer Name</div>
@@ -262,6 +262,7 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Total Value</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Deposit</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Paid So Far</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Outstanding</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Created</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Completed</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Actions</div>
@@ -277,10 +278,10 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
               <div key={sub.subscriptionId}>
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1300px] ${
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1400px] ${
                     isExpanded ? "bg-purple-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "36px 145px 165px 130px 75px 75px 80px 80px 85px 140px" }}
+                  style={{ gridTemplateColumns: "36px 140px 160px 120px 75px 75px 75px 85px 80px 85px 140px" }}
                 >
                   {/* # */}
                   <div className="text-sm text-gray-800">{(page - 1) * 50 + idx + 1}</div>
@@ -322,6 +323,13 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                   {/* Paid So Far */}
                   <div className="text-xs font-medium text-green-700">
                     {formatCurrency(paidSoFar)}
+                  </div>
+
+                  {/* Outstanding */}
+                  <div className="text-xs font-medium">
+                    {outstanding != null && outstanding > 0
+                      ? <span className="text-red-700 font-bold">{formatCurrency(outstanding)}</span>
+                      : <span className="text-green-700">£0.00</span>}
                   </div>
 
                   {/* Created Date */}
