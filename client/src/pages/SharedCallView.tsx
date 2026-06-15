@@ -163,6 +163,14 @@ export default function SharedCallView() {
     ? (() => { try { return JSON.parse(analysis.analysisJson); } catch { return null; } })()
     : null;
 
+  // Product Value Score (same logic as CallCoach)
+  const saleQuality = report?.saleQualityScore != null ? Math.round(report.saleQualityScore) : null;
+  let pvColor = "text-emerald-600";
+  let pvLabel = "Strong product value";
+  if (saleQuality != null && saleQuality < 50) { pvColor = "text-red-600"; pvLabel = "Weak — selling on cancellation"; }
+  else if (saleQuality != null && saleQuality < 70) { pvColor = "text-amber-600"; pvLabel = "Needs more product focus"; }
+  else if (saleQuality != null && saleQuality >= 85) { pvColor = "text-emerald-600"; pvLabel = "Excellent value pitch"; }
+
   // Talk ratio
   const repPct = analysis.repSpeechPct != null ? Math.round(analysis.repSpeechPct) : null;
   const custPct = repPct != null ? 100 - repPct : null;
@@ -542,11 +550,53 @@ export default function SharedCallView() {
               </div>
             </div>
 
-            {/* Right: Talk Ratio + Deal Status */}
+            {/* Right: Product Value / Talk Ratio + Deal Status */}
             <div className="flex flex-row sm:flex-col items-center justify-center gap-6 px-8 py-6 sm:min-w-[200px] bg-gray-50">
-              {repPct != null && (
+              {/* Product Value Score */}
+              {saleQuality != null && (
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 mb-1">Talk Ratio</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-1">Product Value</p>
+                  <div className="relative w-24 h-24">
+                    <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
+                      <circle cx="48" cy="48" r="38" fill="none" stroke="#e2e8f0" strokeWidth="9" />
+                      <circle
+                        cx="48" cy="48" r="38" fill="none"
+                        stroke={saleQuality < 50 ? "#ef4444" : saleQuality < 70 ? "#f59e0b" : "#10b981"}
+                        strokeWidth="9"
+                        strokeDasharray={`${(saleQuality / 100) * 239} 239`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-2xl font-bold leading-none ${pvColor}`}>{saleQuality}</span>
+                      <span className="text-[10px] text-gray-700 mt-0.5">/100</span>
+                    </div>
+                  </div>
+                  <p className={`text-xs font-semibold mt-1 ${pvColor}`}>{pvLabel}</p>
+                  {report?.saleQualityQuote && (
+                    <p className="text-[10px] text-gray-600 italic mt-1 max-w-[180px] leading-tight">
+                      "{report.saleQualityQuote.length > 80 ? report.saleQualityQuote.substring(0, 80) + '...' : report.saleQualityQuote}"
+                    </p>
+                  )}
+                  {/* Cancel & Money counters */}
+                  <div className="flex flex-col gap-0.5 mt-2">
+                    {report?.cancelMentionCount != null && (
+                      <p className={`text-[10px] font-medium ${report.cancelMentionCount >= 2 ? 'text-red-600' : report.cancelMentionCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {report.cancelMentionCount >= 2 ? '\u274C' : report.cancelMentionCount === 1 ? '\u26A0\uFE0F' : '\u2705'} Cancel mentioned: {report.cancelMentionCount}x
+                      </p>
+                    )}
+                    {report?.moneyOverValueCount != null && (
+                      <p className={`text-[10px] font-medium ${report.moneyOverValueCount >= 2 ? 'text-red-600' : report.moneyOverValueCount === 1 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {report.moneyOverValueCount >= 2 ? '\uD83D\uDCB0' : '\u2705'} Money over value: {report.moneyOverValueCount}x
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Fallback: show Talk Ratio if no saleQuality data */}
+              {saleQuality == null && repPct != null && (
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-1">Talk Ratio</p>
                   <div className="relative w-24 h-24">
                     <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
                       <circle cx="48" cy="48" r="38" fill="none" stroke="#1e293b" strokeWidth="9" />
@@ -560,14 +610,14 @@ export default function SharedCallView() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className={`text-2xl font-bold leading-none ${ratioColor}`}>{repPct}%</span>
-                      <span className="text-[10px] text-gray-600 mt-0.5">rep</span>
+                      <span className="text-[10px] text-gray-700 mt-0.5">rep</span>
                     </div>
                   </div>
                   <p className={`text-xs font-semibold mt-1 ${ratioColor}`}>{ratioLabel}</p>
-                  <p className="text-[11px] text-gray-700">Customer: {custPct}%</p>
+                  <p className="text-[11px] text-gray-800">Customer: {custPct}%</p>
                 </div>
               )}
-              {repPct != null && dealStatus && (
+              {(saleQuality != null || repPct != null) && dealStatus && (
                 <div className="hidden sm:block w-full h-px bg-gray-200 my-1" />
               )}
               {dealStatus && (
