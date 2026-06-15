@@ -314,9 +314,9 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                     {formatCurrency(sub.totalAmount)}
                   </div>
 
-                  {/* Deposit (setupFee) */}
+                  {/* Deposit (setupFee + first instalment) */}
                   <div className="text-xs font-medium text-slate-800">
-                    {formatCurrency(sub.setupFee)}
+                    {formatCurrency((sub.setupFee ?? 0) + (sub.recurringAmount ?? 0))}
                   </div>
 
                   {/* Paid So Far */}
@@ -397,8 +397,8 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                         <div className="text-sm font-medium text-slate-900">{formatDate(sub.lastBilledOn)}</div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Deposit</div>
-                        <div className="text-sm font-medium text-slate-900">{formatCurrency(sub.setupFee)}</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Deposit (Setup + 1st Payment)</div>
+                        <div className="text-sm font-medium text-slate-900">{formatCurrency((sub.setupFee ?? 0) + (sub.recurringAmount ?? 0))}</div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Outstanding</div>
