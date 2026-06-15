@@ -288,8 +288,8 @@
 
 /* Dial List (Left Panel) */
 .ws-dial-list {
-  width: 380px;
-  min-width: 380px;
+  width: 420px;
+  min-width: 420px;
   border-right: 2px solid #E5E7EB;
   background: #fff;
   display: flex;
