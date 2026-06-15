@@ -21,7 +21,7 @@ import {
   Phone, Mail, MapPin, User, Pencil, Check, X, RotateCcw,
   ChevronRight, ChevronLeft, ChevronDown, CreditCard, Search,
   Edit3, Save, AlertCircle, Eye, Users, Calendar, UserPlus, ChevronsUpDown,
-  MessageCircle, BookOpen, Package, Loader2
+  MessageCircle, BookOpen, Package, Loader2, FileText
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
@@ -2406,17 +2406,264 @@ function ManagerView({
       </div>
 
       {selectedAgentId ? (
-        <ScriptPanel
-          customMap={customMap}
-          onSave={handleSave}
-          onReset={handleReset}
-          isSaving={adminUpsert.isPending}
-          isManagerView
-        />
+        <>
+          <ScriptPanel
+            customMap={customMap}
+            onSave={handleSave}
+            onReset={handleReset}
+            isSaving={adminUpsert.isPending}
+            isManagerView
+          />
+          <ManagerFullScriptPanel
+            selectedAgentId={selectedAgentId}
+            agentCustomizations={agentCustomizations}
+            adminUpsert={adminUpsert}
+          />
+        </>
       ) : (
         <div className="ws-empty-state">
           <Users size={40} className="text-gray-300" />
           <p>Select an agent to view and edit their pitch customizations</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// FULL SCRIPT PANEL — agent's own full script (stageNum=0)
+// ==========================================
+function FullScriptPanel() {
+  const { data: customizations, isLoading } = trpc.pitch.myCustomizations.useQuery();
+  const utils = trpc.useUtils();
+
+  const upsertMut = trpc.pitch.upsert.useMutation({
+    onSuccess: () => {
+      utils.pitch.myCustomizations.invalidate();
+      toast.success("Full script saved!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const savedText = useMemo(() => {
+    if (!customizations) return "";
+    const entry = customizations.find((c: any) => c.stageNum === 0);
+    return (entry?.customContent as any)?.text ?? "";
+  }, [customizations]);
+
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+
+  // Sync editText when savedText loads
+  useEffect(() => {
+    setEditText(savedText);
+  }, [savedText]);
+
+  const handleSave = () => {
+    upsertMut.mutate({ stageNum: 0, customContent: { text: editText } });
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditText(savedText);
+    setEditing(false);
+  };
+
+  if (isLoading) {
+    return <div className="ws-loading">Loading full script...</div>;
+  }
+
+  return (
+    <div style={{ padding: "8px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <FileText size={16} style={{ color: "#2563eb" }} />
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>Full Script</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {editing ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={upsertMut.isPending}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+                  fontSize: 13, fontWeight: 600,
+                  background: "#2563eb", color: "#fff",
+                  opacity: upsertMut.isPending ? 0.7 : 1,
+                }}
+              >
+                <Save size={13} /> {upsertMut.isPending ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={handleCancel}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 14px", borderRadius: 6, border: "1px solid #d1d5db", cursor: "pointer",
+                  fontSize: 13, fontWeight: 600,
+                  background: "#fff", color: "#374151",
+                }}
+              >
+                <X size={13} /> Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "5px 14px", borderRadius: 6, border: "1px solid #d1d5db", cursor: "pointer",
+                fontSize: 13, fontWeight: 600,
+                background: "#fff", color: "#374151",
+              }}
+            >
+              <Edit3 size={13} /> Edit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <textarea
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          style={{
+            width: "100%", minHeight: 420, padding: "12px 14px",
+            borderRadius: 8, border: "1px solid #d1d5db",
+            fontSize: 14, lineHeight: 1.65, color: "#111827",
+            fontFamily: "inherit", resize: "vertical",
+            boxSizing: "border-box",
+          }}
+          placeholder="Paste your full pitch script here..."
+        />
+      ) : (
+        <div
+          style={{
+            whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65,
+            color: savedText ? "#1f2937" : "#6b7280",
+            background: "#f9fafb", borderRadius: 8,
+            padding: "12px 14px", minHeight: 120,
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          {savedText || "No full script saved yet. Click Edit to add your script."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// MANAGER FULL SCRIPT PANEL — view/edit agent's full script (stageNum=0)
+// ==========================================
+function ManagerFullScriptPanel({
+  selectedAgentId,
+  agentCustomizations,
+  adminUpsert,
+}: {
+  selectedAgentId: number;
+  agentCustomizations: any[] | undefined;
+  adminUpsert: any;
+}) {
+  const savedText = useMemo(() => {
+    if (!agentCustomizations) return "";
+    const entry = agentCustomizations.find((c: any) => c.stageNum === 0);
+    return (entry?.customContent as any)?.text ?? "";
+  }, [agentCustomizations]);
+
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+
+  useEffect(() => {
+    setEditText(savedText);
+  }, [savedText]);
+
+  const handleSave = () => {
+    adminUpsert.mutate({ agentUserId: selectedAgentId, stageNum: 0, customContent: { text: editText } });
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditText(savedText);
+    setEditing(false);
+  };
+
+  return (
+    <div style={{ marginTop: 24, padding: "16px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <FileText size={15} style={{ color: "#2563eb" }} />
+          <span style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>Agent's Full Script</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {editing ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={adminUpsert.isPending}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer",
+                  fontSize: 12, fontWeight: 600,
+                  background: "#2563eb", color: "#fff",
+                  opacity: adminUpsert.isPending ? 0.7 : 1,
+                }}
+              >
+                <Save size={12} /> {adminUpsert.isPending ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={handleCancel}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "4px 12px", borderRadius: 6, border: "1px solid #d1d5db", cursor: "pointer",
+                  fontSize: 12, fontWeight: 600,
+                  background: "#fff", color: "#374151",
+                }}
+              >
+                <X size={12} /> Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "4px 12px", borderRadius: 6, border: "1px solid #d1d5db", cursor: "pointer",
+                fontSize: 12, fontWeight: 600,
+                background: "#fff", color: "#374151",
+              }}
+            >
+              <Edit3 size={12} /> Edit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <textarea
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          style={{
+            width: "100%", minHeight: 320, padding: "10px 12px",
+            borderRadius: 8, border: "1px solid #d1d5db",
+            fontSize: 13, lineHeight: 1.65, color: "#111827",
+            fontFamily: "inherit", resize: "vertical",
+            boxSizing: "border-box",
+          }}
+          placeholder="Paste the agent's full pitch script here..."
+        />
+      ) : (
+        <div
+          style={{
+            whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.65,
+            color: savedText ? "#1f2937" : "#6b7280",
+            background: "#fff", borderRadius: 8,
+            padding: "10px 12px", minHeight: 80,
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          {savedText || "No full script saved for this agent yet."}
         </div>
       )}
     </div>
@@ -2682,7 +2929,7 @@ export default function Workspace() {
   const [localDoneItems, setLocalDoneItems] = useState<Record<number, string>>({});
   const [listFilter, setListFilter] = useState<string>("active");
 
-  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails" | "butler">("pitch");
+  const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails" | "fullscript" | "butler">("pitch");
   const managerMode = activeTab === "manager";
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(() => {
     const saved = localStorage.getItem('ws_selectedAgentId');
@@ -3397,6 +3644,23 @@ export default function Workspace() {
                   <Mail size={14} /> Emails
                 </button>
 
+                {/* Full Script */}
+                <button
+                  onClick={() => setActiveTab("fullscript")}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
+                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+                    background: activeTab === "fullscript" ? "#fff" : "transparent",
+                    color: activeTab === "fullscript" ? "#2563eb" : "#111827",
+                    boxShadow: activeTab === "fullscript" ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+                    borderBottom: activeTab === "fullscript" ? "2px solid #2563eb" : "2px solid transparent",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <FileText size={14} /> Full Script
+                </button>
+
                 {/* Divider */}
                 <div style={{ flex: 1 }} />
 
@@ -3476,6 +3740,8 @@ export default function Workspace() {
                 <div style={{ margin: "-12px -16px -16px", height: "calc(100% + 28px)", display: "flex" }}>
                   <WorkspaceEmailPanel contactId={activeId} visible={activeTab === "emails"} />
                 </div>
+              ) : activeTab === "fullscript" ? (
+                <FullScriptPanel />
               ) : activeTab === "butler" ? (
                 <div style={{ margin: "-12px -16px -16px", height: "calc(100% + 28px)", display: "flex" }}>
                   <PersonalButlerTab />
