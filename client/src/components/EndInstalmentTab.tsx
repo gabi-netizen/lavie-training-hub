@@ -80,11 +80,12 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // Fetch expired subscriptions sorted by lastBilledOn DESC
+  // Fetch expired subscriptions sorted by lastBilledOn DESC — only installments + deposits
   const { data, isLoading, isFetching, refetch } = trpc.billing.getMyClientsData.useQuery(
     {
       salesperson: agentName,
       status: "expired",
+      planType: "installment_and_deposit",
       search: search || undefined,
       page,
       perPage: 50,
@@ -228,10 +229,10 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
-          {/* Table Header — 8 columns */}
+          {/* Table Header — 9 columns */}
           <div
-            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1100px]"
-            style={{ gridTemplateColumns: "40px 160px 180px 150px 90px 90px 100px 140px" }}
+            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1200px]"
+            style={{ gridTemplateColumns: "40px 150px 170px 140px 90px 90px 90px 90px 140px" }}
           >
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">#</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Customer Name</div>
@@ -240,6 +241,7 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Total Value</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Paid So Far</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Outstanding</div>
+            <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Created</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Actions</div>
           </div>
 
@@ -253,10 +255,10 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
               <div key={sub.subscriptionId}>
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1100px] ${
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1200px] ${
                     isExpanded ? "bg-purple-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "40px 160px 180px 150px 90px 90px 100px 140px" }}
+                  style={{ gridTemplateColumns: "40px 150px 170px 140px 90px 90px 90px 90px 140px" }}
                 >
                   {/* # */}
                   <div className="text-sm text-gray-800">{(page - 1) * 50 + idx + 1}</div>
@@ -300,6 +302,11 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
                     {outstanding != null && outstanding > 0
                       ? <span className="text-red-700">{formatCurrency(outstanding)}</span>
                       : <span className="text-green-700">Fully Paid</span>}
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="text-xs text-slate-800">
+                    {formatDate(sub.createdOn)}
                   </div>
 
                   {/* Actions */}

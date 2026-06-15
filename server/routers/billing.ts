@@ -620,6 +620,17 @@ export const billingRouter = router({
         if (input.planType) {
           if (input.planType === "subscription" || input.planType === "installment" || input.planType === "one_payment") {
             conditions.push(eq(clientSubscriptions.planType, input.planType));
+          } else if (input.planType === "installment_and_deposit") {
+            // Installment plans + Deposit (one_payment with planName='Deposit')
+            conditions.push(
+              or(
+                eq(clientSubscriptions.planType, "installment"),
+                and(
+                  eq(clientSubscriptions.planType, "one_payment"),
+                  eq(clientSubscriptions.planName, "Deposit")
+                )
+              )
+            );
           }
         }
 
