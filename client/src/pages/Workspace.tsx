@@ -2445,27 +2445,29 @@ function FullScriptPanel() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const savedText = useMemo(() => {
+  const savedHtml = useMemo(() => {
     if (!customizations) return "";
     const entry = customizations.find((c: any) => c.stageNum === 0);
-    return (entry?.customContent as any)?.text ?? "";
+    return (entry?.customContent as any)?.html ?? (entry?.customContent as any)?.text ?? "";
   }, [customizations]);
 
   const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState("");
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  // Sync editText when savedText loads
+  // Sync editor content when entering edit mode
   useEffect(() => {
-    setEditText(savedText);
-  }, [savedText]);
+    if (editing && editorRef.current) {
+      editorRef.current.innerHTML = savedHtml;
+    }
+  }, [editing, savedHtml]);
 
   const handleSave = () => {
-    upsertMut.mutate({ stageNum: 0, customContent: { text: editText } });
+    const html = editorRef.current?.innerHTML ?? "";
+    upsertMut.mutate({ stageNum: 0, customContent: { html } });
     setEditing(false);
   };
 
   const handleCancel = () => {
-    setEditText(savedText);
     setEditing(false);
   };
 
@@ -2525,30 +2527,31 @@ function FullScriptPanel() {
       </div>
 
       {editing ? (
-        <textarea
-          value={editText}
-          onChange={(e) => setEditText(e.target.value)}
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
           style={{
             width: "100%", minHeight: 420, padding: "12px 14px",
-            borderRadius: 8, border: "1px solid #d1d5db",
+            borderRadius: 8, border: "2px solid #2563eb",
             fontSize: 14, lineHeight: 1.65, color: "#111827",
-            fontFamily: "inherit", resize: "vertical",
-            boxSizing: "border-box",
+            fontFamily: "inherit", outline: "none",
+            boxSizing: "border-box", background: "#fff",
+            overflowY: "auto",
           }}
-          placeholder="Paste your full pitch script here..."
+          data-placeholder="Paste your full pitch script here..."
         />
       ) : (
         <div
           style={{
-            whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.65,
-            color: savedText ? "#1f2937" : "#6b7280",
+            fontSize: 14, lineHeight: 1.65,
+            color: savedHtml ? "#1f2937" : "#6b7280",
             background: "#f9fafb", borderRadius: 8,
             padding: "12px 14px", minHeight: 120,
             border: "1px solid #e5e7eb",
           }}
-        >
-          {savedText || "No full script saved yet. Click Edit to add your script."}
-        </div>
+          dangerouslySetInnerHTML={{ __html: savedHtml || "No full script saved yet. Click Edit to add your script." }}
+        />
       )}
     </div>
   );
@@ -2566,26 +2569,28 @@ function ManagerFullScriptPanel({
   agentCustomizations: any[] | undefined;
   adminUpsert: any;
 }) {
-  const savedText = useMemo(() => {
+  const savedHtml = useMemo(() => {
     if (!agentCustomizations) return "";
     const entry = agentCustomizations.find((c: any) => c.stageNum === 0);
-    return (entry?.customContent as any)?.text ?? "";
+    return (entry?.customContent as any)?.html ?? (entry?.customContent as any)?.text ?? "";
   }, [agentCustomizations]);
 
   const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState("");
+  const mgrEditorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setEditText(savedText);
-  }, [savedText]);
+    if (editing && mgrEditorRef.current) {
+      mgrEditorRef.current.innerHTML = savedHtml;
+    }
+  }, [editing, savedHtml]);
 
   const handleSave = () => {
-    adminUpsert.mutate({ agentUserId: selectedAgentId, stageNum: 0, customContent: { text: editText } });
+    const html = mgrEditorRef.current?.innerHTML ?? "";
+    adminUpsert.mutate({ agentUserId: selectedAgentId, stageNum: 0, customContent: { html } });
     setEditing(false);
   };
 
   const handleCancel = () => {
-    setEditText(savedText);
     setEditing(false);
   };
 
@@ -2641,30 +2646,31 @@ function ManagerFullScriptPanel({
       </div>
 
       {editing ? (
-        <textarea
-          value={editText}
-          onChange={(e) => setEditText(e.target.value)}
+        <div
+          ref={mgrEditorRef}
+          contentEditable
+          suppressContentEditableWarning
           style={{
             width: "100%", minHeight: 320, padding: "10px 12px",
-            borderRadius: 8, border: "1px solid #d1d5db",
+            borderRadius: 8, border: "2px solid #2563eb",
             fontSize: 13, lineHeight: 1.65, color: "#111827",
-            fontFamily: "inherit", resize: "vertical",
-            boxSizing: "border-box",
+            fontFamily: "inherit", outline: "none",
+            boxSizing: "border-box", background: "#fff",
+            overflowY: "auto",
           }}
-          placeholder="Paste the agent's full pitch script here..."
+          data-placeholder="Paste the agent's full pitch script here..."
         />
       ) : (
         <div
           style={{
-            whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.65,
-            color: savedText ? "#1f2937" : "#6b7280",
+            fontSize: 13, lineHeight: 1.65,
+            color: savedHtml ? "#1f2937" : "#6b7280",
             background: "#fff", borderRadius: 8,
             padding: "10px 12px", minHeight: 80,
             border: "1px solid #e5e7eb",
           }}
-        >
-          {savedText || "No full script saved for this agent yet."}
-        </div>
+          dangerouslySetInnerHTML={{ __html: savedHtml || "No full script saved for this agent yet." }}
+        />
       )}
     </div>
   );
