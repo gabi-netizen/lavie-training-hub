@@ -1968,7 +1968,7 @@ function EditableSayLine({
       className={`ws-edit-textarea ${className || ""}`}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      rows={Math.max(2, Math.ceil(value.length / 80))}
+      rows={Math.max(3, value.split('\n').length + 1)}
     />
   );
 }
