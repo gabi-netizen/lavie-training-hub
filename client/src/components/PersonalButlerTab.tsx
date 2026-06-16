@@ -7,6 +7,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  csvData?: string;
 }
 
 export function PersonalButlerTab() {
@@ -57,20 +58,12 @@ export function PersonalButlerTab() {
         content: m.content,
       }));
       const result = await askButler.mutateAsync({ question, history });
-      // Auto-download CSV if butler response contains CSV data
+      // Extract CSV data if present — show download button instead of auto-downloading
+      let csvData: string | undefined;
       if (result.answer.includes("---CSV_START---") && result.answer.includes("---CSV_END---")) {
         const csvMatch = result.answer.match(/---CSV_START---\n([\s\S]*?)\n---CSV_END---/);
         if (csvMatch?.[1]) {
-          const blob = new Blob([csvMatch[1]], { type: "text/csv;charset=utf-8;" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          const today = new Date().toISOString().split("T")[0];
-          a.download = `zoho-import-${today}.csv`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          csvData = csvMatch[1];
         }
       }
       const aiMsg: Message = {
@@ -78,6 +71,7 @@ export function PersonalButlerTab() {
         role: "assistant",
         content: result.answer.replace(/\n---CSV_START---[\s\S]*?---CSV_END---\n/g, ""),
         timestamp: new Date(),
+        csvData,
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: any) {
@@ -102,6 +96,19 @@ export function PersonalButlerTab() {
   };
 
 
+
+  const handleCsvDownload = (csvData: string) => {
+    const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().split("T")[0];
+    a.download = `zoho-import-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const formatContent = (content: string) => {
     // Format: bold (**text**), bullet points, newlines
@@ -210,6 +217,22 @@ export function PersonalButlerTab() {
                 }}>
                   {msg.role === "assistant" ? formatContent(msg.content) : msg.content}
                 </div>
+                {msg.csvData && (
+                  <button
+                    onClick={() => handleCsvDownload(msg.csvData!)}
+                    style={{
+                      marginTop: 12, padding: "10px 20px", borderRadius: 8,
+                      border: "none", background: "#16a34a", color: "#fff",
+                      fontSize: 14, fontWeight: 700, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 8,
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#15803d"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "#16a34a"; }}
+                  >
+                    📁 Download CSV for Zoho Import
+                  </button>
+                )}
               </div>
             </div>
           ))}
