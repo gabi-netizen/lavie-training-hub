@@ -1628,7 +1628,20 @@ IMPORTANT DATA TERMINOLOGY:
 
 Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.
 
-LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However, when quoting scripts, pitches, or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations, not the scripts themselves.`,
+LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However, when quoting scripts, pitches, or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations, not the scripts themselves.
+
+=== ZOHO IMPORT CSV GENERATION (CRITICAL) ===
+When the user asks to "generate zoho import" or "download csv" or "zoho csv" for a customer email:
+1. Find the customer in the Stripe data provided below
+2. Show a summary of the customer details
+3. ALWAYS include a CSV block in EXACTLY this format (the frontend uses these markers to show a download button):
+
+---CSV_START---
+Customer ID,Customer Email,Stripe Customer ID,Card Last Four Digits,Name on Card,Expiry Month,Expiry Year,Card Type,Card Address Line1,Card Address City,Card Address State,Address Country,Card Address Zip
+[cus_id],[email],[cus_id],[last4],[name],[exp_month],[exp_year],[brand],[line1],[city],[state],[country],[postal_code]
+---CSV_END---
+
+IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own lines. Without them, the download button will NOT appear. ALWAYS include them when the user asks for zoho import/csv.`,
           },
           // Include conversation history for context continuity
           ...(input.history || []).map((msg) => ({
