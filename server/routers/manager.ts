@@ -1394,12 +1394,42 @@ export const managerRouter = router({
             const custData = await custRes.json() as any;
             const cust = custData?.data?.[0];
             if (cust) {
-              // 2. Get payment methods
+              // 2. Get payment methods (attached to customer)
               const pmRes = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${cust.id}&type=card&limit=1`, { headers: stripeHeaders });
               const pmData = await pmRes.json() as any;
-              const pm = pmData?.data?.[0];
-              const card = pm?.card;
-              const billing = pm?.billing_details;
+              let pm = pmData?.data?.[0];
+              let card = pm?.card;
+              let billing = pm?.billing_details;
+
+              // 3. If no attached payment method, check latest PaymentIntent
+              if (!card) {
+                const piRes = await fetch(`https://api.stripe.com/v1/payment_intents?customer=${cust.id}&limit=1`, { headers: stripeHeaders });
+                const piData = await piRes.json() as any;
+                const pi = piData?.data?.[0];
+                const piPmId = pi?.latest_charge ? null : pi?.payment_method;
+                // Get card details from the charge's payment_method_details
+                const chargeId = pi?.latest_charge;
+                if (chargeId) {
+                  const chargeRes = await fetch(`https://api.stripe.com/v1/charges/${chargeId}`, { headers: stripeHeaders });
+                  const chargeData = await chargeRes.json() as any;
+                  const pmDetails = chargeData?.payment_method_details?.card;
+                  if (pmDetails) {
+                    card = pmDetails;
+                    pm = { id: chargeData?.payment_method || "from_charge" };
+                    billing = chargeData?.billing_details;
+                  }
+                } else if (piPmId) {
+                  // Fallback: fetch the payment method directly
+                  const pmDirectRes = await fetch(`https://api.stripe.com/v1/payment_methods/${piPmId}`, { headers: stripeHeaders });
+                  const pmDirectData = await pmDirectRes.json() as any;
+                  if (pmDirectData?.card) {
+                    card = pmDirectData.card;
+                    pm = { id: pmDirectData.id };
+                    billing = pmDirectData.billing_details;
+                  }
+                }
+              }
+
               const addr = billing?.address || cust.address || {};
               // Build CSV with exact Zoho Billing field names
               const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","id","Email","Customer Name"];
