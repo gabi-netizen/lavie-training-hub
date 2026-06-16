@@ -1381,6 +1381,45 @@ export const managerRouter = router({
         }
       } catch (e) { /* opening_trials table might not exist */ }
 
+      // ─── ZOHO IMPORT CSV SHORTCUT ─────────────────────────────────────────────
+      // If the user asks to generate a Zoho import CSV for a specific email, do it directly
+      const zohoImportKeywords = ["zoho import", "zoho csv", "generate csv", "generate zoho", "download csv", "import csv", "תוקן לזוהו", "csv לזוהו", "ייצא csv", "zoho file", "zoho token file"];
+      if (zohoImportKeywords.some((kw) => questionLower.includes(kw)) && targetEmail) {
+        try {
+          const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
+          if (stripeKey) {
+            const Stripe = (await import("stripe")).default;
+            const stripeClient = new Stripe(stripeKey);
+            const custList = await stripeClient.customers.list({ email: targetEmail, limit: 1 });
+            const cust = custList.data[0];
+            if (cust) {
+              const pms = await stripeClient.paymentMethods.list({ customer: cust.id, type: "card", limit: 1 });
+              const pm = pms.data[0];
+              const card = pm?.card;
+              const billing = pm?.billing_details;
+              const addr = billing?.address || cust.address;
+              // Build CSV
+              const headers = ["Customer ID","Customer Email","Stripe Customer ID","Card Last Four Digits","Name on Card","Expiry Month","Expiry Year","Card Type","Card Address Line1","Card Address City","Card Address State","Address Country","Card Address Zip"];
+              const row = [
+                cust.id, cust.email || "", cust.id,
+                card?.last4 || "", billing?.name || cust.name || "",
+                card?.exp_month?.toString().padStart(2, "0") || "", card?.exp_year?.toString() || "",
+                card?.brand || "",
+                addr?.line1 || "", addr?.city || "", addr?.state || "",
+                addr?.country || "GB", addr?.postal_code || "",
+              ];
+              const csvContent = headers.join(",") + "\n" + row.map(v => v.includes(",") ? `"${v}"` : v).join(",");
+              // Return CSV as a special response the frontend can detect and download
+              return { answer: `✅ **Zoho Import CSV generated for ${targetEmail}**\n\nCustomer: ${billing?.name || cust.name || "Unknown"}\nCard: ${card?.brand || "?"} ****${card?.last4 || "????"} (exp ${card?.exp_month}/${card?.exp_year})\nAddress: ${addr?.line1 || "?"}, ${addr?.city || "?"}, ${addr?.postal_code || "?"}, ${addr?.country || "GB"}\n\n---CSV_START---\n${csvContent}\n---CSV_END---\n\nThe download should start automatically. Upload this file to Zoho Billing → Stripe Customer Import.` };
+            } else {
+              return { answer: `❌ Customer with email **${targetEmail}** was not found in Stripe. Please check the email address and try again.` };
+            }
+          }
+        } catch (e) {
+          // Fall through to normal AI response
+        }
+      }
+
       // Build context for the AI
       const dataContext = `
 User asking: ${userName}

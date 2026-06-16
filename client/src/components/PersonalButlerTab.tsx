@@ -13,6 +13,7 @@ export function PersonalButlerTab() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -56,10 +57,26 @@ export function PersonalButlerTab() {
         content: m.content,
       }));
       const result = await askButler.mutateAsync({ question, history });
+      // Auto-download CSV if butler response contains CSV data
+      if (result.answer.includes("---CSV_START---") && result.answer.includes("---CSV_END---")) {
+        const csvMatch = result.answer.match(/---CSV_START---\n([\s\S]*?)\n---CSV_END---/);
+        if (csvMatch?.[1]) {
+          const blob = new Blob([csvMatch[1]], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          const today = new Date().toISOString().split("T")[0];
+          a.download = `zoho-import-${today}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }
       const aiMsg: Message = {
         id: Date.now() + 1,
         role: "assistant",
-        content: result.answer,
+        content: result.answer.replace(/\n---CSV_START---[\s\S]*?---CSV_END---\n/g, ""),
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMsg]);
@@ -83,6 +100,8 @@ export function PersonalButlerTab() {
       handleSend();
     }
   };
+
+
 
   const formatContent = (content: string) => {
     // Format: bold (**text**), bullet points, newlines
@@ -119,7 +138,7 @@ export function PersonalButlerTab() {
                 How can I help you today?
               </h3>
               <p style={{ fontSize: 14, color: "#6b7280", maxWidth: 400, lineHeight: 1.5 }}>
-                I have access to all your leads, clients, call history, WhatsApp messages, emails, and performance data. Ask me anything.
+                I have access to all your leads, clients, call history, WhatsApp messages, emails, and Stripe data. Ask me anything.
               </p>
               <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 480, width: "100%" }}>
                 {[
@@ -144,6 +163,8 @@ export function PersonalButlerTab() {
                   </button>
                 ))}
               </div>
+
+
             </div>
           )}
 

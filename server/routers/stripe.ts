@@ -450,4 +450,106 @@ export const stripeRouter = router({
 
       return { success: true, agentName: input.agentName, agentEmail: input.agentEmail };
     }),
+
+  /**
+   * Generate CSV for Zoho Billing Stripe Customer Import.
+   * Pulls customer + payment method + address from Stripe and returns CSV string.
+   * Can generate for a single customer or all recent customers (today/this week).
+   */
+  generateZohoImportCsv: protectedProcedure
+    .input(
+      z.object({
+        /** Single Stripe Customer ID — if provided, generates CSV for just this customer */
+        stripeCustomerId: z.string().optional(),
+        /** Or generate for all customers created in the last N days (default: 1 = today) */
+        daysBack: z.number().int().min(1).max(30).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const stripe = getStripeClient();
+      let customers: Stripe.Customer[] = [];
+
+      if (input.stripeCustomerId) {
+        // Single customer
+        const cust = await stripe.customers.retrieve(input.stripeCustomerId);
+        if (!cust.deleted) customers = [cust as Stripe.Customer];
+      } else {
+        // All customers from last N days
+        const daysBack = input.daysBack ?? 1;
+        const since = Math.floor(Date.now() / 1000) - daysBack * 24 * 60 * 60;
+        const list = await stripe.customers.list({ created: { gte: since }, limit: 100 });
+        customers = list.data.filter((c) => !c.deleted) as Stripe.Customer[];
+      }
+
+      if (customers.length === 0) {
+        return { csv: "", count: 0 };
+      }
+
+      // CSV header matching Zoho Billing Stripe Customer Import format
+      const headers = [
+        "Customer ID",
+        "Customer Email",
+        "Stripe Customer ID",
+        "Card Last Four Digits",
+        "Name on Card",
+        "Expiry Month",
+        "Expiry Year",
+        "Card Type",
+        "Card Address Line1",
+        "Card Address City",
+        "Card Address State",
+        "Address Country",
+        "Card Address Zip",
+      ];
+
+      const rows: string[][] = [];
+
+      for (const cust of customers) {
+        // Get payment methods for this customer
+        const pms = await stripe.paymentMethods.list({
+          customer: cust.id,
+          type: "card",
+          limit: 1,
+        });
+
+        const pm = pms.data[0];
+        const card = pm?.card;
+        const billing = pm?.billing_details;
+        const custAddress = cust.address;
+
+        // Use billing_details address from PM, fallback to customer address
+        const addr = billing?.address || custAddress;
+
+        rows.push([
+          cust.id, // Customer ID (Stripe cus_xxx)
+          cust.email || "",
+          cust.id, // Stripe Customer ID
+          card?.last4 || "",
+          billing?.name || cust.name || "",
+          card?.exp_month?.toString().padStart(2, "0") || "",
+          card?.exp_year?.toString() || "",
+          card?.brand || "",
+          addr?.line1 || "",
+          addr?.city || "",
+          addr?.state || "",
+          addr?.country || "GB",
+          addr?.postal_code || "",
+        ]);
+      }
+
+      // Build CSV string
+      const escapeCsv = (val: string) => {
+        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      };
+
+      const csvLines = [
+        headers.map(escapeCsv).join(","),
+        ...rows.map((row) => row.map(escapeCsv).join(",")),
+      ];
+
+      return { csv: csvLines.join("\n"), count: rows.length };
+    }),
 });
