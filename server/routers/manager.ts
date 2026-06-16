@@ -1388,34 +1388,45 @@ export const managerRouter = router({
         try {
           const stripeKey = process.env.STRIPE_BILLING_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
           if (stripeKey) {
-            const Stripe = (await import("stripe")).default;
-            const stripeClient = new Stripe(stripeKey);
-            const custList = await stripeClient.customers.list({ email: targetEmail, limit: 1 });
-            const cust = custList.data[0];
+            const stripeHeaders = { Authorization: `Bearer ${stripeKey}` };
+            // 1. Find customer by email
+            const custRes = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(targetEmail)}&limit=1`, { headers: stripeHeaders });
+            const custData = await custRes.json() as any;
+            const cust = custData?.data?.[0];
             if (cust) {
-              const pms = await stripeClient.paymentMethods.list({ customer: cust.id, type: "card", limit: 1 });
-              const pm = pms.data[0];
+              // 2. Get payment methods
+              const pmRes = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${cust.id}&type=card&limit=1`, { headers: stripeHeaders });
+              const pmData = await pmRes.json() as any;
+              const pm = pmData?.data?.[0];
               const card = pm?.card;
               const billing = pm?.billing_details;
-              const addr = billing?.address || cust.address;
-              // Build CSV
+              const addr = billing?.address || cust.address || {};
+              // Build CSV with exact Zoho Billing field names
               const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","id","Email","Customer Name"];
               const row = [
-                pm?.id || "", card?.last4 || "",
-                card?.exp_month?.toString().padStart(2, "0") || "", card?.exp_year?.toString() || "",
-                card?.brand || "", card?.funding || "credit",
-                addr?.line1 || "", addr?.city || "", addr?.state || "",
-                addr?.country || "GB", addr?.postal_code || "",
-                cust.id, cust.email || "", billing?.name || cust.name || "",
+                pm?.id || "",
+                card?.last4 || "",
+                String(card?.exp_month || "").padStart(2, "0"),
+                String(card?.exp_year || ""),
+                card?.brand || "",
+                card?.funding || "credit",
+                addr?.line1 || "",
+                addr?.city || "",
+                addr?.state || "",
+                addr?.country || "GB",
+                addr?.postal_code || "",
+                cust.id,
+                cust.email || targetEmail,
+                billing?.name || cust.name || "",
               ];
-              const csvContent = headers.join(",") + "\n" + row.map(v => v.includes(",") ? `"${v}"` : v).join(",");
-              // Return CSV as a special response the frontend can detect and download
-              return { answer: `✅ **Zoho Import CSV generated for ${targetEmail}**\n\nCustomer: ${billing?.name || cust.name || "Unknown"}\nCard: ${card?.brand || "?"} ****${card?.last4 || "????"} (exp ${card?.exp_month}/${card?.exp_year})\nAddress: ${addr?.line1 || "?"}, ${addr?.city || "?"}, ${addr?.postal_code || "?"}, ${addr?.country || "GB"}\n\n---CSV_START---\n${csvContent}\n---CSV_END---\n\nThe download should start automatically. Upload this file to Zoho Billing → Stripe Customer Import.` };
+              const csvContent = headers.join(",") + "\n" + row.map((v: string) => v.includes(",") ? `"${v}"` : v).join(",");
+              return { answer: `✅ **Zoho Import CSV generated for ${targetEmail}**\n\nCustomer: ${billing?.name || cust.name || "Unknown"}\nCard: ${card?.brand || "?"} ****${card?.last4 || "????"} (exp ${card?.exp_month}/${card?.exp_year})\nAddress: ${addr?.line1 || "?"}, ${addr?.city || "?"}, ${addr?.postal_code || "?"}, ${addr?.country || "GB"}\nStripe ID: ${cust.id}\nPayment Method: ${pm?.id || "none"}\n\nClick the green button below to download the CSV file.\n\n---CSV_START---\n${csvContent}\n---CSV_END---\n` };
             } else {
               return { answer: `❌ Customer with email **${targetEmail}** was not found in Stripe. Please check the email address and try again.` };
             }
           }
-        } catch (e) {
+        } catch (e: any) {
+          console.error("[ZOHO CSV SHORTCUT ERROR]", e?.message || e);
           // Fall through to normal AI response
         }
       }
