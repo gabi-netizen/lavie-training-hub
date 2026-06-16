@@ -441,6 +441,13 @@ export default function OpeningDashboard() {
   // ── Add Agent modal (admin only) ──
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [newAgentName, setNewAgentName] = useState("");
+  const addAgentMutation = trpc.openingDashboard.upsertAgentDailyHours.useMutation({
+    onSuccess: () => {
+      utils.openingDashboard.getAgentData.invalidate();
+      setNewAgentName("");
+      setShowAddAgent(false);
+    },
+  });
   // ── Admin check ──
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -1322,15 +1329,7 @@ export default function OpeningDashboard() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newAgentName.trim()) {
                   const today = new Date().toISOString().slice(0, 10);
-                  fetch("/api/trpc/openingDashboard.upsertAgentDailyHours", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ agentName: newAgentName.trim(), date: today, hoursTracked: 0 }),
-                  }).then(() => {
-                    utils.openingDashboard.getAgentData.invalidate();
-                    setNewAgentName("");
-                    setShowAddAgent(false);
-                  });
+                  addAgentMutation.mutate({ agentName: newAgentName.trim(), date: today, hoursTracked: 0 });
                 }
               }}
             />
@@ -1345,20 +1344,12 @@ export default function OpeningDashboard() {
                 onClick={() => {
                   if (!newAgentName.trim()) return;
                   const today = new Date().toISOString().slice(0, 10);
-                  fetch("/api/trpc/openingDashboard.upsertAgentDailyHours", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ agentName: newAgentName.trim(), date: today, hoursTracked: 0 }),
-                  }).then(() => {
-                    utils.openingDashboard.getAgentData.invalidate();
-                    setNewAgentName("");
-                    setShowAddAgent(false);
-                  });
+                  addAgentMutation.mutate({ agentName: newAgentName.trim(), date: today, hoursTracked: 0 });
                 }}
-                disabled={!newAgentName.trim()}
+                disabled={!newAgentName.trim() || addAgentMutation.isPending}
                 className="px-4 py-2 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Agent
+                {addAgentMutation.isPending ? "Adding..." : "Add Agent"}
               </button>
             </div>
           </div>
