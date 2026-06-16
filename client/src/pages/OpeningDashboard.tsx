@@ -438,6 +438,9 @@ export default function OpeningDashboard() {
   const [editHoursAgent, setEditHoursAgent] = useState<string | null>(null);
   // ── Edit trials override modal (admin only) ──
   const [editTrialsAgent, setEditTrialsAgent] = useState<{ agentName: string; currentTrials: number } | null>(null);
+  // ── Add Agent modal (admin only) ──
+  const [showAddAgent, setShowAddAgent] = useState(false);
+  const [newAgentName, setNewAgentName] = useState("");
   // ── Admin check ──
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -846,6 +849,15 @@ export default function OpeningDashboard() {
             >
               Reset
             </button>
+            {/* Add Agent (admin only) */}
+            {isAdmin && (
+              <button
+                onClick={() => setShowAddAgent(true)}
+                className="px-4 py-1.5 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+              >
+                + Add Agent
+              </button>
+            )}
           </div>
         </div>
 
@@ -1285,6 +1297,72 @@ export default function OpeningDashboard() {
             setEditTrialsAgent(null);
           }}
         />
+      )}
+      {/* ── Add Agent Modal (Admin only) ── */}
+      {showAddAgent && isAdmin && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAddAgent(false)}>
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 text-lg">Add Agent</h3>
+              <button onClick={() => setShowAddAgent(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Enter the agent's full name. They will appear in the Opening Dashboard immediately.</p>
+            <input
+              type="text"
+              value={newAgentName}
+              onChange={(e) => setNewAgentName(e.target.value)}
+              placeholder="e.g. Bethany Hunt"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newAgentName.trim()) {
+                  const today = new Date().toISOString().slice(0, 10);
+                  fetch("/api/trpc/openingDashboard.upsertAgentDailyHours", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ agentName: newAgentName.trim(), date: today, hoursTracked: 0 }),
+                  }).then(() => {
+                    utils.openingDashboard.getAgentData.invalidate();
+                    setNewAgentName("");
+                    setShowAddAgent(false);
+                  });
+                }
+              }}
+            />
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => setShowAddAgent(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!newAgentName.trim()) return;
+                  const today = new Date().toISOString().slice(0, 10);
+                  fetch("/api/trpc/openingDashboard.upsertAgentDailyHours", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ agentName: newAgentName.trim(), date: today, hoursTracked: 0 }),
+                  }).then(() => {
+                    utils.openingDashboard.getAgentData.invalidate();
+                    setNewAgentName("");
+                    setShowAddAgent(false);
+                  });
+                }}
+                disabled={!newAgentName.trim()}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Agent
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
