@@ -1399,14 +1399,14 @@ export const managerRouter = router({
               const billing = pm?.billing_details;
               const addr = billing?.address || cust.address;
               // Build CSV
-              const headers = ["Customer ID","Customer Email","Stripe Customer ID","Card Last Four Digits","Name on Card","Expiry Month","Expiry Year","Card Type","Card Address Line1","Card Address City","Card Address State","Address Country","Card Address Zip"];
+              const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","Customer ID","Customer Email","Customer Name"];
               const row = [
-                cust.id, cust.email || "", cust.id,
-                card?.last4 || "", billing?.name || cust.name || "",
+                pm?.id || "", card?.last4 || "",
                 card?.exp_month?.toString().padStart(2, "0") || "", card?.exp_year?.toString() || "",
-                card?.brand || "",
+                card?.brand || "", card?.funding || "credit",
                 addr?.line1 || "", addr?.city || "", addr?.state || "",
                 addr?.country || "GB", addr?.postal_code || "",
+                cust.id, cust.email || "", billing?.name || cust.name || "",
               ];
               const csvContent = headers.join(",") + "\n" + row.map(v => v.includes(",") ? `"${v}"` : v).join(",");
               // Return CSV as a special response the frontend can detect and download
@@ -1637,8 +1637,8 @@ When the user asks to "generate zoho import" or "download csv" or "zoho csv" for
 3. ALWAYS include a CSV block in EXACTLY this format (the frontend uses these markers to show a download button):
 
 ---CSV_START---
-Customer ID,Customer Email,Stripe Customer ID,Card Last Four Digits,Name on Card,Expiry Month,Expiry Year,Card Type,Card Address Line1,Card Address City,Card Address State,Address Country,Card Address Zip
-[cus_id],[email],[cus_id],[last4],[name],[exp_month],[exp_year],[brand],[line1],[city],[state],[country],[postal_code]
+Card ID,Card Last4,Card Exp Month,Card Exp Year,Card Brand,Card Funding,Card Address Line1,Card Address City,Card Address State,Card Address Country,Card Address Zip,Customer ID,Customer Email,Customer Name
+[pm_xxx],[last4],[exp_month],[exp_year],[brand],credit,[line1],[city],[state],[country],[postal_code],[cus_xxx],[email],[name]
 ---CSV_END---
 
 IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own lines. Without them, the download button will NOT appear. ALWAYS include them when the user asks for zoho import/csv.`,
