@@ -1399,7 +1399,7 @@ export const managerRouter = router({
               const billing = pm?.billing_details;
               const addr = billing?.address || cust.address;
               // Build CSV
-              const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","Customer ID","Customer Email","Customer Name"];
+              const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","id","Email","Customer Name"];
               const row = [
                 pm?.id || "", card?.last4 || "",
                 card?.exp_month?.toString().padStart(2, "0") || "", card?.exp_year?.toString() || "",
@@ -1637,7 +1637,7 @@ When the user asks to "generate zoho import" or "download csv" or "zoho csv" for
 3. ALWAYS include a CSV block in EXACTLY this format (the frontend uses these markers to show a download button):
 
 ---CSV_START---
-Card ID,Card Last4,Card Exp Month,Card Exp Year,Card Brand,Card Funding,Card Address Line1,Card Address City,Card Address State,Card Address Country,Card Address Zip,Customer ID,Customer Email,Customer Name
+Card ID,Card Last4,Card Exp Month,Card Exp Year,Card Brand,Card Funding,Card Address Line1,Card Address City,Card Address State,Card Address Country,Card Address Zip,id,Email,Customer Name
 [pm_xxx],[last4],[exp_month],[exp_year],[brand],credit,[line1],[city],[state],[country],[postal_code],[cus_xxx],[email],[name]
 ---CSV_END---
 
