@@ -471,6 +471,7 @@ export default function ContactCard() {
   // Tab state
   const [centerTopTab, setCenterTopTab] = useState<"history" | "transactions" | "shipments" | "notes">("history");
   const [centerBottomTab, setCenterBottomTab] = useState<"documents" | "activities" | "cloudtalk" | "privacy">("documents");
+  const [transactionIdx, setTransactionIdx] = useState(0);
 
   const { data: cloudTalkHistory, isLoading: historyLoading } = trpc.contacts.callHistory.useQuery(
     { phone: contact?.phone ?? "", limit: 20 },
@@ -1664,162 +1665,74 @@ export default function ContactCard() {
                       <p className="text-sm font-medium text-gray-800">No transactions yet</p>
                       <p className="text-xs mt-1 text-gray-600">Subscription data will appear here once synced from Zoho Billing</p>
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-5 max-h-[420px] overflow-y-auto pr-1">
-                      {clientTransactions.map((sub: any, idx: number) => {
-                        const statusBadge = (() => {
-                          const s = (sub.status ?? "").toLowerCase();
-                          if (s === "live") return "bg-green-100 text-green-800 border-green-200";
-                          if (s === "future") return "bg-blue-100 text-blue-800 border-blue-200";
-                          if (s === "cancelled") return "bg-red-100 text-red-800 border-red-200";
-                          if (s === "dunning") return "bg-orange-100 text-orange-800 border-orange-200";
-                          if (s === "unpaid") return "bg-yellow-100 text-yellow-800 border-yellow-200";
-                          return "bg-gray-100 text-gray-800 border-gray-200";
-                        })();
-
-                        const cycles = sub.billingCycles;
-                        const completed = sub.cyclesCompleted ?? 0;
-                        const remaining = cycles != null ? cycles - completed : null;
-                        const allPaid = cycles != null && completed >= cycles;
-
-                        let products: { name: string; qty: number }[] = [];
-                        if (sub.products) {
-                          try {
-                            const raw = typeof sub.products === "string" ? JSON.parse(sub.products) : sub.products;
-                            if (typeof raw === "object" && raw !== null) {
-                              products = Object.entries(raw as Record<string, unknown>).map(([name, qty]) => ({
-                                name,
-                                qty: Number(qty),
-                              }));
-                            }
-                          } catch {}
+                  ) : ((() => {
+                    const currentTx = clientTransactions[transactionIdx] || clientTransactions[0];
+                    if (!currentTx) return null;
+                    const txStatus = (currentTx.status ?? "").toLowerCase();
+                    const txStatusBadge = txStatus === "live" ? "bg-green-100 text-green-800 border-green-200" :
+                      txStatus === "future" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                      txStatus === "cancelled" ? "bg-red-100 text-red-800 border-red-200" :
+                      txStatus === "dunning" ? "bg-orange-100 text-orange-800 border-orange-200" :
+                      txStatus === "unpaid" ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
+                      "bg-gray-100 text-gray-800 border-gray-200";
+                    const txCycles = currentTx.billingCycles;
+                    const txCompleted = currentTx.cyclesCompleted ?? 0;
+                    const txRemaining = txCycles != null ? txCycles - txCompleted : null;
+                    const txAllPaid = txCycles != null && txCompleted >= txCycles;
+                    let txProducts: { name: string; qty: number }[] = [];
+                    if (currentTx.products) {
+                      try {
+                        const raw = typeof currentTx.products === "string" ? JSON.parse(currentTx.products) : currentTx.products;
+                        if (typeof raw === "object" && raw !== null) {
+                          txProducts = Object.entries(raw as Record<string, unknown>).map(([name, qty]) => ({ name, qty: Number(qty) }));
                         }
-
-                        const fmtDate = (d: string | Date | null | undefined) =>
-                          d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
-
-                        const fmtAmount = (v: string | number | null | undefined) =>
-                          v != null && v !== "" ? `£${Number(v).toFixed(2)}` : "—";
-
-                        return (
-                          <div
-                            key={sub.subscriptionId}
-                            className="rounded-xl border-2 border-gray-900 bg-white shadow-sm overflow-hidden"
-                          >
-                            {/* Card header */}
-                            <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm font-bold text-gray-800">
-                                  {sub.planName || "Subscription"}
-                                </span>
-                                {sub.subscriptionNumber && (
-                                  <span className="text-xs text-gray-600 font-mono">{sub.subscriptionNumber}</span>
-                                )}
-                              </div>
-                              <span
-                                className={cn(
-                                  "px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border",
-                                  statusBadge
-                                )}
-                              >
-                                {sub.status}
-                              </span>
-                            </div>
-
-                            {/* Card body */}
-                            <div className="p-5">
-                              <div
-                                className="grid gap-x-6 gap-y-3"
-                                style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-                              >
-                                {/* Row 1: Deposit | Recurring | Total Value */}
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Deposit</p>
-                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount((Number(sub.setupFee) || 0) + (Number(sub.recurringAmount ?? sub.amount) || 0))}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Per Cycle</p>
-                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount(sub.recurringAmount ?? sub.amount)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Total Value</p>
-                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount(sub.totalAmount)}</p>
-                                </div>
-
-                                {/* Row 2: Payment Status | Next Billing | Last Billed */}
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Payment Status</p>
-                                  {allPaid ? (
-                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
-                                      <CheckCircle2 size={13} /> All Paid
-                                    </span>
-                                  ) : cycles != null ? (
-                                    <span className="text-xs font-semibold text-gray-800">
-                                      {completed}/{cycles} paid
-                                      {remaining != null && remaining > 0 && (
-                                        <span className="ml-1 text-gray-600 font-normal">({remaining} remaining)</span>
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs text-gray-600">Ongoing</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Next Billing</p>
-                                  <p className="text-sm text-gray-800">{fmtDate(sub.nextBillingOn)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Last Billed</p>
-                                  <p className="text-sm text-gray-800">{fmtDate(sub.lastBilledOn)}</p>
-                                </div>
-
-                                {/* Row 3: Created | Activated | Salesperson */}
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Created</p>
-                                  <p className="text-sm text-gray-800">{fmtDate(sub.createdOn)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Activated</p>
-                                  <p className="text-sm text-gray-800">{fmtDate(sub.activatedOn)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Salesperson</p>
-                                  <p className="text-sm text-gray-800">{sub.salesPerson || "—"}</p>
-                                </div>
-
-                                {/* Row 4: Campaign (full width) */}
-                                {sub.campaignId && (
-                                  <div style={{ gridColumn: "1 / -1" }}>
-                                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Campaign</p>
-                                    <p className="text-sm text-gray-800">{sub.campaignId}</p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Products breakdown */}
-                              {products.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-gray-900">
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">Products ({products.reduce((sum, p) => sum + p.qty, 0)} items)</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {products.map((p) => (
-                                      <span
-                                        key={p.name}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-gray-800"
-                                      >
-                                        <Package size={11} className="text-blue-500" />
-                                        {p.name}
-                                        <span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span>
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                      } catch {}
+                    }
+                    const txFmtDate = (d: string | Date | null | undefined) => d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "\u2014";
+                    const txFmtAmount = (v: string | number | null | undefined) => v != null && v !== "" ? `\u00a3${Number(v).toFixed(2)}` : "\u2014";
+                    return (
+                      <div>
+                        {clientTransactions.length > 1 && (
+                          <div className="flex items-center justify-between mb-3">
+                            <button onClick={() => setTransactionIdx(Math.max(0, transactionIdx - 1))} disabled={transactionIdx === 0} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"><ChevronLeft size={16} /> Previous</button>
+                            <span className="text-sm font-bold text-black">Transaction {transactionIdx + 1} of {clientTransactions.length}</span>
+                            <button onClick={() => setTransactionIdx(Math.min(clientTransactions.length - 1, transactionIdx + 1))} disabled={transactionIdx === clientTransactions.length - 1} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100">Next <ChevronRight size={16} /></button>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
+                        <div className="rounded-xl border-2 border-gray-900 bg-white shadow-sm overflow-hidden">
+                          <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-900">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-bold text-black">{currentTx.planName || "Plan"}</span>
+                              {currentTx.subscriptionNumber && <span className="text-xs text-black font-mono">{currentTx.subscriptionNumber}</span>}
+                            </div>
+                            <span className={cn("px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border", txStatusBadge)}>{currentTx.status}</span>
+                          </div>
+                          <div className="p-5">
+                            <div className="grid gap-x-6 gap-y-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Deposit</p><p className="text-sm font-semibold text-black">{txFmtAmount((Number(currentTx.setupFee) || 0) + (Number(currentTx.recurringAmount ?? currentTx.amount) || 0))}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Per Cycle</p><p className="text-sm font-semibold text-black">{txFmtAmount(currentTx.recurringAmount ?? currentTx.amount)}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Total Value</p><p className="text-sm font-semibold text-black">{txFmtAmount(currentTx.totalAmount)}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Payment Status</p>{txAllPaid ? <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700"><CheckCircle2 size={13} /> All Paid</span> : txCycles != null ? <span className="text-xs font-semibold text-black">{txCompleted}/{txCycles} paid{txRemaining != null && txRemaining > 0 && <span className="ml-1 text-black font-normal">({txRemaining} remaining)</span>}</span> : <span className="text-xs text-black">Ongoing</span>}</div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Next Billing</p><p className="text-sm text-black">{txFmtDate(currentTx.nextBillingOn)}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Last Billed</p><p className="text-sm text-black">{txFmtDate(currentTx.lastBilledOn)}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Created</p><p className="text-sm text-black">{txFmtDate(currentTx.createdOn)}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Activated</p><p className="text-sm text-black">{txFmtDate(currentTx.activatedOn)}</p></div>
+                              <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Salesperson</p><p className="text-sm font-bold text-black">{currentTx.salesPerson || "\u2014"}</p></div>
+                              {currentTx.campaignId && <div style={{ gridColumn: "1 / -1" }}><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Campaign</p><p className="text-sm text-black">{currentTx.campaignId}</p></div>}
+                            </div>
+                            {txProducts.length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-gray-900">
+                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products ({txProducts.reduce((s, p) => s + p.qty, 0)} items)</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {txProducts.map((p) => <span key={p.name} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-black"><Package size={11} className="text-blue-500" />{p.name}<span className="ml-0.5 font-bold text-blue-700">\u00d7{p.qty}</span></span>)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })())}
                 </div>
               )}
 
