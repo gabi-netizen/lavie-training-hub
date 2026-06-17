@@ -223,11 +223,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Total</div>
-          <div className="text-2xl font-bold text-slate-900">{summary.total}</div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="bg-white border border-green-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-1">Live</div>
           <div className="text-2xl font-bold text-green-800">{summary.live}</div>
@@ -236,16 +232,12 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           <div className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-1">Decline</div>
           <div className="text-2xl font-bold text-red-800">{summary.dunning}</div>
         </div>
-        <div className="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-slate-800 uppercase tracking-wide mb-1">Cancelled</div>
-          <div className="text-2xl font-bold text-slate-800">{summary.cancelled}</div>
-        </div>
         <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-sm">
           <div className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-1">Future</div>
           <div className="text-2xl font-bold text-blue-800">{summary.future}</div>
         </div>
         <div className="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-slate-800 uppercase tracking-wide mb-1">Expired</div>
+          <div className="text-xs font-semibold text-slate-800 uppercase tracking-wide mb-1">End Installments</div>
           <div className="text-2xl font-bold text-slate-800">{summary.expired}</div>
         </div>
         <div className="bg-white border border-orange-200 rounded-xl p-4 shadow-sm">
