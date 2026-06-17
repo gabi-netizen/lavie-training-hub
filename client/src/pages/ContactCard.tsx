@@ -1735,7 +1735,7 @@ export default function ContactCard() {
                                 {/* Row 1: Deposit | Recurring | Total Value */}
                                 <div>
                                   <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Deposit</p>
-                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount(sub.setupFee)}</p>
+                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount((Number(sub.setupFee) || 0) + (Number(sub.recurringAmount ?? sub.amount) || 0))}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Per Cycle</p>
