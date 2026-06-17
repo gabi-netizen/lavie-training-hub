@@ -1665,8 +1665,8 @@ export default function ContactCard() {
                       <p className="text-xs mt-1 text-gray-600">Subscription data will appear here once synced from Zoho Billing</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-4">
-                      {clientTransactions.map((sub: any) => {
+                    <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-1">
+                      {clientTransactions.map((sub: any, idx: number) => {
                         const statusBadge = (() => {
                           const s = (sub.status ?? "").toLowerCase();
                           if (s === "live") return "bg-green-100 text-green-800 border-green-200";

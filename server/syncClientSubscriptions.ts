@@ -180,7 +180,7 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
     console.log(`[ZohoSync] Fetched ${allSubscriptions.length} total subscriptions from Zoho.`);
 
     // Filter by retention agents (Rob, Guy, James)
-    const RETENTION_AGENTS = ["rob", "guy", "james", "james huxley"];
+    const RETENTION_AGENTS = ["rob", "guy", "james", "james huxley", "mitch"];
     let filtered = allSubscriptions.filter(
       (sub) => RETENTION_AGENTS.includes((sub.salesperson_name || "").toLowerCase())
     );
