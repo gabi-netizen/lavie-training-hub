@@ -1688,6 +1688,14 @@ export default function ContactCard() {
                         }
                       } catch {}
                     }
+                    // Count total products from planName (e.g. "1x Matinika +2x Ashkara + 1x Oulala" → 1+2+1=4)
+                    const txProductCount = (() => {
+                      const plan = currentTx.planName || "";
+                      const matches = plan.match(/(\d+)\s*x\s/gi);
+                      if (!matches || matches.length === 0) return 0;
+                      return matches.reduce((sum, m) => sum + parseInt(m), 0);
+                    })();
+                    const txAvgPerProduct = txProductCount > 0 && currentTx.totalAmount ? Number(currentTx.totalAmount) / txProductCount : null;
                     const txFmtDate = (d: string | Date | null | undefined) => d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "\u2014";
                     const txFmtAmount = (v: string | number | null | undefined) => v != null && v !== "" ? `\u00a3${Number(v).toFixed(2)}` : "\u2014";
                     return (
@@ -1712,6 +1720,7 @@ export default function ContactCard() {
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Deposit</p><p className="text-sm font-semibold text-black">{txFmtAmount((Number(currentTx.setupFee) || 0) + (Number(currentTx.recurringAmount ?? currentTx.amount) || 0))}</p></div>
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Per Cycle</p><p className="text-sm font-semibold text-black">{txFmtAmount(currentTx.recurringAmount ?? currentTx.amount)}</p></div>
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Total Value</p><p className="text-sm font-semibold text-black">{txFmtAmount(currentTx.totalAmount)}</p></div>
+                              {txAvgPerProduct != null && <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Avg/Product</p><p className="text-sm font-semibold text-black">£{txAvgPerProduct.toFixed(2)} <span className="text-xs font-normal text-black">({txProductCount} items)</span></p></div>}
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Payment Status</p>{txAllPaid ? <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700"><CheckCircle2 size={13} /> All Paid</span> : txCycles != null ? <span className="text-xs font-semibold text-black">{txCompleted}/{txCycles} paid{txRemaining != null && txRemaining > 0 && <span className="ml-1 text-black font-normal">({txRemaining} remaining)</span>}</span> : <span className="text-xs text-black">Ongoing</span>}</div>
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Next Billing</p><p className="text-sm text-black">{txFmtDate(currentTx.nextBillingOn)}</p></div>
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Last Billed</p><p className="text-sm text-black">{txFmtDate(currentTx.lastBilledOn)}</p></div>
@@ -1720,16 +1729,10 @@ export default function ContactCard() {
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Salesperson</p><p className="text-sm font-bold text-black">{currentTx.salesPerson || "\u2014"}</p></div>
                               {currentTx.campaignId && <div style={{ gridColumn: "1 / -1" }}><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Campaign</p><p className="text-sm text-black">{currentTx.campaignId}</p></div>}
                             </div>
-                            {(txProducts.length > 0 || currentTx.planName) && (
+                            {currentTx.planName && (
                               <div className="mt-4 pt-4 border-t border-gray-900">
-                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products{txProducts.length > 0 ? ` (${txProducts.reduce((s, p) => s + p.qty, 0)} items)` : ""}</p>
-                                {txProducts.length > 0 ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    {txProducts.map((p) => <span key={p.name} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-black"><Package size={11} className="text-blue-500" />{p.name}<span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span></span>)}
-                                  </div>
-                                ) : currentTx.planName ? (
-                                  <p className="text-sm text-black">{currentTx.planName}</p>
-                                ) : null}
+                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products</p>
+                                <p className="text-sm font-medium text-black">{currentTx.planName}</p>
                               </div>
                             )}
                           </div>
