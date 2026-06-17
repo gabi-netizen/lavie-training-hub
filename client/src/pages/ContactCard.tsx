@@ -2208,8 +2208,8 @@ export default function ContactCard() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <CreditCard size={18} className="text-indigo-600" />
-                <span className="text-sm font-bold text-gray-800">Subscriptions</span>
-                <span className="ml-auto text-xs font-semibold text-gray-500">{contactSubscriptions.length}</span>
+                <span className="text-sm font-black text-black">Plans</span>
+                <span className="ml-auto text-xs font-bold text-black">{contactSubscriptions.length}</span>
               </div>
               <div className="flex flex-col gap-2.5">
                 {contactSubscriptions.map((sub) => (
@@ -2227,7 +2227,7 @@ export default function ContactCard() {
                         {sub.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-gray-600">
+                    <div className="flex items-center gap-3 text-[11px] text-black">
                       <span>£{parseFloat(sub.amount || "0").toFixed(2)}/cycle</span>
                       {sub.billingCycles && (
                         <span>{sub.cyclesCompleted ?? 0}/{sub.billingCycles} paid</span>
