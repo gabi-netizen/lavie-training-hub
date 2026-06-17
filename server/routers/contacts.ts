@@ -1577,24 +1577,28 @@ export const contactsRouter = router({
           callType: callAnalyses.callType,
           analysisJson: callAnalyses.analysisJson,
           customerName: callAnalyses.customerName,
+          overallScore: callAnalyses.overallScore,
+          durationSeconds: callAnalyses.durationSeconds,
         })
         .from(callAnalyses)
-        .where(sql`(${sql.join(conditions, sql` OR `)}) AND ${callAnalyses.status} = 'done' AND ${callAnalyses.analysisJson} IS NOT NULL`)
+        .where(sql`(${sql.join(conditions, sql` OR `)}) AND ${callAnalyses.status} = 'done'`)
         .orderBy(sql`${callAnalyses.callDate} DESC`)
         .limit(20);
 
       const notes = rows
         .map((row) => {
           try {
-            const report = JSON.parse(row.analysisJson!);
-            if (!report.retentionNotes) return null;
+            const report = row.analysisJson ? JSON.parse(row.analysisJson) : {};
             return {
               id: row.id,
               repName: row.repName,
               callDate: row.callDate ? row.callDate.toISOString() : null,
               callType: row.callType,
               customerName: row.customerName,
-              retentionNotes: report.retentionNotes,
+              overallScore: row.overallScore ?? report.overallScore ?? null,
+              durationSeconds: row.durationSeconds,
+              retentionNotes: report.retentionNotes || null,
+              summary: report.summary || report.managerReview?.title || null,
             };
           } catch { return null; }
         })
