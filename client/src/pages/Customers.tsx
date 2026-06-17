@@ -73,6 +73,8 @@ interface Contact {
   callbackAt?: Date | null;
   address?: string | null;
   department?: string | null;
+  naCount?: number | null;
+  lastNaAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1153,6 +1155,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[140px]">Agent</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[200px]">Agent Email</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Source</th>
+                  <th className="text-center px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[80px]">NA</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-700 uppercase tracking-wide w-[110px]">Lead Date</th>
                   <th className="px-4 py-3.5 w-[60px]"></th>
                 </tr>
@@ -1194,6 +1197,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                       <span className="text-xs text-gray-800 font-mono">{c.agentEmail ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3.5"><span className="text-sm text-gray-700">{c.source ?? "—"}</span></td>
+                    <td className="px-4 py-3.5 text-center">
+                      {(c.naCount && c.naCount > 0) ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-sm font-bold text-red-600">{c.naCount}</span>
+                          {c.lastNaAt && <span className="text-[10px] text-gray-700">{new Date(c.lastNaAt).toLocaleDateString("en-GB")} {new Date(c.lastNaAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>}
+                        </div>
+                      ) : <span className="text-sm text-gray-400">—</span>}
+                    </td>
                     <td className="px-4 py-3.5"><span className="text-xs text-gray-800">{c.leadDate ? new Date(c.leadDate).toLocaleDateString("en-GB") : "—"}</span></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1.5">
