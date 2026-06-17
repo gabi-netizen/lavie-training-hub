@@ -1665,7 +1665,7 @@ export default function ContactCard() {
                       <p className="text-xs mt-1 text-gray-600">Subscription data will appear here once synced from Zoho Billing</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-1">
+                    <div className="flex flex-col gap-5 max-h-[420px] overflow-y-auto pr-1">
                       {clientTransactions.map((sub: any, idx: number) => {
                         const statusBadge = (() => {
                           const s = (sub.status ?? "").toLowerCase();
@@ -1704,7 +1704,7 @@ export default function ContactCard() {
                         return (
                           <div
                             key={sub.subscriptionId}
-                            className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                            className="rounded-xl border-2 border-gray-900 bg-white shadow-sm overflow-hidden"
                           >
                             {/* Card header */}
                             <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
@@ -1798,8 +1798,8 @@ export default function ContactCard() {
 
                               {/* Products breakdown */}
                               {products.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">Products</p>
+                                <div className="mt-4 pt-4 border-t border-gray-900">
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">Products ({products.reduce((sum, p) => sum + p.qty, 0)} items)</p>
                                   <div className="flex flex-wrap gap-2">
                                     {products.map((p) => (
                                       <span
@@ -1808,9 +1808,7 @@ export default function ContactCard() {
                                       >
                                         <Package size={11} className="text-blue-500" />
                                         {p.name}
-                                        {p.qty > 1 && (
-                                          <span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span>
-                                        )}
+                                        <span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span>
                                       </span>
                                     ))}
                                   </div>
