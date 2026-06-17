@@ -74,6 +74,14 @@ interface CallAnalysisReport {
   saleQualityQuote?: string | null;
   cancelMentionCount?: number | null;
   moneyOverValueCount?: number | null;
+  // Retention Notes (auto-generated call summary)
+  retentionNotes?: {
+    rapport: string | null;
+    currentRoutine: string | null;
+    productsToSend: string | null;
+    financials: string | null;
+    nextActions: string | null;
+  } | null;
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -367,6 +375,49 @@ export default function SharedCallView() {
                       <p className="text-sm text-gray-700"><span className="font-bold text-purple-700">What you should have done: </span>{item.suggestion}</p>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── 5b. RETENTION NOTES ── */}
+            {report.retentionNotes && (
+              <Card className="bg-white border-gray-200 rounded-xl shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-gray-800 flex items-center gap-2">
+                    <span className="text-lg">{"\uD83D\uDCDD"}</span> Retention Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {report.retentionNotes.rapport && (
+                    <div className="border-l-4 border-teal-400 pl-4 py-1">
+                      <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-1">Rapport & Personal Info</p>
+                      <p className="text-sm text-gray-800">{report.retentionNotes.rapport}</p>
+                    </div>
+                  )}
+                  {report.retentionNotes.currentRoutine && (
+                    <div className="border-l-4 border-indigo-400 pl-4 py-1">
+                      <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide mb-1">Current Routine</p>
+                      <p className="text-sm text-gray-800">{report.retentionNotes.currentRoutine}</p>
+                    </div>
+                  )}
+                  {report.retentionNotes.productsToSend && (
+                    <div className="border-l-4 border-purple-400 pl-4 py-1">
+                      <p className="text-xs font-bold text-purple-700 uppercase tracking-wide mb-1">Products to Send</p>
+                      <p className="text-sm text-gray-800 whitespace-pre-line">{report.retentionNotes.productsToSend}</p>
+                    </div>
+                  )}
+                  {report.retentionNotes.financials && (
+                    <div className="border-l-4 border-green-400 pl-4 py-1">
+                      <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">Financials</p>
+                      <p className="text-sm text-gray-800">{report.retentionNotes.financials}</p>
+                    </div>
+                  )}
+                  {report.retentionNotes.nextActions && (
+                    <div className="border-l-4 border-orange-400 pl-4 py-1">
+                      <p className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-1">Next Actions</p>
+                      <p className="text-sm text-gray-800">{report.retentionNotes.nextActions}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

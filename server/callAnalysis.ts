@@ -814,6 +814,14 @@ export interface CallAnalysisReport {
     feedback: string;      // 3-4 sentences: customer state, what happened, why rep's approach was wrong
     suggestion: string;    // "You should have..." + technique name + exact words in quotes
   }[] | null;
+  // ─── RETENTION NOTES (auto-generated call summary for retention agents) ───
+  retentionNotes?: {
+    rapport: string | null;           // Personal info, rapport topics, things discussed outside products
+    currentRoutine: string | null;    // How customer currently uses products
+    productsToSend: string | null;    // What was agreed to send (quantities, sizes, specific products)
+    financials: string | null;        // Deposit, monthly cost, total, installment plan details
+    nextActions: string | null;       // Follow-up actions (check-in date, emails to send, etc.)
+  } | null;
 }
 
 // ─── CALL TYPE CONTEXT BUILDERS ───────────────────────────────────────────────
@@ -1206,6 +1214,23 @@ ${isRetentionLongCall ? `
   - suggestion: MUST start with 'You should have', name the specific technique if applicable (e.g. 'Magic Wand question', 'Silence after close', 'High anchor'), then give the EXACT alternative words in quotes that the rep should have said, then briefly explain why this works better
   - Write as a senior call center manager who has listened to this recording 3 times and is giving detailed, face-to-face coaching
   - Be 100% specific to THIS call — reference the customer by name, reference specific products/prices mentioned, reference the exact moment in the conversation. NEVER give generic advice that could apply to any call.
+
+  "retentionNotes": {
+    "rapport": "<Personal info about the customer: age, family situation, hobbies, personality traits, things discussed outside of products. Include any emotional context (e.g. 'retired in August 2025, cares for husband diagnosed with dementia'). null if no personal info shared>",
+    "currentRoutine": "<How the customer currently uses products: which products, how often, morning/evening, any issues. null if not discussed>",
+    "productsToSend": "<Exact products agreed to send with quantities and sizes (e.g. '6x Ashkara 15ml DROPPERS, 3x Oulala 30ml BLACK BOTTLES'). Include any special shipping notes (e.g. 'SHIP WHEN READY'). Also include sample sizes if mentioned. null if no products discussed>",
+    "financials": "<Deposit amount, monthly payment, total value, number of installments, which card to use. Include any special payment instructions (e.g. 'DO NOT USE EXISTING CARD ENDING 0471 FOR DEPOSIT'). null if no financials discussed>",
+    "nextActions": "<Follow-up actions: when to call back, emails to send, things to check. Include specific timeframes (e.g. 'Speak to Claire in 2 weeks, then 2 months'). null if no follow-up discussed>"
+  },
+
+  RULES for retentionNotes (MUST follow):
+  - Write as if you are the agent documenting the call for future reference
+  - Include SPECIFIC details: names, dates, amounts, product names, quantities
+  - Use the customer's name where relevant
+  - If a field has no relevant information from the call, set it to null
+  - For productsToSend: list EVERY product mentioned with exact quantities and sizes
+  - For financials: include ALL numbers mentioned (deposit, monthly, total, installments)
+  - For nextActions: include specific dates/timeframes, not vague "follow up later"
 ` : ''}}
 ${dealTypeBlock}${complianceRules}
 
