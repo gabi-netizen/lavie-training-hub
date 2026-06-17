@@ -1441,7 +1441,7 @@ export const managerRouter = router({
                 postal_code: billingAddr.postal_code || custAddr.postal_code || "",
               };
               // Build CSV with exact Zoho Billing field names
-              const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","id","Email","Customer Name"];
+              const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","id","Email","Card Name"];
               const row = [
                 pm?.id || "",
                 card?.last4 || "",
