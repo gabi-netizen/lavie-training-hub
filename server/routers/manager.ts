@@ -1430,7 +1430,16 @@ export const managerRouter = router({
                 }
               }
 
-              const addr = billing?.address || cust.address || {};
+              // Merge address: prefer billing address fields, fall back to customer address
+              const billingAddr = billing?.address || {};
+              const custAddr = cust.address || {};
+              const addr = {
+                line1: billingAddr.line1 || custAddr.line1 || "",
+                city: billingAddr.city || custAddr.city || "",
+                state: billingAddr.state || custAddr.state || "",
+                country: billingAddr.country || custAddr.country || "GB",
+                postal_code: billingAddr.postal_code || custAddr.postal_code || "",
+              };
               // Build CSV with exact Zoho Billing field names
               const headers = ["Card ID","Card Last4","Card Exp Month","Card Exp Year","Card Brand","Card Funding","Card Address Line1","Card Address City","Card Address State","Card Address Country","Card Address Zip","id","Email","Customer Name"];
               const row = [
@@ -1450,7 +1459,9 @@ export const managerRouter = router({
                 billing?.name || cust.name || "",
               ];
               const csvContent = headers.join(",") + "\n" + row.map((v: string) => v.includes(",") ? `"${v}"` : v).join(",");
-              return { answer: `✅ **Zoho Import CSV generated for ${targetEmail}**\n\nCustomer: ${billing?.name || cust.name || "Unknown"}\nCard: ${card?.brand || "?"} ****${card?.last4 || "????"} (exp ${card?.exp_month}/${card?.exp_year})\nAddress: ${addr?.line1 || "?"}, ${addr?.city || "?"}, ${addr?.postal_code || "?"}, ${addr?.country || "GB"}\nStripe ID: ${cust.id}\nPayment Method: ${pm?.id || "none"}\n\nClick the green button below to download the CSV file.\n\n---CSV_START---\n${csvContent}\n---CSV_END---\n` };
+              const displayName = billing?.name || cust.name || "Unknown";
+              const displayEmail = cust.email || targetEmail;
+              return { answer: `✅ **Zoho Import CSV generated for ${targetEmail}**\n\nCustomer: ${displayName}\nEmail: ${displayEmail}\nCard: ${card?.brand || "?"} ****${card?.last4 || "????"} (exp ${card?.exp_month}/${card?.exp_year})\nAddress: ${addr.line1 || "?"}, ${addr.city || "?"}, ${addr.postal_code || "?"}, ${addr.country || "GB"}\nStripe ID: ${cust.id}\nPayment Method: ${pm?.id || "none"}\n\nClick the green button below to download the CSV file.\n\n---CSV_START---\n${csvContent}\n---CSV_END---\n` };
             } else {
               return { answer: `❌ Customer with email **${targetEmail}** was not found in Stripe. Please check the email address and try again.` };
             }
