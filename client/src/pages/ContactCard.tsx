@@ -1694,9 +1694,9 @@ export default function ContactCard() {
                       <div>
                         {clientTransactions.length > 1 && (
                           <div className="flex items-center justify-between mb-3">
-                            <button onClick={() => setTransactionIdx(Math.max(0, transactionIdx - 1))} disabled={transactionIdx === 0} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"><ChevronLeft size={16} /> Previous</button>
-                            <span className="text-sm font-bold text-black">Transaction {transactionIdx + 1} of {clientTransactions.length}</span>
-                            <button onClick={() => setTransactionIdx(Math.min(clientTransactions.length - 1, transactionIdx + 1))} disabled={transactionIdx === clientTransactions.length - 1} className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100">Next <ChevronRight size={16} /></button>
+                            <button onClick={() => setTransactionIdx(Math.max(0, transactionIdx - 1))} disabled={transactionIdx === 0} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-500"><ChevronLeft size={16} /> Previous</button>
+                            <span className="px-4 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black">Transaction {transactionIdx + 1} of {clientTransactions.length}</span>
+                            <button onClick={() => setTransactionIdx(Math.min(clientTransactions.length - 1, transactionIdx + 1))} disabled={transactionIdx === clientTransactions.length - 1} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-500">Next <ChevronRight size={16} /></button>
                           </div>
                         )}
                         <div className="rounded-xl border-2 border-gray-900 bg-white shadow-sm overflow-hidden">
