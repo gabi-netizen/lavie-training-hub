@@ -1720,12 +1720,16 @@ export default function ContactCard() {
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Salesperson</p><p className="text-sm font-bold text-black">{currentTx.salesPerson || "\u2014"}</p></div>
                               {currentTx.campaignId && <div style={{ gridColumn: "1 / -1" }}><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Campaign</p><p className="text-sm text-black">{currentTx.campaignId}</p></div>}
                             </div>
-                            {txProducts.length > 0 && (
+                            {(txProducts.length > 0 || currentTx.planName) && (
                               <div className="mt-4 pt-4 border-t border-gray-900">
-                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products ({txProducts.reduce((s, p) => s + p.qty, 0)} items)</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {txProducts.map((p) => <span key={p.name} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-black"><Package size={11} className="text-blue-500" />{p.name}<span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span></span>)}
-                                </div>
+                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products{txProducts.length > 0 ? ` (${txProducts.reduce((s, p) => s + p.qty, 0)} items)` : ""}</p>
+                                {txProducts.length > 0 ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {txProducts.map((p) => <span key={p.name} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-black"><Package size={11} className="text-blue-500" />{p.name}<span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span></span>)}
+                                  </div>
+                                ) : currentTx.planName ? (
+                                  <p className="text-sm text-black">{currentTx.planName}</p>
+                                ) : null}
                               </div>
                             )}
                           </div>
