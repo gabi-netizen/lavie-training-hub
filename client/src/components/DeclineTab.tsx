@@ -5,7 +5,7 @@ import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, Refresh
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface DeclineTabProps {
-  agentName: string;
+  agentName?: string;
   onWhatsApp?: (contactId: number, phone: string, name: string) => void;
   onSms?: (contactId: number, phone: string, name: string) => void;
   onEmail?: (contactId: number, name: string, email: string) => void;
@@ -87,7 +87,7 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
   // Fetch dunning + unpaid subscriptions sorted by lastBilledOn DESC
   const { data: dunningData, isLoading: dunningLoading, isFetching: dunningFetching, refetch: refetchDunning } = trpc.billing.getMyClientsData.useQuery(
     {
-      salesperson: agentName,
+      ...(agentName ? { salesperson: agentName } : {}),
       status: "dunning",
       search: search || undefined,
       page,
@@ -99,7 +99,7 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
 
   const { data: unpaidData, isLoading: unpaidLoading, isFetching: unpaidFetching, refetch: refetchUnpaid } = trpc.billing.getMyClientsData.useQuery(
     {
-      salesperson: agentName,
+      ...(agentName ? { salesperson: agentName } : {}),
       status: "unpaid",
       search: search || undefined,
       page: 1,

@@ -564,7 +564,7 @@ export const billingRouter = router({
   getMyClientsData: protectedProcedure
     .input(
       z.object({
-        salesperson: z.string().default("Rob"),
+        salesperson: z.string().optional(),
         status: z.string().optional(),
         planType: z.string().optional(),
         search: z.string().optional(),
@@ -599,9 +599,10 @@ export const billingRouter = router({
         }
 
         // Build WHERE conditions
-        const conditions: any[] = [
-          eq(clientSubscriptions.salesPerson, input.salesperson),
-        ];
+        const conditions: any[] = [];
+        if (input.salesperson) {
+          conditions.push(eq(clientSubscriptions.salesPerson, input.salesperson));
+        }
 
         if (input.status) {
           const statusFilter = input.status.toLowerCase();
@@ -659,7 +660,7 @@ export const billingRouter = router({
           }
         }
 
-        const whereClause = and(...conditions);
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
         // Get total count for pagination
         const countResult = await db
@@ -683,8 +684,10 @@ export const billingRouter = router({
           .limit(input.perPage)
           .offset(offset);
 
-        // Get summary counts (always for the full salesperson, not filtered)
-        const agentCondition = eq(clientSubscriptions.salesPerson, input.salesperson);
+        // Get summary counts (scoped to salesperson if provided, otherwise all)
+        const agentCondition = input.salesperson
+          ? eq(clientSubscriptions.salesPerson, input.salesperson)
+          : undefined;
         const summaryResult = await db
           .select({
             total: sql<number>`COUNT(*)`,

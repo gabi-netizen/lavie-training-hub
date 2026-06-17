@@ -5,7 +5,7 @@ import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, Refresh
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface EndInstalmentTabProps {
-  agentName: string;
+  agentName?: string;
   onWhatsApp?: (contactId: number, phone: string, name: string) => void;
   onSms?: (contactId: number, phone: string, name: string) => void;
   onEmail?: (contactId: number, name: string, email: string) => void;
@@ -85,7 +85,7 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
   // Fetch expired subscriptions sorted by lastBilledOn DESC — only installments + deposits
   const { data, isLoading, isFetching, refetch } = trpc.billing.getMyClientsData.useQuery(
     {
-      salesperson: agentName,
+      ...(agentName ? { salesperson: agentName } : {}),
       status: "expired",
       planType: "installment_and_deposit",
       search: search || undefined,

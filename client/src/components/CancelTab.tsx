@@ -5,7 +5,7 @@ import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, Refresh
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface CancelTabProps {
-  agentName: string;
+  agentName?: string;
   onWhatsApp?: (contactId: number, phone: string, name: string) => void;
   onSms?: (contactId: number, phone: string, name: string) => void;
   onEmail?: (contactId: number, name: string, email: string) => void;
@@ -86,7 +86,7 @@ export function CancelTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, o
   // Fetch cancelled subscriptions sorted by cancelledDate DESC
   const { data, isLoading, isFetching, refetch } = trpc.billing.getMyClientsData.useQuery(
     {
-      salesperson: agentName,
+      ...(agentName ? { salesperson: agentName } : {}),
       status: "cancelled",
       search: search || undefined,
       page,

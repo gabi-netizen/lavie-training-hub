@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,6 @@ import {
   Mail,
   ChevronDown,
   ChevronUp,
-  FileText,
   CheckSquare,
   Square,
   X,
@@ -45,56 +44,52 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
+  MessageCircle,
+  MessageSquare,
+  Calendar,
+  Send,
 } from "lucide-react";
+import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
+import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
+import { AllClientsTab } from "@/components/AllClientsTab";
+import { DeclineTab } from "@/components/DeclineTab";
+import { CancelTab } from "@/components/CancelTab";
+import { EndInstalmentTab } from "@/components/EndInstalmentTab";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Strip HTML/CSS from customer notes (for display)
 // ─────────────────────────────────────────────────────────────────────────────
 function stripHtml(text: string | null | undefined): string {
   if (!text) return "";
-  // Remove <style>...</style> blocks entirely
   let clean = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
-  // Remove HTML tags
   clean = clean.replace(/<[^>]*>/g, " ");
-  // Remove entire CSS selector lines: div.zm_XXXX..., #x_XXXX..., a[...], [style*=...] etc.
   clean = clean.replace(/(?:div\.zm_|#x_|\.[a-z])[\w_.:-]*(?:\s+[\w_.#\[\]=*"':,-]+)*/gi, "");
-  // Remove a[x-apple-data-detectors] and similar attribute selectors
   clean = clean.replace(/\w*\[[^\]]*\]/g, "");
-  // Remove [data-...] attribute selectors
   clean = clean.replace(/\[[^\]]*\]/g, "");
-  // Remove .x_NNNNReadMsgBody, .x_NNNNExternalClass, #x_NNNNoutlook patterns
   clean = clean.replace(/[.#]x_[\w]+/g, "");
-  // Remove ReadMsgBody, ExternalClass, MessageViewBody standalone
   clean = clean.replace(/ReadMsgBody/g, "");
   clean = clean.replace(/ExternalClass/g, "");
   clean = clean.replace(/MessageViewBody/g, "");
-  // Remove CSS blocks { ... }
   clean = clean.replace(/\{[^}]*\}/g, "");
-  // Remove standalone CSS element selectors (a, div, table, td, th, img, sup, p, span, font)
   clean = clean.replace(/\b(div|table|td|th|img|sup|span|font|a)\b\s*[,]/g, "");
-  // Remove css-skikae, apple-link patterns
   clean = clean.replace(/css-[\w]+/g, "");
   clean = clean.replace(/apple-link/g, "");
-  // Remove &nbsp; and other HTML entities
   clean = clean.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#?\w+;/g, " ");
-  // Remove orphaned CSS-like tokens (color:, font-size:, word-break:, etc.)
   clean = clean.replace(/[\w-]+\s*:\s*[^;,]+[;,]/g, "");
-  // Remove soft hyphens, zero-width spaces, and invisible Unicode chars
   clean = clean.replace(/[\u00AD\u200B\u200C\u200D\uFEFF\u034F]+/g, "");
-  // Remove isolated dots and hashes from leftover selectors
   clean = clean.replace(/\s[.#]\s/g, " ");
-  // Collapse multiple spaces/newlines, commas, semicolons and trim
   clean = clean.replace(/[,;]+\s*/g, " ");
   clean = clean.replace(/\s+/g, " ").trim();
   return clean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lead type badge styles — matched exactly to the Google Sheet screenshot
+// Lead type badge styles
 // ─────────────────────────────────────────────────────────────────────────────
 function getLeadTypeBadge(
   leadType: string,
-  daysSinceEvent: number
+  _daysSinceEvent: number
 ): { bg: string; text: string; label: string; rowTint: string } {
   const map: Record<string, { bg: string; text: string; label: string; rowTint: string }> = {
     "Cat to Rob":                 { bg: "bg-[#92400e]", text: "text-white", label: "Cat to Rob",                 rowTint: "bg-white" },
@@ -105,10 +100,9 @@ function getLeadTypeBadge(
     "Pre-Cycle-Decline":          { bg: "bg-[#1a1a1a]", text: "text-white", label: "Pre-Cycle-Decline",          rowTint: "bg-white" },
     "Decline Live Sub":           { bg: "bg-[#7c3aed]", text: "text-white", label: "Decline Live Sub",           rowTint: "bg-white" },
   };
-  return map[leadType] || { bg: "bg-gray-200", text: "text-gray-700", label: leadType, rowTint: "bg-white" };
+  return map[leadType] || { bg: "bg-gray-200", text: "text-gray-800", label: leadType, rowTint: "bg-white" };
 }
 
-// All available lead types for the edit dropdown
 const LEAD_TYPE_OPTIONS = [
   "Cat to Rob",
   "Pre-Cycle-Cancelled",
@@ -119,34 +113,30 @@ const LEAD_TYPE_OPTIONS = [
   "Decline Live Sub",
 ];
 
-// Lead Status — derived from assignedAgent (read-only badge)
-const LEAD_STATUS_OPTIONS = [
-  { value: "new",      label: "New",      bg: "bg-green-100",  text: "text-green-700" },
-  { value: "assigned", label: "Assigned", bg: "bg-blue-100",  text: "text-blue-700" },
-];
-
-function getLeadStatus(assignedAgent: string | null | undefined) {
-  return assignedAgent ? LEAD_STATUS_OPTIONS[1] : LEAD_STATUS_OPTIONS[0];
-}
-
-// Work Status — what the agent did with the lead (editable dropdown)
+// Work Status options
 const STATUS_OPTIONS = [
   { value: "in_progress",    label: "In Progress",    bg: "bg-yellow-100", text: "text-yellow-800" },
-  { value: "retained",       label: "Retained Sub",   bg: "bg-green-100",  text: "text-green-700" },
+  { value: "retained",       label: "Retained Sub",   bg: "bg-green-100",  text: "text-green-800" },
   { value: "done_deal",      label: "Done Deal",      bg: "bg-green-200",  text: "text-green-800" },
-  { value: "future_deal",    label: "Future Deal",    bg: "bg-indigo-100", text: "text-indigo-700" },
+  { value: "future_deal",    label: "Future Deal",    bg: "bg-indigo-100", text: "text-indigo-800" },
   { value: "dont_assign",    label: "Don't Assign",   bg: "bg-red-200",    text: "text-red-800" },
-  { value: "not_interested", label: "Not Interested", bg: "bg-red-100",    text: "text-red-600" },
-  { value: "no_answer",      label: "No Answer",      bg: "bg-orange-100", text: "text-orange-700" },
-  { value: "callback",       label: "Callback",       bg: "bg-purple-100", text: "text-purple-700" },
-  { value: "follow_up",      label: "Follow-up",      bg: "bg-sky-100",    text: "text-sky-700" },
-  { value: "whatsapp_queue", label: "WhatsApp Queue", bg: "bg-teal-100",   text: "text-teal-700" },
-  { value: "cancelled_sub",  label: "Cancelled Sub",  bg: "bg-red-100",    text: "text-red-700" },
-  { value: "archived",       label: "Archived",       bg: "bg-gray-100",   text: "text-gray-600" },
+  { value: "not_interested", label: "Not Interested", bg: "bg-red-100",    text: "text-red-800" },
+  { value: "no_answer",      label: "No Answer",      bg: "bg-orange-100", text: "text-orange-800" },
+  { value: "callback",       label: "Callback",       bg: "bg-purple-100", text: "text-purple-800" },
+  { value: "follow_up",      label: "Follow-up",      bg: "bg-sky-100",    text: "text-sky-800" },
+  { value: "whatsapp_queue", label: "WhatsApp Queue", bg: "bg-teal-100",   text: "text-teal-800" },
+  { value: "cancelled_sub",  label: "Cancelled Sub",  bg: "bg-red-100",    text: "text-red-800" },
+  { value: "archived",       label: "Archived",       bg: "bg-gray-100",   text: "text-gray-800" },
 ];
 
 function getStatusStyle(status: string) {
-  return STATUS_OPTIONS.find((s) => s.value === status) || { value: status, label: status, bg: "bg-gray-100", text: "text-gray-600" };
+  return STATUS_OPTIONS.find((s) => s.value === status) || { value: status, label: status, bg: "bg-gray-100", text: "text-gray-800" };
+}
+
+function getLeadStatus(assignedAgent: string | null | undefined) {
+  return assignedAgent
+    ? { bg: "bg-blue-100", text: "text-blue-800", label: "Assigned" }
+    : { bg: "bg-green-100", text: "text-green-800", label: "New" };
 }
 
 function formatDate(dateStr: string | null | undefined) {
@@ -168,16 +158,15 @@ function formatCurrency(amount: number | null | undefined, currency = "GBP") {
 const AGENTS = ["Guy", "Rob", "James"];
 
 const AGENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  Guy:   { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-300" },
-  Rob:   { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-300" },
-  James: { bg: "bg-fuchsia-100", text: "text-fuchsia-700", border: "border-fuchsia-300" },
+  Guy:   { bg: "bg-orange-100", text: "text-orange-800", border: "border-orange-300" },
+  Rob:   { bg: "bg-indigo-100", text: "text-indigo-800", border: "border-indigo-300" },
+  James: { bg: "bg-fuchsia-100", text: "text-fuchsia-800", border: "border-fuchsia-300" },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Notes Cell — inline note editor (for Agent Note column)
 // ─────────────────────────────────────────────────────────────────────────────
 function NotesCell({
-  managerNote,
   agentNote,
   subscriptionId,
   onSaveNote,
@@ -208,8 +197,8 @@ function NotesCell({
           title={displayText || undefined}
           className="flex items-start gap-1 w-[250px] px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm hover:border-gray-400 transition-colors"
         >
-          <span className="text-sm text-gray-700 flex-1 text-left line-clamp-2 leading-snug">
-            {displayText || <span className="text-gray-400 italic">Add note...</span>}
+          <span className="text-sm text-gray-800 flex-1 text-left line-clamp-2 leading-snug">
+            {displayText || <span className="text-gray-500 italic">Add note...</span>}
           </span>
           <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5" />
         </button>
@@ -255,11 +244,10 @@ function NotesCell({
             <div>
               {agentNote && (
                 <div className="mb-2 p-2 bg-amber-50 rounded text-sm text-amber-800 border border-amber-100">
-                  <p className="font-semibold text-amber-500 uppercase text-[10px] mb-0.5">Agent Note</p>
+                  <p className="font-semibold text-amber-600 uppercase text-[10px] mb-0.5">Agent Note</p>
                   <p>{agentNote}</p>
                 </div>
               )}
-
               <div className="flex gap-1.5">
                 <Button
                   size="sm"
@@ -272,7 +260,7 @@ function NotesCell({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 px-2 text-xs text-gray-500"
+                  className="h-6 px-2 text-xs text-gray-600"
                   onClick={() => setOpen(false)}
                 >
                   Close
@@ -314,7 +302,7 @@ function CustomerMessageEditor({
             + Add message
           </button>
         </div>
-        <p className="text-sm text-gray-400 mt-1">No message</p>
+        <p className="text-sm text-gray-500 mt-1">No message</p>
       </div>
     );
   }
@@ -324,7 +312,7 @@ function CustomerMessageEditor({
       <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
         <p className="font-semibold text-amber-600 uppercase text-[10px] mb-1">Customer Message</p>
         <textarea
-          className="w-full border border-amber-200 rounded p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+          className="w-full border border-amber-200 rounded p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 text-gray-800"
           rows={4}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -339,7 +327,7 @@ function CustomerMessageEditor({
           </button>
           <button
             onClick={() => { setDraft(message); setEditing(false); }}
-            className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+            className="px-3 py-1 bg-gray-200 text-gray-800 text-xs rounded hover:bg-gray-300"
           >
             Cancel
           </button>
@@ -365,6 +353,11 @@ function CustomerMessageEditor({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Tab type
+// ─────────────────────────────────────────────────────────────────────────────
+type TabId = "leads" | "callbacks" | "messages" | "emails" | "allClients" | "decline" | "cancel" | "endInstalment" | "butler";
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Dashboard Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ManagerDashboard() {
@@ -372,6 +365,20 @@ export default function ManagerDashboard() {
   const isAdmin = user?.role === "admin";
   const [, navigate] = useLocation();
 
+  // ─── Tab State ──────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const saved = sessionStorage.getItem("command-centre-tab");
+    if (saved && ["leads", "callbacks", "messages", "emails", "allClients", "decline", "cancel", "endInstalment", "butler"].includes(saved)) {
+      return saved as TabId;
+    }
+    return "leads";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("command-centre-tab", activeTab);
+  }, [activeTab]);
+
+  // ─── Incoming Leads State ───────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState("all");
@@ -383,12 +390,13 @@ export default function ManagerDashboard() {
   const [customDateFrom, setCustomDateFrom] = useState("");
   const [customDateTo, setCustomDateTo] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAgent, setBulkAgent] = useState<string>("");
   const [editingLeadType, setEditingLeadType] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
 
+  // ─── Data Queries ───────────────────────────────────────────────────────────
   const {
     data: leadsData,
     isLoading,
@@ -437,20 +445,6 @@ export default function ManagerDashboard() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
-  const handleDeleteSelected = () => {
-    if (selectedIds.size === 0) return;
-    // Collect the numeric DB IDs (assignmentId) for the selected leads
-    const idsToDelete = leads
-      .filter((l: any) => selectedIds.has(l.subscriptionId))
-      .map((l: any) => l.assignmentId as number)
-      .filter((id: number) => typeof id === "number" && !isNaN(id));
-    if (idsToDelete.length === 0) {
-      toast.error("Could not resolve lead IDs");
-      return;
-    }
-    bulkDeleteLeads.mutate({ ids: idsToDelete });
-  };
-
   const { data: workloadData } = trpc.manager.getAgentWorkload.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
@@ -462,6 +456,94 @@ export default function ManagerDashboard() {
     });
     return map;
   }, [workloadData]);
+
+  // ─── Leads Processing ──────────────────────────────────────────────────────
+  const allLeads: any[] = leadsData?.leads ?? [];
+
+  const leads = useMemo(() => {
+    if (leadStatusFilter === "all") return allLeads;
+    if (leadStatusFilter === "new") return allLeads.filter((l) => !l.assignedAgent);
+    if (leadStatusFilter === "assigned") return allLeads.filter((l) => !!l.assignedAgent);
+    return allLeads;
+  }, [allLeads, leadStatusFilter]);
+
+  // Callbacks: leads with callbackAt in the future
+  const callbackLeads = useMemo(
+    () => allLeads.filter((l: any) => l.callbackAt && l.callbackAt > Date.now()),
+    [allLeads]
+  );
+
+  const callbacksTodayCount = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    return allLeads.filter(
+      (l: any) => l.callbackAt && l.callbackAt >= todayStart.getTime() && l.callbackAt <= todayEnd.getTime()
+    ).length;
+  }, [allLeads]);
+
+  const doneDealCount = useMemo(
+    () => allLeads.filter((l: any) => l.workStatus === "done_deal" || l.workStatus === "retained").length,
+    [allLeads]
+  );
+
+  // Extract contactIds from leads for Messages tab
+  const agentContactIds = useMemo(
+    () => allLeads.filter((l: any) => l.contactId).map((l: any) => l.contactId as number),
+    [allLeads]
+  );
+
+  const displayLeads = activeTab === "leads" ? leads : activeTab === "callbacks" ? callbackLeads : [];
+
+  const stats = useMemo(() => {
+    const total = leads.length;
+    const unassigned = leads.filter((l) => !l.assignedAgent || l.workStatus === "new").length;
+    const urgent = leads.filter((l) => l.urgencyScore >= 70).length;
+    const retained = leads.filter((l) => l.workStatus === "retained").length;
+    const doneDealLeads = leads.filter((l) => l.workStatus === "done_deal");
+    const futureDealLeads = leads.filter((l) => l.workStatus === "future_deal");
+    const doneDeal = doneDealLeads.length;
+    const futureDeal = futureDealLeads.length;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const newToday = (leadsData?.leads ?? []).filter((l: any) => {
+      if (l.assignedAgent) return false;
+      const dateStr = l.currentTermEndsAt;
+      if (!dateStr) return false;
+      const ts = new Date(dateStr).getTime();
+      return !isNaN(ts) && ts >= todayStart.getTime();
+    }).length;
+    return { total, unassigned, urgent, retained, doneDeal, futureDeal, newToday };
+  }, [leads, leadsData]);
+
+  // Agent workload cards
+  const agentCardData = useMemo(() => {
+    return AGENTS.map((agent) => {
+      const agentLeads = allLeads.filter((l: any) => l.assignedAgent === agent);
+      const closings = agentLeads.filter((l: any) =>
+        ["retained", "done_deal"].includes(l.workStatus)
+      );
+      const subClosings = closings.filter((l: any) => l.leadCategory !== "installment").length;
+      const instalmentClosings = closings.filter((l: any) => l.leadCategory === "installment").length;
+      const totalAmount = closings.reduce((sum: number, l: any) => sum + (l.monthlyAmount || 0), 0);
+      return { agent, closings: closings.length, subClosings, instalmentClosings, totalAmount };
+    });
+  }, [allLeads]);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    const idsToDelete = leads
+      .filter((l: any) => selectedIds.has(l.subscriptionId))
+      .map((l: any) => l.assignmentId as number)
+      .filter((id: number) => typeof id === "number" && !isNaN(id));
+    if (idsToDelete.length === 0) {
+      toast.error("Could not resolve lead IDs");
+      return;
+    }
+    bulkDeleteLeads.mutate({ ids: idsToDelete });
+  };
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -491,71 +573,6 @@ export default function ManagerDashboard() {
     });
   };
 
-  const allLeads: any[] = leadsData?.leads ?? [];
-
-  // Apply lead status filter client-side (derived from assignedAgent)
-  const leads = useMemo(() => {
-    if (leadStatusFilter === "all") return allLeads;
-    if (leadStatusFilter === "new") return allLeads.filter((l) => !l.assignedAgent);
-    if (leadStatusFilter === "assigned") return allLeads.filter((l) => !!l.assignedAgent);
-    return allLeads;
-  }, [allLeads, leadStatusFilter]);
-
-  const leadTypes = useMemo(() => {
-    const seen = new Map<string, string>();
-    leads.forEach((l) => {
-      if (!seen.has(l.leadType)) {
-        const badge = getLeadTypeBadge(l.leadType, l.daysSinceEvent ?? 0);
-        seen.set(l.leadType, badge.label);
-      }
-    });
-    return Array.from(seen.entries()).map(([key, label]) => ({ key, label }));
-  }, [leads]);
-
-  const stats = useMemo(() => {
-    const total = leads.length;
-    const unassigned = leads.filter((l) => !l.assignedAgent || l.workStatus === "new").length;
-    const urgent = leads.filter((l) => l.urgencyScore >= 70).length;
-    const retained = leads.filter((l) => l.workStatus === "retained").length;
-    const doneDealLeads = leads.filter((l) => l.workStatus === "done_deal");
-    const futureDealLeads = leads.filter((l) => l.workStatus === "future_deal");
-    const doneDeal = doneDealLeads.length;
-    const futureDeal = futureDealLeads.length;
-    const doneDealValue = doneDealLeads.reduce((sum: number, l: any) => sum + (l.monthlyAmount || 0), 0);
-    const futureDealValue = futureDealLeads.reduce((sum: number, l: any) => sum + (l.monthlyAmount || 0), 0);
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const newToday = (leadsData?.leads ?? []).filter((l: any) => {
-      if (l.assignedAgent) return false;
-      const dateStr = l.currentTermEndsAt;
-      if (!dateStr) return false;
-      const ts = new Date(dateStr).getTime();
-      return !isNaN(ts) && ts >= todayStart.getTime();
-    }).length;
-    return { total, unassigned, urgent, retained, doneDeal, futureDeal, doneDealValue, futureDealValue, newToday };
-  }, [leads, leadsData]);
-
-  // Compute agent workload cards data from leads
-  const agentCardData = useMemo(() => {
-    return AGENTS.map((agent) => {
-      const agentLeads = allLeads.filter((l: any) => l.assignedAgent === agent);
-      const closings = agentLeads.filter((l: any) =>
-        ["retained", "done_deal"].includes(l.workStatus)
-      );
-      const subClosings = closings.filter((l: any) => l.leadCategory !== "installment").length;
-      const instalmentClosings = closings.filter((l: any) => l.leadCategory === "installment").length;
-      const totalAmount = closings.reduce((sum: number, l: any) => sum + (l.monthlyAmount || 0), 0);
-      return {
-        agent,
-        closings: closings.length,
-        subClosings,
-        instalmentClosings,
-        totalAmount,
-      };
-    });
-  }, [allLeads]);
-
-  // Export current filtered leads to CSV
   const exportToCSV = () => {
     if (!leads.length) {
       toast.error("No leads to export");
@@ -590,189 +607,293 @@ export default function ManagerDashboard() {
     toast.success(`Exported ${leads.length} leads to CSV`);
   };
 
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f4f5f7]">
+    <div className="min-h-screen bg-white p-6">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
-            Manager Command Centre
-          </h1>
-          <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">
-            Retention Lead Management &middot; Zoho Billing
-          </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Manager Command Centre</h1>
+          <p className="text-sm text-gray-600 mt-0.5">Retention Lead Management</p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="gap-1 text-sm h-9 px-3"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">{isFetching ? "Loading..." : "Refresh"}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportToCSV}
-            disabled={!leads.length}
-            className="gap-1 text-sm h-9 px-3"
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Export CSV</span>
-          </Button>
+        <div className="flex items-center gap-4 text-sm text-gray-800">
+          <span className="font-medium">{allLeads.length} leads</span>
+          <span className="text-gray-400">|</span>
+          <span className="font-medium">{callbacksTodayCount} callbacks today</span>
+          <span className="text-gray-400">|</span>
+          <span className="font-medium text-green-700">{doneDealCount} done deals</span>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="px-3 sm:px-6 py-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          {/* Total */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500 font-medium">Total</p>
-            </div>
-          </div>
-          {/* Unassigned */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-              <Inbox className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.unassigned}</p>
-              <p className="text-xs text-gray-500 font-medium">Unassigned</p>
-            </div>
-          </div>
-          {/* Urgent */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.urgent}</p>
-              <p className="text-xs text-gray-500 font-medium">Urgent</p>
-            </div>
-          </div>
-          {/* Retained */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.retained}</p>
-              <p className="text-xs text-gray-500 font-medium">Retained</p>
-            </div>
-          </div>
-          {/* Done Deal */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-              <Handshake className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.doneDeal}</p>
-              <p className="text-xs text-gray-500 font-medium">Done Deal</p>
-            </div>
-          </div>
-          {/* Future Deal */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-              <Clock className="h-5 w-5 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.futureDeal}</p>
-              <p className="text-xs text-gray-500 font-medium">Future Deal</p>
-            </div>
-          </div>
-          {/* New Today */}
-          <button
-            onClick={() => {
-              setDateRangeFilter("today");
-              setLeadStatusFilter("new");
-            }}
-            className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 hover:border-blue-300 transition-colors text-left"
-            title="Click to show only today's new unassigned leads"
-          >
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 relative">
-              <CalendarPlus className="h-5 w-5 text-blue-600" />
-              {stats.newToday > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
-              )}
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.newToday}</p>
-              <p className="text-xs text-gray-500 font-medium">New Today</p>
-            </div>
-          </button>
-        </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab("leads")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "leads"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Incoming Leads
+        </button>
+        <button
+          onClick={() => setActiveTab("callbacks")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "callbacks"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          My Callbacks
+          {callbackLeads.length > 0 && (
+            <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white ${callbacksTodayCount > 0 ? 'bg-red-600' : 'bg-indigo-500'}`}>
+              {callbackLeads.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("messages")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "messages"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Messages
+        </button>
+        <button
+          onClick={() => setActiveTab("emails")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "emails"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Emails
+        </button>
+        <button
+          onClick={() => setActiveTab("allClients")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "allClients"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          All Clients
+        </button>
+        <button
+          onClick={() => setActiveTab("decline")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "decline"
+              ? "border-red-600 text-red-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Decline
+        </button>
+        <button
+          onClick={() => setActiveTab("cancel")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "cancel"
+              ? "border-gray-600 text-gray-800"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => setActiveTab("endInstalment")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "endInstalment"
+              ? "border-purple-600 text-purple-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          End Instalment
+        </button>
+        <button
+          onClick={() => setActiveTab("butler")}
+          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "butler"
+              ? "border-purple-600 text-purple-700"
+              : "border-transparent text-purple-600 hover:text-purple-800"
+          }`}
+        >
+          Sir Carlton
+        </button>
       </div>
 
-      {/* Agent Workload Cards — Today */}
-      <div className="px-3 sm:px-6 pb-4">
-        <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-          Agent Workload <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Today</span>
-        </h2>
-        <div className="grid grid-cols-3 gap-3">
-          {agentCardData.map((card) => (
-            <div
-              key={card.agent}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center"
+      {/* ─── Tab Content: Messages ─────────────────────────────────────────────── */}
+      {activeTab === "messages" && (
+        <div style={{ height: "calc(100vh - 220px)", display: "flex" }}>
+          <WhatsAppChatPanel open={true} onClose={() => setActiveTab("leads")} inline contactIds={agentContactIds} />
+        </div>
+      )}
+
+      {/* ─── Tab Content: Emails ───────────────────────────────────────────────── */}
+      {activeTab === "emails" && (
+        <div style={{ height: "calc(100vh - 220px)", display: "flex" }}>
+          <WorkspaceEmailPanel contactId={selectedLeadContactId} visible={activeTab === "emails"} />
+        </div>
+      )}
+
+      {/* ─── Tab Content: All Clients ──────────────────────────────────────────── */}
+      {activeTab === "allClients" && (
+        <AllClientsTab
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {/* ─── Tab Content: Decline ──────────────────────────────────────────────── */}
+      {activeTab === "decline" && (
+        <DeclineTab
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {/* ─── Tab Content: Cancel ───────────────────────────────────────────────── */}
+      {activeTab === "cancel" && (
+        <CancelTab
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {/* ─── Tab Content: End Instalment ───────────────────────────────────────── */}
+      {activeTab === "endInstalment" && (
+        <EndInstalmentTab
+          onOpenCard={(contactId, subscriptionId) => {
+            window.location.href = `/contacts/${contactId}?from=retention&subId=${encodeURIComponent(subscriptionId)}`;
+          }}
+        />
+      )}
+
+      {/* ─── Tab Content: Sir Carlton ──────────────────────────────────────────── */}
+      {activeTab === "butler" && (
+        <PersonalButlerTab />
+      )}
+
+      {/* ─── Tab Content: Incoming Leads / Callbacks ───────────────────────────── */}
+      {(activeTab === "leads" || activeTab === "callbacks") && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs text-gray-600 font-medium">Total</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                <Inbox className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.unassigned}</p>
+                <p className="text-xs text-gray-600 font-medium">Unassigned</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.urgent}</p>
+                <p className="text-xs text-gray-600 font-medium">Urgent</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                <ShieldCheck className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.retained}</p>
+                <p className="text-xs text-gray-600 font-medium">Retained</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                <Handshake className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.doneDeal}</p>
+                <p className="text-xs text-gray-600 font-medium">Done Deal</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.futureDeal}</p>
+                <p className="text-xs text-gray-600 font-medium">Future Deal</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setDateRangeFilter("today");
+                setLeadStatusFilter("new");
+              }}
+              className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 hover:border-blue-300 transition-colors"
             >
-              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full mb-2">Today</span>
-              <p className="text-lg font-bold text-gray-900 mb-1">{card.agent}</p>
-              <p className="text-3xl font-bold text-gray-900">{card.closings}</p>
-              <p className="text-xs text-gray-500 font-medium mt-0.5">closings</p>
-              <p className="text-xs text-gray-600 mt-2">
-                {card.subClosings} sub / {card.instalmentClosings} instalment
-              </p>
-              <p className="text-xl font-bold text-green-600 mt-2">
-                {formatCurrency(card.totalAmount)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-52 shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="Search..."
-              value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-              className="pl-8 h-9 text-sm w-full"
-            />
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 relative">
+                <CalendarPlus className="h-5 w-5 text-blue-600" />
+                {stats.newToday > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+                )}
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.newToday}</p>
+                <p className="text-xs text-gray-600 font-medium">New Today</p>
+              </div>
+            </button>
           </div>
-          {/* Mobile filter toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="sm:hidden h-9 px-3 gap-1.5 text-sm shrink-0"
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-            {[agentFilter, leadTypeFilter, statusFilter, leadStatusFilter].filter(
-              (v) => v !== "all"
-            ).length > 0 && (
-              <span className="bg-blue-600 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
-                {
-                  [agentFilter, leadTypeFilter, statusFilter, leadStatusFilter].filter(
-                    (v) => v !== "all"
-                  ).length
-                }
-              </span>
-            )}
-          </Button>
-          {/* Desktop: all filters inline */}
-          <div className="hidden sm:flex items-center gap-2.5 flex-wrap">
+
+          {/* Agent Workload Cards */}
+          <div className="mb-4">
+            <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+              Agent Workload <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">Today</span>
+            </h2>
+            <div className="grid grid-cols-3 gap-3">
+              {agentCardData.map((card) => (
+                <div
+                  key={card.agent}
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center"
+                >
+                  <p className="text-lg font-bold text-gray-900 mb-1">{card.agent}</p>
+                  <p className="text-3xl font-bold text-gray-900">{card.closings}</p>
+                  <p className="text-xs text-gray-600 font-medium mt-0.5">closings</p>
+                  <p className="text-xs text-gray-800 mt-2">
+                    {card.subClosings} sub / {card.instalmentClosings} instalment
+                  </p>
+                  <p className="text-xl font-bold text-green-600 mt-2">
+                    {formatCurrency(card.totalAmount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-4">
+            <div className="relative w-52 shrink-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                className="pl-8 h-9 text-sm w-full"
+              />
+            </div>
             <Select value={agentFilter} onValueChange={setAgentFilter}>
               <SelectTrigger className="h-9 w-32 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="All Agents" />
@@ -780,9 +901,7 @@ export default function ManagerDashboard() {
               <SelectContent side="bottom">
                 <SelectItem value="all">All Agents</SelectItem>
                 {AGENTS.map((a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
-                  </SelectItem>
+                  <SelectItem key={a} value={a}>{a}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -802,13 +921,17 @@ export default function ManagerDashboard() {
               </SelectTrigger>
               <SelectContent side="bottom">
                 <SelectItem value="all">All Lead Types</SelectItem>
-                <SelectItem value="Pre-Cycle-Cancelled"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span>Pre-Cycle-Cancelled</span></SelectItem>
-                <SelectItem value="Pre-Cycle-Decline"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#1a1a1a]"></span>Pre-Cycle-Decline</span></SelectItem>
-                <SelectItem value="Decline Live Sub"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>Decline Live Sub</span></SelectItem>
-                <SelectItem value="Cancel Live Sub (Cycle 1)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>Cancel Live Sub (Cycle 1)</span></SelectItem>
-                <SelectItem value="Cancel Live Sub (Cycle 2+)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></span>Cancel Live Sub (Cycle 2+)</span></SelectItem>
-                <SelectItem value="Cat to Rob"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#92400e]"></span>Cat to Rob</span></SelectItem>
-                <SelectItem value="Hot Lead"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#eab308]"></span>Hot Lead</span></SelectItem>
+                {LEAD_TYPE_OPTIONS.map((lt) => {
+                  const b = getLeadTypeBadge(lt, 0);
+                  return (
+                    <SelectItem key={lt} value={lt}>
+                      <span className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${b.bg}`}></span>
+                        {lt}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -818,9 +941,7 @@ export default function ManagerDashboard() {
               <SelectContent side="bottom">
                 <SelectItem value="all">All Work Status</SelectItem>
                 {STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -848,7 +969,7 @@ export default function ManagerDashboard() {
                   onChange={(e) => setCustomDateFrom(e.target.value)}
                   className="h-9 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
-                <span className="text-sm text-gray-500">&rarr;</span>
+                <span className="text-sm text-gray-600">&rarr;</span>
                 <input
                   type="date"
                   value={customDateTo}
@@ -857,432 +978,391 @@ export default function ManagerDashboard() {
                 />
               </>
             )}
-          </div>
-          <span className="text-sm text-gray-800 font-medium ml-auto hidden sm:block">
-            {isLoading ? "Loading..." : `${leads.length} leads`}
-          </span>
-        </div>
-
-        {/* Mobile filter panel */}
-        {showMobileFilters && (
-          <div className="sm:hidden mt-2 flex flex-col gap-2 pb-1">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={agentFilter} onValueChange={setAgentFilter}>
-                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
-                  <SelectValue placeholder="All Agents" />
-                </SelectTrigger>
-                <SelectContent side="bottom">
-                  <SelectItem value="all">All Agents</SelectItem>
-                  {AGENTS.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={leadStatusFilter} onValueChange={setLeadStatusFilter}>
-                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
-                  <SelectValue placeholder="Lead Status" />
-                </SelectTrigger>
-                <SelectContent side="bottom">
-                  <SelectItem value="all">All Lead Status</SelectItem>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={leadTypeFilter} onValueChange={setLeadTypeFilter}>
-                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
-                  <SelectValue placeholder="Lead Type" />
-                </SelectTrigger>
-                <SelectContent side="bottom">
-                  <SelectItem value="all">All Lead Types</SelectItem>
-                  <SelectItem value="Pre-Cycle-Cancelled"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span>Pre-Cycle-Cancelled</span></SelectItem>
-                  <SelectItem value="Pre-Cycle-Decline"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#1a1a1a]"></span>Pre-Cycle-Decline</span></SelectItem>
-                  <SelectItem value="Decline Live Sub"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>Decline Live Sub</span></SelectItem>
-                  <SelectItem value="Cancel Live Sub (Cycle 1)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>Cancel Live Sub (Cycle 1)</span></SelectItem>
-                  <SelectItem value="Cancel Live Sub (Cycle 2+)"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></span>Cancel Live Sub (Cycle 2+)</span></SelectItem>
-                  <SelectItem value="Cat to Rob"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#92400e]"></span>Cat to Rob</span></SelectItem>
-                  <SelectItem value="Hot Lead"><span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#eab308]"></span>Hot Lead</span></SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
-                  <SelectValue placeholder="Work Status" />
-                </SelectTrigger>
-                <SelectContent side="bottom">
-                  <SelectItem value="all">All Work Status</SelectItem>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Select
-              value={dateRangeFilter}
-              onValueChange={(v) => setDateRangeFilter(v as any)}
-            >
-              <SelectTrigger className="h-10 text-sm border border-gray-300 rounded-lg">
-                <SelectValue placeholder="This Month" />
-              </SelectTrigger>
-              <SelectContent side="bottom">
-                <SelectItem value="this_month">This Month</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="custom">Custom Range</SelectItem>
-                <SelectItem value="all">All Time</SelectItem>
-              </SelectContent>
-            </Select>
-            {dateRangeFilter === "custom" && (
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={customDateFrom}
-                  onChange={(e) => setCustomDateFrom(e.target.value)}
-                  className="h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                />
-                <input
-                  type="date"
-                  value={customDateTo}
-                  onChange={(e) => setCustomDateTo(e.target.value)}
-                  className="h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                />
-              </div>
-            )}
-            <div className="flex items-center justify-between text-sm text-gray-800 pt-1">
-              <span>{isLoading ? "Loading..." : `${leads.length} leads`}</span>
-              <button
-                onClick={() => {
-                  setAgentFilter("all");
-                  setLeadStatusFilter("all");
-                  setLeadTypeFilter("all");
-                  setStatusFilter("all");
-                  setDateRangeFilter("this_month");
-                }}
-                className="text-blue-600 font-medium"
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="gap-1 text-sm h-9 px-3"
               >
-                Clear all
+                <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+                {isFetching ? "Loading..." : "Refresh"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                disabled={!leads.length}
+                className="gap-1 text-sm h-9 px-3"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+              <span className="text-sm text-gray-800 font-medium">
+                {isLoading ? "Loading..." : `${displayLeads.length} leads`}
+              </span>
+            </div>
+          </div>
+
+          {/* Bulk action toolbar */}
+          {selectedIds.size > 0 && (
+            <div className="bg-blue-50 border border-blue-200 text-gray-800 px-6 py-2 flex items-center gap-3 text-sm rounded-md mb-4">
+              <CheckSquare className="h-4 w-4" />
+              <span className="font-medium">
+                {selectedIds.size} lead{selectedIds.size > 1 ? "s" : ""} selected
+              </span>
+              <div className="flex items-center gap-2 ml-4">
+                <span className="text-gray-600 text-sm">Assign to:</span>
+                <Select value={bulkAgent} onValueChange={setBulkAgent}>
+                  <SelectTrigger className="h-8 w-32 text-sm bg-white border-gray-300 text-gray-800">
+                    <SelectValue placeholder="Choose agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AGENTS.map((a) => (
+                      <SelectItem key={a} value={a}>
+                        <span className="flex items-center gap-2">
+                          {a}
+                          {agentWorkload[a] !== undefined && (
+                            <span className="text-xs text-gray-600">({agentWorkload[a]} active)</span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  className="h-8 px-3 text-sm bg-blue-600 text-white hover:bg-blue-700 font-semibold rounded"
+                  disabled={!bulkAgent || bulkAssign.isPending}
+                  onClick={handleBulkAssign}
+                >
+                  {bulkAssign.isPending ? "Assigning..." : "Assign"}
+                </Button>
+              </div>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  className="h-8 px-3 text-sm bg-red-600 hover:bg-red-700 text-white font-semibold gap-1.5 ml-2"
+                  disabled={bulkDeleteLeads.isPending}
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {bulkDeleteLeads.isPending ? "Deleting..." : `Delete Selected (${selectedIds.size})`}
+                </Button>
+              )}
+              <button
+                className="ml-auto text-gray-500 hover:text-gray-800"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bulk action toolbar */}
-      {selectedIds.size > 0 && (
-        <div className="bg-blue-50 border border-blue-200 text-gray-800 px-6 py-2 flex items-center gap-3 text-sm rounded-md mx-4 mt-2">
-          <CheckSquare className="h-4 w-4" />
-          <span className="font-medium">
-            {selectedIds.size} lead{selectedIds.size > 1 ? "s" : ""} selected
-          </span>
-          <div className="flex items-center gap-2 ml-4">
-            <span className="text-gray-500 text-sm">Assign to:</span>
-            <Select value={bulkAgent} onValueChange={setBulkAgent}>
-              <SelectTrigger className="h-8 w-32 text-sm bg-white border-gray-300 text-gray-800">
-                <SelectValue placeholder="Choose agent..." />
-              </SelectTrigger>
-              <SelectContent>
-                {AGENTS.map((a) => (
-                  <SelectItem key={a} value={a}>
-                    <span className="flex items-center gap-2">
-                      {a}
-                      {agentWorkload[a] !== undefined && (
-                        <span className="text-xs text-gray-500">({agentWorkload[a]} active)</span>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              className="h-8 px-3 text-sm bg-blue-600 text-white hover:bg-blue-700 font-semibold rounded"
-              disabled={!bulkAgent || bulkAssign.isPending}
-              onClick={handleBulkAssign}
-            >
-              {bulkAssign.isPending ? "Assigning..." : "Assign"}
-            </Button>
-          </div>
-          {isAdmin && (
-            <Button
-              size="sm"
-              className="h-8 px-3 text-sm bg-red-600 hover:bg-red-700 text-white font-semibold gap-1.5 ml-2"
-              disabled={bulkDeleteLeads.isPending}
-              onClick={() => setShowDeleteConfirm(true)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {bulkDeleteLeads.isPending ? "Deleting..." : `Delete Selected (${selectedIds.size})`}
-            </Button>
           )}
-          <button
-            className="ml-auto text-gray-400 hover:text-gray-700"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You are about to permanently delete{" "}
-              <strong>{selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}</strong> from the
-              database. This action cannot be undone and will also remove all associated call
-              history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                handleDeleteSelected();
-              }}
-            >
-              Yes, delete {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          {/* Delete confirmation dialog */}
+          <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You are about to permanently delete{" "}
+                  <strong>{selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}</strong> from the
+                  database. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    handleDeleteSelected();
+                  }}
+                >
+                  Yes, delete {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      {/* Table / Cards */}
-      <div className="p-2 sm:p-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
-            <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-            Loading leads...
-          </div>
-        ) : leads.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
-            No leads found
-          </div>
-        ) : (
-          <>
-            {/* ── MOBILE CARD LIST (hidden on sm+) ── */}
-            <div className="sm:hidden flex flex-col gap-2">
-              {leads.map((lead: any) => {
-                const badge = getLeadTypeBadge(lead.leadType, lead.daysSinceEvent ?? 0);
-                const statusStyle = getStatusStyle(lead.workStatus);
-                const isExpanded = expandedRow === lead.subscriptionId;
-                const leadDate = lead.currentTermEndsAt || lead.nextBillingAt || null;
-                const isSelected = selectedIds.has(lead.subscriptionId);
-                return (
-                  <div
-                    key={lead.subscriptionId}
-                    className={`bg-white rounded-xl border shadow-sm overflow-hidden ${
-                      isSelected ? "ring-2 ring-blue-400" : "border-gray-200"
-                    } ${badge.rowTint}`}
+          {/* Table */}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64 text-gray-600 text-sm">
+              <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+              Loading leads...
+            </div>
+          ) : displayLeads.length === 0 ? (
+            <div className="flex items-center justify-center h-64 text-gray-600 text-sm">
+              No leads found
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 overflow-visible shadow-sm">
+              {/* CSS Grid Table Header */}
+              <div
+                className="grid items-center gap-0 px-2 py-2.5 bg-gray-50 border-b border-gray-200 min-w-[1600px]"
+                style={{ gridTemplateColumns: "32px 150px 160px 100px 80px 130px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" }}
+              >
+                <div className="px-1">
+                  <button
+                    onClick={() => toggleSelectAll(displayLeads)}
+                    className="text-gray-800 hover:text-blue-600"
                   >
-                    {/* Card header */}
-                    <div className="px-4 pt-3 pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
+                    {selectedIds.size === displayLeads.length && displayLeads.length > 0 ? (
+                      <CheckSquare className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <Square className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Name</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Email</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Agent</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Status</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Work Status</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Date</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Time In</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Lead Type</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Customer Note</div>
+                <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Agent Note</div>
+              </div>
+
+              {/* CSS Grid Table Body */}
+              <div className="overflow-x-auto">
+                {displayLeads.map((lead: any) => {
+                  const badge = getLeadTypeBadge(lead.leadType, lead.daysSinceEvent ?? 0);
+                  const statusStyle = getStatusStyle(lead.workStatus);
+                  const isExpanded = expandedRow === lead.subscriptionId;
+                  const leadDate = lead.currentTermEndsAt || lead.nextBillingAt || null;
+                  const isSelected = selectedIds.has(lead.subscriptionId);
+
+                  return (
+                    <React.Fragment key={lead.subscriptionId}>
+                      <div
+                        className={`grid items-center gap-0 px-2 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition-colors min-w-[1600px] ${
+                          isSelected ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""
+                        }`}
+                        style={{ gridTemplateColumns: "32px 150px 160px 100px 80px 130px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" }}
+                      >
+                        {/* Checkbox */}
+                        <div className="px-1">
                           <button
                             onClick={() => toggleSelect(lead.subscriptionId)}
-                            className="shrink-0 text-gray-400 active:text-blue-600"
+                            className="text-gray-800 hover:text-blue-600"
                           >
                             {isSelected ? (
-                              <CheckSquare className="h-5 w-5 text-blue-600" />
+                              <CheckSquare className="h-4 w-4 text-blue-600" />
                             ) : (
-                              <Square className="h-5 w-5" />
+                              <Square className="h-4 w-4" />
                             )}
                           </button>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">
-                              {lead.customerName}
-                            </p>
-                            {lead.phone && (
-                              <a
-                                href={`tel:${lead.phone}`}
-                                className="flex items-center gap-1 text-xs text-blue-600 font-medium mt-0.5"
-                              >
-                                <Phone className="h-3 w-3" />
-                                {lead.phone}
-                              </a>
-                            )}
-                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <div className="flex items-center gap-1 group">
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badge.bg} ${badge.text}`}
-                            >
-                              {badge.label}
-                            </span>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
-                              className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
-                              title="Edit lead type"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <span className="text-[10px] text-gray-800">{formatDate(leadDate)}</span>
-                          <span className="text-[10px] text-gray-500">{lead.createdAt ? new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
-                        </div>
-                      </div>
-                      {lead.email && (
-                        lead.contactId ? (
+                        {/* Name + Phone */}
+                        <div className="px-2">
                           <button
-                            onClick={() => navigate(`/contacts/${lead.contactId}`)}
-                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-1.5 truncate"
+                            onClick={() => setExpandedRow(isExpanded ? null : lead.subscriptionId)}
+                            className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px] hover:text-blue-600 hover:underline cursor-pointer text-left"
                           >
-                            <Mail className="h-3 w-3 shrink-0" />
-                            {lead.email}
-                            <ExternalLink className="h-3 w-3 shrink-0" />
+                            {lead.customerName}
                           </button>
-                        ) : (
-                          <span className="flex items-center gap-1 text-xs text-gray-800 mt-1.5 truncate">
-                            <Mail className="h-3 w-3 shrink-0" />
-                            {lead.email}
-                          </span>
-                        )
-                      )}
-                    </div>
-                    {/* Card body — agent + status */}
-                    <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
-                      <Select
-                        value={lead.assignedAgent || "unassigned"}
-                        onValueChange={(v) =>
-                          assignLead.mutate({
-                            subscriptionId: lead.subscriptionId,
-                            assignedAgent: v === "unassigned" ? null : v,
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          className={`h-9 w-32 text-sm border rounded-lg font-medium ${
-                            lead.assignedAgent && AGENT_COLORS[lead.assignedAgent]
-                              ? `${AGENT_COLORS[lead.assignedAgent].bg} ${AGENT_COLORS[lead.assignedAgent].text} ${AGENT_COLORS[lead.assignedAgent].border}`
-                              : lead.assignedAgent
-                              ? "text-gray-800 border-gray-300"
-                              : "text-green-700 bg-green-100 border-green-300"
-                          }`}
-                        >
-                          <SelectValue placeholder="Assign..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unassigned">
-                            <span className="text-gray-500 italic">Unassigned</span>
-                          </SelectItem>
-                          {AGENTS.map((a) => (
-                            <SelectItem key={a} value={a}>
-                              {a}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={
-                          lead.workStatus &&
-                          lead.workStatus !== "new" &&
-                          lead.workStatus !== "assigned"
-                            ? lead.workStatus
-                            : ""
-                        }
-                        onValueChange={(v) =>
-                          assignLead.mutate({
-                            subscriptionId: lead.subscriptionId,
-                            workStatus: v as any,
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          className={`h-9 flex-1 min-w-[120px] text-sm border rounded-lg font-medium ${
-                            lead.workStatus &&
-                            lead.workStatus !== "new" &&
-                            lead.workStatus !== "assigned"
-                              ? `${statusStyle.bg} ${statusStyle.text} border-transparent`
-                              : "text-gray-500 italic border-gray-200"
-                          }`}
-                        >
-                          <SelectValue placeholder="Set status..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUS_OPTIONS.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              <span className={`px-1.5 py-0.5 rounded-full text-xs ${s.bg} ${s.text}`}>
-                                {s.label}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <button
-                        onClick={() =>
-                          setExpandedRow(isExpanded ? null : lead.subscriptionId)
-                        }
-                        className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-800 active:bg-gray-100"
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    {/* Notes preview */}
-                    {(lead.managerNote || lead.agentNote) && (
-                      <div className="px-4 pb-2">
-                        <p className="text-sm text-gray-800 line-clamp-2">
-                          {stripHtml(lead.managerNote) || lead.agentNote}
-                        </p>
-                      </div>
-                    )}
-                    {/* Expanded detail */}
-                    {isExpanded && (
-                      <div className="border-t border-blue-100 bg-blue-50/60 px-4 py-3">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                              Plan
-                            </p>
-                            <p className="text-gray-800">{lead.planName || "\u2014"}</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                              Cycles
-                            </p>
-                            <p className="text-gray-800">{lead.cyclesCompleted ?? "\u2014"}</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                              Monthly
-                            </p>
-                            <p className="text-gray-800">
-                              {formatCurrency(lead.monthlyAmount, lead.currencyCode)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                              Total Spend
-                            </p>
-                            <p className="text-gray-800 font-semibold">
-                              {formatCurrency(lead.totalSpend, lead.currencyCode)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                              Last Call
-                            </p>
-                            <p className="text-gray-800">
-                              {lead.lastCallAt
-                                ? new Date(lead.lastCallAt).toLocaleDateString("en-GB")
-                                : "\u2014"}
-                              {lead.lastCallResult && (
-                                <span className="ml-1 text-gray-800">({lead.lastCallResult})</span>
-                              )}
-                            </p>
-                          </div>
+                          {lead.phone && (
+                            <a
+                              href={`tel:${lead.phone}`}
+                              className="flex items-center gap-1 text-xs text-blue-600 hover:underline mt-0.5"
+                            >
+                              <Phone className="h-3 w-3" />
+                              {lead.phone}
+                            </a>
+                          )}
                         </div>
-                        <div className="mt-2">
+                        {/* Email */}
+                        <div className="px-2">
+                          {lead.contactId ? (
+                            <button
+                              onClick={() => navigate(`/contacts/${lead.contactId}`)}
+                              title={lead.email}
+                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline truncate max-w-[150px] font-medium"
+                            >
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{lead.email}</span>
+                              <ExternalLink className="h-3 w-3 shrink-0" />
+                            </button>
+                          ) : (
+                            <span
+                              title={lead.email}
+                              className="flex items-center gap-1 text-xs text-gray-800 truncate max-w-[150px]"
+                            >
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{lead.email}</span>
+                            </span>
+                          )}
+                        </div>
+                        {/* Agent */}
+                        <div className="px-2">
+                          <Select
+                            value={lead.assignedAgent || "unassigned"}
+                            onValueChange={(v) =>
+                              assignLead.mutate({
+                                subscriptionId: lead.subscriptionId,
+                                assignedAgent: v === "unassigned" ? null : v,
+                                email: lead.email,
+                              })
+                            }
+                          >
+                            <SelectTrigger
+                              className={`h-8 w-[90px] text-sm border rounded-lg px-2 font-medium ${
+                                lead.assignedAgent && AGENT_COLORS[lead.assignedAgent]
+                                  ? `${AGENT_COLORS[lead.assignedAgent].bg} ${AGENT_COLORS[lead.assignedAgent].text} ${AGENT_COLORS[lead.assignedAgent].border}`
+                                  : lead.assignedAgent
+                                  ? "text-gray-900 border-gray-300"
+                                  : "text-green-700 bg-green-100 border-green-300"
+                              }`}
+                            >
+                              <SelectValue placeholder="Assign..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unassigned">
+                                <span className="text-gray-600 italic">Unassigned</span>
+                              </SelectItem>
+                              {AGENTS.map((a) => (
+                                <SelectItem key={a} value={a}>{a}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Lead Status */}
+                        <div className="px-2">
+                          {(() => {
+                            const ls = getLeadStatus(lead.assignedAgent);
+                            return (
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${ls.bg} ${ls.text}`}
+                              >
+                                {ls.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        {/* Work Status */}
+                        <div className="px-2">
+                          <Select
+                            value={
+                              lead.workStatus &&
+                              lead.workStatus !== "new" &&
+                              lead.workStatus !== "assigned"
+                                ? lead.workStatus
+                                : ""
+                            }
+                            onValueChange={(v) =>
+                              assignLead.mutate({
+                                subscriptionId: lead.subscriptionId,
+                                workStatus: v as any,
+                              })
+                            }
+                          >
+                            <SelectTrigger
+                              className={`h-8 w-[120px] text-xs border border-gray-300 rounded-lg px-2 font-medium ${
+                                lead.workStatus &&
+                                lead.workStatus !== "new" &&
+                                lead.workStatus !== "assigned"
+                                  ? `${statusStyle.bg} ${statusStyle.text}`
+                                  : "text-gray-600 italic bg-transparent"
+                              }`}
+                            >
+                              <SelectValue placeholder="Set status..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((s) => (
+                                <SelectItem key={s.value} value={s.value}>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${s.bg} ${s.text}`}>
+                                    {s.label}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Date */}
+                        <div className="px-2 text-sm text-gray-800 whitespace-nowrap">
+                          {formatDate(leadDate)}
+                        </div>
+                        {/* Time In */}
+                        <div className="px-2 text-sm text-gray-600 whitespace-nowrap">
+                          {lead.createdAt ? new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "\u2014"}
+                        </div>
+                        {/* Lead Type */}
+                        <div className="px-2">
+                          {editingLeadType === lead.subscriptionId ? (
+                            <Select
+                              value={lead.leadType ?? ""}
+                              onValueChange={(v) => {
+                                assignLead.mutate({
+                                  subscriptionId: lead.subscriptionId,
+                                  leadType: v,
+                                });
+                                setEditingLeadType(null);
+                              }}
+                              open
+                              onOpenChange={(open) => { if (!open) setEditingLeadType(null); }}
+                            >
+                              <SelectTrigger className="h-7 text-xs w-[150px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LEAD_TYPE_OPTIONS.map((lt) => {
+                                  const b = getLeadTypeBadge(lt, 0);
+                                  return (
+                                    <SelectItem key={lt} value={lt}>
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${b.bg} ${b.text}`}>
+                                        {b.label}
+                                      </span>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="flex items-center gap-1 group">
+                              <span
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
+                              >
+                                {badge.label}
+                              </span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
+                                className="p-0.5 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-800"
+                                title="Edit lead type"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {/* Customer Note */}
+                        <div className="px-2">
+                          {lead.managerNote ? (() => {
+                            const cleaned = stripHtml(lead.managerNote);
+                            return (
+                              <details className="group">
+                                <summary className="cursor-pointer list-none">
+                                  <div className="flex items-start gap-1 w-[200px] px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
+                                    <span className="text-sm text-gray-800 flex-1 line-clamp-2 leading-snug">{cleaned}</span>
+                                    <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5 group-open:rotate-180 transition-transform" />
+                                  </div>
+                                </summary>
+                                <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[250px]">
+                                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
+                                </div>
+                              </details>
+                            );
+                          })() : (
+                            <div className="flex items-start gap-1 w-[200px] px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                              <span className="text-sm text-gray-500 italic flex-1">No note</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Agent Note */}
+                        <div className="px-2">
                           <NotesCell
                             managerNote={lead.managerNote}
                             agentNote={lead.agentNote}
@@ -1293,429 +1373,88 @@ export default function ManagerDashboard() {
                                 agentNote: note,
                               })
                             }
+                            onOpen={() => setExpandedRow(null)}
                           />
                         </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
 
-            {/* ── DESKTOP TABLE (hidden on mobile) ── */}
-            <div className="hidden sm:block bg-white rounded-lg border border-gray-200 overflow-visible shadow-sm">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-blue-100/60 border-b-2 border-blue-200 text-sm">
-                    <th className="px-2 py-2.5 w-8">
-                      <button
-                        onClick={() => toggleSelectAll(leads)}
-                        className="text-gray-800 hover:text-blue-600"
-                      >
-                        {selectedIds.size === leads.length && leads.length > 0 ? (
-                          <CheckSquare className="h-4 w-4 text-blue-600" />
-                        ) : (
-                          <Square className="h-4 w-4" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-40">
-                      Name
-                    </th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-44">
-                      Email
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-32">
-                      Agent
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
-                      Status
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-40">
-                      Work Status
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
-                      Date
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-28">
-                      Time In
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs w-48">
-                      Lead Type
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[240px]">
-                      Customer Note
-                    </th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-800 uppercase tracking-wide text-xs min-w-[200px]">
-                      Agent Note
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leads.map((lead: any) => {
-                    const badge = getLeadTypeBadge(lead.leadType, lead.daysSinceEvent ?? 0);
-                    const statusStyle = getStatusStyle(lead.workStatus);
-                    const isExpanded = expandedRow === lead.subscriptionId;
-                    const leadDate = lead.currentTermEndsAt || lead.nextBillingAt || null;
-                    const isSelected = selectedIds.has(lead.subscriptionId);
-
-                    return (
-                      <React.Fragment key={lead.subscriptionId}>
-                        <tr
-                          className={`border-b-2 border-blue-200 hover:bg-blue-100 transition-all bg-blue-50/40 ${
-                            badge.rowTint
-                          } ${isSelected ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
-                        >
-                          {/* Checkbox */}
-                          <td className="px-2 py-3">
-                            <button
-                              onClick={() => toggleSelect(lead.subscriptionId)}
-                              className="text-gray-800 hover:text-blue-600"
-                            >
-                              {isSelected ? (
-                                <CheckSquare className="h-4 w-4 text-blue-600" />
-                              ) : (
-                                <Square className="h-4 w-4" />
-                              )}
-                            </button>
-                          </td>
-                          {/* Name + Phone */}
-                          <td className="px-2 py-3">
-                            <button
-                              onClick={() => setExpandedRow(isExpanded ? null : lead.subscriptionId)}
-                              className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px] hover:text-blue-600 hover:underline cursor-pointer text-left"
-                            >
-                              {lead.customerName}
-                            </button>
-                            {lead.phone && (
-                              <a
-                                href={`tel:${lead.phone}`}
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:underline mt-0.5"
-                              >
-                                <Phone className="h-3 w-3" />
-                                {lead.phone}
-                              </a>
-                            )}
-                          </td>
-                          {/* Email — click navigates to contact card */}
-                          <td className="px-2 py-3">
-                            {lead.contactId ? (
-                              <button
-                                onClick={() => navigate(`/contacts/${lead.contactId}`)}
-                                title={lead.email}
-                                className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline truncate max-w-[160px] font-medium"
-                              >
-                                <Mail className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{lead.email}</span>
-                                <ExternalLink className="h-3 w-3 shrink-0" />
-                              </button>
-                            ) : (
-                              <span
-                                title={lead.email}
-                                className="flex items-center gap-1 text-xs text-gray-800 truncate max-w-[130px]"
-                              >
-                                <Mail className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{lead.email}</span>
-                              </span>
-                            )}
-                          </td>
-                          {/* Agent — prominent dropdown with visible border */}
-                          <td className="px-2 py-3">
-                            <Select
-                              value={lead.assignedAgent || "unassigned"}
-                              onValueChange={(v) =>
-                                assignLead.mutate({
-                                  subscriptionId: lead.subscriptionId,
-                                  assignedAgent: v === "unassigned" ? null : v,
-                                  email: lead.email,
-                                })
-                              }
-                            >
-                              <SelectTrigger
-                                className={`h-8 w-[90px] text-sm border rounded-lg px-2 font-medium ${
-                                  lead.assignedAgent && AGENT_COLORS[lead.assignedAgent]
-                                    ? `${AGENT_COLORS[lead.assignedAgent].bg} ${AGENT_COLORS[lead.assignedAgent].text} ${AGENT_COLORS[lead.assignedAgent].border}`
-                                    : lead.assignedAgent
-                                    ? "text-gray-900 border-gray-300"
-                                    : "text-green-700 bg-green-100 border-green-300"
-                                }`}
-                              >
-                                <SelectValue placeholder="Assign..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="unassigned">
-                                  <span className="text-gray-500 italic">Unassigned</span>
-                                </SelectItem>
-                                {AGENTS.map((a) => (
-                                  <SelectItem key={a} value={a}>
-                                    {a}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          {/* Lead Status */}
-                          <td className="px-2 py-3">
-                            {(() => {
-                              const ls = getLeadStatus(lead.assignedAgent);
-                              return (
-                                <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${ls.bg} ${ls.text}`}
-                                >
-                                  {ls.label}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                          {/* Work Status — prominent dropdown with visible border, slightly smaller badge */}
-                          <td className="px-2 py-3">
-                            <Select
-                              value={
-                                lead.workStatus &&
-                                lead.workStatus !== "new" &&
-                                lead.workStatus !== "assigned"
-                                  ? lead.workStatus
-                                  : ""
-                              }
-                              onValueChange={(v) =>
-                                assignLead.mutate({
-                                  subscriptionId: lead.subscriptionId,
-                                  workStatus: v as any,
-                                })
-                              }
-                            >
-                              <SelectTrigger
-                                className={`h-8 w-[130px] text-xs border border-gray-300 rounded-lg px-2 font-medium ${
-                                  lead.workStatus &&
-                                  lead.workStatus !== "new" &&
-                                  lead.workStatus !== "assigned"
-                                    ? `${statusStyle.bg} ${statusStyle.text}`
-                                    : "text-gray-500 italic bg-transparent"
-                                }`}
-                              >
-                                <SelectValue placeholder="Set status..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUS_OPTIONS.map((s) => (
-                                  <SelectItem key={s.value} value={s.value}>
-                                    <span
-                                      className={`px-1.5 py-0.5 rounded-full text-xs ${s.bg} ${s.text}`}
-                                    >
-                                      {s.label}
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          {/* Date */}
-                          <td className="px-2 py-3 text-sm text-gray-800 whitespace-nowrap">
-                            {formatDate(leadDate)}
-                          </td>
-                          {/* Time In */}
-                          <td className="px-2 py-3 text-sm text-gray-500 whitespace-nowrap">
-                            {lead.createdAt ? new Date(lead.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—"}
-                          </td>
-                          {/* Lead Type */}
-                          <td className="px-2 py-3">
-                            {editingLeadType === lead.subscriptionId ? (
-                              <Select
-                                value={lead.leadType ?? ""}
-                                onValueChange={(v) => {
-                                  assignLead.mutate({
-                                    subscriptionId: lead.subscriptionId,
-                                    leadType: v,
-                                  });
-                                  setEditingLeadType(null);
-                                }}
-                                open
-                                onOpenChange={(open) => { if (!open) setEditingLeadType(null); }}
-                              >
-                                <SelectTrigger className="h-7 text-xs w-[180px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {LEAD_TYPE_OPTIONS.map((lt) => {
-                                    const b = getLeadTypeBadge(lt, 0);
-                                    return (
-                                      <SelectItem key={lt} value={lt}>
-                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold ${b.bg} ${b.text}`}>
-                                          {b.label}
-                                        </span>
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <div className="flex items-center gap-1 group">
-                                <span
-                                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${badge.bg} ${badge.text}`}
-                                >
-                                  {badge.label}
-                                </span>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
-                                  className="p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
-                                  title="Edit lead type"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                          {/* Customer Note — expandable */}
-                          <td className="px-2 py-3">
-                            {lead.managerNote ? (() => {
-                              const cleaned = stripHtml(lead.managerNote);
-                              return (
-                                <details className="group">
-                                  <summary className="cursor-pointer list-none">
-                                    <div className="flex items-start gap-1 w-[250px] px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
-                                      <span className="text-sm text-gray-700 flex-1 line-clamp-2 leading-snug">{cleaned}</span>
-                                      <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-900 mt-0.5 group-open:rotate-180 transition-transform" />
-                                    </div>
-                                  </summary>
-                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto w-[280px]">
-                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{cleaned}</p>
-                                  </div>
-                                </details>
-                              );
-                            })() : (
-                              <div className="flex items-start gap-1 w-[250px] px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                                <span className="text-sm text-gray-400 italic flex-1">No note</span>
-                              </div>
-                            )}
-                          </td>
-                          {/* Agent Note */}
-                          <td className="px-2 py-3 max-w-[200px]">
-                            <NotesCell
-                              managerNote={lead.managerNote}
-                              agentNote={lead.agentNote}
-                              subscriptionId={lead.subscriptionId}
-                              onSaveNote={(note) =>
-                                assignLead.mutate({
-                                  subscriptionId: lead.subscriptionId,
-                                  agentNote: note,
-                                })
-                              }
-                              onOpen={() => setExpandedRow(null)}
-                            />
-                          </td>
-
-                        </tr>
-
-                        {/* Expanded detail row */}
-                        {isExpanded && (
-                          <tr
-                            key={`${lead.subscriptionId}-exp`}
-                            className="bg-blue-50 border-b-2 border-blue-200"
+                      {/* Expanded detail row */}
+                      {isExpanded && (
+                        <div className="bg-blue-50 border-b border-blue-200 px-6 py-4 relative min-w-[1600px]">
+                          <button
+                            onClick={() => setExpandedRow(null)}
+                            className="absolute top-2 right-4 p-1 rounded-full hover:bg-blue-200 transition-colors"
+                            title="Close"
                           >
-                            <td colSpan={12} className="px-6 py-4 relative">
-                              <button
-                                onClick={() => setExpandedRow(null)}
-                                className="absolute top-2 right-4 p-1 rounded-full hover:bg-blue-200 transition-colors"
-                                title="Close"
-                              >
-                                <X className="w-5 h-5 text-gray-700" />
-                              </button>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Plan
-                                  </p>
-                                  <p className="text-gray-800">{lead.planName || "\u2014"}</p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Cycles Completed
-                                  </p>
-                                  <p className="text-gray-800">{lead.cyclesCompleted ?? "\u2014"}</p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Monthly Amount
-                                  </p>
-                                  <p className="text-gray-800">
-                                    {formatCurrency(lead.monthlyAmount, lead.currencyCode)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Retry Attempts
-                                  </p>
-                                  <p className="text-gray-800">{lead.retryAttempts ?? 0}</p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Call Purpose
-                                  </p>
-                                  <p className="text-gray-800">{lead.callPurpose || "\u2014"}</p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Next Billing
-                                  </p>
-                                  <p className="text-gray-800">{formatDate(lead.nextBillingAt)}</p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Last Call
-                                  </p>
-                                  <p className="text-gray-800">
-                                    {lead.lastCallAt
-                                      ? new Date(lead.lastCallAt).toLocaleDateString("en-GB")
-                                      : "\u2014"}
-                                    {lead.lastCallResult && (
-                                      <span className="ml-1 text-gray-800">
-                                        ({lead.lastCallResult})
-                                      </span>
-                                    )}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">
-                                    Urgency Flags
-                                  </p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {(lead.urgencyFlags || []).length > 0 ? (
-                                      lead.urgencyFlags.map((f: string) => (
-                                        <span
-                                          key={f}
-                                          className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]"
-                                        >
-                                          {f.replace(/_/g, " ")}
-                                        </span>
-                                      ))
-                                    ) : (
-                                      <span className="text-gray-800">None</span>
-                                    )}
-                                  </div>
-                                </div>
+                            <X className="w-5 h-5 text-gray-800" />
+                          </button>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">Plan</p>
+                              <p className="text-gray-800">{lead.planName || "\u2014"}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">Cycles Completed</p>
+                              <p className="text-gray-800">{lead.cyclesCompleted ?? "\u2014"}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">Monthly Amount</p>
+                              <p className="text-gray-800">{formatCurrency(lead.monthlyAmount, lead.currencyCode)}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">Total Spend</p>
+                              <p className="text-gray-800 font-semibold">{formatCurrency(lead.totalSpend, lead.currencyCode)}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">Last Call</p>
+                              <p className="text-gray-800">
+                                {lead.lastCallAt
+                                  ? new Date(lead.lastCallAt).toLocaleDateString("en-GB")
+                                  : "\u2014"}
+                                {lead.lastCallResult && (
+                                  <span className="ml-1 text-gray-800">({lead.lastCallResult})</span>
+                                )}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 uppercase text-[10px] mb-0.5">Urgency Flags</p>
+                              <div className="flex flex-wrap gap-1">
+                                {(lead.urgencyFlags || []).length > 0 ? (
+                                  lead.urgencyFlags.map((f: string) => (
+                                    <span
+                                      key={f}
+                                      className="px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-[10px]"
+                                    >
+                                      {f.replace(/_/g, " ")}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-gray-800">None</span>
+                                )}
                               </div>
-                              {/* Full customer note in expanded row - editable by admin */}
-                              <CustomerMessageEditor
-                                leadId={lead.subscriptionId}
-                                message={lead.managerNote || ""}
-                                onSave={(newMsg) =>
-                                  assignLead.mutate({
-                                    subscriptionId: lead.subscriptionId,
-                                    managerNote: newMsg,
-                                  })
-                                }
-                              />
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            </div>
+                          </div>
+                          {/* Full customer note in expanded row - editable by admin */}
+                          <CustomerMessageEditor
+                            leadId={lead.subscriptionId}
+                            message={lead.managerNote || ""}
+                            onSave={(newMsg) =>
+                              assignLead.mutate({
+                                subscriptionId: lead.subscriptionId,
+                                managerNote: newMsg,
+                              })
+                            }
+                          />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
-          </>
-        )}
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
