@@ -262,6 +262,12 @@ export default function ContactCard() {
   );
   const contactSubscriptions = (clientSubs && clientSubs.length > 0) ? clientSubs : (clientSubsByEmail ?? []);
 
+  // Transactions tab: fetch subscriptions by email via dedicated endpoint
+  const { data: clientTransactions, isLoading: transactionsLoading } = trpc.contacts.getClientTransactions.useQuery(
+    { email: contact?.email ?? "" },
+    { enabled: !!contact?.email }
+  );
+
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
   const agentName = "Rob"; // Same as RetentionWorkspace
   const { data: adjacentData } = trpc.manager.getAdjacentLeads.useQuery(
@@ -1647,49 +1653,173 @@ export default function ContactCard() {
               {/* Transactions tab */}
               {centerTopTab === "transactions" && (
                 <div>
-                  {(!zohoData?.invoices || zohoData.invoices.length === 0) ? (
+                  {transactionsLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+                      <div className="w-7 h-7 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
+                      <p className="text-sm text-gray-700">Loading transactions…</p>
+                    </div>
+                  ) : !clientTransactions || clientTransactions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <CreditCard size={36} className="mb-3 opacity-40" />
-                      <p className="text-sm font-medium">Transactions</p>
-                      <p className="text-xs mt-1">No transaction data available</p>
+                      <p className="text-sm font-medium text-gray-800">No transactions yet</p>
+                      <p className="text-xs mt-1 text-gray-600">Subscription data will appear here once synced from Zoho Billing</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-100">
-                          <tr>
-                            <th className="px-4 py-3 font-semibold">Date</th>
-                            <th className="px-4 py-3 font-semibold">Invoice #</th>
-                            <th className="px-4 py-3 font-semibold">Amount</th>
-                            <th className="px-4 py-3 font-semibold">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {zohoData.invoices.map((inv: any, idx: number) => (
-                            <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50">
-                              <td className="px-4 py-3 text-gray-800">
-                                {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : "—"}
-                              </td>
-                              <td className="px-4 py-3 text-gray-800 font-medium">
-                                {inv.invoice_number || "—"}
-                              </td>
-                              <td className="px-4 py-3 text-gray-800 font-semibold">
-                                £{Number(inv.total || 0).toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={cn(
-                                  "px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                  inv.status === "paid" ? "bg-green-100 text-green-800" :
-                                  inv.status === "void" ? "bg-gray-100 text-gray-800" :
-                                  "bg-red-100 text-red-800"
-                                )}>
-                                  {inv.status || "Unknown"}
+                    <div className="flex flex-col gap-4">
+                      {clientTransactions.map((sub: any) => {
+                        const statusBadge = (() => {
+                          const s = (sub.status ?? "").toLowerCase();
+                          if (s === "live") return "bg-green-100 text-green-800 border-green-200";
+                          if (s === "future") return "bg-blue-100 text-blue-800 border-blue-200";
+                          if (s === "cancelled") return "bg-red-100 text-red-800 border-red-200";
+                          if (s === "dunning") return "bg-orange-100 text-orange-800 border-orange-200";
+                          if (s === "unpaid") return "bg-yellow-100 text-yellow-800 border-yellow-200";
+                          return "bg-gray-100 text-gray-800 border-gray-200";
+                        })();
+
+                        const cycles = sub.billingCycles;
+                        const completed = sub.cyclesCompleted ?? 0;
+                        const remaining = cycles != null ? cycles - completed : null;
+                        const allPaid = cycles != null && completed >= cycles;
+
+                        let products: { name: string; qty: number }[] = [];
+                        if (sub.products) {
+                          try {
+                            const raw = typeof sub.products === "string" ? JSON.parse(sub.products) : sub.products;
+                            if (typeof raw === "object" && raw !== null) {
+                              products = Object.entries(raw as Record<string, unknown>).map(([name, qty]) => ({
+                                name,
+                                qty: Number(qty),
+                              }));
+                            }
+                          } catch {}
+                        }
+
+                        const fmtDate = (d: string | Date | null | undefined) =>
+                          d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+                        const fmtAmount = (v: string | number | null | undefined) =>
+                          v != null && v !== "" ? `£${Number(v).toFixed(2)}` : "—";
+
+                        return (
+                          <div
+                            key={sub.subscriptionId}
+                            className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                          >
+                            {/* Card header */}
+                            <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-gray-800">
+                                  {sub.planName || "Subscription"}
                                 </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                {sub.subscriptionNumber && (
+                                  <span className="text-xs text-gray-600 font-mono">{sub.subscriptionNumber}</span>
+                                )}
+                              </div>
+                              <span
+                                className={cn(
+                                  "px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border",
+                                  statusBadge
+                                )}
+                              >
+                                {sub.status}
+                              </span>
+                            </div>
+
+                            {/* Card body */}
+                            <div className="p-5">
+                              <div
+                                className="grid gap-x-6 gap-y-3"
+                                style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+                              >
+                                {/* Row 1: Deposit | Recurring | Total Value */}
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Deposit</p>
+                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount(sub.setupFee)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Per Cycle</p>
+                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount(sub.recurringAmount ?? sub.amount)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Total Value</p>
+                                  <p className="text-sm font-semibold text-gray-800">{fmtAmount(sub.totalAmount)}</p>
+                                </div>
+
+                                {/* Row 2: Payment Status | Next Billing | Last Billed */}
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Payment Status</p>
+                                  {allPaid ? (
+                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
+                                      <CheckCircle2 size={13} /> All Paid
+                                    </span>
+                                  ) : cycles != null ? (
+                                    <span className="text-xs font-semibold text-gray-800">
+                                      {completed}/{cycles} paid
+                                      {remaining != null && remaining > 0 && (
+                                        <span className="ml-1 text-gray-600 font-normal">({remaining} remaining)</span>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-gray-600">Ongoing</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Next Billing</p>
+                                  <p className="text-sm text-gray-800">{fmtDate(sub.nextBillingOn)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Last Billed</p>
+                                  <p className="text-sm text-gray-800">{fmtDate(sub.lastBilledOn)}</p>
+                                </div>
+
+                                {/* Row 3: Created | Activated | Salesperson */}
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Created</p>
+                                  <p className="text-sm text-gray-800">{fmtDate(sub.createdOn)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Activated</p>
+                                  <p className="text-sm text-gray-800">{fmtDate(sub.activatedOn)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Salesperson</p>
+                                  <p className="text-sm text-gray-800">{sub.salesPerson || "—"}</p>
+                                </div>
+
+                                {/* Row 4: Campaign (full width) */}
+                                {sub.campaignId && (
+                                  <div style={{ gridColumn: "1 / -1" }}>
+                                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">Campaign</p>
+                                    <p className="text-sm text-gray-800">{sub.campaignId}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Products breakdown */}
+                              {products.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">Products</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {products.map((p) => (
+                                      <span
+                                        key={p.name}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-gray-800"
+                                      >
+                                        <Package size={11} className="text-blue-500" />
+                                        {p.name}
+                                        {p.qty > 1 && (
+                                          <span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

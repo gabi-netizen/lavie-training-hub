@@ -46,7 +46,7 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses } from "../../drizzle/schema";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses, clientSubscriptions } from "../../drizzle/schema";
 import {
   createSubscriptionSchedule,
   getCustomerPaymentMethods,
@@ -1262,6 +1262,23 @@ export const contactsRouter = router({
       }));
 
       return { leads };
+    }),
+
+  // ─── Get client transactions (subscriptions) by email ───────────────────
+  getClientTransactions: protectedProcedure
+    .input(z.object({ email: z.string() }))
+    .query(async ({ input }) => {
+      if (!input.email) return [];
+      const db = await getDb();
+      if (!db) return [];
+
+      const rows = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(sql`LOWER(${clientSubscriptions.email}) = LOWER(${input.email})`)
+        .orderBy(sql`${clientSubscriptions.createdOn} DESC`);
+
+      return rows;
     }),
 
   // ─── Get live Zoho Billing data for a contact by email ──────────────────
