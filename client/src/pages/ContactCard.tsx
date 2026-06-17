@@ -245,6 +245,12 @@ export default function ContactCard() {
     { enabled: !!contact?.email }
   );
 
+  // AI Retention Notes from call analyses
+  const { data: aiNotesData } = trpc.contacts.getRetentionNotes.useQuery(
+    { contactId, phone: contact?.phone ?? undefined },
+    { enabled: !!contactId }
+  );
+
   // Client subscriptions from My Clients table
   const { data: clientSubs } = trpc.clientSubscriptions.getByContactId.useQuery(
     { contactId },
@@ -1700,14 +1706,67 @@ export default function ContactCard() {
 
               {/* Notes tab */}
               {centerTopTab === "notes" && (
-                <div>
-                  {retentionLeads.length === 0 ? (
+                <div className="space-y-4">
+                  {/* AI Retention Notes from Call Analyses */}
+                  {aiNotesData?.notes && aiNotesData.notes.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                        <span>{"\uD83E\uDD16"}</span> AI Call Notes
+                      </p>
+                      {(aiNotesData.notes as any[]).map((note: any) => (
+                        <div key={`ai-note-${note.id}`} className="rounded-xl border border-blue-100 bg-blue-50/30 p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-semibold text-blue-700">
+                              {note.callType?.replace(/_/g, " ").toUpperCase() || "RETENTION CALL"}
+                            </span>
+                            <span className="text-[10px] text-gray-600">
+                              {note.callDate ? new Date(note.callDate).toLocaleDateString("en-GB") : ""}
+                              {note.repName ? ` \u2022 ${note.repName}` : ""}
+                            </span>
+                          </div>
+                          {note.retentionNotes.rapport && (
+                            <div className="border-l-4 border-teal-400 pl-3 py-1 mb-2">
+                              <p className="text-[10px] font-bold text-teal-700 uppercase">Rapport</p>
+                              <p className="text-sm text-gray-800">{note.retentionNotes.rapport}</p>
+                            </div>
+                          )}
+                          {note.retentionNotes.currentRoutine && (
+                            <div className="border-l-4 border-indigo-400 pl-3 py-1 mb-2">
+                              <p className="text-[10px] font-bold text-indigo-700 uppercase">Current Routine</p>
+                              <p className="text-sm text-gray-800">{note.retentionNotes.currentRoutine}</p>
+                            </div>
+                          )}
+                          {note.retentionNotes.productsToSend && (
+                            <div className="border-l-4 border-purple-400 pl-3 py-1 mb-2">
+                              <p className="text-[10px] font-bold text-purple-700 uppercase">Products to Send</p>
+                              <p className="text-sm text-gray-800 whitespace-pre-line">{note.retentionNotes.productsToSend}</p>
+                            </div>
+                          )}
+                          {note.retentionNotes.financials && (
+                            <div className="border-l-4 border-green-400 pl-3 py-1 mb-2">
+                              <p className="text-[10px] font-bold text-green-700 uppercase">Financials</p>
+                              <p className="text-sm text-gray-800">{note.retentionNotes.financials}</p>
+                            </div>
+                          )}
+                          {note.retentionNotes.nextActions && (
+                            <div className="border-l-4 border-orange-400 pl-3 py-1">
+                              <p className="text-[10px] font-bold text-orange-700 uppercase">Next Actions</p>
+                              <p className="text-sm text-gray-800">{note.retentionNotes.nextActions}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Existing Retention Lead Notes */}
+                  {retentionLeads.length === 0 && (!aiNotesData?.notes || aiNotesData.notes.length === 0) ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <FileText size={36} className="mb-3 opacity-40" />
                       <p className="text-sm font-medium">Notes</p>
                       <p className="text-xs mt-1">No retention notes available</p>
                     </div>
-                  ) : (
+                  ) : retentionLeads.length > 0 ? (
                     <div className="flex flex-col gap-4">
                       {retentionLeads.filter((l) => l.managerNote || l.agentNote).length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-gray-600">
@@ -1747,7 +1806,7 @@ export default function ContactCard() {
                           ))
                       )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>

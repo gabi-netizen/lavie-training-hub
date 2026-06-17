@@ -46,7 +46,7 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes } from "../../drizzle/schema";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses } from "../../drizzle/schema";
 import {
   createSubscriptionSchedule,
   getCustomerPaymentMethods,
@@ -1534,4 +1534,55 @@ export const contactsRouter = router({
 
     return { allocated: allIds.length, fromNew, fromCoolingPool };
   }),
+
+  // ─── Get AI Retention Notes for a contact (from call analyses) ──────────────
+  getRetentionNotes: protectedProcedure
+    .input(z.object({ contactId: z.number().optional(), phone: z.string().optional(), email: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { notes: [] };
+
+      // Build conditions to find call analyses for this contact
+      const conditions: any[] = [];
+      if (input.contactId) conditions.push(eq(callAnalyses.contactId, input.contactId));
+      if (input.phone) {
+        const normalized = input.phone.replace(/[^0-9]/g, "").slice(-10);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(${callAnalyses.externalNumber}, ' ', ''), '+', ''), '-', '') LIKE ${"%" + normalized}`);
+      }
+
+      if (conditions.length === 0) return { notes: [] };
+
+      const rows = await db
+        .select({
+          id: callAnalyses.id,
+          repName: callAnalyses.repName,
+          callDate: callAnalyses.callDate,
+          callType: callAnalyses.callType,
+          analysisJson: callAnalyses.analysisJson,
+          customerName: callAnalyses.customerName,
+        })
+        .from(callAnalyses)
+        .where(sql`(${sql.join(conditions, sql` OR `)}) AND ${callAnalyses.status} = 'done' AND ${callAnalyses.analysisJson} IS NOT NULL`)
+        .orderBy(sql`${callAnalyses.callDate} DESC`)
+        .limit(20);
+
+      const notes = rows
+        .map((row) => {
+          try {
+            const report = JSON.parse(row.analysisJson!);
+            if (!report.retentionNotes) return null;
+            return {
+              id: row.id,
+              repName: row.repName,
+              callDate: row.callDate ? row.callDate.toISOString() : null,
+              callType: row.callType,
+              customerName: row.customerName,
+              retentionNotes: report.retentionNotes,
+            };
+          } catch { return null; }
+        })
+        .filter(Boolean);
+
+      return { notes };
+    }),
 });
