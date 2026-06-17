@@ -1688,12 +1688,14 @@ export default function ContactCard() {
                         }
                       } catch {}
                     }
-                    // Count total products from planName (e.g. "1x Matinika +2x Ashkara + 1x Oulala" → 1+2+1=4)
+                    // Match with zohoData to get full subscription name (includes all products)
+                    const zohoSub = zohoData?.allSubscriptions?.find((s: any) => s.subscription_number === currentTx.subscriptionNumber || s.subscription_id === currentTx.subscriptionId);
+                    const txFullName = zohoSub?.name || zohoSub?.plan_name || zohoSub?.plan?.name || currentTx.planName || "";
+                    // Count total products from full name (e.g. "1x Matinika +2x Ashkara + 1x Oulala" → 1+2+1=4)
                     const txProductCount = (() => {
-                      const plan = currentTx.planName || "";
-                      const matches = plan.match(/(\d+)\s*x\s/gi);
+                      const matches = txFullName.match(/(\d+)\s*x\s/gi);
                       if (!matches || matches.length === 0) return 0;
-                      return matches.reduce((sum, m) => sum + parseInt(m), 0);
+                      return matches.reduce((sum: number, m: string) => sum + parseInt(m), 0);
                     })();
                     const txAvgPerProduct = txProductCount > 0 && currentTx.totalAmount ? Number(currentTx.totalAmount) / txProductCount : null;
                     const txFmtDate = (d: string | Date | null | undefined) => d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "\u2014";
@@ -1729,10 +1731,10 @@ export default function ContactCard() {
                               <div><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Salesperson</p><p className="text-sm font-bold text-black">{currentTx.salesPerson || "\u2014"}</p></div>
                               {currentTx.campaignId && <div style={{ gridColumn: "1 / -1" }}><p className="text-[10px] font-black text-black uppercase tracking-wider mb-0.5">Campaign</p><p className="text-sm text-black">{currentTx.campaignId}</p></div>}
                             </div>
-                            {currentTx.planName && (
+                            {txFullName && (
                               <div className="mt-4 pt-4 border-t border-gray-900">
-                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products</p>
-                                <p className="text-sm font-medium text-black">{currentTx.planName}</p>
+                                <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products{txProductCount > 0 ? ` (${txProductCount} items)` : ""}</p>
+                                <p className="text-sm font-medium text-black">{txFullName}</p>
                               </div>
                             )}
                           </div>
