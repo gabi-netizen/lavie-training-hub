@@ -1724,7 +1724,7 @@ export default function ContactCard() {
                               <div className="mt-4 pt-4 border-t border-gray-900">
                                 <p className="text-[10px] font-black text-black uppercase tracking-wider mb-2">Products ({txProducts.reduce((s, p) => s + p.qty, 0)} items)</p>
                                 <div className="flex flex-wrap gap-2">
-                                  {txProducts.map((p) => <span key={p.name} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-black"><Package size={11} className="text-blue-500" />{p.name}<span className="ml-0.5 font-bold text-blue-700">\u00d7{p.qty}</span></span>)}
+                                  {txProducts.map((p) => <span key={p.name} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-medium text-black"><Package size={11} className="text-blue-500" />{p.name}<span className="ml-0.5 font-bold text-blue-700">×{p.qty}</span></span>)}
                                 </div>
                               </div>
                             )}
