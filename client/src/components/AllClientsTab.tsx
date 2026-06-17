@@ -33,6 +33,7 @@ interface MyClientSubscription {
   products: Record<string, number>;
   subscriptionNumber: string | null;
   contactId: number | null;
+  salesPerson: string | null;
 }
 
 // ─── Status Badge Colors ────────────────────────────────────────────────────────
@@ -423,12 +424,13 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
           {/* Table Header — CSS Grid */}
           <div
-            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1800px]"
-            style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1900px]"
+            style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Customer</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Plan Name</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Status</div>
+            <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Agent</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Created</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Activated</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Deposit</div>
@@ -456,10 +458,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 {/* Main Row */}
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1800px] ${
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1900px] ${
                     isExpanded ? "bg-blue-50" : ""
                   }`}
-                  style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+                  style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Customer Name */}
                   <div
@@ -483,6 +485,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColor.bg} ${statusColor.text}`}>
                       {statusLabel}
                     </span>
+                  </div>
+                  {/* Agent */}
+                  <div className="text-xs font-medium text-slate-800 truncate" title={sub.salesPerson || ""}>
+                    {sub.salesPerson || "—"}
                   </div>
                   {/* Created On */}
                   <div className="text-xs text-slate-800">

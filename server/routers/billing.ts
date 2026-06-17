@@ -371,6 +371,7 @@ interface MyClientSubscription {
   products: Record<string, number>;
   subscriptionNumber: string | null;
   contactId: number | null;
+  salesPerson: string | null;
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -733,6 +734,7 @@ export const billingRouter = router({
           products: (row.products as Record<string, number>) ?? {},
           subscriptionNumber: row.subscriptionNumber,
           contactId: row.contactId ?? null,
+          salesPerson: row.salesPerson || null,
         }));
 
         const end = offset + input.perPage;
