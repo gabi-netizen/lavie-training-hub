@@ -360,6 +360,14 @@ export async function handleCloudTalkWebhook(req: Request, res: Response) {
 
     console.log(`[CloudTalk Webhook] Call ID: ${callId}, Agent: ${agentId}, Phone: ${callerPhone}, Recording: ${recordingUrl ? "YES" : "NO"}, Duration: ${callDuration}`);
 
+    // Skip calls shorter than 5 minutes (300 seconds) — saves Deepgram + OpenAI costs
+    const durationNum = Number(callDuration) || 0;
+    if (durationNum > 0 && durationNum < 300) {
+      console.log(`[CloudTalk Webhook] Call ${callId} too short (${durationNum}s < 300s) — skipping analysis`);
+      res.status(200).json({ received: true, processed: false, reason: `Call too short (${durationNum}s)` });
+      return;
+    }
+
     // Skip if no recording
     if (!recordingUrl) {
       console.log("[CloudTalk Webhook] No recording URL — skipping analysis");
