@@ -152,9 +152,22 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   );
 
   const subscriptions: MyClientSubscription[] = data?.subscriptions ?? [];
-  const summary = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, expired: 0, unpaid: 0 };
+  const summary: any = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, expired: 0, unpaid: 0, liveInstallment: 0, liveSub: 0 };
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / 50);
+
+  // Click on a card = quick-filter by status (+ planType for sub-categories)
+  const handleCardClick = (status: string, planType?: string) => {
+    if (statusFilter === status && planTypeFilter === (planType || "")) {
+      // Clicking same card again = reset
+      setStatusFilter("");
+      setPlanTypeFilter("");
+    } else {
+      setStatusFilter(status);
+      setPlanTypeFilter(planType || "");
+    }
+    setPage(1);
+  };
 
   const resetFilters = () => {
     setDateRangePreset("all");
@@ -223,24 +236,32 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="bg-white border border-green-200 rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div onClick={() => handleCardClick("live")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && !planTypeFilter ? "border-2 border-green-600 ring-2 ring-green-100" : "border border-green-200 hover:border-green-400"}`}>
           <div className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-1">Live</div>
           <div className="text-2xl font-bold text-green-800">{summary.live}</div>
         </div>
-        <div className="bg-white border border-red-200 rounded-xl p-4 shadow-sm">
+        <div onClick={() => handleCardClick("live", "installment")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && planTypeFilter === "installment" ? "border-2 border-emerald-600 ring-2 ring-emerald-100" : "border border-emerald-200 hover:border-emerald-400"}`}>
+          <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wide mb-1">Live Installments</div>
+          <div className="text-2xl font-bold text-emerald-800">{summary.liveInstallment}</div>
+        </div>
+        <div onClick={() => handleCardClick("live", "subscription")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && planTypeFilter === "subscription" ? "border-2 border-teal-600 ring-2 ring-teal-100" : "border border-teal-200 hover:border-teal-400"}`}>
+          <div className="text-xs font-semibold text-teal-800 uppercase tracking-wide mb-1">Live Sub</div>
+          <div className="text-2xl font-bold text-teal-800">{summary.liveSub}</div>
+        </div>
+        <div onClick={() => handleCardClick("dunning")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "dunning" ? "border-2 border-red-600 ring-2 ring-red-100" : "border border-red-200 hover:border-red-400"}`}>
           <div className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-1">Decline</div>
           <div className="text-2xl font-bold text-red-800">{summary.dunning}</div>
         </div>
-        <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-sm">
+        <div onClick={() => handleCardClick("future")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "future" ? "border-2 border-blue-600 ring-2 ring-blue-100" : "border border-blue-200 hover:border-blue-400"}`}>
           <div className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-1">Future</div>
           <div className="text-2xl font-bold text-blue-800">{summary.future}</div>
         </div>
-        <div className="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
+        <div onClick={() => handleCardClick("expired")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "expired" ? "border-2 border-gray-600 ring-2 ring-gray-100" : "border border-gray-300 hover:border-gray-500"}`}>
           <div className="text-xs font-semibold text-slate-800 uppercase tracking-wide mb-1">End Installments</div>
           <div className="text-2xl font-bold text-slate-800">{summary.expired}</div>
         </div>
-        <div className="bg-white border border-orange-200 rounded-xl p-4 shadow-sm">
+        <div onClick={() => handleCardClick("unpaid")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "unpaid" ? "border-2 border-orange-600 ring-2 ring-orange-100" : "border border-orange-200 hover:border-orange-400"}`}>
           <div className="text-xs font-semibold text-orange-800 uppercase tracking-wide mb-1">Unpaid</div>
           <div className="text-2xl font-bold text-orange-800">{summary.unpaid}</div>
         </div>

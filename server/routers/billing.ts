@@ -698,6 +698,8 @@ export const billingRouter = router({
             future: sql<number>`SUM(CASE WHEN status = 'future' THEN 1 ELSE 0 END)`,
             expired: sql<number>`SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)`,
             unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
+            liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND plan_type = 'installment' THEN 1 ELSE 0 END)`,
+            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND plan_type = 'subscription' THEN 1 ELSE 0 END)`,
           })
           .from(clientSubscriptions)
           .where(agentCondition);
@@ -710,6 +712,8 @@ export const billingRouter = router({
           future: Number(summaryResult[0]?.future ?? 0),
           expired: Number(summaryResult[0]?.expired ?? 0),
           unpaid: Number(summaryResult[0]?.unpaid ?? 0),
+          liveInstallment: Number(summaryResult[0]?.liveInstallment ?? 0),
+          liveSub: Number(summaryResult[0]?.liveSub ?? 0),
         };
 
         // Map DB rows to the MyClientSubscription response format
