@@ -698,8 +698,8 @@ export const billingRouter = router({
             future: sql<number>`SUM(CASE WHEN status = 'future' THEN 1 ELSE 0 END)`,
             expired: sql<number>`SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)`,
             unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
-            liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND plan_type = 'installment' THEN 1 ELSE 0 END)`,
-            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND plan_type = 'subscription' THEN 1 ELSE 0 END)`,
+            liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'installment' THEN 1 ELSE 0 END)`,
+            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' THEN 1 ELSE 0 END)`,
           })
           .from(clientSubscriptions)
           .where(agentCondition);
