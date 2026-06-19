@@ -1231,6 +1231,7 @@ ${isRetentionLongCall ? `
   - For productsToSend: list EVERY product mentioned with exact quantities and sizes
   - For financials: include ALL numbers mentioned — per-product prices, deposit, monthly payment, total, installments, and card details
   - For financials: if per-product prices are mentioned (e.g. rep states the cost of each product), list each product with its price before other financial details
+  - For financials: Do NOT calculate total value yourself — ONLY report numbers that were explicitly stated in the conversation. If the total was not mentioned, do not include it.
   - For nextActions: include specific dates/timeframes, not vague "follow up later"
 ` : ''}}
 ${dealTypeBlock}${complianceRules}
