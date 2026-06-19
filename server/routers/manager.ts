@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users } from "../../drizzle/schema";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes } from "../../drizzle/schema";
 import { addCallNote, updateContact } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
@@ -481,14 +481,36 @@ export const managerRouter = router({
         .limit(1);
 
       // Also save agent note to ContactCard notes (if contactId exists)
+      // Logic: if a note from the same agent exists TODAY, update it. Otherwise create new.
       if (input.agentNote && result[0]?.contactId) {
         try {
-          await addCallNote({
-            contactId: result[0].contactId,
-            agentName: result[0].assignedAgent || "Retention Agent",
-            note: input.agentNote,
-            statusAtTime: result[0].workStatus || undefined,
-          });
+          const cId = result[0].contactId;
+          const agent = result[0].assignedAgent || "Retention Agent";
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          // Check if there's already a note from this agent today for this contact
+          const existing = await db.select()
+            .from(contactCallNotes)
+            .where(and(
+              eq(contactCallNotes.contactId, cId),
+              eq(contactCallNotes.agentName, agent),
+              gte(contactCallNotes.createdAt, todayStart)
+            ))
+            .limit(1);
+          if (existing.length > 0) {
+            // Update existing note from today
+            await db.update(contactCallNotes)
+              .set({ note: input.agentNote, statusAtTime: result[0].workStatus || undefined })
+              .where(eq(contactCallNotes.id, existing[0].id));
+          } else {
+            // Create new note (different day)
+            await addCallNote({
+              contactId: cId,
+              agentName: agent,
+              note: input.agentNote,
+              statusAtTime: result[0].workStatus || undefined,
+            });
+          }
         } catch (e) {
           // Don't fail the main mutation if note sync fails
           console.error("[assignLead] Failed to sync note to ContactCard:", e);
