@@ -470,7 +470,7 @@ export default function ContactCard() {
   const [smsMessage, setSmsMessage] = useState("");
 
   // Tab state
-  const [centerTopTab, setCenterTopTab] = useState<"history" | "transactions" | "shipments" | "notes">("history");
+  const [centerTopTab, setCenterTopTab] = useState<"history" | "transactions" | "shipments" | "notes">(isFromRetention ? "notes" : "history");
   const [centerBottomTab, setCenterBottomTab] = useState<"documents" | "activities" | "cloudtalk" | "privacy">("documents");
   const [transactionIdx, setTransactionIdx] = useState(0);
 
