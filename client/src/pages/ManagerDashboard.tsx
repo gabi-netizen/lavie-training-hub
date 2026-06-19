@@ -928,12 +928,12 @@ export default function ManagerDashboard() {
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-4">
             <div className="relative w-52 shrink-0">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-800" />
               <Input
                 placeholder="Search..."
                 value={search}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                className="pl-8 h-9 text-sm w-full"
+                className="pl-8 h-9 text-sm w-full font-bold text-gray-800 placeholder-gray-800"
               />
             </div>
             {activeTab === "callbacks" && (

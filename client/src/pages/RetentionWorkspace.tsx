@@ -821,7 +821,7 @@ export default function RetentionWorkspace() {
               placeholder="Search name, email or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 w-[220px] placeholder-gray-400"
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-bold w-[220px] placeholder-gray-800"
             />
             <span className="text-sm text-gray-600 font-medium">{displayLeads.length} leads</span>
           </div>
