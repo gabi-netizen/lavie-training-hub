@@ -22,6 +22,7 @@ import {
   Pencil,
   Send,
   Calendar,
+  Clock,
   Copy,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
@@ -117,9 +118,9 @@ const LEAD_TYPE_OPTIONS = [
 
 export default function RetentionWorkspace() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "messages" | "emails" | "clients" | "decline" | "cancel" | "endInstalment" | "butler">(() => {
+  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "followups" | "messages" | "emails" | "clients" | "decline" | "cancel" | "endInstalment" | "butler">(() => {
     const saved = sessionStorage.getItem("retention-workspace-tab");
-    if (saved && ["queue", "callbacks", "messages", "emails", "clients", "decline", "cancel", "endInstalment", "butler"].includes(saved)) {
+    if (saved && ["queue", "callbacks", "followups", "messages", "emails", "clients", "decline", "cancel", "endInstalment", "butler"].includes(saved)) {
       return saved as any;
     }
     return "queue";
@@ -157,7 +158,7 @@ export default function RetentionWorkspace() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Callback modal state
-  const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
+  const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string; type: "callback" | "follow_up" } | null>(null);
   const [editingLeadType, setEditingLeadType] = useState<string | null>(null);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
@@ -395,7 +396,15 @@ export default function RetentionWorkspace() {
     [allLeads]
   );
 
-  const displayLeads = activeTab === "queue" ? queueLeads : activeTab === "callbacks" ? callbackLeads : [];
+  // Follow-up leads (same logic as callbacks but using followUpAt)
+  const followUpLeads = useMemo(() => {
+    let fups = allLeads.filter((l: Lead) => l.followUpAt && l.followUpAt > Date.now());
+    // Sort by soonest first
+    fups.sort((a, b) => (a.followUpAt ?? 0) - (b.followUpAt ?? 0));
+    return fups;
+  }, [allLeads]);
+
+  const displayLeads = activeTab === "queue" ? queueLeads : activeTab === "callbacks" ? callbackLeads : activeTab === "followups" ? followUpLeads : [];
 
   // Handle agent note save
   const handleNoteSave = (subscriptionId: string, note: string) => {
@@ -566,6 +575,21 @@ export default function RetentionWorkspace() {
           )}
         </button>
         <button
+          onClick={() => setActiveTab("followups")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+            activeTab === "followups"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          My Follow Ups
+          {followUpLeads.length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white bg-sky-500">
+              {followUpLeads.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab("messages")}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
             activeTab === "messages"
@@ -671,7 +695,7 @@ export default function RetentionWorkspace() {
             setEmailTemplateOpen(true);
           }}
           onCallback={(subscriptionId, contactName) => {
-            setCallbackModal({ subscriptionId, contactName });
+            setCallbackModal({ subscriptionId, contactName, type: "callback" });
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
@@ -702,7 +726,7 @@ export default function RetentionWorkspace() {
             setEmailTemplateOpen(true);
           }}
           onCallback={(subscriptionId, contactName) => {
-            setCallbackModal({ subscriptionId, contactName });
+            setCallbackModal({ subscriptionId, contactName, type: "callback" });
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
@@ -733,7 +757,7 @@ export default function RetentionWorkspace() {
             setEmailTemplateOpen(true);
           }}
           onCallback={(subscriptionId, contactName) => {
-            setCallbackModal({ subscriptionId, contactName });
+            setCallbackModal({ subscriptionId, contactName, type: "callback" });
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
@@ -764,7 +788,7 @@ export default function RetentionWorkspace() {
             setEmailTemplateOpen(true);
           }}
           onCallback={(subscriptionId, contactName) => {
-            setCallbackModal({ subscriptionId, contactName });
+            setCallbackModal({ subscriptionId, contactName, type: "callback" });
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
@@ -777,7 +801,7 @@ export default function RetentionWorkspace() {
         <PersonalButlerTab />
       )}
 
-      {(activeTab === "queue" || activeTab === "callbacks") && (
+      {(activeTab === "queue" || activeTab === "callbacks" || activeTab === "followups") && (
         <>
           {/* Filters */}
           <div className="flex items-center gap-3 mb-4">
@@ -851,6 +875,9 @@ export default function RetentionWorkspace() {
                     {activeTab === "callbacks" && (
                       <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Callback Due</th>
                     )}
+                    {activeTab === "followups" && (
+                      <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Follow Up Due</th>
+                    )}
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Date</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Lead Type</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Customer Note</th>
@@ -911,6 +938,14 @@ export default function RetentionWorkspace() {
                           <td className="py-3 px-3 text-sm text-gray-800 whitespace-nowrap">
                             {lead.callbackAt
                               ? new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                              : "—"}
+                          </td>
+                        )}
+                        {/* Follow Up Due (only in followups tab) */}
+                        {activeTab === "followups" && (
+                          <td className="py-3 px-3 text-sm text-gray-800 whitespace-nowrap">
+                            {lead.followUpAt
+                              ? new Date(lead.followUpAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.followUpAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
                               : "—"}
                           </td>
                         )}
@@ -1138,13 +1173,24 @@ export default function RetentionWorkspace() {
                             {/* Schedule Callback */}
                             <button
                               onClick={() => {
-                                setCallbackModal({ subscriptionId: lead.subscriptionId, contactName: lead.customerName || "" });
+                                setCallbackModal({ subscriptionId: lead.subscriptionId, contactName: lead.customerName || "", type: "callback" });
                                 setCallbackDateTime("");
                               }}
                               className="p-1.5 rounded hover:bg-purple-50 transition-colors text-purple-600"
                               title="Schedule Callback"
                             >
                               <Calendar className="h-4 w-4" />
+                            </button>
+                            {/* Schedule Follow Up */}
+                            <button
+                              onClick={() => {
+                                setCallbackModal({ subscriptionId: lead.subscriptionId, contactName: lead.customerName || "", type: "follow_up" });
+                                setCallbackDateTime("");
+                              }}
+                              className="p-1.5 rounded hover:bg-sky-50 transition-colors text-sky-600"
+                              title="Schedule Follow Up"
+                            >
+                              <Clock className="h-4 w-4" />
                             </button>
 
                             {/* Open Card */}
@@ -1505,11 +1551,11 @@ export default function RetentionWorkspace() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-indigo-600" />
-                <span className="font-bold text-lg text-gray-800">Schedule Callback</span>
+                {callbackModal.type === "follow_up" ? <Clock className="h-5 w-5 text-sky-600" /> : <Calendar className="h-5 w-5 text-indigo-600" />}
+                <span className="font-bold text-lg text-gray-800">{callbackModal.type === "follow_up" ? "Schedule Follow Up" : "Schedule Callback"}</span>
               </div>
               <p className="text-sm text-gray-600">
-                Scheduling callback for <strong>{callbackModal.contactName}</strong>
+                Scheduling {callbackModal.type === "follow_up" ? "follow up" : "callback"} for <strong>{callbackModal.contactName}</strong>
               </p>
 
               {/* Date buttons */}
@@ -1569,14 +1615,16 @@ export default function RetentionWorkspace() {
                   onClick={() => {
                     if (!isValid || !callbackModal) return;
                     const dt = new Date(callbackDateTime);
+                    const typeLabel = callbackModal.type === "follow_up" ? "Follow up" : "Callback";
                     const noteText = callbackNote
-                      ? `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime} — Note: ${callbackNote}`
-                      : `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`;
+                      ? `${typeLabel} scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime} — Note: ${callbackNote}`
+                      : `${typeLabel} scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`;
                     logCallAttemptMutation.mutate({
                       subscriptionId: callbackModal.subscriptionId,
                       agentName: agentName,
-                      result: "callback",
-                      callbackAt: dt.getTime(),
+                      result: callbackModal.type === "follow_up" ? "follow_up" : "callback",
+                      callbackAt: callbackModal.type === "callback" ? dt.getTime() : undefined,
+                      followUpAt: callbackModal.type === "follow_up" ? dt.getTime() : undefined,
                       note: noteText,
                     });
                     setCallbackModal(null);
@@ -1585,7 +1633,7 @@ export default function RetentionWorkspace() {
                   disabled={!isValid}
                   className={`px-5 py-2 rounded-lg border-none font-bold text-sm text-white ${
                     isValid ? "bg-indigo-600 hover:bg-indigo-700 cursor-pointer" : "bg-indigo-300 cursor-not-allowed"
-                  }`}>Confirm Callback</button>
+                  }`}>{callbackModal.type === "follow_up" ? "Confirm Follow Up" : "Confirm Callback"}</button>
               </div>
             </div>
           </div>
