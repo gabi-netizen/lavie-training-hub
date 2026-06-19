@@ -470,6 +470,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   // ─── Bulk assign state ──────────────────────────────────────────────────
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  const [assignLeadType, setAssignLeadType] = useState<string>("");
   const { data: agentList = [] } = trpc.callCoach.getAgentList.useQuery();
   const bulkAssignMutation = trpc.contacts.bulkAssign.useMutation({
     onSuccess: (result) => {
@@ -490,6 +491,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       ids: Array.from(selectedIds),
       agentName: agent.name!,
       agentEmail: agent.email ?? "trial@lavielabs.com",
+      leadType: assignLeadType || undefined,
     });
   };
 
@@ -1359,7 +1361,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
       </Dialog>
 
       {/* ─── Bulk Assign Dialog─────────────────────────────────────────────────────────────────── */}
-      <Dialog open={showBulkAssignDialog} onOpenChange={(open) => { setShowBulkAssignDialog(open); if (!open) setSelectedAgentId(""); }}>
+      <Dialog open={showBulkAssignDialog} onOpenChange={(open) => { setShowBulkAssignDialog(open); if (!open) { setSelectedAgentId(""); setAssignLeadType(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Assign {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''} to Agent</DialogTitle>
@@ -1372,10 +1374,10 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <SelectValue placeholder="Choose an agent…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {agentList.filter((agent: any) => agent.team === department).map((agent: any) => (
+                  {agentList.filter((agent: any) => agent.team === department || agent.team === "retention").map((agent: any) => (
                     <SelectItem key={agent.id} value={String(agent.id)}>
                       <div className="flex flex-col">
-                        <span className="font-medium">{agent.name}</span>
+                        <span className="font-medium">{agent.name}{agent.team === "retention" ? " (Retention)" : ""}</span>
                         {agent.email && <span className="text-xs text-gray-500">{agent.email}</span>}
                       </div>
                     </SelectItem>
@@ -1383,10 +1385,27 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label className="text-sm font-semibold text-gray-700 mb-2 block">Lead Type (optional)</Label>
+              <Select value={assignLeadType} onValueChange={setAssignLeadType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select lead type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cat to Rob">Cat to Rob</SelectItem>
+                  <SelectItem value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</SelectItem>
+                  <SelectItem value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</SelectItem>
+                  <SelectItem value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</SelectItem>
+                  <SelectItem value="Hot Lead">Hot Lead</SelectItem>
+                  <SelectItem value="Pre-Cycle-Decline">Pre-Cycle-Decline</SelectItem>
+                  <SelectItem value="Decline Live Sub">Decline Live Sub</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
           </div>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => { setShowBulkAssignDialog(false); setSelectedAgentId(""); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setShowBulkAssignDialog(false); setSelectedAgentId(""); setAssignLeadType(""); }}>Cancel</Button>
             <Button
               className="bg-amber-500 hover:bg-amber-600 text-white"
               onClick={handleBulkReturn}

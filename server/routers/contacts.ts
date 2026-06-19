@@ -746,10 +746,35 @@ export const contactsRouter = router({
         ids: z.array(z.number()).min(1),
         agentName: z.string().min(1),
         agentEmail: z.string().email(),
+        leadType: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      return bulkAssignContacts(input.ids, input.agentName, input.agentEmail);
+      const result = await bulkAssignContacts(input.ids, input.agentName, input.agentEmail);
+      // If leadType provided, also create lead_assignments for retention workspace
+      if (input.leadType) {
+        const db = await getDb();
+        if (db) {
+          const assignedContacts = await db.select().from(contactsSchema).where(inArray(contactsSchema.id, input.ids));
+          for (const c of assignedContacts) {
+            const subscriptionId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            await db.insert(leadAssignments).values({
+              subscriptionId,
+              customerName: c.name || "Unknown",
+              email: c.email || null,
+              phone: c.phone || null,
+              leadType: input.leadType,
+              leadCategory: "subscription",
+              assignedAgent: input.agentName,
+              assignedAt: Date.now(),
+              workStatus: "assigned",
+              eventDate: new Date().toISOString().split("T")[0],
+              contactId: c.id,
+            });
+          }
+        }
+      }
+      return result;
     }),
 
   // ─── Bulk Return to System (unassign + set status new) ──────────────────
