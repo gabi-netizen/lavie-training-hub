@@ -1203,9 +1203,15 @@ export default function RetentionWorkspace() {
                 ) : smsTemplates && smsTemplates.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {smsTemplates.filter((tpl: any) => {
+                      const name = tpl.friendly_name;
+                      // Retention team: only show templates starting with ret_
+                      if (user?.team === "retention") {
+                        return name.startsWith("ret_") || name.startsWith("RET:");
+                      }
+                      // Others: show rt_/RT: and non-prefixed (hide op_/OP:)
                       const allPrefixes = ["op_", "OP:", "rt_", "RT:"];
-                      const hasPrefix = allPrefixes.some((p: string) => tpl.friendly_name.startsWith(p));
-                      return tpl.friendly_name.startsWith("rt_") || tpl.friendly_name.startsWith("RT:") || !hasPrefix;
+                      const hasPrefix = allPrefixes.some((p: string) => name.startsWith(p));
+                      return name.startsWith("rt_") || name.startsWith("RT:") || !hasPrefix;
                     }).map((tpl: any) => (
                       <button
                         key={tpl.sid}
