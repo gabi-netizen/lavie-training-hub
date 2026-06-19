@@ -40,6 +40,7 @@ import {
   Pencil,
   Check,
   Trash2,
+  Calculator,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1376,6 +1377,15 @@ export default function ContactCard() {
                 <FileText size={16} />
                 Notes
               </button>
+              <a
+                href="https://docs.google.com/spreadsheets/d/1vXf8mwQibQLFmB9KaIHawTaeLZyu-61LErOiL8HelXY/edit?gid=0#gid=0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 border-transparent text-green-700 hover:text-green-900 transition-colors whitespace-nowrap"
+              >
+                <Calculator size={16} />
+                Calculator
+              </a>
               <div className="ml-auto">
                 <button
                   onClick={() => setShowNoteForm((v) => !v)}
