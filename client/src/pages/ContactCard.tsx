@@ -1261,7 +1261,7 @@ export default function ContactCard() {
                       Score: {(contact as any).latestCallAnalysis.overallScore}/100
                     </span>
                     <a
-                      href={`/call-coach/${(contact as any).latestCallAnalysis.id}`}
+                      href={`/ai-coach?analysisId=${(contact as any).latestCallAnalysis.id}`}
                       className="text-xs text-blue-600 hover:underline"
                     >
                       View Full Analysis
@@ -1821,7 +1821,7 @@ export default function ContactCard() {
                             </div>
                           )}
                           <div className="mt-2 pt-2 border-t border-blue-100 flex justify-end">
-                            <a href={`/call-coach/${note.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">
+                            <a href={`/ai-coach?analysisId=${note.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">
                               View Full Analysis →
                             </a>
                           </div>
