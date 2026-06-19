@@ -22,6 +22,7 @@ import {
   Pencil,
   Send,
   Calendar,
+  Copy,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -55,6 +56,7 @@ const LEAD_TYPE_COLORS: Record<string, string> = {
   "Live Sub 14days+": "#e6cff2",
   "Live Sub 2nd+": "#e6cff2",
   "From Cat to Rob": "#92400e",
+  "Duplicate": "#9ca3af",
 };
 
 // ─── Work Status Badge Config ────────────────────────────────────────────────
@@ -100,6 +102,17 @@ function formatDateDDMMYYYY(dateStr: string | null | undefined): string {
 
 const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub", "callback", "no_answer", "not_interested"] as const;
 
+const LEAD_TYPE_OPTIONS = [
+  "Cat to Rob",
+  "Pre-Cycle-Cancelled",
+  "Cancel Live Sub (Cycle 1)",
+  "Cancel Live Sub (Cycle 2+)",
+  "Hot Lead",
+  "Pre-Cycle-Decline",
+  "Decline Live Sub",
+  "Duplicate",
+];
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function RetentionWorkspace() {
@@ -144,6 +157,7 @@ export default function RetentionWorkspace() {
 
   // Callback modal state
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
+  const [editingLeadType, setEditingLeadType] = useState<string | null>(null);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [callbackDateTime, setCallbackDateTime] = useState("");
   const [callbackNote, setCallbackNote] = useState("");
@@ -837,7 +851,7 @@ export default function RetentionWorkspace() {
                       <tr
                         key={lead.subscriptionId}
                         onClick={() => lead.contactId && setSelectedLeadContactId(lead.contactId)}
-                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                        className={`group/row border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
                           selectedLeadContactId === lead.contactId ? "bg-blue-50" : ""
                         }`}
                       >
@@ -891,7 +905,43 @@ export default function RetentionWorkspace() {
 
                         {/* Lead Type */}
                         <td className="py-3 px-3">
-                          <LeadTypeBadge leadType={lead.leadType} />
+                          {editingLeadType === lead.subscriptionId ? (
+                            <Select
+                              value={lead.leadType ?? ""}
+                              onValueChange={(v) => {
+                                assignLeadMutation.mutate({
+                                  subscriptionId: lead.subscriptionId,
+                                  leadType: v,
+                                });
+                                setEditingLeadType(null);
+                                toast.success(`Lead type → ${v}`);
+                              }}
+                              open
+                              onOpenChange={(open) => { if (!open) setEditingLeadType(null); }}
+                            >
+                              <SelectTrigger className="h-7 text-xs w-[160px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {LEAD_TYPE_OPTIONS.map((lt) => (
+                                  <SelectItem key={lt} value={lt}>{lt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <LeadTypeBadge leadType={lead.leadType} />
+                              {user?.role === "admin" && !user?.team && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
+                                  className="p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                  title="Edit lead type"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
 
                         {/* Customer Note */}

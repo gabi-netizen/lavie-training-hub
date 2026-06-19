@@ -99,6 +99,7 @@ function getLeadTypeBadge(
     "Hot Lead":                   { bg: "bg-[#eab308]", text: "text-white", label: "Hot Lead",                   rowTint: "bg-white" },
     "Pre-Cycle-Decline":          { bg: "bg-[#1a1a1a]", text: "text-white", label: "Pre-Cycle-Decline",          rowTint: "bg-white" },
     "Decline Live Sub":           { bg: "bg-[#7c3aed]", text: "text-white", label: "Decline Live Sub",           rowTint: "bg-white" },
+    "Duplicate":                    { bg: "bg-gray-400", text: "text-white", label: "Duplicate",                    rowTint: "bg-gray-50" },
   };
   return map[leadType] || { bg: "bg-gray-200", text: "text-gray-800", label: leadType, rowTint: "bg-white" };
 }
@@ -111,6 +112,7 @@ const LEAD_TYPE_OPTIONS = [
   "Hot Lead",
   "Pre-Cycle-Decline",
   "Decline Live Sub",
+  "Duplicate",
 ];
 
 // Work Status options
@@ -1397,13 +1399,15 @@ export default function ManagerDashboard() {
                               >
                                 {badge.label}
                               </span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
-                                className="p-0.5 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-800"
-                                title="Edit lead type"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </button>
+                              {user?.role === "admin" && !user?.team && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingLeadType(lead.subscriptionId); }}
+                                  className="p-0.5 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-800"
+                                  title="Edit lead type"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
