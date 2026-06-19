@@ -1786,9 +1786,6 @@ export default function ContactCard() {
                               {note.durationSeconds ? ` \u2022 ${Math.floor(note.durationSeconds / 60)}m` : ""}
                             </span>
                           </div>
-                          {note.summary && (
-                            <p className="text-sm text-gray-800 mb-2">{note.summary}</p>
-                          )}
                           {note.retentionNotes && (
                             <div className="space-y-1.5 mt-2">
                               {note.retentionNotes.rapport && (
