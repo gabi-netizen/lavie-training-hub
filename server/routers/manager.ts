@@ -10,6 +10,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog } from "../../drizzle/schema";
+import { addCallNote } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
@@ -480,6 +481,21 @@ export const managerRouter = router({
         .from(leadAssignments)
         .where(eq(leadAssignments.subscriptionId, input.subscriptionId))
         .limit(1);
+
+      // Also save agent note to ContactCard notes (if contactId exists)
+      if (input.agentNote && result[0]?.contactId) {
+        try {
+          await addCallNote({
+            contactId: result[0].contactId,
+            agentName: result[0].assignedAgent || "Retention Agent",
+            note: input.agentNote,
+            statusAtTime: result[0].workStatus || undefined,
+          });
+        } catch (e) {
+          // Don't fail the main mutation if note sync fails
+          console.error("[assignLead] Failed to sync note to ContactCard:", e);
+        }
+      }
 
       return { success: true, assignment: result[0] };
     }),
