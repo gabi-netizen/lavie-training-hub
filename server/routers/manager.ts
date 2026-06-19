@@ -10,7 +10,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog } from "../../drizzle/schema";
-import { addCallNote } from "../contacts";
+import { addCallNote, updateContact } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
@@ -494,6 +494,30 @@ export const managerRouter = router({
         } catch (e) {
           // Don't fail the main mutation if note sync fails
           console.error("[assignLead] Failed to sync note to ContactCard:", e);
+        }
+      }
+
+      // Sync workStatus to contact.status (if contactId exists)
+      if (input.workStatus && result[0]?.contactId) {
+        const STATUS_MAP: Record<string, string> = {
+          no_answer: "no_answer",
+          done_deal: "done_deal",
+          retained: "done_deal",
+          retained_sub: "done_deal",
+          closed: "closed",
+          not_interested: "closed",
+          callback: "working",
+          working: "working",
+          assigned: "assigned",
+          new: "new",
+        };
+        const contactStatus = STATUS_MAP[input.workStatus];
+        if (contactStatus) {
+          try {
+            await updateContact(result[0].contactId, { status: contactStatus as any });
+          } catch (e) {
+            console.error("[assignLead] Failed to sync status to contact:", e);
+          }
         }
       }
 
