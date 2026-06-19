@@ -1,7 +1,7 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import OpenAI from "openai";
 import { getDb } from "./db";
-import { callAnalyses, aiFeedback, users } from "../drizzle/schema";
+import { callAnalyses, aiFeedback, users, contactCallNotes } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { storageGet } from "./storage";
 import { ENV } from "./_core/env";
@@ -1219,7 +1219,7 @@ ${isRetentionLongCall ? `
     "rapport": "<Personal info about the customer: age, family situation, hobbies, personality traits, things discussed outside of products. Include any emotional context (e.g. 'retired in August 2025, cares for husband diagnosed with dementia'). null if no personal info shared>",
     "currentRoutine": "<How the customer currently uses products: which products, how often, morning/evening, any issues. null if not discussed>",
     "productsToSend": "<Exact products agreed to send with quantities and sizes (e.g. '6x Ashkara 15ml DROPPERS, 3x Oulala 30ml BLACK BOTTLES'). Include any special shipping notes (e.g. 'SHIP WHEN READY'). Also include sample sizes if mentioned. null if no products discussed>",
-    "financials": "<Deposit amount, monthly payment, total value, number of installments, which card to use. Include any special payment instructions (e.g. 'DO NOT USE EXISTING CARD ENDING 0471 FOR DEPOSIT'). null if no financials discussed>",
+    "financials": "<Per-product pricing (e.g. '37 GBP per Ashkara & Oulala, 35 GBP per Matinika, 69 GBP per Immortality'), deposit amount, monthly payment, total value, number of installments, which card to use. Include any special payment instructions (e.g. 'DO NOT USE EXISTING CARD ENDING 0471 FOR DEPOSIT'). null if no financials discussed>",
     "nextActions": "<Follow-up actions: when to call back, emails to send, things to check. Include specific timeframes (e.g. 'Speak to Claire in 2 weeks, then 2 months'). null if no follow-up discussed>"
   },
 
@@ -1229,7 +1229,8 @@ ${isRetentionLongCall ? `
   - Use the customer's name where relevant
   - If a field has no relevant information from the call, set it to null
   - For productsToSend: list EVERY product mentioned with exact quantities and sizes
-  - For financials: include ALL numbers mentioned (deposit, monthly, total, installments)
+  - For financials: include ALL numbers mentioned — per-product prices, deposit, monthly payment, total, installments, and card details
+  - For financials: if per-product prices are mentioned (e.g. rep states the cost of each product), list each product with its price before other financial details
   - For nextActions: include specific dates/timeframes, not vague "follow up later"
 ` : ''}}
 ${dealTypeBlock}${complianceRules}
@@ -1509,6 +1510,61 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
       console.log(`[CallAnalysis] AI classified retention call #${analysisId} as: ${report.retentionCallType}`);
     }
     await updateCallAnalysisStatus(analysisId, savePayload);
+
+    // Step 4: Auto-save retention notes to ContactCard if applicable
+    // Conditions: call has a contactId, it's a retention call type, and retentionNotes exist in the report
+    const RETENTION_CALL_TYPES_FOR_NOTES = new Set([
+      "live_sub", "cancel_live_sub", "cancel_live_sub_2plus",
+      "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment",
+      "from_cat", "other", "retention_cancel_trial", "retention_win_back",
+      "instalment_decline",
+    ]);
+    const effectiveCallType = (savePayload as any).callType ?? callType;
+    const contactId = record?.contactId ?? null;
+    if (contactId && RETENTION_CALL_TYPES_FOR_NOTES.has(effectiveCallType) && report.retentionNotes) {
+      try {
+        const notes = report.retentionNotes;
+        const callDateStr = record?.callDate
+          ? new Date(record.callDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          : new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+        const lines: string[] = [`\uD83D\uDCCB Retention Notes (AI Coach - ${callDateStr})`];
+        if (notes.rapport) {
+          lines.push("", "RAPPORT & PERSONAL INFO:", notes.rapport);
+        }
+        if (notes.currentRoutine) {
+          lines.push("", "CURRENT ROUTINE:", notes.currentRoutine);
+        }
+        if (notes.productsToSend) {
+          lines.push("", "PRODUCTS TO SEND:", notes.productsToSend);
+        }
+        if (notes.financials) {
+          lines.push("", "FINANCIALS:", notes.financials);
+        }
+        if (notes.nextActions) {
+          lines.push("", "NEXT ACTIONS:", notes.nextActions);
+        }
+
+        // Only save if at least one section has content
+        if (lines.length > 1) {
+          const noteText = lines.join("\n");
+          const db = await getDb();
+          if (db) {
+            await db.insert(contactCallNotes).values({
+              contactId,
+              userId: record?.userId ?? undefined,
+              agentName: record?.repName ?? undefined,
+              note: noteText,
+              statusAtTime: "working",
+            });
+            console.log(`[CallAnalysis] Saved retention notes to ContactCard #${contactId} for analysis #${analysisId}`);
+          }
+        }
+      } catch (noteErr) {
+        // Non-fatal: log but don't fail the whole analysis
+        console.warn(`[CallAnalysis] Failed to save retention notes to ContactCard #${contactId}:`, noteErr);
+      }
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[CallAnalysis] Failed for id=${analysisId}:`, message);

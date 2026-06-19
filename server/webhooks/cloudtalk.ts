@@ -143,20 +143,33 @@ async function findOrCreateAgentUser(agentId: string | number, agentName: string
 }
 
 // ─── Find contact by phone number ─────────────────────────────────────────────
+// Handles UK prefix mismatch: CloudTalk sends 447725053542, DB stores 7725053542
 async function findContactByPhone(phone: string | number) {
   const db = await getDb();
   if (!db) return null;
   const normalized = normalizePhone(phone);
-  // Try exact match first, then partial match
+
+  // Build all phone variants to search across:
+  // 1. The normalized value as-is
+  // 2. Strip leading "44" (12-digit UK number → 10-digit local)
+  // 3. Prepend "44" (10-digit local → 12-digit UK)
+  // 4. Strip leading "0" and prepend "44" (11-digit 07xxx → 447xxx)
+  const variants: string[] = [normalized];
+  if (normalized.startsWith("44") && normalized.length === 12) {
+    variants.push(normalized.slice(2)); // 447725053542 → 7725053542
+  }
+  if (!normalized.startsWith("44") && !normalized.startsWith("0") && normalized.length === 10) {
+    variants.push("44" + normalized); // 7725053542 → 447725053542
+  }
+  if (normalized.startsWith("0") && normalized.length === 11) {
+    variants.push("44" + normalized.slice(1)); // 07725053542 → 447725053542
+  }
+
+  const conditions = variants.map(v => like(contacts.phone, `%${v}%`));
   const results = await db
     .select()
     .from(contacts)
-    .where(
-      or(
-        like(contacts.phone, `%${normalized}%`),
-        like(contacts.phone, `%${phone}%`)
-      )
-    )
+    .where(or(...conditions))
     .limit(1);
   return results[0] ?? null;
 }
