@@ -767,7 +767,7 @@ export const contactsRouter = router({
               leadCategory: "subscription",
               assignedAgent: input.agentName,
               assignedAt: Date.now(),
-              workStatus: "assigned",
+              workStatus: "new",
               eventDate: new Date().toISOString().split("T")[0],
               contactId: c.id,
             });

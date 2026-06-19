@@ -418,9 +418,7 @@ export const managerRouter = router({
       if (input.assignedAgent !== undefined) {
         updateData.assignedAgent = input.assignedAgent;
         updateData.assignedAt = input.assignedAgent ? Date.now() : null;
-        if (input.assignedAgent && (!existing[0]?.workStatus || existing[0]?.workStatus === "new")) {
-          updateData.workStatus = "assigned";
-        }
+        // Keep status as "new" when assigning — agent sees it as a new lead to work on
       }
       if (input.managerNote !== undefined) updateData.managerNote = input.managerNote;
       if (input.agentNote !== undefined) updateData.agentNote = input.agentNote;
@@ -470,7 +468,7 @@ export const managerRouter = router({
           retryAttempts: input.retryAttempts || 0,
           assignedAgent: input.assignedAgent || null,
           assignedAt: input.assignedAgent ? Date.now() : null,
-          workStatus: input.workStatus || (input.assignedAgent ? "assigned" : "new"),
+          workStatus: input.workStatus || "new",
           managerNote: input.managerNote || null,
           callbackAt: input.callbackAt || null,
         });
