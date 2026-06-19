@@ -1160,7 +1160,13 @@ export default function ManagerDashboard() {
                         {/* Name + Phone */}
                         <div className="px-2">
                           <button
-                            onClick={() => setExpandedRow(isExpanded ? null : lead.subscriptionId)}
+                            onClick={() => {
+                              if (lead.contactId) {
+                                window.location.href = `/contacts/${lead.contactId}?from=retention&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                              } else {
+                                setExpandedRow(isExpanded ? null : lead.subscriptionId);
+                              }
+                            }}
                             className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[140px] hover:text-blue-600 hover:underline cursor-pointer text-left"
                           >
                             {lead.customerName}

@@ -713,9 +713,17 @@ export default function RetentionWorkspace() {
 
                         {/* Name */}
                         <td className="py-3 px-3">
-                          <span className="text-sm font-semibold text-blue-600 cursor-pointer hover:underline">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (lead.contactId) {
+                                window.location.href = `/contacts/${lead.contactId}?from=retention&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                              }
+                            }}
+                            className="text-sm font-semibold text-blue-600 cursor-pointer hover:underline text-left"
+                          >
                             {lead.customerName}
-                          </span>
+                          </button>
                         </td>
 
                         {/* Email */}
