@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -395,6 +395,7 @@ export default function ManagerDashboard() {
   const [editingLeadType, setEditingLeadType] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
+  const [callbackDateFilter, setCallbackDateFilter] = useState<string>("all");
 
   // ─── Data Queries ───────────────────────────────────────────────────────────
   const {
@@ -449,6 +450,25 @@ export default function ManagerDashboard() {
     refetchOnWindowFocus: false,
   });
 
+  // ─── Upcoming Callbacks Polling (toast notifications) ──────────────────────
+  const { data: upcomingCallbacks = [] } = trpc.manager.getUpcomingCallbacks.useQuery(
+    undefined,
+    { refetchInterval: 30_000 }
+  );
+  const lastCallbackIdsRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (upcomingCallbacks.length > 0) {
+      const currentIds = new Set(upcomingCallbacks.map((c: any) => c.id));
+      for (const cb of upcomingCallbacks) {
+        if (!lastCallbackIdsRef.current.has(cb.id)) {
+          const mins = Math.max(1, Math.round(((cb.callbackAt as number) - Date.now()) / 60000));
+          toast.info(`\u23F0 Callback with ${cb.customerName} in ${mins} min`, { duration: 10000 });
+        }
+      }
+      lastCallbackIdsRef.current = currentIds;
+    }
+  }, [upcomingCallbacks]);
+
   const agentWorkload = useMemo(() => {
     const map: Record<string, number> = {};
     (workloadData?.workload || []).forEach((w: any) => {
@@ -467,11 +487,31 @@ export default function ManagerDashboard() {
     return allLeads;
   }, [allLeads, leadStatusFilter]);
 
-  // Callbacks: leads with callbackAt in the future
-  const callbackLeads = useMemo(
-    () => allLeads.filter((l: any) => l.callbackAt && l.callbackAt > Date.now()),
-    [allLeads]
-  );
+  // Callbacks: leads with callbackAt in the future, filtered + sorted soonest first
+  const callbackLeads = useMemo(() => {
+    let cbs = allLeads.filter((l: any) => l.callbackAt && l.callbackAt > Date.now());
+    // Apply callback date filter
+    if (callbackDateFilter !== "all") {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+      if (callbackDateFilter === "today") {
+        cbs = cbs.filter((l: any) => l.callbackAt >= todayStart && l.callbackAt <= todayEnd);
+      } else if (callbackDateFilter === "tomorrow") {
+        const tomorrowStart = todayStart + 24 * 60 * 60 * 1000;
+        const tomorrowEnd = todayEnd + 24 * 60 * 60 * 1000;
+        cbs = cbs.filter((l: any) => l.callbackAt >= tomorrowStart && l.callbackAt <= tomorrowEnd);
+      } else if (callbackDateFilter === "this_week") {
+        const dayOfWeek = now.getDay() || 7;
+        const weekStart = todayStart - (dayOfWeek - 1) * 24 * 60 * 60 * 1000;
+        const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000 - 1;
+        cbs = cbs.filter((l: any) => l.callbackAt >= weekStart && l.callbackAt <= weekEnd);
+      }
+    }
+    // Sort by soonest callback first
+    cbs.sort((a: any, b: any) => (a.callbackAt ?? 0) - (b.callbackAt ?? 0));
+    return cbs;
+  }, [allLeads, callbackDateFilter]);
 
   const callbacksTodayCount = useMemo(() => {
     const todayStart = new Date();
@@ -894,6 +934,18 @@ export default function ManagerDashboard() {
                 className="pl-8 h-9 text-sm w-full"
               />
             </div>
+            {activeTab === "callbacks" && (
+              <select
+                value={callbackDateFilter}
+                onChange={(e) => setCallbackDateFilter(e.target.value)}
+                className="h-9 px-3 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-medium"
+              >
+                <option value="all">All Callbacks</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="this_week">This Week</option>
+              </select>
+            )}
             <Select value={agentFilter} onValueChange={setAgentFilter}>
               <SelectTrigger className="h-9 w-32 text-sm border border-gray-300 rounded-lg">
                 <SelectValue placeholder="All Agents" />
@@ -1101,7 +1153,7 @@ export default function ManagerDashboard() {
               {/* CSS Grid Table Header */}
               <div
                 className="grid items-center gap-0 px-2 py-2.5 bg-gray-50 border-b border-gray-200 min-w-[1600px]"
-                style={{ gridTemplateColumns: "32px 150px 160px 100px 80px 130px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" }}
+                style={{ gridTemplateColumns: activeTab === "callbacks" ? "32px 150px 160px 100px 80px 130px 120px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" : "32px 150px 160px 100px 80px 130px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" }}
               >
                 <div className="px-1">
                   <button
@@ -1120,6 +1172,9 @@ export default function ManagerDashboard() {
                 <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Agent</div>
                 <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Status</div>
                 <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Work Status</div>
+                {activeTab === "callbacks" && (
+                  <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Callback Due</div>
+                )}
                 <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Date</div>
                 <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Time In</div>
                 <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-2">Lead Type</div>
@@ -1142,7 +1197,7 @@ export default function ManagerDashboard() {
                         className={`grid items-center gap-0 px-2 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition-colors min-w-[1600px] ${
                           isSelected ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""
                         }`}
-                        style={{ gridTemplateColumns: "32px 150px 160px 100px 80px 130px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" }}
+                        style={{ gridTemplateColumns: activeTab === "callbacks" ? "32px 150px 160px 100px 80px 130px 120px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" : "32px 150px 160px 100px 80px 130px 90px 70px 160px minmax(200px, 1fr) minmax(200px, 1fr)" }}
                       >
                         {/* Checkbox */}
                         <div className="px-1">
@@ -1288,6 +1343,14 @@ export default function ManagerDashboard() {
                             </SelectContent>
                           </Select>
                         </div>
+                        {/* Callback Due (only in callbacks tab) */}
+                        {activeTab === "callbacks" && (
+                          <div className="px-2 text-sm text-gray-800 whitespace-nowrap">
+                            {lead.callbackAt
+                              ? new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                              : "\u2014"}
+                          </div>
+                        )}
                         {/* Date */}
                         <div className="px-2 text-sm text-gray-800 whitespace-nowrap">
                           {formatDate(leadDate)}

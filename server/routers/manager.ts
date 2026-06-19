@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog } from "../../drizzle/schema";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users } from "../../drizzle/schema";
 import { addCallNote, updateContact } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
@@ -1868,4 +1868,36 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         })),
       };
     }),
+
+  /**
+   * Get upcoming callbacks due in the next 10 minutes for the current user.
+   * Frontend polls this every 30 seconds to show toast notifications.
+   */
+  getUpcomingCallbacks: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return [];
+
+    const userName = ctx.user.name;
+    if (!userName) return [];
+
+    const now = Date.now();
+    const tenMinutesFromNow = now + 10 * 60 * 1000;
+
+    const result = await db.execute(sql`
+      SELECT id, customerName, phone, callbackAt, assignedAgent
+      FROM lead_assignments
+      WHERE callbackAt IS NOT NULL
+        AND callbackAt > ${now}
+        AND callbackAt <= ${tenMinutesFromNow}
+        AND assignedAgent = ${userName}
+    `);
+
+    const rows = (result as unknown as any[][])[0] as any[];
+    return (rows || []).map((r) => ({
+      id: r.id,
+      customerName: r.customerName || "Unknown",
+      phone: r.phone || null,
+      callbackAt: r.callbackAt,
+    }));
+  }),
 });

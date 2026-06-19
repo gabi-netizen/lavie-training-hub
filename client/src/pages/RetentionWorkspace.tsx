@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -140,6 +140,7 @@ export default function RetentionWorkspace() {
   // Filter state
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState<string>("all");
+  const [callbackDateFilter, setCallbackDateFilter] = useState<string>("all");
 
   // Callback modal state
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
@@ -239,6 +240,25 @@ export default function RetentionWorkspace() {
     onSuccess: () => { toast.success("Callback scheduled"); refetch(); },
     onError: (err: any) => toast.error(err.message || "Failed to schedule callback"),
   });
+
+  // ─── Upcoming Callbacks Polling (toast notifications) ──────────────────────
+  const { data: upcomingCallbacks = [] } = trpc.manager.getUpcomingCallbacks.useQuery(
+    undefined,
+    { refetchInterval: 30_000 }
+  );
+  const lastCallbackIdsRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (upcomingCallbacks.length > 0) {
+      const currentIds = new Set(upcomingCallbacks.map((c: any) => c.id));
+      for (const cb of upcomingCallbacks) {
+        if (!lastCallbackIdsRef.current.has(cb.id)) {
+          const mins = Math.max(1, Math.round(((cb.callbackAt as number) - Date.now()) / 60000));
+          toast.info(`\u23F0 Callback with ${cb.customerName} in ${mins} min`, { duration: 10000 });
+        }
+      }
+      lastCallbackIdsRef.current = currentIds;
+    }
+  }, [upcomingCallbacks]);
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
     onSuccess: () => {
       refetch();
@@ -304,10 +324,30 @@ export default function RetentionWorkspace() {
     [filteredLeads]
   );
 
-  const callbackLeads = useMemo(
-    () => allLeads.filter((l: Lead) => l.callbackAt && l.callbackAt > Date.now()),
-    [allLeads]
-  );
+  const callbackLeads = useMemo(() => {
+    let cbs = allLeads.filter((l: Lead) => l.callbackAt && l.callbackAt > Date.now());
+    // Apply callback date filter
+    if (callbackDateFilter !== "all") {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+      if (callbackDateFilter === "today") {
+        cbs = cbs.filter((l) => l.callbackAt! >= todayStart && l.callbackAt! <= todayEnd);
+      } else if (callbackDateFilter === "tomorrow") {
+        const tomorrowStart = todayStart + 24 * 60 * 60 * 1000;
+        const tomorrowEnd = todayEnd + 24 * 60 * 60 * 1000;
+        cbs = cbs.filter((l) => l.callbackAt! >= tomorrowStart && l.callbackAt! <= tomorrowEnd);
+      } else if (callbackDateFilter === "this_week") {
+        const dayOfWeek = now.getDay() || 7; // Mon=1
+        const weekStart = todayStart - (dayOfWeek - 1) * 24 * 60 * 60 * 1000;
+        const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000 - 1;
+        cbs = cbs.filter((l) => l.callbackAt! >= weekStart && l.callbackAt! <= weekEnd);
+      }
+    }
+    // Sort by soonest callback first
+    cbs.sort((a, b) => (a.callbackAt ?? 0) - (b.callbackAt ?? 0));
+    return cbs;
+  }, [allLeads, callbackDateFilter]);
 
   const doneDealCount = useMemo(
     () => allLeads.filter((l: Lead) => l.workStatus === "done_deal" || l.workStatus === "retained").length,
@@ -717,17 +757,31 @@ export default function RetentionWorkspace() {
         <>
           {/* Filters */}
           <div className="flex items-center gap-3 mb-4">
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-medium"
-            >
-              <option value="all">All Dates</option>
-              <option value="today">Today</option>
-              <option value="7days">Last 7 Days</option>
-              <option value="thisMonth">This Month</option>
-              <option value="lastMonth">Last Month</option>
-            </select>
+            {activeTab === "queue" && (
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-medium"
+              >
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+              </select>
+            )}
+            {activeTab === "callbacks" && (
+              <select
+                value={callbackDateFilter}
+                onChange={(e) => setCallbackDateFilter(e.target.value)}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-medium"
+              >
+                <option value="all">All Callbacks</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="this_week">This Week</option>
+              </select>
+            )}
             <select
               value={leadTypeFilter}
               onChange={(e) => setLeadTypeFilter(e.target.value)}
@@ -763,6 +817,9 @@ export default function RetentionWorkspace() {
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Name</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3 max-w-[160px]">Email</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Status</th>
+                    {activeTab === "callbacks" && (
+                      <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Callback Due</th>
+                    )}
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Date</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Lead Type</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Customer Note</th>
@@ -817,6 +874,15 @@ export default function RetentionWorkspace() {
                         <td className="py-3 px-3">
                           <StatusBadge lead={lead} />
                         </td>
+
+                        {/* Callback Due (only in callbacks tab) */}
+                        {activeTab === "callbacks" && (
+                          <td className="py-3 px-3 text-sm text-gray-800 whitespace-nowrap">
+                            {lead.callbackAt
+                              ? new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                              : "—"}
+                          </td>
+                        )}
 
                         {/* Date */}
                         <td className="py-3 px-3 text-sm text-gray-800">

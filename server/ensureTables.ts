@@ -103,4 +103,14 @@ export async function ensureSupportTicketsTable() {
   } catch (err) {
     console.error("[DB] Error adding firstAgentReplyAt column:", err);
   }
+
+  // ── lead_assignments.callbackNotifiedAt (callback reminder tracking) ────────
+  try {
+    await db.execute(sql`
+      ALTER TABLE lead_assignments ADD COLUMN IF NOT EXISTS callbackNotifiedAt float NULL;
+    `);
+    console.log("[DB] lead_assignments.callbackNotifiedAt column ensured");
+  } catch (err) {
+    console.error("[DB] Error adding callbackNotifiedAt column:", err);
+  }
 }

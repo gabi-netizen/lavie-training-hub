@@ -30,6 +30,7 @@ import { getPaymentPageHtml } from "../payment-html";
 import { handleEmailTrackPixel, handleEmailLinkClick } from "../emailTracking";
 import { startNightlyCron } from "../cron/nightlyCoolingPool";
 import { startTicketAutoUnassignCron } from "../cron/ticketAutoUnassign";
+import { startCallbackReminderCron } from "../cron/callbackReminder";
 import { startClientSubscriptionsSync } from "../syncClientSubscriptions";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -337,6 +338,7 @@ async function startServer() {
     setTimeout(() => {
       startNightlyCron();
       startTicketAutoUnassignCron();
+      startCallbackReminderCron();
     }, 8000);
   });
 }
