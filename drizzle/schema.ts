@@ -604,6 +604,8 @@ export const supportTickets = mysqlTable("support_tickets", {
   notes: text("notes"),
   /** Which address the email was sent TO (e.g. "guy@lavielabs.com", "support@lavielabs.com") */
   recipient: varchar("recipient", { length: 320 }),
+  /** When the first agent reply was sent */
+  firstAgentReplyAt: timestamp("firstAgentReplyAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

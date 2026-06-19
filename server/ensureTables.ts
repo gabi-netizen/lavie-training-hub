@@ -94,4 +94,13 @@ export async function ensureSupportTicketsTable() {
   } catch (err) {
     console.error("[DB] Error creating support_tickets table:", err);
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS firstAgentReplyAt timestamp NULL;
+    `);
+    console.log("[DB] support_tickets.firstAgentReplyAt column ensured");
+  } catch (err) {
+    console.error("[DB] Error adding firstAgentReplyAt column:", err);
+  }
 }

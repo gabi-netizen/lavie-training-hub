@@ -235,6 +235,11 @@ export const ticketsRouter = router({
         } else {
           // "support" mode: show tickets where recipient is support/trial or NULL (old tickets)
           rows = rows.filter((r) => !r.recipient || !RETENTION_EMAILS.includes(r.recipient));
+          
+          // Team-based visibility: agents (team = opening/retention) only see tickets assigned to them
+          if (ctx.user.team === "opening" || ctx.user.team === "retention") {
+            rows = rows.filter((r) => r.assignedTo === ctx.user.name);
+          }
         }
 
         // Map to frontend-friendly format
@@ -257,6 +262,7 @@ export const ticketsRouter = router({
           notes: row.notes,
           recipient: row.recipient ?? null,
           agentLabel: row.recipient ? (EMAIL_AGENT_MAP[row.recipient] ?? null) : null,
+          firstAgentReplyAt: row.firstAgentReplyAt?.toISOString() ?? null,
           createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
           updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
         }));
@@ -367,6 +373,7 @@ export const ticketsRouter = router({
           notes: row.notes,
           recipient: row.recipient ?? null,
           agentLabel: row.recipient ? (EMAIL_AGENT_MAP[row.recipient] ?? null) : null,
+          firstAgentReplyAt: row.firstAgentReplyAt?.toISOString() ?? null,
           createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
           updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
         };
@@ -548,10 +555,20 @@ export const ticketsRouter = router({
         sentBy: agentName,
       });
 
-      // Update ticket status to awaiting_response
+      // Update ticket: set status, assign to agent, and record first reply time
+      const updateFields: Record<string, any> = { 
+        status: "awaiting_response",
+        assignedTo: agentName,
+      };
+
+      // Only set firstAgentReplyAt if it hasn't been set yet
+      if (!ticket.firstAgentReplyAt) {
+        updateFields.firstAgentReplyAt = new Date();
+      }
+
       await db
         .update(supportTickets)
-        .set({ status: "awaiting_response" })
+        .set(updateFields)
         .where(eq(supportTickets.id, input.ticketId));
 
       return { success: true };

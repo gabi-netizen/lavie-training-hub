@@ -29,6 +29,7 @@ import { createPaymentIntent, handleStripeWebhook } from "../stripe";
 import { getPaymentPageHtml } from "../payment-html";
 import { handleEmailTrackPixel, handleEmailLinkClick } from "../emailTracking";
 import { startNightlyCron } from "../cron/nightlyCoolingPool";
+import { startTicketAutoUnassignCron } from "../cron/ticketAutoUnassign";
 import { startClientSubscriptionsSync } from "../syncClientSubscriptions";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -335,6 +336,7 @@ async function startServer() {
     // Start nightly Cooling Pool cron (23:00 UTC — moves N/A leads to unassigned)
     setTimeout(() => {
       startNightlyCron();
+      startTicketAutoUnassignCron();
     }, 8000);
   });
 }
