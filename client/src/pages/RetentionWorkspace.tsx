@@ -154,6 +154,7 @@ export default function RetentionWorkspace() {
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState<string>("all");
   const [callbackDateFilter, setCallbackDateFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Callback modal state
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
@@ -329,8 +330,17 @@ export default function RetentionWorkspace() {
     if (leadTypeFilter !== "all") {
       result = result.filter((l) => l.leadType === leadTypeFilter);
     }
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((l) =>
+        (l.customerName || "").toLowerCase().includes(q) ||
+        (l.email || "").toLowerCase().includes(q) ||
+        (l.phone || "").includes(q)
+      );
+    }
     return result;
-  }, [allLeads, dateFilter, leadTypeFilter]);
+  }, [allLeads, dateFilter, leadTypeFilter, searchQuery]);
 
   // Tab filtering - show ALL leads in queue
   const queueLeads = useMemo(
@@ -806,6 +816,13 @@ export default function RetentionWorkspace() {
                 <option key={lt} value={lt}>{lt}</option>
               ))}
             </select>
+            <input
+              type="text"
+              placeholder="Search name, email or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 w-[220px] placeholder-gray-400"
+            />
             <span className="text-sm text-gray-600 font-medium">{displayLeads.length} leads</span>
           </div>
           {displayLeads.length === 0 ? (
