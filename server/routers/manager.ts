@@ -348,9 +348,9 @@ export const managerRouter = router({
       leads.sort((a, b) => {
         switch (input.sortBy) {
           case "leadStatus": {
-            const aDate = a.currentTermEndsAt ? new Date(a.currentTermEndsAt).getTime() : 0;
-            const bDate = b.currentTermEndsAt ? new Date(b.currentTermEndsAt).getTime() : 0;
-            return bDate - aDate;
+            const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bDate - aDate; // newest first
           }
           case "urgency":
             return b.urgencyScore - a.urgencyScore;

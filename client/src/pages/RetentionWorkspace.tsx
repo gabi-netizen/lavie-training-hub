@@ -137,6 +137,10 @@ export default function RetentionWorkspace() {
   const [msgLeadPhone, setMsgLeadPhone] = useState("");
   const [msgLeadName, setMsgLeadName] = useState("");
     const [smsBody, setSmsBody] = useState("");
+  // Filter state
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [leadTypeFilter, setLeadTypeFilter] = useState<string>("all");
+
   // Callback modal state
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string } | null>(null);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -243,7 +247,11 @@ export default function RetentionWorkspace() {
 
   type Lead = NonNullable<typeof leadsData>["leads"][number];
   const allLeads: Lead[] = useMemo(
-    () => [...(leadsData?.leads ?? [])].sort((a, b) => (a.assignmentId ?? 0) - (b.assignmentId ?? 0)),
+    () => [...(leadsData?.leads ?? [])].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA; // newest first
+    }),
     [leadsData]
   );
 
@@ -253,10 +261,46 @@ export default function RetentionWorkspace() {
     [allLeads]
   );
 
+  // Apply date + lead type filters
+  const filteredLeads: Lead[] = useMemo(() => {
+    let result = allLeads;
+    // Date filter
+    if (dateFilter !== "all") {
+      const now = new Date();
+      let startDate: Date;
+      if (dateFilter === "today") {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateFilter === "7days") {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateFilter === "thisMonth") {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (dateFilter === "lastMonth") {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        result = result.filter((l) => {
+          const d = new Date(l.createdAt || 0).getTime();
+          return d >= startDate.getTime() && d <= endDate.getTime();
+        });
+        // Skip the generic filter below
+        startDate = undefined as any;
+      } else {
+        startDate = undefined as any;
+      }
+      if (startDate) {
+        result = result.filter((l) => new Date(l.createdAt || 0).getTime() >= startDate.getTime());
+      }
+    }
+    // Lead type filter
+    if (leadTypeFilter !== "all") {
+      result = result.filter((l) => l.leadType === leadTypeFilter);
+    }
+    return result;
+  }, [allLeads, dateFilter, leadTypeFilter]);
+
   // Tab filtering - show ALL leads in queue
   const queueLeads = useMemo(
-    () => allLeads,
-    [allLeads]
+    () => filteredLeads,
+    [filteredLeads]
   );
 
   const callbackLeads = useMemo(
@@ -279,6 +323,12 @@ export default function RetentionWorkspace() {
       (l: Lead) => l.callbackAt && l.callbackAt >= todayStart.getTime() && l.callbackAt <= todayEnd.getTime()
     ).length;
   }, [allLeads]);
+
+  // Unique lead types for filter dropdown
+  const uniqueLeadTypes = useMemo(
+    () => Array.from(new Set(allLeads.map((l) => l.leadType).filter(Boolean))).sort(),
+    [allLeads]
+  );
 
   const displayLeads = activeTab === "queue" ? queueLeads : activeTab === "callbacks" ? callbackLeads : [];
 
@@ -664,6 +714,31 @@ export default function RetentionWorkspace() {
 
       {(activeTab === "queue" || activeTab === "callbacks") && (
         <>
+          {/* Filters */}
+          <div className="flex items-center gap-3 mb-4">
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-medium"
+            >
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="7days">Last 7 Days</option>
+              <option value="thisMonth">This Month</option>
+              <option value="lastMonth">Last Month</option>
+            </select>
+            <select
+              value={leadTypeFilter}
+              onChange={(e) => setLeadTypeFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 font-medium"
+            >
+              <option value="all">All Lead Types</option>
+              {uniqueLeadTypes.map((lt) => (
+                <option key={lt} value={lt}>{lt}</option>
+              ))}
+            </select>
+            <span className="text-sm text-gray-600 font-medium">{displayLeads.length} leads</span>
+          </div>
           {displayLeads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
