@@ -154,6 +154,7 @@ export default function RetentionWorkspace() {
       agentFilter: agentName,
       perPage: 200,
       dateRangeFilter: "all",
+      sortBy: "leadStatus",
     },
     { refetchOnWindowFocus: false, refetchInterval: 30_000 }
   );
