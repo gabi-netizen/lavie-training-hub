@@ -498,8 +498,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           <option value="180+">180+ days</option>
         </select>
 
-        {/* Days Left Filter — visible only for Trials */}
-        {planTypeFilter === "trial" && (
+        {/* Days Left Filter — visible when Trials cube is selected */}
+        {(statusFilter === "live" && planTypeFilter === "trial") && (
           <select
             value={daysLeftFilter}
             onChange={(e) => {
@@ -511,10 +511,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             <option value="">All Days Left</option>
             <option value="today">Today</option>
             <option value="tomorrow">Tomorrow</option>
-            <option value="1-3">1-3 days</option>
-            <option value="4-7">4-7 days</option>
-            <option value="8-14">8-14 days</option>
-            <option value="15-21">15-21 days</option>
+            <option value="2days">2 Days</option>
+            <option value="3days">3 Days</option>
+            <option value="4days">4 Days</option>
+            <option value="thisweek">This Week</option>
             <option value="overdue">Overdue</option>
           </select>
         )}
@@ -789,8 +789,15 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   {isSubMode && (
                     <div className="text-xs font-bold text-orange-700">
                       {(() => {
-                        if (!sub.nextBillingOn) return "—";
-                        const next = new Date(sub.nextBillingOn);
+                        let nextDate = sub.nextBillingOn;
+                        if (!nextDate && sub.activatedOn) {
+                          // Trial: calculate first billing as activatedOn + 21 days
+                          const activated = new Date(sub.activatedOn);
+                          activated.setDate(activated.getDate() + 21);
+                          nextDate = activated.toISOString().split('T')[0];
+                        }
+                        if (!nextDate) return "—";
+                        const next = new Date(nextDate);
                         const today = new Date();
                         today.setHours(0,0,0,0);
                         next.setHours(0,0,0,0);

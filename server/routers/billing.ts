@@ -724,22 +724,24 @@ export const billingRouter = router({
           }
         }
 
-        // Days Left filter: filter by days until nextBillingOn
+        // Days Left filter: filter by days until first billing
+        // Use COALESCE(nextBillingOn, activatedOn + 21 days) since trials have NULL nextBillingOn
         if (input.daysLeftFilter) {
+          const billingDateExpr = sql`COALESCE(${clientSubscriptions.nextBillingOn}, DATE_ADD(${clientSubscriptions.activatedOn}, INTERVAL 21 DAY))`;
           if (input.daysLeftFilter === "today") {
-            conditions.push(sql`${clientSubscriptions.nextBillingOn} = CURDATE()`);
+            conditions.push(sql`${billingDateExpr} = CURDATE()`);
           } else if (input.daysLeftFilter === "tomorrow") {
-            conditions.push(sql`${clientSubscriptions.nextBillingOn} = DATE_ADD(CURDATE(), INTERVAL 1 DAY)`);
-          } else if (input.daysLeftFilter === "1-3") {
-            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 1 AND 3`);
-          } else if (input.daysLeftFilter === "4-7") {
-            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 4 AND 7`);
-          } else if (input.daysLeftFilter === "8-14") {
-            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 8 AND 14`);
-          } else if (input.daysLeftFilter === "15-21") {
-            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 15 AND 21`);
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 1 DAY)`);
+          } else if (input.daysLeftFilter === "2days") {
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 2 DAY)`);
+          } else if (input.daysLeftFilter === "3days") {
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 3 DAY)`);
+          } else if (input.daysLeftFilter === "4days") {
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 4 DAY)`);
+          } else if (input.daysLeftFilter === "thisweek") {
+            conditions.push(sql`DATEDIFF(${billingDateExpr}, CURDATE()) BETWEEN 0 AND 7`);
           } else if (input.daysLeftFilter === "overdue") {
-            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) < 0`);
+            conditions.push(sql`DATEDIFF(${billingDateExpr}, CURDATE()) < 0`);
           }
         }
 
