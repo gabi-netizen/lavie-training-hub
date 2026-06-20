@@ -183,6 +183,7 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
     const RETENTION_AGENTS = ["rob", "guy", "james", "james huxley", "mitch"];
 
     // Live Subs (status=live + planType=subscription): ALL agents, no salesperson filter
+    // Expired (End Installments): ALL agents, no salesperson filter
     // Everything else: retention agents only
     let filtered = allSubscriptions.filter((sub) => {
       const status = (sub.status || "").toLowerCase();
@@ -190,6 +191,7 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
       const isSubscriptionPlan = !(/i?nstal/i.test(planName)) && !(/one\s*payment|deposit/i.test(planName));
       const isLiveSub = status === "live" && isSubscriptionPlan;
       if (isLiveSub) return true; // All live subs - no agent filter
+      if (status === "expired") return true; // All end installments - no agent filter
       return RETENTION_AGENTS.includes((sub.salesperson_name || "").toLowerCase());
     });
 
