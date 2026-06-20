@@ -293,7 +293,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <div onClick={() => handleCardClick("live")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && !planTypeFilter ? "border-2 border-green-600 ring-2 ring-green-100" : "border border-green-200 hover:border-green-400"}`}>
           <div className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-1">Live</div>
-          <div className="text-2xl font-bold text-green-800">{summary.live}</div>
+          <div className="text-2xl font-bold text-green-800">{summary.liveInstallment + summary.liveSub}</div>
         </div>
         <div onClick={() => handleCardClick("live", "installment")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && planTypeFilter === "installment" ? "border-2 border-emerald-600 ring-2 ring-emerald-100" : "border border-emerald-200 hover:border-emerald-400"}`}>
           <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wide mb-1">Live Installments</div>
