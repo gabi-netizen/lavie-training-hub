@@ -41,6 +41,7 @@ import {
   Check,
   Trash2,
   Calculator,
+  Copy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1179,14 +1180,38 @@ export default function ContactCard() {
               <div className="mb-4">
                 <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Email</p>
                 {isFromRetention ? (
-                  <InlineEditableField
-                    label="Email"
-                    value={contact.email ?? ""}
-                    onSave={handleSaveEmail}
-                    icon={<Mail size={14} />}
-                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <InlineEditableField
+                        label="Email"
+                        value={contact.email ?? ""}
+                        onSave={handleSaveEmail}
+                        icon={<Mail size={14} />}
+                      />
+                    </div>
+                    {contact.email && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(contact.email || ""); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
+                        title="Copy email"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-700">{contact.email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-700">{contact.email}</p>
+                    {contact.email && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(contact.email || ""); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
+                        title="Copy email"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -1196,14 +1221,38 @@ export default function ContactCard() {
               <div className="mb-4 pt-3 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Shipping Address</p>
                 {isFromRetention ? (
-                  <InlineEditableField
-                    label="Address"
-                    value={contact.address ?? zohoData?.shippingAddress ?? ""}
-                    onSave={handleSaveAddress}
-                    icon={<Package size={14} />}
-                  />
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <InlineEditableField
+                        label="Address"
+                        value={contact.address ?? zohoData?.shippingAddress ?? ""}
+                        onSave={handleSaveAddress}
+                        icon={<Package size={14} />}
+                      />
+                    </div>
+                    {(contact.address || zohoData?.shippingAddress) && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(contact.address || zohoData?.shippingAddress || ""); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors mt-0.5"
+                        title="Copy address"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-700 leading-relaxed">{contact.address || zohoData?.shippingAddress}</p>
+                  <div className="flex items-start gap-2">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{contact.address || zohoData?.shippingAddress}</p>
+                    {(contact.address || zohoData?.shippingAddress) && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(contact.address || zohoData?.shippingAddress || ""); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors mt-0.5"
+                        title="Copy address"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
