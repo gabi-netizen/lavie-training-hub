@@ -152,7 +152,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   );
 
   const subscriptions: MyClientSubscription[] = data?.subscriptions ?? [];
-  const summary: any = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, expired: 0, unpaid: 0, liveInstallment: 0, liveSub: 0 };
+  const summary: any = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, expired: 0, unpaid: 0, liveInstallment: 0, liveSub: 0, trials: 0 };
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / 50);
 
@@ -248,6 +248,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
         <div onClick={() => handleCardClick("live", "subscription")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && planTypeFilter === "subscription" ? "border-2 border-teal-600 ring-2 ring-teal-100" : "border border-teal-200 hover:border-teal-400"}`}>
           <div className="text-xs font-semibold text-teal-800 uppercase tracking-wide mb-1">Live Sub</div>
           <div className="text-2xl font-bold text-teal-800">{summary.liveSub}</div>
+        </div>
+        <div onClick={() => handleCardClick("live", "trial")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && planTypeFilter === "trial" ? "border-2 border-purple-600 ring-2 ring-purple-100" : "border border-purple-200 hover:border-purple-400"}`}>
+          <div className="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-1">Trials</div>
+          <div className="text-2xl font-bold text-purple-800">{summary.trials}</div>
         </div>
         <div onClick={() => handleCardClick("dunning")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "dunning" ? "border-2 border-red-600 ring-2 ring-red-100" : "border border-red-200 hover:border-red-400"}`}>
           <div className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-1">Decline</div>

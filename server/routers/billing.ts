@@ -621,7 +621,15 @@ export const billingRouter = router({
         }
 
         if (input.planType) {
-          if (input.planType === "subscription" || input.planType === "installment" || input.planType === "one_payment") {
+          if (input.planType === "trial") {
+            // Trials: subscription plans with amount <= 4.95
+            conditions.push(eq(clientSubscriptions.planType, "subscription"));
+            conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) <= 4.95`);
+          } else if (input.planType === "subscription") {
+            // Live Sub: subscription plans with amount > 4.95
+            conditions.push(eq(clientSubscriptions.planType, "subscription"));
+            conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) > 4.95`);
+          } else if (input.planType === "installment" || input.planType === "one_payment") {
             conditions.push(eq(clientSubscriptions.planType, input.planType));
           } else if (input.planType === "installment_and_deposit") {
             // Installment plans + Deposit (one_payment with planName='Deposit')
@@ -699,7 +707,8 @@ export const billingRouter = router({
             expired: sql<number>`SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)`,
             unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
             liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'installment' THEN 1 ELSE 0 END)`,
-            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' THEN 1 ELSE 0 END)`,
+            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 THEN 1 ELSE 0 END)`,
+            trials: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) <= 4.95 THEN 1 ELSE 0 END)`,
           })
           .from(clientSubscriptions)
           .where(agentCondition);
@@ -714,6 +723,7 @@ export const billingRouter = router({
           unpaid: Number(summaryResult[0]?.unpaid ?? 0),
           liveInstallment: Number(summaryResult[0]?.liveInstallment ?? 0),
           liveSub: Number(summaryResult[0]?.liveSub ?? 0),
+          trials: Number(summaryResult[0]?.trials ?? 0),
         };
 
         // Map DB rows to the MyClientSubscription response format
