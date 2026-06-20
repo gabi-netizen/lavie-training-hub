@@ -179,11 +179,19 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
 
     console.log(`[ZohoSync] Fetched ${allSubscriptions.length} total subscriptions from Zoho.`);
 
-    // Filter by retention agents (Rob, Guy, James)
+    // Filter by retention agents (Rob, Guy, James) for non-live-sub records
     const RETENTION_AGENTS = ["rob", "guy", "james", "james huxley", "mitch"];
-    let filtered = allSubscriptions.filter(
-      (sub) => RETENTION_AGENTS.includes((sub.salesperson_name || "").toLowerCase())
-    );
+
+    // Live Subs (status=live + planType=subscription): ALL agents, no salesperson filter
+    // Everything else: retention agents only
+    let filtered = allSubscriptions.filter((sub) => {
+      const status = (sub.status || "").toLowerCase();
+      const planName = sub.plan_name || "";
+      const isSubscriptionPlan = !(/installment/i.test(planName)) && !(/one\s*payment|deposit/i.test(planName));
+      const isLiveSub = status === "live" && isSubscriptionPlan;
+      if (isLiveSub) return true; // All live subs - no agent filter
+      return RETENTION_AGENTS.includes((sub.salesperson_name || "").toLowerCase());
+    });
 
     // Filter OUT "Not Shippable"
     filtered = filtered.filter((sub) => {
