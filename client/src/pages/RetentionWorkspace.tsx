@@ -119,7 +119,7 @@ const LEAD_TYPE_OPTIONS = [
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function RetentionWorkspace() {
+export default function RetentionWorkspace({ agentName: agentNameProp }: { agentName?: string } = {}) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "followups" | "messages" | "emails" | "clients" | "decline" | "cancel" | "endInstalment" | "butler">(() => {
     const saved = sessionStorage.getItem("retention-workspace-tab");
@@ -171,8 +171,7 @@ export default function RetentionWorkspace() {
   const [callbackDateTime, setCallbackDateTime] = useState("");
   const [callbackNote, setCallbackNote] = useState("");
   // Fetch leads for the current agent
-  // TODO: Once retention flow is live, revert to user?.name filtering
-  const agentName = "Rob";
+  const agentName = agentNameProp || "Rob";
   const { data: leadsData, refetch } = trpc.manager.getLeads.useQuery(
     {
       agentFilter: agentName,

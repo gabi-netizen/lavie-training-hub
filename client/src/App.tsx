@@ -58,7 +58,7 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
 }
 
 /** Wraps a component so admins and retention team members can access it. */
-function AdminOrRetentionRoute({ component: Component }: { component: React.ComponentType }) {
+function AdminOrRetentionRoute({ component: Component, componentProps }: { component: React.ComponentType<any>; componentProps?: Record<string, any> }) {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
@@ -81,7 +81,7 @@ function AdminOrRetentionRoute({ component: Component }: { component: React.Comp
   );
   if (!user || (user.role !== "admin" && user.team !== "retention")) return null;
 
-  return <Component />;
+  return <Component {...(componentProps || {})} />;
 }
 
 /** Wraps a component so only managers (users with no team) can access it. */
@@ -190,6 +190,9 @@ function Router() {
         {/* Retention Workspace — admin + retention agents */}
         <Route path={"/retention-workspace"}>
           {() => <AdminOrRetentionRoute component={RetentionWorkspace} />}
+        </Route>
+        <Route path={"/retention-workspace/james"}>
+          {() => <AdminOrRetentionRoute component={RetentionWorkspace} componentProps={{ agentName: "James" }} />}
         </Route>
 
         {/* Workspace — agent calling workspace */}

@@ -82,8 +82,10 @@ export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [callsOpen, setCallsOpen] = useState(false);
   const [aiCoachOpen, setAiCoachOpen] = useState(false);
+  const [retentionOpen, setRetentionOpen] = useState(false);
   const callsRef = useRef<HTMLDivElement>(null);
   const aiCoachRef = useRef<HTMLDivElement>(null);
+  const retentionRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === "admin";
   const isManager = !user?.team; // Managers have no team assigned
@@ -106,6 +108,9 @@ export default function TopNav() {
       }
       if (aiCoachRef.current && !aiCoachRef.current.contains(e.target as Node)) {
         setAiCoachOpen(false);
+      }
+      if (retentionRef.current && !retentionRef.current.contains(e.target as Node)) {
+        setRetentionOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -309,21 +314,40 @@ export default function TopNav() {
               </button>
             </Link>
           )}
-          {/* Retention Workspace — admin + retention */}
+          {/* Retention Workspace dropdown — admin + retention */}
           {(isAdmin || isRetention) && (
-            <Link href={RETENTION_WORKSPACE_ITEM.path}>
+            <div className="relative" ref={retentionRef}>
               <button
+                onClick={() => { setRetentionOpen((v) => !v); setCallsOpen(false); setAiCoachOpen(false); }}
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-all duration-150 font-bold",
-                  location === RETENTION_WORKSPACE_ITEM.path
+                  location.startsWith("/retention-workspace")
                     ? "text-white bg-white/20 border-b-2 border-white rounded-b-none"
                     : "text-white hover:text-white hover:bg-white/10"
                 )}
               >
                 <Users size={14} />
                 Retention
+                <ChevronDown size={12} className={cn("transition-transform duration-150", retentionOpen && "rotate-180")} />
               </button>
-            </Link>
+
+              {retentionOpen && (
+                <div className="absolute left-0 top-full mt-1 w-44 rounded-lg border border-gray-200 shadow-lg bg-white py-1 z-50">
+                  <Link href="/retention-workspace" onClick={() => setRetentionOpen(false)}>
+                    <div className={cn("flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors", location === "/retention-workspace" ? "text-indigo-600 bg-indigo-50 font-medium" : "text-gray-700 hover:text-gray-800 hover:bg-gray-50")}>
+                      <Users size={14} />
+                      Rob
+                    </div>
+                  </Link>
+                  <Link href="/retention-workspace/james" onClick={() => setRetentionOpen(false)}>
+                    <div className={cn("flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors", location === "/retention-workspace/james" ? "text-indigo-600 bg-indigo-50 font-medium" : "text-gray-700 hover:text-gray-800 hover:bg-gray-50")}>
+                      <Users size={14} />
+                      James
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Opening Dashboard — visible to all authenticated users */}
