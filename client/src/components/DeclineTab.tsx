@@ -198,21 +198,7 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="bg-white border border-red-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Total Declined</div>
-          <div className="text-2xl font-bold text-red-800">{totalDeclineCount}</div>
-        </div>
-        <div className="bg-white border border-red-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Dunning</div>
-          <div className="text-2xl font-bold text-red-800">{dunningCount}</div>
-        </div>
-        <div className="bg-white border border-orange-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">Unpaid</div>
-          <div className="text-2xl font-bold text-orange-800">{unpaidCount}</div>
-        </div>
-      </div>
+
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">

@@ -164,17 +164,7 @@ export function CancelTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, o
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Total Cancelled</div>
-          <div className="text-2xl font-bold text-slate-800">{summary.cancelled}</div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Showing</div>
-          <div className="text-2xl font-bold text-slate-900">{totalCount}</div>
-        </div>
-      </div>
+
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
