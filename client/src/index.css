@@ -396,13 +396,14 @@
 }
 .ws-detail-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   padding: 4px 6px;
   border: 1px solid #F3F4F6;
   border-radius: 6px;
   background: #fff;
   min-height: 30px;
+  flex-wrap: wrap;
 }
 .ws-detail-icon { color: #4F46E5; flex-shrink: 0; }
 .ws-detail-text {
@@ -411,9 +412,10 @@
   font-weight: 500;
   color: #1f2937;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.4;
+  padding-top: 2px;
 }
 .ws-detail-edit {
   width: 24px;
