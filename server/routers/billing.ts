@@ -759,10 +759,16 @@ export const billingRouter = router({
           .limit(input.perPage)
           .offset(offset);
 
-        // Get summary counts (scoped to salesperson if provided, otherwise all)
-        const agentCondition = input.salesperson
-          ? eq(clientSubscriptions.salesPerson, input.salesperson)
-          : undefined;
+        // Get summary counts — scoped to agent filter (multi-select)
+        let summaryAgentCondition: any = undefined;
+        if (input.salesperson) {
+          const sAgents = input.salesperson.split(",").map(a => a.trim()).filter(Boolean);
+          if (sAgents.length === 1) {
+            summaryAgentCondition = eq(clientSubscriptions.salesPerson, sAgents[0]);
+          } else if (sAgents.length > 1) {
+            summaryAgentCondition = sql`${clientSubscriptions.salesPerson} IN (${sql.join(sAgents.map(a => sql`${a}`), sql`, `)})`;
+          }
+        }
         const summaryResult = await db
           .select({
             total: sql<number>`COUNT(*)`,
@@ -777,7 +783,7 @@ export const billingRouter = router({
             trials: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) <= 4.95 THEN 1 ELSE 0 END)`,
           })
           .from(clientSubscriptions)
-          .where(agentCondition);
+          .where(summaryAgentCondition);
 
         const summary = {
           total: Number(summaryResult[0]?.total ?? 0),
