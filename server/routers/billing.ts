@@ -8,8 +8,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions } from "../../drizzle/schema";
-import { eq, like, or, and, sql, desc } from "drizzle-orm";
+import { clientSubscriptions, leadAssignments } from "../../drizzle/schema";
+import { eq, like, or, and, sql, desc, getTableColumns } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 
 // ─── Zoho Billing API Credentials ────────────────────────────────────────────
@@ -372,6 +372,7 @@ interface MyClientSubscription {
   subscriptionNumber: string | null;
   contactId: number | null;
   salesPerson: string | null;
+  retentionAgent: string | null;
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -721,8 +722,12 @@ export const billingRouter = router({
             ? clientSubscriptions.cancelledDate
             : clientSubscriptions.createdOn;
         const rows = await db
-          .select()
+          .select({
+            ...getTableColumns(clientSubscriptions),
+            retentionAgent: leadAssignments.assignedAgent,
+          })
           .from(clientSubscriptions)
+          .leftJoin(leadAssignments, eq(clientSubscriptions.subscriptionId, leadAssignments.subscriptionId))
           .where(whereClause)
           .orderBy(desc(sortColumn))
           .limit(input.perPage)
@@ -784,6 +789,7 @@ export const billingRouter = router({
           subscriptionNumber: row.subscriptionNumber,
           contactId: row.contactId ?? null,
           salesPerson: row.salesPerson || null,
+          retentionAgent: row.retentionAgent || null,
         }));
 
         const end = offset + input.perPage;
@@ -816,5 +822,78 @@ export const billingRouter = router({
         ...result,
         lastSyncAt: status.lastSyncAt?.toISOString() ?? null,
       };
+    }),
+
+  /**
+   * Assign live sub customers to a retention agent.
+   * Creates lead_assignments entries with leadType="Live Sub".
+   */
+  assignToRetention: adminProcedure
+    .input(
+      z.object({
+        subscriptionIds: z.array(z.string()),
+        assignedAgent: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get subscription details from client_subscriptions
+      const subs = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(
+          or(...input.subscriptionIds.map((id) => eq(clientSubscriptions.subscriptionId, id)))
+        );
+
+      let created = 0;
+      let skipped = 0;
+
+      for (const sub of subs) {
+        // Check if lead already exists for this subscription
+        const existing = await db
+          .select({ id: leadAssignments.id })
+          .from(leadAssignments)
+          .where(eq(leadAssignments.subscriptionId, sub.subscriptionId))
+          .limit(1);
+
+        if (existing.length > 0) {
+          // Update the assigned agent if already exists
+          await db
+            .update(leadAssignments)
+            .set({
+              assignedAgent: input.assignedAgent,
+              assignedAt: Date.now(),
+              workStatus: "assigned",
+            })
+            .where(eq(leadAssignments.subscriptionId, sub.subscriptionId));
+          skipped++;
+          continue;
+        }
+
+        // Create new lead assignment
+        await db.insert(leadAssignments).values({
+          subscriptionId: sub.subscriptionId,
+          customerId: null,
+          customerName: sub.customerName,
+          email: sub.email || null,
+          phone: sub.phone || null,
+          leadCategory: "subscription",
+          leadType: "Live Sub",
+          planName: sub.planName || null,
+          billingCycles: sub.billingCycles || 0,
+          cyclesCompleted: sub.currentBillingCycle || 0,
+          monthlyAmount: sub.recurringAmount ? parseFloat(String(sub.recurringAmount)) : 0,
+          billingStatus: sub.status || null,
+          assignedAgent: input.assignedAgent,
+          assignedAt: Date.now(),
+          workStatus: "assigned",
+          eventDate: new Date().toISOString().split("T")[0],
+        });
+        created++;
+      }
+
+      return { success: true, created, updated: skipped };
     }),
 });

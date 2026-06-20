@@ -1005,20 +1005,42 @@ export const managerRouter = router({
       const db = await getDb();
       if (!db) return { leads: [], currentIndex: -1, total: 0 };
 
+      // First try lead_assignments
       const rows = await db.select().from(leadAssignments).orderBy(desc(leadAssignments.id));
-
-      // Filter by agent (same as RetentionWorkspace)
       let filtered = rows.filter((r) => r.assignedAgent === input.agentFilter);
 
-      // Sort by assignmentId ascending (same as RetentionWorkspace frontend)
-      filtered.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+      if (filtered.length > 0) {
+        // Sort by assignmentId ascending (same as RetentionWorkspace frontend)
+        filtered.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+        const leads = filtered.map((row) => ({
+          assignmentId: row.id,
+          contactId: row.contactId ?? null,
+          subscriptionId: row.subscriptionId,
+          customerName: row.customerName ?? "Unknown",
+          workStatus: row.workStatus ?? "new",
+        }));
+        const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);
+        return { leads, currentIndex, total: leads.length };
+      }
 
-      const leads = filtered.map((row) => ({
+      // Fallback: use client_subscriptions (My Clients tab data source)
+      const csRows = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(
+          and(
+            eq(clientSubscriptions.salesPerson, input.agentFilter),
+            eq(clientSubscriptions.status, "live")
+          )
+        )
+        .orderBy(clientSubscriptions.id);
+
+      const leads = csRows.map((row) => ({
         assignmentId: row.id,
         contactId: row.contactId ?? null,
         subscriptionId: row.subscriptionId,
         customerName: row.customerName ?? "Unknown",
-        workStatus: row.workStatus ?? "new",
+        workStatus: "live" as string,
       }));
 
       const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);

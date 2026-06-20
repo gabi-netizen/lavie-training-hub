@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
+import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
@@ -99,6 +100,18 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   // Bulk messaging state
   const { selectedIds, isSelected, toggle, toggleAll, isAllSelected, clearSelection, selectedCount } = useCheckboxSelection();
   const [bulkChannel, setBulkChannel] = useState<"whatsapp" | "sms" | "email" | null>(null);
+  const [showAssignRetention, setShowAssignRetention] = useState(false);
+  const [retentionAgent, setRetentionAgent] = useState("");
+  const assignToRetention = trpc.billing.assignToRetention.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Assigned ${data.created} new leads, updated ${data.updated} existing`);
+      setShowAssignRetention(false);
+      setRetentionAgent("");
+      clearSelection();
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   // Clear selection on page change
   useEffect(() => { clearSelection(); }, [page, clearSelection]);
@@ -511,10 +524,22 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             onEmail={() => setBulkChannel("email")}
             onClear={clearSelection}
           />
+          {/* Assign to Retention button — visible when items selected and in subscription mode */}
+          {selectedCount > 0 && (planTypeFilter === "subscription" || planTypeFilter === "trial") && (
+            <div className="px-4 pb-2">
+              <button
+                onClick={() => setShowAssignRetention(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Assign to Retention ({selectedCount})
+              </button>
+            </div>
+          )}
           {/* Table Header — CSS Grid */}
           <div
             className={`grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 ${(planTypeFilter === "subscription" || planTypeFilter === "trial") ? "min-w-[1600px]" : "min-w-[1940px]"}`}
-            style={{ gridTemplateColumns: (planTypeFilter === "subscription" || planTypeFilter === "trial") ? "36px 150px 130px 75px 90px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+            style={{ gridTemplateColumns: (planTypeFilter === "subscription" || planTypeFilter === "trial") ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
             <div className="flex items-center justify-center">
               <input
@@ -528,6 +553,9 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Plan Name</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Status</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Agent</div>
+            {(planTypeFilter === "subscription" || planTypeFilter === "trial") && (
+              <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Ret. Agent</div>
+            )}
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Created</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Activated</div>
             {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") && (
@@ -565,7 +593,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
                   className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${(planTypeFilter === "subscription" || planTypeFilter === "trial") ? "min-w-[1600px]" : "min-w-[1940px]"} ${
                     isExpanded ? "bg-blue-50" : ""} ${isSelected(sub.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
-                  style={{ gridTemplateColumns: (planTypeFilter === "subscription" || planTypeFilter === "trial") ? "36px 150px 130px 75px 90px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+                  style={{ gridTemplateColumns: (planTypeFilter === "subscription" || planTypeFilter === "trial") ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Checkbox */}
                   <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -603,6 +631,12 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   <div className="text-xs font-medium text-slate-800 truncate" title={sub.salesPerson || ""}>
                     {sub.salesPerson || "—"}
                   </div>
+                  {/* Ret. Agent */}
+                  {(planTypeFilter === "subscription" || planTypeFilter === "trial") && (
+                    <div className="text-xs font-medium text-purple-700 truncate" title={(sub as any).retentionAgent || ""}>
+                      {(sub as any).retentionAgent || "—"}
+                    </div>
+                  )}
                   {/* Created On */}
                   <div className="text-xs text-slate-800">
                     {formatDate(sub.createdOn)}
@@ -931,6 +965,50 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           >
             Next
           </button>
+        </div>
+      )}
+
+      {/* Assign to Retention Modal */}
+      {showAssignRetention && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Assign to Retention Agent</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Assign {selectedCount} selected subscription(s) to a retention agent. They will appear as "Live Sub" leads.
+            </p>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Retention Agent</label>
+            <select
+              value={retentionAgent}
+              onChange={(e) => setRetentionAgent(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 mb-6"
+            >
+              <option value="">Select agent...</option>
+              {AGENTS.map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setShowAssignRetention(false); setRetentionAgent(""); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!retentionAgent) { toast.error("Please select an agent"); return; }
+                  assignToRetention.mutate({
+                    subscriptionIds: Array.from(selectedIds),
+                    assignedAgent: retentionAgent,
+                  });
+                }}
+                disabled={!retentionAgent || assignToRetention.isPending}
+                className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {assignToRetention.isPending ? "Assigning..." : "Assign"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
