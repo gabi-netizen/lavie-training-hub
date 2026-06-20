@@ -517,7 +517,6 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             <option value="5days">5 Days</option>
             <option value="6days">6 Days</option>
             <option value="7days">7 Days</option>
-            <option value="overdue">Overdue</option>
           </select>
         )}
 
