@@ -1221,7 +1221,7 @@ export default function ContactCard() {
               <div className="mb-4 pt-3 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Shipping Address</p>
                 {isFromRetention ? (
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-1">
                     <div className="flex-1">
                       <InlineEditableField
                         label="Address"
@@ -1233,7 +1233,7 @@ export default function ContactCard() {
                     {(contact.address || zohoData?.shippingAddress) && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(contact.address || zohoData?.shippingAddress || ""); }}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors mt-0.5"
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors shrink-0"
                         title="Copy address"
                       >
                         <Copy size={14} />
@@ -1241,12 +1241,12 @@ export default function ContactCard() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-start gap-2">
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{contact.address || zohoData?.shippingAddress}</p>
+                  <div className="flex items-start gap-1">
+                    <p className="text-sm text-gray-700 leading-relaxed flex-1" style={{ wordBreak: 'break-word' }}>{contact.address || zohoData?.shippingAddress}</p>
                     {(contact.address || zohoData?.shippingAddress) && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(contact.address || zohoData?.shippingAddress || ""); }}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors mt-0.5"
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors shrink-0"
                         title="Copy address"
                       >
                         <Copy size={14} />
