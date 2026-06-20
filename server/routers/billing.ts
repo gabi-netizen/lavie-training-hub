@@ -647,6 +647,10 @@ export const billingRouter = router({
             // Trials: subscription plans with amount <= 4.95
             conditions.push(eq(clientSubscriptions.planType, "subscription"));
             conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) <= 4.95`);
+            // Exclude customers who have another non-trial subscription (live/future/cancelled with amount > 4.95)
+            conditions.push(
+              sql`${clientSubscriptions.email} NOT IN (SELECT email FROM client_subscriptions WHERE CAST(amount AS DECIMAL(10,2)) > 4.95 AND status IN ('live','future','cancelled','canceled') AND email IS NOT NULL AND email != '')`
+            );
           } else if (input.planType === "subscription") {
             // Live Sub: subscription plans with amount > 4.95, excluding installment-named plans
             conditions.push(eq(clientSubscriptions.planType, "subscription"));
