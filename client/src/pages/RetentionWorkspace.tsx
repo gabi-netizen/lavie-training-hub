@@ -32,6 +32,9 @@ import { DeclineTab } from "@/components/DeclineTab";
 import { CancelTab } from "@/components/CancelTab";
 import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
+import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
+import { BulkMessagingBar } from "@/components/BulkMessagingBar";
+import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
 
@@ -156,6 +159,10 @@ export default function RetentionWorkspace() {
   const [leadTypeFilter, setLeadTypeFilter] = useState<string>("all");
   const [callbackDateFilter, setCallbackDateFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Bulk messaging state for leads table
+  const { selectedIds: bulkSelectedIds, isSelected: bulkIsSelected, toggle: bulkToggle, toggleAll: bulkToggleAll, isAllSelected: bulkIsAllSelected, clearSelection: bulkClearSelection, selectedCount: bulkSelectedCount } = useCheckboxSelection();
+  const [bulkMsgChannel, setBulkMsgChannel] = useState<"whatsapp" | "sms" | "email" | null>(null);
 
   // Callback modal state
   const [callbackModal, setCallbackModal] = useState<{ subscriptionId: string; contactName: string; type: "callback" | "follow_up" } | null>(null);
@@ -405,6 +412,16 @@ export default function RetentionWorkspace() {
   }, [allLeads]);
 
   const displayLeads = activeTab === "queue" ? queueLeads : activeTab === "callbacks" ? callbackLeads : activeTab === "followups" ? followUpLeads : [];
+
+  // Clear bulk selection when switching tabs
+  useEffect(() => { bulkClearSelection(); }, [activeTab, bulkClearSelection]);
+
+  // Get selected lead recipients for bulk messaging
+  const getBulkLeadRecipients = () => {
+    return displayLeads
+      .filter((l: any) => bulkSelectedIds.has(l.subscriptionId))
+      .map((l: any) => ({ phone: l.phone || null, email: l.email || null, name: l.customerName || null }));
+  };
 
   // Handle agent note save
   const handleNoteSave = (subscriptionId: string, note: string) => {
@@ -865,9 +882,25 @@ export default function RetentionWorkspace() {
             </div>
           ) : (
             <div className="">
+              {/* Bulk Messaging Action Bar */}
+              <BulkMessagingBar
+                selectedCount={bulkSelectedCount}
+                onWhatsApp={() => setBulkMsgChannel("whatsapp")}
+                onSms={() => setBulkMsgChannel("sms")}
+                onEmail={() => setBulkMsgChannel("email")}
+                onClear={bulkClearSelection}
+              />
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
+                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={bulkIsAllSelected(displayLeads.map((l: any) => l.subscriptionId))}
+                        onChange={() => bulkToggleAll(displayLeads.map((l: any) => l.subscriptionId))}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3 w-10">#</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3">Name</th>
                     <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wide py-3 px-3 max-w-[160px]">Email</th>
@@ -897,8 +930,17 @@ export default function RetentionWorkspace() {
                         onClick={() => lead.contactId && setSelectedLeadContactId(lead.contactId)}
                         className={`group/row border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
                           selectedLeadContactId === lead.contactId ? "bg-blue-50" : ""
-                        }`}
+                        } ${bulkIsSelected(lead.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
                       >
+                        {/* Checkbox */}
+                        <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={bulkIsSelected(lead.subscriptionId)}
+                            onChange={() => bulkToggle(lead.subscriptionId)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
                         {/* # */}
                         <td className="py-3 px-3 text-sm text-gray-800">{idx + 1}</td>
 
@@ -1639,6 +1681,14 @@ export default function RetentionWorkspace() {
           </div>
         );
       })()}
+      {/* Bulk Messaging Template Modal for Leads */}
+      <BulkTemplateModal
+        open={bulkMsgChannel !== null}
+        channel={bulkMsgChannel || "whatsapp"}
+        recipients={getBulkLeadRecipients()}
+        onClose={() => setBulkMsgChannel(null)}
+        onSuccess={bulkClearSelection}
+      />
     </div>
   );
 }

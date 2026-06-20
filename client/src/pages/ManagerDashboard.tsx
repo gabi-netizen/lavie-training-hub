@@ -56,6 +56,7 @@ import { DeclineTab } from "@/components/DeclineTab";
 import { CancelTab } from "@/components/CancelTab";
 import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
+import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Strip HTML/CSS from customer notes (for display)
@@ -398,6 +399,7 @@ export default function ManagerDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
   const [callbackDateFilter, setCallbackDateFilter] = useState<string>("all");
+  const [bulkMsgChannel, setBulkMsgChannel] = useState<"whatsapp" | "sms" | "email" | null>(null);
 
   // ─── Data Queries ───────────────────────────────────────────────────────────
   const {
@@ -1105,6 +1107,30 @@ export default function ManagerDashboard() {
                   {bulkDeleteLeads.isPending ? "Deleting..." : `Delete Selected (${selectedIds.size})`}
                 </Button>
               )}
+              {/* Bulk Messaging Buttons */}
+              <div className="flex items-center gap-2 ml-4 border-l border-gray-300 pl-4">
+                <button
+                  onClick={() => setBulkMsgChannel("whatsapp")}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  WhatsApp
+                </button>
+                <button
+                  onClick={() => setBulkMsgChannel("sms")}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  SMS
+                </button>
+                <button
+                  onClick={() => setBulkMsgChannel("email")}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  Email
+                </button>
+              </div>
               <button
                 className="ml-auto text-gray-500 hover:text-gray-800"
                 onClick={() => setSelectedIds(new Set())}
@@ -1528,6 +1554,16 @@ export default function ManagerDashboard() {
           )}
         </>
       )}
+      {/* Bulk Messaging Template Modal */}
+      <BulkTemplateModal
+        open={bulkMsgChannel !== null}
+        channel={bulkMsgChannel || "whatsapp"}
+        recipients={displayLeads
+          .filter((l: any) => selectedIds.has(l.subscriptionId))
+          .map((l: any) => ({ phone: l.phone || null, email: l.email || null, name: l.customerName || null }))}
+        onClose={() => setBulkMsgChannel(null)}
+        onSuccess={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }

@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
+import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
+import { BulkMessagingBar } from "@/components/BulkMessagingBar";
+import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -90,6 +93,20 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Bulk messaging state
+  const { selectedIds, isSelected, toggle, toggleAll, isAllSelected, clearSelection, selectedCount } = useCheckboxSelection();
+  const [bulkChannel, setBulkChannel] = useState<"whatsapp" | "sms" | "email" | null>(null);
+
+  // Clear selection on page change
+  useEffect(() => { clearSelection(); }, [page, clearSelection]);
+
+  // Get recipients for bulk send
+  const getSelectedRecipients = () => {
+    return subscriptions
+      .filter((sub) => selectedIds.has(sub.subscriptionId))
+      .map((sub) => ({ phone: sub.phone, email: sub.email || null, name: sub.customerName }));
+  };
 
   // Format date as YYYY-MM-DD in LOCAL timezone
   const toLocalDateStr = (d: Date) => {
@@ -439,11 +456,27 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
+          {/* Bulk Messaging Action Bar */}
+          <BulkMessagingBar
+            selectedCount={selectedCount}
+            onWhatsApp={() => setBulkChannel("whatsapp")}
+            onSms={() => setBulkChannel("sms")}
+            onEmail={() => setBulkChannel("email")}
+            onClear={clearSelection}
+          />
           {/* Table Header — CSS Grid */}
           <div
-            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1900px]"
-            style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1940px]"
+            style={{ gridTemplateColumns: "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
+            <div className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={isAllSelected(subscriptions.map(s => s.subscriptionId))}
+                onChange={() => toggleAll(subscriptions.map(s => s.subscriptionId))}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Customer</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Plan Name</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Status</div>
@@ -475,11 +508,19 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 {/* Main Row */}
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1900px] ${
-                    isExpanded ? "bg-blue-50" : ""
-                  }`}
-                  style={{ gridTemplateColumns: "150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1940px] ${
+                    isExpanded ? "bg-blue-50" : ""} ${isSelected(sub.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
+                  style={{ gridTemplateColumns: "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
+                  {/* Checkbox */}
+                  <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected(sub.subscriptionId)}
+                      onChange={() => toggle(sub.subscriptionId)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </div>
                   {/* Customer Name */}
                   <div
                     className="text-sm font-semibold text-blue-700 truncate cursor-pointer hover:underline"
@@ -791,6 +832,15 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           })}
         </div>
       )}
+
+      {/* Bulk Template Modal */}
+      <BulkTemplateModal
+        open={bulkChannel !== null}
+        channel={bulkChannel || "whatsapp"}
+        recipients={getSelectedRecipients()}
+        onClose={() => setBulkChannel(null)}
+        onSuccess={clearSelection}
+      />
 
       {/* Bottom Pagination */}
       {totalPages > 1 && (

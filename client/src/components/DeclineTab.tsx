@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
+import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
+import { BulkMessagingBar } from "@/components/BulkMessagingBar";
+import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -83,6 +86,19 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Bulk messaging state
+  const { selectedIds, isSelected, toggle, toggleAll, isAllSelected, clearSelection, selectedCount } = useCheckboxSelection();
+  const [bulkChannel, setBulkChannel] = useState<"whatsapp" | "sms" | "email" | null>(null);
+
+  // Clear selection on page change
+  useEffect(() => { clearSelection(); }, [page, clearSelection]);
+
+  const getSelectedRecipients = () => {
+    return allDeclined
+      .filter((sub) => selectedIds.has(sub.subscriptionId))
+      .map((sub) => ({ phone: sub.phone, email: sub.email || null, name: sub.customerName }));
+  };
 
   // Fetch dunning + unpaid subscriptions sorted by lastBilledOn DESC
   const { data: dunningData, isLoading: dunningLoading, isFetching: dunningFetching, refetch: refetchDunning } = trpc.billing.getMyClientsData.useQuery(
@@ -248,11 +264,27 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
-          {/* Table Header — 9 columns */}
+          {/* Bulk Messaging Action Bar */}
+          <BulkMessagingBar
+            selectedCount={selectedCount}
+            onWhatsApp={() => setBulkChannel("whatsapp")}
+            onSms={() => setBulkChannel("sms")}
+            onEmail={() => setBulkChannel("email")}
+            onClear={clearSelection}
+          />
+          {/* Table Header — 10 columns */}
           <div
-            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1200px]"
-            style={{ gridTemplateColumns: "40px 160px 180px 150px 90px 90px 90px 110px 140px" }}
+            className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 min-w-[1240px]"
+            style={{ gridTemplateColumns: "36px 40px 160px 180px 150px 90px 90px 90px 110px 140px" }}
           >
+            <div className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={isAllSelected(allDeclined.map(s => s.subscriptionId))}
+                onChange={() => toggleAll(allDeclined.map(s => s.subscriptionId))}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">#</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Customer Name</div>
             <div className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Email</div>
@@ -274,11 +306,19 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
               <div key={sub.subscriptionId}>
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1200px] ${
-                    isExpanded ? "bg-red-50" : ""
-                  }`}
-                  style={{ gridTemplateColumns: "40px 160px 180px 150px 90px 90px 90px 110px 140px" }}
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 min-w-[1240px] ${
+                    isExpanded ? "bg-red-50" : ""} ${isSelected(sub.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
+                  style={{ gridTemplateColumns: "36px 40px 160px 180px 150px 90px 90px 90px 110px 140px" }}
                 >
+                  {/* Checkbox */}
+                  <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected(sub.subscriptionId)}
+                      onChange={() => toggle(sub.subscriptionId)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </div>
                   {/* # */}
                   <div className="text-sm text-gray-800">{idx + 1}</div>
 
@@ -414,6 +454,14 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
           })}
         </div>
       )}
+      {/* Bulk Template Modal */}
+      <BulkTemplateModal
+        open={bulkChannel !== null}
+        channel={bulkChannel || "whatsapp"}
+        recipients={getSelectedRecipients()}
+        onClose={() => setBulkChannel(null)}
+        onSuccess={clearSelection}
+      />
     </div>
   );
 }
