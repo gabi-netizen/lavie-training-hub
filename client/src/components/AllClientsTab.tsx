@@ -90,6 +90,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
   const [agentFilter, setAgentFilter] = useState("");
+  const [cycleFilter, setCycleFilter] = useState("");
+  const [subAgeFilter, setSubAgeFilter] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -159,6 +161,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
       ...(agentFilter ? { salesperson: agentFilter } : {}),
       status: statusFilter || undefined,
       planType: planTypeFilter || undefined,
+      cycleFilter: cycleFilter || undefined,
+      subAgeFilter: subAgeFilter || undefined,
       search: search || undefined,
       dateFrom: dateRange.from,
       dateTo: dateRange.to,
@@ -193,6 +197,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     setStatusFilter("");
     setPlanTypeFilter("");
     setAgentFilter("");
+    setCycleFilter("");
+    setSubAgeFilter("");
     setSearch("");
     setPage(1);
   };
@@ -380,6 +386,47 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           {AGENTS.map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
+        </select>
+
+        {/* Cycle Dropdown */}
+        <select
+          value={cycleFilter}
+          onChange={(e) => {
+            setCycleFilter(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
+        >
+          <option value="">All Cycles</option>
+          <option value="1">Cycle 1</option>
+          <option value="2">Cycle 2</option>
+          <option value="3">Cycle 3</option>
+          <option value="4">Cycle 4</option>
+          <option value="5">Cycle 5</option>
+          <option value="6">Cycle 6</option>
+          <option value="7">Cycle 7</option>
+          <option value="8">Cycle 8</option>
+          <option value="9">Cycle 9</option>
+          <option value="10+">Cycle 10+</option>
+        </select>
+
+        {/* Sub Age Dropdown */}
+        <select
+          value={subAgeFilter}
+          onChange={(e) => {
+            setSubAgeFilter(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
+        >
+          <option value="">All Ages</option>
+          <option value="0-7">0-7 days</option>
+          <option value="8-14">8-14 days</option>
+          <option value="15-30">15-30 days</option>
+          <option value="31-60">31-60 days</option>
+          <option value="61-90">61-90 days</option>
+          <option value="91-180">91-180 days</option>
+          <option value="180+">180+ days</option>
         </select>
 
         {/* Search Input */}

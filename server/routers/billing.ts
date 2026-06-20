@@ -576,6 +576,8 @@ export const billingRouter = router({
         forceRefresh: z.boolean().optional(),
         sortBy: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
         dateFilterColumn: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
+        cycleFilter: z.string().optional(),
+        subAgeFilter: z.string().optional(),
       })
     )
     .query(async ({ input }) => {
@@ -666,6 +668,37 @@ export const billingRouter = router({
           }
           if (input.dateTo) {
             conditions.push(sql`${dateCol} <= ${input.dateTo}`);
+          }
+        }
+
+        // Cycle filter: filter by currentBillingCycle
+        if (input.cycleFilter) {
+          if (input.cycleFilter === "10+") {
+            conditions.push(sql`${clientSubscriptions.currentBillingCycle} >= 10`);
+          } else {
+            const cycleNum = parseInt(input.cycleFilter, 10);
+            if (!isNaN(cycleNum)) {
+              conditions.push(eq(clientSubscriptions.currentBillingCycle, cycleNum));
+            }
+          }
+        }
+
+        // Sub Age filter: filter by days since lastBilledOn
+        if (input.subAgeFilter) {
+          if (input.subAgeFilter === "0-7") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 0 AND 7`);
+          } else if (input.subAgeFilter === "8-14") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 8 AND 14`);
+          } else if (input.subAgeFilter === "15-30") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 15 AND 30`);
+          } else if (input.subAgeFilter === "31-60") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 31 AND 60`);
+          } else if (input.subAgeFilter === "61-90") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 61 AND 90`);
+          } else if (input.subAgeFilter === "91-180") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 91 AND 180`);
+          } else if (input.subAgeFilter === "180+") {
+            conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) > 180`);
           }
         }
 
