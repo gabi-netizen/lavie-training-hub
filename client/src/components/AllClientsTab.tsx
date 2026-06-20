@@ -112,6 +112,14 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     },
     onError: (e) => toast.error(e.message),
   });
+  const reassignRetention = trpc.billing.reassignRetention.useMutation({
+    onSuccess: (data) => {
+      if (data.action === "unassigned") toast.success("Lead unassigned");
+      else if (data.action === "reassigned") toast.success("Lead reassigned");
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   // Clear selection on page change
   useEffect(() => { clearSelection(); }, [page, clearSelection]);
@@ -631,10 +639,33 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   <div className="text-xs font-medium text-slate-800 truncate" title={sub.salesPerson || ""}>
                     {sub.salesPerson || "—"}
                   </div>
-                  {/* Ret. Agent */}
+                  {/* Ret. Agent — inline dropdown */}
                   {(planTypeFilter === "subscription" || planTypeFilter === "trial") && (
-                    <div className="text-xs font-medium text-purple-700 truncate" title={(sub as any).retentionAgent || ""}>
-                      {(sub as any).retentionAgent || "—"}
+                    <div className="text-xs" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={(sub as any).retentionAgent || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__unassign__") {
+                            reassignRetention.mutate({ subscriptionId: sub.subscriptionId, assignedAgent: null });
+                          } else if (val) {
+                            reassignRetention.mutate({ subscriptionId: sub.subscriptionId, assignedAgent: val });
+                          }
+                        }}
+                        className={`w-full px-1 py-0.5 border rounded text-xs cursor-pointer ${
+                          (sub as any).retentionAgent
+                            ? "border-purple-300 text-purple-700 font-semibold bg-purple-50"
+                            : "border-gray-300 text-gray-500"
+                        }`}
+                      >
+                        <option value="">—</option>
+                        {AGENTS.map((a) => (
+                          <option key={a} value={a}>{a}</option>
+                        ))}
+                        {(sub as any).retentionAgent && (
+                          <option value="__unassign__" className="text-red-600">Unassign</option>
+                        )}
+                      </select>
                     </div>
                   )}
                   {/* Created On */}

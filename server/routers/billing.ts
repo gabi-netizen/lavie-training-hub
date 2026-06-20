@@ -896,4 +896,49 @@ export const billingRouter = router({
 
       return { success: true, created, updated: skipped };
     }),
+
+  /**
+   * Reassign a lead to a different retention agent, or unassign.
+   */
+  reassignRetention: adminProcedure
+    .input(
+      z.object({
+        subscriptionId: z.string(),
+        assignedAgent: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      if (input.assignedAgent === null) {
+        // Unassign — remove the lead assignment entirely
+        await db
+          .delete(leadAssignments)
+          .where(eq(leadAssignments.subscriptionId, input.subscriptionId));
+        return { success: true, action: "unassigned" };
+      } else {
+        // Reassign — update the agent
+        const existing = await db
+          .select({ id: leadAssignments.id })
+          .from(leadAssignments)
+          .where(eq(leadAssignments.subscriptionId, input.subscriptionId))
+          .limit(1);
+
+        if (existing.length > 0) {
+          await db
+            .update(leadAssignments)
+            .set({
+              assignedAgent: input.assignedAgent,
+              assignedAt: Date.now(),
+              workStatus: "assigned",
+            })
+            .where(eq(leadAssignments.subscriptionId, input.subscriptionId));
+        } else {
+          // Shouldn't happen normally, but handle gracefully
+          return { success: false, action: "not_found" };
+        }
+        return { success: true, action: "reassigned" };
+      }
+    }),
 });
