@@ -89,7 +89,7 @@ function parseBillingCycles(planName: string): number | null {
  */
 function derivePlanType(planName: string): "installment" | "subscription" | "one_payment" {
   if (!planName) return "subscription";
-  if (/install?m/i.test(planName)) return "installment";
+  if (/i?nstal/i.test(planName)) return "installment";
   if (/one\s*payment|deposit/i.test(planName)) return "one_payment";
   return "subscription";
 }
@@ -187,7 +187,7 @@ export async function syncClientSubscriptionsFromZoho(): Promise<{ synced: numbe
     let filtered = allSubscriptions.filter((sub) => {
       const status = (sub.status || "").toLowerCase();
       const planName = sub.plan_name || "";
-      const isSubscriptionPlan = !(/install?m/i.test(planName)) && !(/one\s*payment|deposit/i.test(planName));
+      const isSubscriptionPlan = !(/i?nstal/i.test(planName)) && !(/one\s*payment|deposit/i.test(planName));
       const isLiveSub = status === "live" && isSubscriptionPlan;
       if (isLiveSub) return true; // All live subs - no agent filter
       return RETENTION_AGENTS.includes((sub.salesperson_name || "").toLowerCase());
