@@ -618,6 +618,15 @@ export const billingRouter = router({
                 eq(clientSubscriptions.status, "canceled")
               )
             );
+          } else if (statusFilter === "expired") {
+            // End Installments: only installment plans (not Starter Kit/subscriptions)
+            conditions.push(eq(clientSubscriptions.status, "expired"));
+            conditions.push(
+              or(
+                eq(clientSubscriptions.planType, "installment"),
+                sql`(${clientSubscriptions.planType} = 'subscription' AND (${clientSubscriptions.planName} LIKE '%stall%' OR ${clientSubscriptions.planName} REGEXP '^[0-9]+ [Dd]ays' OR ${clientSubscriptions.planName} LIKE '%payment%'))`
+              )
+            );
           } else {
             conditions.push(eq(clientSubscriptions.status, statusFilter));
           }
@@ -756,7 +765,7 @@ export const billingRouter = router({
             dunning: sql<number>`SUM(CASE WHEN status = 'dunning' THEN 1 ELSE 0 END)`,
             cancelled: sql<number>`SUM(CASE WHEN status IN ('cancelled','canceled') THEN 1 ELSE 0 END)`,
             future: sql<number>`SUM(CASE WHEN status = 'future' THEN 1 ELSE 0 END)`,
-            expired: sql<number>`SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)`,
+            expired: sql<number>`SUM(CASE WHEN status = 'expired' AND (planType = 'installment' OR (planType = 'subscription' AND (planName LIKE '%stall%' OR planName REGEXP '^[0-9]+ [Dd]ays' OR planName LIKE '%payment%'))) THEN 1 ELSE 0 END)`,
             unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
             liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND (planType = 'installment' OR (planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 AND (planName LIKE '%stall%' OR planName REGEXP '^[0-9]+ [Dd]ays'))) THEN 1 ELSE 0 END)`,
             liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 AND planName NOT LIKE '%stall%' AND planName NOT REGEXP '^[0-9]+ [Dd]ays' THEN 1 ELSE 0 END)`,
