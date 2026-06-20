@@ -632,6 +632,10 @@ export const billingRouter = router({
                 sql`(${clientSubscriptions.planType} = 'subscription' AND (${clientSubscriptions.planName} LIKE '%stall%' OR ${clientSubscriptions.planName} REGEXP '^[0-9]+ [Dd]ays' OR ${clientSubscriptions.planName} LIKE '%payment%'))`
               )
             );
+            // Exclude customers who have another live/future subscription
+            conditions.push(
+              sql`${clientSubscriptions.email} NOT IN (SELECT email FROM client_subscriptions WHERE status IN ('live','future') AND email IS NOT NULL AND email != '')`
+            );
           } else {
             conditions.push(eq(clientSubscriptions.status, statusFilter));
           }
