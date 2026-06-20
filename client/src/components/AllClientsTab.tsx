@@ -92,7 +92,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [customDateTo, setCustomDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
-  const [agentFilter, setAgentFilter] = useState("");
+  const [agentFilter, setAgentFilter] = useState<string[]>([]);
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const [cycleFilter, setCycleFilter] = useState("");
   const [subAgeFilter, setSubAgeFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -181,7 +182,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
 
   const { data, isLoading, refetch, isFetching } = trpc.billing.getMyClientsData.useQuery(
     {
-      ...(agentFilter ? { salesperson: agentFilter } : {}),
+      ...(agentFilter.length > 0 ? { salesperson: agentFilter.join(",") } : {}),
       status: statusFilter || undefined,
       planType: planTypeFilter || undefined,
       cycleFilter: cycleFilter || undefined,
@@ -224,7 +225,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     setCustomDateTo("");
     setStatusFilter("");
     setPlanTypeFilter("");
-    setAgentFilter("");
+    setAgentFilter([]);
     setCycleFilter("");
     setSubAgeFilter("");
     setSearch("");
@@ -401,20 +402,56 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           <option value="one_payment">One Payment</option>
         </select>
 
-        {/* Agent Dropdown */}
-        <select
-          value={agentFilter}
-          onChange={(e) => {
-            setAgentFilter(e.target.value);
-            setPage(1);
-          }}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
-        >
-          <option value="">All Agents</option>
-          {(data?.uniqueAgents ?? []).map((a: string) => (
-            <option key={a} value={a}>{a}</option>
-          ))}
-        </select>
+        {/* Agent Multi-Select */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowAgentDropdown(!showAgentDropdown)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white min-w-[130px] text-left"
+          >
+            {agentFilter.length === 0 ? "All Agents" : `${agentFilter.length} selected`}
+            <span className="ml-2 text-gray-400">▾</span>
+          </button>
+          {showAgentDropdown && (
+            <div className="absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto min-w-[180px]">
+              <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200">
+                <input
+                  type="checkbox"
+                  checked={agentFilter.length === 0}
+                  onChange={() => { setAgentFilter([]); setPage(1); }}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium text-gray-800">All Agents</span>
+              </label>
+              {(data?.uniqueAgents ?? []).map((a: string) => (
+                <label key={a} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agentFilter.includes(a)}
+                    onChange={() => {
+                      setAgentFilter((prev) =>
+                        prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
+                      );
+                      setPage(1);
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-800">{a}</span>
+                </label>
+              ))}
+              <div className="flex justify-end gap-2 px-3 py-2 border-t border-gray-200">
+                <button
+                  onClick={() => { setAgentFilter([]); setPage(1); }}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >Clear</button>
+                <button
+                  onClick={() => setShowAgentDropdown(false)}
+                  className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                >OK</button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Cycle Dropdown */}
         <select

@@ -605,7 +605,12 @@ export const billingRouter = router({
         // Build WHERE conditions
         const conditions: any[] = [];
         if (input.salesperson) {
-          conditions.push(eq(clientSubscriptions.salesPerson, input.salesperson));
+          const agents = input.salesperson.split(",").map(a => a.trim()).filter(Boolean);
+          if (agents.length === 1) {
+            conditions.push(eq(clientSubscriptions.salesPerson, agents[0]));
+          } else if (agents.length > 1) {
+            conditions.push(sql`${clientSubscriptions.salesPerson} IN (${sql.join(agents.map(a => sql`${a}`), sql`, `)})`);
+          }
         }
 
         if (input.status) {
