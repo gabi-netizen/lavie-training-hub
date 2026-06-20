@@ -556,7 +556,7 @@ export default function RetentionWorkspace() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900">Retention Workspace</h1>
-          <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-sm font-bold">{agentName}</span>
+          <span className="px-4 py-1.5 rounded-full bg-orange-500 text-white text-lg font-bold">{agentName}</span>
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-800">
           <span className="font-medium">{queueLeads.length} leads</span>
