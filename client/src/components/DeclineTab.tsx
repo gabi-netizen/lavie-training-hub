@@ -329,7 +329,7 @@ export function DeclineTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, 
                     onClick={(e) => {
                       e.stopPropagation();
                       if (sub.contactId) {
-                        window.location.href = `/contacts/${sub.contactId}?from=retention&subId=${encodeURIComponent(sub.subscriptionId)}`;
+                        window.location.href = `/contacts/${sub.contactId}?from=retention&agent=${encodeURIComponent(agentName || "Rob")}&subId=${encodeURIComponent(sub.subscriptionId)}`;
                       }
                     }}
                   >
