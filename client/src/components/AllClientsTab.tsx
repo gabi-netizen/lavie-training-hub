@@ -93,6 +93,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [statusFilter, setStatusFilter] = useState("");
   const [planTypeFilter, setPlanTypeFilter] = useState("");
   const [agentFilter, setAgentFilter] = useState<string[]>([]);
+  const [draftAgentFilter, setDraftAgentFilter] = useState<string[]>([]);
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const [cycleFilter, setCycleFilter] = useState("");
   const [subAgeFilter, setSubAgeFilter] = useState("");
@@ -226,6 +227,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     setStatusFilter("");
     setPlanTypeFilter("");
     setAgentFilter([]);
+    setDraftAgentFilter([]);
     setCycleFilter("");
     setSubAgeFilter("");
     setSearch("");
@@ -406,7 +408,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
         <div className="relative">
           <button
             type="button"
-            onClick={() => setShowAgentDropdown(!showAgentDropdown)}
+            onClick={() => { setDraftAgentFilter([...agentFilter]); setShowAgentDropdown(!showAgentDropdown); }}
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white min-w-[130px] text-left"
           >
             {agentFilter.length === 0 ? "All Agents" : `${agentFilter.length} selected`}
@@ -417,8 +419,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
               <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200">
                 <input
                   type="checkbox"
-                  checked={agentFilter.length === 0}
-                  onChange={() => { setAgentFilter([]); setPage(1); }}
+                  checked={draftAgentFilter.length === 0}
+                  onChange={() => setDraftAgentFilter([])}
                   className="rounded"
                 />
                 <span className="text-sm font-medium text-gray-800">All Agents</span>
@@ -427,12 +429,11 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 <label key={a} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={agentFilter.includes(a)}
+                    checked={draftAgentFilter.includes(a)}
                     onChange={() => {
-                      setAgentFilter((prev) =>
+                      setDraftAgentFilter((prev) =>
                         prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
                       );
-                      setPage(1);
                     }}
                     className="rounded"
                   />
@@ -441,11 +442,11 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
               ))}
               <div className="flex justify-end gap-2 px-3 py-2 border-t border-gray-200">
                 <button
-                  onClick={() => { setAgentFilter([]); setPage(1); }}
+                  onClick={() => { setDraftAgentFilter([]); setAgentFilter([]); setPage(1); setShowAgentDropdown(false); }}
                   className="text-xs text-gray-500 hover:text-gray-700"
                 >Clear</button>
                 <button
-                  onClick={() => setShowAgentDropdown(false)}
+                  onClick={() => { setAgentFilter([...draftAgentFilter]); setPage(1); setShowAgentDropdown(false); }}
                   className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
                 >OK</button>
               </div>
