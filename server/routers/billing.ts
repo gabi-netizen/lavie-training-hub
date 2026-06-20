@@ -579,6 +579,7 @@ export const billingRouter = router({
         dateFilterColumn: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
         cycleFilter: z.string().optional(),
         subAgeFilter: z.string().optional(),
+        daysLeftFilter: z.string().optional(),
       })
     )
     .query(async ({ input }) => {
@@ -720,6 +721,25 @@ export const billingRouter = router({
             conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) BETWEEN 91 AND 180`);
           } else if (input.subAgeFilter === "180+") {
             conditions.push(sql`DATEDIFF(CURDATE(), ${clientSubscriptions.lastBilledOn}) > 180`);
+          }
+        }
+
+        // Days Left filter: filter by days until nextBillingOn
+        if (input.daysLeftFilter) {
+          if (input.daysLeftFilter === "today") {
+            conditions.push(sql`${clientSubscriptions.nextBillingOn} = CURDATE()`);
+          } else if (input.daysLeftFilter === "tomorrow") {
+            conditions.push(sql`${clientSubscriptions.nextBillingOn} = DATE_ADD(CURDATE(), INTERVAL 1 DAY)`);
+          } else if (input.daysLeftFilter === "1-3") {
+            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 1 AND 3`);
+          } else if (input.daysLeftFilter === "4-7") {
+            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 4 AND 7`);
+          } else if (input.daysLeftFilter === "8-14") {
+            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 8 AND 14`);
+          } else if (input.daysLeftFilter === "15-21") {
+            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) BETWEEN 15 AND 21`);
+          } else if (input.daysLeftFilter === "overdue") {
+            conditions.push(sql`DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE()) < 0`);
           }
         }
 

@@ -97,6 +97,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const [cycleFilter, setCycleFilter] = useState("");
   const [subAgeFilter, setSubAgeFilter] = useState("");
+  const [daysLeftFilter, setDaysLeftFilter] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -188,6 +189,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
       planType: planTypeFilter || undefined,
       cycleFilter: cycleFilter || undefined,
       subAgeFilter: subAgeFilter || undefined,
+      daysLeftFilter: daysLeftFilter || undefined,
       search: search || undefined,
       dateFrom: dateRange.from,
       dateTo: dateRange.to,
@@ -230,6 +232,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     setDraftAgentFilter([]);
     setCycleFilter("");
     setSubAgeFilter("");
+    setDaysLeftFilter("");
     setSearch("");
     setPage(1);
   };
@@ -495,6 +498,27 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           <option value="180+">180+ days</option>
         </select>
 
+        {/* Days Left Filter — visible only for Trials */}
+        {planTypeFilter === "trial" && (
+          <select
+            value={daysLeftFilter}
+            onChange={(e) => {
+              setDaysLeftFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 text-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 bg-orange-50 font-medium"
+          >
+            <option value="">All Days Left</option>
+            <option value="today">Today</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="1-3">1-3 days</option>
+            <option value="4-7">4-7 days</option>
+            <option value="8-14">8-14 days</option>
+            <option value="15-21">15-21 days</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        )}
+
         {/* Search Input */}
         <input
           type="text"
@@ -592,7 +616,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           {/* Table Header — CSS Grid */}
           <div
             className={`grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 ${isSubMode ? "min-w-[1600px]" : showRetentionCol ? "min-w-[2020px]" : "min-w-[1940px]"}`}
-            style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+            style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 65px 75px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
             <div className="flex items-center justify-center">
               <input
@@ -623,6 +647,12 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             ) : (
               <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Cycle</div>
             )}
+            {isSubMode && (
+              <div className="text-[11px] font-semibold text-orange-700 uppercase tracking-wide">Days Left</div>
+            )}
+            {isSubMode && (
+              <div className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">First Billing</div>
+            )}
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Next Billing</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Last Billed</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Campaign</div>
@@ -646,7 +676,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
                   className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${isSubMode ? "min-w-[1600px]" : showRetentionCol ? "min-w-[2020px]" : "min-w-[1940px]"} ${
                     isExpanded ? "bg-blue-50" : ""} ${isSelected(sub.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
-                  style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+                  style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 65px 75px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Checkbox */}
                   <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -753,6 +783,28 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   ) : (
                     <div className="text-xs font-semibold text-slate-800">
                       {sub.currentBillingCycle ?? "—"}
+                    </div>
+                  )}
+                  {/* Days Left — only for sub/trial mode */}
+                  {isSubMode && (
+                    <div className="text-xs font-bold text-orange-700">
+                      {(() => {
+                        if (!sub.nextBillingOn) return "—";
+                        const next = new Date(sub.nextBillingOn);
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        next.setHours(0,0,0,0);
+                        const diff = Math.ceil((next.getTime() - today.getTime()) / (1000*60*60*24));
+                        if (diff < 0) return `${Math.abs(diff)}d overdue`;
+                        if (diff === 0) return "Today";
+                        return `${diff}`;
+                      })()}
+                    </div>
+                  )}
+                  {/* First Billing Amount — only for sub/trial mode */}
+                  {isSubMode && (
+                    <div className="text-xs font-semibold text-green-700">
+                      {formatCurrency(sub.recurringAmount)}
                     </div>
                   )}
                   {/* Next Billing On */}
