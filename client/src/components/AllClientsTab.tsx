@@ -514,7 +514,9 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             <option value="2days">2 Days</option>
             <option value="3days">3 Days</option>
             <option value="4days">4 Days</option>
-            <option value="thisweek">This Week</option>
+            <option value="5days">5 Days</option>
+            <option value="6days">6 Days</option>
+            <option value="7days">7 Days</option>
             <option value="overdue">Overdue</option>
           </select>
         )}
@@ -616,7 +618,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           {/* Table Header — CSS Grid */}
           <div
             className={`grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 ${isSubMode ? "min-w-[1600px]" : showRetentionCol ? "min-w-[2020px]" : "min-w-[1940px]"}`}
-            style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 65px 75px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+            style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 70px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
             <div className="flex items-center justify-center">
               <input
@@ -650,9 +652,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             {isSubMode && (
               <div className="text-[11px] font-semibold text-orange-700 uppercase tracking-wide">Days Left</div>
             )}
-            {isSubMode && (
-              <div className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">First Billing</div>
-            )}
+
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Next Billing</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Last Billed</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Campaign</div>
@@ -676,7 +676,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
                   className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${isSubMode ? "min-w-[1600px]" : showRetentionCol ? "min-w-[2020px]" : "min-w-[1940px]"} ${
                     isExpanded ? "bg-blue-50" : ""} ${isSelected(sub.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
-                  style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 65px 75px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+                  style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 70px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Checkbox */}
                   <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -808,12 +808,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                       })()}
                     </div>
                   )}
-                  {/* First Billing Amount — only for sub/trial mode */}
-                  {isSubMode && (
-                    <div className="text-xs font-semibold text-green-700">
-                      {formatCurrency(sub.recurringAmount)}
-                    </div>
-                  )}
+
                   {/* Next Billing On */}
                   <div className="text-xs text-slate-800">
                     {formatDate(sub.nextBillingOn)}

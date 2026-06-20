@@ -724,7 +724,7 @@ export const billingRouter = router({
           }
         }
 
-        // Days Left filter: filter by days until first billing
+        // Days Left filter: filter by days until first billing (exact day, not cumulative)
         // Use COALESCE(nextBillingOn, activatedOn + 21 days) since trials have NULL nextBillingOn
         if (input.daysLeftFilter) {
           const billingDateExpr = sql`COALESCE(${clientSubscriptions.nextBillingOn}, DATE_ADD(${clientSubscriptions.activatedOn}, INTERVAL 21 DAY))`;
@@ -738,8 +738,12 @@ export const billingRouter = router({
             conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 3 DAY)`);
           } else if (input.daysLeftFilter === "4days") {
             conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 4 DAY)`);
-          } else if (input.daysLeftFilter === "thisweek") {
-            conditions.push(sql`DATEDIFF(${billingDateExpr}, CURDATE()) BETWEEN 0 AND 7`);
+          } else if (input.daysLeftFilter === "5days") {
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 5 DAY)`);
+          } else if (input.daysLeftFilter === "6days") {
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 6 DAY)`);
+          } else if (input.daysLeftFilter === "7days") {
+            conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 7 DAY)`);
           } else if (input.daysLeftFilter === "overdue") {
             conditions.push(sql`DATEDIFF(${billingDateExpr}, CURDATE()) < 0`);
           }
