@@ -345,6 +345,12 @@ export default function TopNav() {
                       James
                     </div>
                   </Link>
+                  <Link href="/retention-workspace/guy" onClick={() => setRetentionOpen(false)}>
+                    <div className={cn("flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors", location === "/retention-workspace/guy" ? "text-indigo-600 bg-indigo-50 font-medium" : "text-gray-700 hover:text-gray-800 hover:bg-gray-50")}>
+                      <Users size={14} />
+                      Guy
+                    </div>
+                  </Link>
                 </div>
               )}
             </div>
