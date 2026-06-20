@@ -526,9 +526,9 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                   <div className="text-xs font-medium text-slate-800">
                     {formatCurrency(sub.recurringAmount)}
                   </div>
-                  {/* Total Amount */}
+                  {/* Total Amount (minus deposit) */}
                   <div className="text-xs font-medium text-slate-800">
-                    {formatCurrency(sub.totalAmount)}
+                    {formatCurrency((sub.totalAmount ?? 0) - (sub.setupFee ?? 0))}
                   </div>
                   {/* Remaining Payments */}
                   <div className="text-xs text-slate-800">
@@ -537,6 +537,8 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                       let paid = sub.currentBillingCycle ?? 0;
                       // If live/dunning with lastBilledOn but cycle is null/0, at least 1 paid
                       if (paid === 0 && sub.lastBilledOn && (sub.status === "live" || sub.status === "dunning")) paid = 1;
+                      // Deposit counts as first payment
+                      if (sub.setupFee && sub.setupFee > 0) paid = paid + 1;
                       const remaining = Math.max(0, sub.billingCycles - paid);
                       return `${remaining} remaining`;
                     })()}
@@ -652,8 +654,8 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                         <div className="text-sm font-medium text-slate-900">{formatCurrency(sub.recurringAmount)}</div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Total Amount</div>
-                        <div className="text-sm font-medium text-slate-900">{formatCurrency(sub.totalAmount)}</div>
+                        <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Total Value</div>
+                        <div className="text-sm font-medium text-slate-900">{formatCurrency((sub.totalAmount ?? 0) - (sub.setupFee ?? 0))}</div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-slate-500 uppercase mb-1">Payment Progress</div>
@@ -662,8 +664,10 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                             if (sub.billingCycles == null) return "Recurring (∞)";
                             let paid = sub.currentBillingCycle ?? 0;
                             if (paid === 0 && sub.lastBilledOn && (sub.status === "live" || sub.status === "dunning")) paid = 1;
+                            // Deposit counts as first payment
+                            if (sub.setupFee && sub.setupFee > 0) paid = paid + 1;
                             const remaining = Math.max(0, sub.billingCycles - paid);
-                            return `Payment ${paid} of ${sub.billingCycles} (${remaining} remaining)`;
+                            return `${paid}/${sub.billingCycles} paid (${remaining} remaining)`;
                           })()}
                         </div>
                       </div>
