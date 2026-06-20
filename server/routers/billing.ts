@@ -628,9 +628,11 @@ export const billingRouter = router({
             conditions.push(eq(clientSubscriptions.planType, "subscription"));
             conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) <= 4.95`);
           } else if (input.planType === "subscription") {
-            // Live Sub: subscription plans with amount > 4.95
+            // Live Sub: subscription plans with amount > 4.95, excluding installment-named plans
             conditions.push(eq(clientSubscriptions.planType, "subscription"));
             conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) > 4.95`);
+            conditions.push(sql`${clientSubscriptions.planName} NOT LIKE '%stall%'`);
+            conditions.push(sql`${clientSubscriptions.planName} NOT REGEXP '^[0-9]+ [Dd]ays'`);
           } else if (input.planType === "installment" || input.planType === "one_payment") {
             conditions.push(eq(clientSubscriptions.planType, input.planType));
           } else if (input.planType === "installment_and_deposit") {
@@ -739,8 +741,8 @@ export const billingRouter = router({
             future: sql<number>`SUM(CASE WHEN status = 'future' THEN 1 ELSE 0 END)`,
             expired: sql<number>`SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)`,
             unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
-            liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'installment' THEN 1 ELSE 0 END)`,
-            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 THEN 1 ELSE 0 END)`,
+            liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND (planType = 'installment' OR (planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 AND (planName LIKE '%stall%' OR planName REGEXP '^[0-9]+ [Dd]ays'))) THEN 1 ELSE 0 END)`,
+            liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 AND planName NOT LIKE '%stall%' AND planName NOT REGEXP '^[0-9]+ [Dd]ays' THEN 1 ELSE 0 END)`,
             trials: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) <= 4.95 THEN 1 ELSE 0 END)`,
           })
           .from(clientSubscriptions)
