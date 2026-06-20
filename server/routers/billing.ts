@@ -707,6 +707,18 @@ export const billingRouter = router({
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+        // Get unique agents for the current filter set (excluding agent filter itself)
+        const agentConditions = conditions.filter((c: any) => c !== eq(clientSubscriptions.salesPerson, input.salesperson || ""));
+        const agentWhereClause = agentConditions.length > 0 ? and(...agentConditions) : undefined;
+        const agentRows = await db
+          .selectDistinct({ salesPerson: clientSubscriptions.salesPerson })
+          .from(clientSubscriptions)
+          .where(input.salesperson ? agentWhereClause : whereClause);
+        const uniqueAgents = agentRows
+          .map((r: any) => r.salesPerson)
+          .filter((a: any) => a && a.trim() !== "")
+          .sort();
+
         // Get total count for pagination
         const countResult = await db
           .select({ count: sql<number>`COUNT(*)` })
@@ -801,6 +813,7 @@ export const billingRouter = router({
           page: input.page,
           perPage: input.perPage,
           hasMore: end < totalCount,
+          uniqueAgents,
         };
       } catch (err: any) {
         throw new TRPCError({

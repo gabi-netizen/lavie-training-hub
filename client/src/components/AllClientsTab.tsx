@@ -64,12 +64,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const RETENTION_AGENTS = ["Guy", "Rob", "James"];
 const AGENTS = RETENTION_AGENTS; // alias for Ret. Agent dropdown
-const ALL_AGENTS = [
-  "Adam/Abdul", "Alan", "Andrea", "Angel", "Anna", "Ashleigh", "Ashley", "Ava",
-  "Beth", "Bethany", "Brenden", "Carl Bennett", "Darrel", "Darren", "Debbie",
-  "Franklin", "Guy", "Harrison", "James", "Kai", "Lavie", "Marco", "Matt",
-  "Mitch", "Nicola", "Nisha", "Paige", "Renee", "Rob", "Ryan", "Sara", "Shola", "Tristan"
-];
+
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -416,7 +411,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white"
         >
           <option value="">All Agents</option>
-          {ALL_AGENTS.map((a) => (
+          {(data?.uniqueAgents ?? []).map((a: string) => (
             <option key={a} value={a}>{a}</option>
           ))}
         </select>
