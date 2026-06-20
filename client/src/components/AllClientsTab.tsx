@@ -218,6 +218,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     } else {
       setStatusFilter(status);
       setPlanTypeFilter(planType || "");
+      // Reset date range so all records for this status are shown
+      setDateRangePreset("all");
+      setCustomDateFrom("");
+      setCustomDateTo("");
     }
     setPage(1);
   };
