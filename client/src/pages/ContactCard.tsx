@@ -271,7 +271,8 @@ export default function ContactCard() {
   );
 
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
-  const agentName = "Rob"; // Same as RetentionWorkspace
+  const agentParam = searchParams.get("agent");
+  const agentName = agentParam || "Rob";
   const { data: adjacentData } = trpc.manager.getAdjacentLeads.useQuery(
     { agentFilter: agentName, currentContactId: contactId },
     { enabled: isFromRetention && !!contactId }
@@ -284,7 +285,8 @@ export default function ContactCard() {
 
   const navigateToLead = (lead: { contactId: number | null; subscriptionId: string }, idx: number) => {
     if (lead.contactId) {
-      window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+      const agentQ = agentParam ? `&agent=${encodeURIComponent(agentParam)}` : "";
+      window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}${agentQ}`;
     }
   };
 
@@ -684,7 +686,7 @@ export default function ContactCard() {
       {isFromRetention && (
         <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center justify-between">
           <button
-            onClick={() => navigate("/retention-workspace")}
+            onClick={() => navigate(agentParam && agentParam !== "Rob" ? `/retention-workspace/${agentParam.toLowerCase()}` : "/retention-workspace")}
             className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-blue-700 transition-colors"
           >
             <ArrowLeft size={16} />
@@ -754,7 +756,7 @@ export default function ContactCard() {
         <div className="flex items-center gap-2 text-sm text-gray-700">
           {isFromRetention ? (
             <>
-              <button onClick={() => navigate("/retention-workspace")} className="hover:text-blue-700 transition-colors text-slate-800 font-medium">
+              <button onClick={() => navigate(agentParam && agentParam !== "Rob" ? `/retention-workspace/${agentParam.toLowerCase()}` : "/retention-workspace")} className="hover:text-blue-700 transition-colors text-slate-800 font-medium">
                 Retention Workspace
               </button>
               <ChevronRight size={14} className="text-gray-400" />
