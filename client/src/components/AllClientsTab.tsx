@@ -195,6 +195,11 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
 
   const subscriptions: MyClientSubscription[] = data?.subscriptions ?? [];
   const summary: any = data?.summary ?? { total: 0, live: 0, dunning: 0, cancelled: 0, future: 0, expired: 0, unpaid: 0, liveInstallment: 0, liveSub: 0, trials: 0 };
+
+  // Show Ret. Agent column for: LIVE SUB, TRIALS, END INSTALLMENTS
+  const showRetentionCol = planTypeFilter === "subscription" || planTypeFilter === "trial" || statusFilter === "expired";
+  // Hide installment columns (Deposit/Total/Remaining) only for subscriptions/trials, NOT for expired
+  const isSubMode = planTypeFilter === "subscription" || planTypeFilter === "trial";
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / 50);
 
@@ -533,7 +538,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             onClear={clearSelection}
           />
           {/* Assign to Retention button — visible when items selected and in subscription mode */}
-          {selectedCount > 0 && (planTypeFilter === "subscription" || planTypeFilter === "trial") && (
+          {selectedCount > 0 && showRetentionCol && (
             <div className="px-4 pb-2">
               <button
                 onClick={() => setShowAssignRetention(true)}
@@ -546,8 +551,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           )}
           {/* Table Header — CSS Grid */}
           <div
-            className={`grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 ${(planTypeFilter === "subscription" || planTypeFilter === "trial") ? "min-w-[1600px]" : "min-w-[1940px]"}`}
-            style={{ gridTemplateColumns: (planTypeFilter === "subscription" || planTypeFilter === "trial") ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+            className={`grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 ${isSubMode ? "min-w-[1600px]" : showRetentionCol ? "min-w-[2020px]" : "min-w-[1940px]"}`}
+            style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
           >
             <div className="flex items-center justify-center">
               <input
@@ -561,19 +566,19 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Plan Name</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Status</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Agent</div>
-            {(planTypeFilter === "subscription" || planTypeFilter === "trial") && (
+            {showRetentionCol && (
               <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Ret. Agent</div>
             )}
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Created</div>
             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Activated</div>
-            {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") && (
+            {!isSubMode && (
               <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Deposit</div>
             )}
-            <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">{(planTypeFilter === "subscription" || planTypeFilter === "trial") ? "Monthly" : "Recurring"}</div>
-            {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") && (
+            <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">{isSubMode ? "Monthly" : "Recurring"}</div>
+            {!isSubMode && (
               <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Total</div>
             )}
-            {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") ? (
+            {!isSubMode ? (
               <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Remaining</div>
             ) : (
               <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-wide">Cycle</div>
@@ -599,9 +604,9 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 {/* Main Row */}
                 <div
                   onClick={() => setExpandedRow(isExpanded ? null : sub.subscriptionId)}
-                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${(planTypeFilter === "subscription" || planTypeFilter === "trial") ? "min-w-[1600px]" : "min-w-[1940px]"} ${
+                  className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${isSubMode ? "min-w-[1600px]" : showRetentionCol ? "min-w-[2020px]" : "min-w-[1940px]"} ${
                     isExpanded ? "bg-blue-50" : ""} ${isSelected(sub.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
-                  style={{ gridTemplateColumns: (planTypeFilter === "subscription" || planTypeFilter === "trial") ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
+                  style={{ gridTemplateColumns: isSubMode ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : showRetentionCol ? "36px 150px 130px 75px 90px 80px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" : "36px 150px 130px 75px 90px 90px 90px 80px 80px 80px 70px 90px 90px 130px 90px 140px 180px 110px" }}
                 >
                   {/* Checkbox */}
                   <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
@@ -640,7 +645,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                     {sub.salesPerson || "—"}
                   </div>
                   {/* Ret. Agent — inline dropdown */}
-                  {(planTypeFilter === "subscription" || planTypeFilter === "trial") && (
+                  {showRetentionCol && (
                     <div className="text-xs" onClick={(e) => e.stopPropagation()}>
                       <select
                         value={(sub as any).retentionAgent || ""}
@@ -677,7 +682,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                     {formatDate(sub.activatedOn)}
                   </div>
                   {/* Deposit (Setup Fee + first Recurring) — hidden for subscriptions */}
-                  {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") && (
+                  {!isSubMode && (
                     <div className="text-xs font-medium text-slate-800">
                       {formatCurrency((sub.setupFee || 0) + (sub.recurringAmount || 0))}
                     </div>
@@ -687,13 +692,13 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                     {formatCurrency(sub.recurringAmount)}
                   </div>
                   {/* Total Amount (minus deposit) — hidden for subscriptions */}
-                  {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") && (
+                  {!isSubMode && (
                     <div className="text-xs font-medium text-slate-800">
                       {formatCurrency((sub.totalAmount ?? 0) - (sub.setupFee ?? 0))}
                     </div>
                   )}
                   {/* Remaining Payments (installments) OR Cycle (subscriptions) */}
-                  {(planTypeFilter !== "subscription" && planTypeFilter !== "trial") ? (
+                  {!isSubMode ? (
                     <div className="text-xs text-slate-800">
                       {(() => {
                         if (sub.billingCycles == null) return "∞";
