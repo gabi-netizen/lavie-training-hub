@@ -895,7 +895,6 @@ export default function ManagerDashboard() {
       {activeTab === "performance" && (
         <PerformanceTab />
       )}
-      )}
 
       {/* ─── Tab Content: Incoming Leads / Callbacks ───────────────────────────── */}
       {(activeTab === "leads" || activeTab === "callbacks") && (
