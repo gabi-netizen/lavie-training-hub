@@ -3675,7 +3675,7 @@ export default function Workspace() {
                 {/* Divider */}
                 <div style={{ flex: 1 }} />
 
-                {/* Sir Carlton — AI assistant */}
+                {/* Maximus Aurelius — AI assistant */}
                 <button
                   onClick={() => setActiveTab("butler")}
                   style={{

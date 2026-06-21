@@ -682,7 +682,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
               : "border-transparent text-purple-600 hover:text-purple-800"
           }`}
         >
-          Sir Carlton
+          Maximus Aurelius
         </button>
       </div>
 

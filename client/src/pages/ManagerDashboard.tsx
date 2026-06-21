@@ -846,7 +846,7 @@ export default function ManagerDashboard() {
         />
       )}
 
-      {/* ─── Tab Content: Sir Carlton ──────────────────────────────────────────── */}
+      {/* ─── Tab Content: Maximus Aurelius ──────────────────────────────────────────── */}
       {activeTab === "butler" && (
         <PersonalButlerTab />
       )}

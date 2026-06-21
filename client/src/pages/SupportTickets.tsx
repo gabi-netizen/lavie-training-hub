@@ -1020,7 +1020,7 @@ export default function SupportTickets() {
                     : "bg-white text-purple-600 hover:bg-purple-50"
                 }`}
               >
-                Sir Carlton
+                Maximus Aurelius
               </button>
               {isManager && (
                 <button
@@ -1075,7 +1075,7 @@ export default function SupportTickets() {
                     }`}
                   >
                     <span className="flex items-center gap-1">
-                      ⚡ Sir Carlton Usage
+                      ⚡ Maximus Aurelius Usage
                     </span>
                   </button>
                 </>
@@ -1127,14 +1127,14 @@ export default function SupportTickets() {
         </div>
       )}
 
-      {/* Sir Carlton View */}
+      {/* Maximus Aurelius View */}
       {viewMode === "butler" && (
         <div className="px-3 sm:px-6 py-6">
           <PersonalButlerTab />
         </div>
       )}
 
-      {/* Sir Carlton Usage View (admin only) */}
+      {/* Maximus Aurelius Usage View (admin only) */}
       {viewMode === "butlerUsage" && <ButlerUsagePanel />}
 
       {/* WhatsApp Control View */}
@@ -1735,7 +1735,7 @@ function ButlerUsagePanel() {
     <div className="px-3 sm:px-6 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">⚡ Sir Carlton Token Usage</h2>
+          <h2 className="text-xl font-bold text-gray-900">⚡ Maximus Aurelius Token Usage</h2>
           <p className="text-sm text-gray-600 mt-1">Monitor AI token consumption per agent</p>
         </div>
         <select
