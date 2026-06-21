@@ -2186,7 +2186,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         const agentSubs = currentSubs.filter((s) => s.salesPerson === agent);
         const totalDeals = agentSubs.length;
         const installments = agentSubs.filter((s) => s.planType === "installment").length;
-        const future = agentSubs.filter((s) => s.planType === "subscription" && s.status === "future").length;
+        const future = agentSubs.filter((s) => s.status === "future").length;
         const oneTime = agentSubs.filter((s) => s.planType === "one_payment").length;
 
         let deposit = 0;
@@ -2199,15 +2199,13 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           const fee = s.setupFee ? parseFloat(String(s.setupFee)) : 0;
           deposit += fee;
 
-          if (s.planType === "installment" || s.planType === "one_payment") {
+          if (s.status === "future") {
+            futureTurnOver += totalAmt;
+            totalTurnOver += totalAmt;
+          } else if (s.planType === "installment" || s.planType === "one_payment") {
             totalTurnOver += totalAmt;
           } else if (s.planType === "subscription") {
-            if (s.status === "future") {
-              futureTurnOver += totalAmt;
-              totalTurnOver += totalAmt;
-            } else {
-              totalTurnOver += amt;
-            }
+            totalTurnOver += amt;
           }
         }
 
