@@ -223,6 +223,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
       setCustomDateFrom("");
       setCustomDateTo("");
     }
+    // Always reset sub-filters when switching cubes
+    setDaysLeftFilter("");
+    setCycleFilter("");
+    setSubAgeFilter("");
     setPage(1);
   };
 
