@@ -389,6 +389,7 @@ export default function ManagerDashboard() {
   }, [activeTab]);
 
   // ─── Incoming Leads State ───────────────────────────────────────────────────
+  const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState("all");
@@ -688,7 +689,7 @@ export default function ManagerDashboard() {
           }`}
         >
           <Inbox className="w-4 h-4" />
-          Incoming Leads
+          Incoming Leads {currentMonthName}
         </button>
         <button
           onClick={() => setActiveTab("callbacks")}
