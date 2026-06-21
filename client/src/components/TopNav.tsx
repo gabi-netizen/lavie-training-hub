@@ -379,19 +379,19 @@ export default function TopNav() {
 
               {/* 7. Calls dropdown (Dialler, Contacts, etc.) */}
               <div className="relative" ref={callsRef}>
-                <button
-                  onClick={() => { closeAll(); setCallsOpen(v => !v); }}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
-                    callsActive
-                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
-                  )}
-                >
-                  <Phone size={14} />
-                  Calls
-                  <ChevronDown size={11} className={cn("transition-transform duration-200 opacity-60", callsOpen && "rotate-180")} />
-                </button>
+              <button
+                onClick={() => { closeAll(); setCallsOpen(v => !v); }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                  callsActive
+                    ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
+                    : "text-white/70 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <ContactRound size={14} />
+                Contacts & Dialler
+                <ChevronDown size={11} className={cn("transition-transform duration-200 opacity-60", callsOpen && "rotate-180")} />
+              </button>
 
                 <div className={cn(
                   "absolute left-0 top-full mt-2 w-48 rounded-xl border border-white/10 shadow-xl bg-slate-800/95 backdrop-blur-lg py-1.5 z-50 transition-all duration-200 origin-top",
