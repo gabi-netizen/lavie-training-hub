@@ -232,15 +232,15 @@ export default function TopNav() {
                   <button
                     onClick={() => { closeAll(); setOpeningOpen(v => !v); }}
                     className={cn(
-                      "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                       openingActive
-                        ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
+                        ? "text-cyan-300 shadow-inner shadow-cyan-500/10 border-cyan-500/30"
+                        : "text-white"
                     )}
                   >
                     <Rocket size={14} />
                     Opening
-                    <ChevronDown size={11} className={cn("transition-transform duration-200 opacity-60", openingOpen && "rotate-180")} />
+                    <ChevronDown size={14} className={cn("transition-transform duration-200 text-white", openingOpen && "rotate-180")} />
                   </button>
 
                   <div className={cn(
@@ -273,15 +273,15 @@ export default function TopNav() {
                   <button
                     onClick={() => { closeAll(); setRetentionOpen(v => !v); }}
                     className={cn(
-                      "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                       retentionActive
-                        ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
+                        ? "text-cyan-300 shadow-inner shadow-cyan-500/10 border-cyan-500/30"
+                        : "text-white"
                     )}
                   >
                     <ShieldHalf size={14} />
                     Retention
-                    <ChevronDown size={11} className={cn("transition-transform duration-200 opacity-60", retentionOpen && "rotate-180")} />
+                    <ChevronDown size={14} className={cn("transition-transform duration-200 text-white", retentionOpen && "rotate-180")} />
                   </button>
 
                   <div className={cn(
@@ -343,15 +343,15 @@ export default function TopNav() {
                 <button
                   onClick={() => { closeAll(); setAiCoachOpen(v => !v); }}
                   className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                     aiCoachActive
-                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
+                      ? "text-cyan-300 shadow-inner shadow-cyan-500/10 border-cyan-500/30"
+                      : "text-white"
                   )}
                 >
                   <Brain size={14} />
                   AI Coach
-                  <ChevronDown size={11} className={cn("transition-transform duration-200 opacity-60", aiCoachOpen && "rotate-180")} />
+                  <ChevronDown size={14} className={cn("transition-transform duration-200 text-white", aiCoachOpen && "rotate-180")} />
                 </button>
 
                 <div className={cn(
@@ -385,15 +385,15 @@ export default function TopNav() {
               <button
                 onClick={() => { closeAll(); setCallsOpen(v => !v); }}
                 className={cn(
-                  "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                   callsActive
-                    ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
+                    ? "text-cyan-300 shadow-inner shadow-cyan-500/10 border-cyan-500/30"
+                    : "text-white"
                 )}
               >
                 <ContactRound size={14} />
                 Contacts & Dialler
-                <ChevronDown size={11} className={cn("transition-transform duration-200 opacity-60", callsOpen && "rotate-180")} />
+                <ChevronDown size={14} className={cn("transition-transform duration-200 text-white", callsOpen && "rotate-180")} />
               </button>
 
                 <div className={cn(
