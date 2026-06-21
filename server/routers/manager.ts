@@ -2090,7 +2090,13 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       function filterSubsByPeriod(subs: typeof allSubs, period: { from: string; to: string }) {
         return subs.filter((s) => {
           if (!s.createdOn) return false;
-          const cd = String(s.createdOn).substring(0, 10);
+          // Drizzle date() may return Date object or string — normalize to YYYY-MM-DD
+          let cd: string;
+          if (s.createdOn instanceof Date) {
+            cd = s.createdOn.toISOString().substring(0, 10);
+          } else {
+            cd = String(s.createdOn).substring(0, 10);
+          }
           return cd >= period.from && cd <= period.to;
         });
       }
