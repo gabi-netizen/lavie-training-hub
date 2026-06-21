@@ -19,6 +19,7 @@ import { stripeRouter } from "./routers/stripe";
 import { billingRouter } from "./routers/billing";
 import { clientSubscriptionsRouter } from "./routers/clientSubscriptions";
 import { bulkMessagingRouter } from "./routers/bulkMessaging";
+import { customersRouter } from "./routers/customers";
 
 export const appRouter = router({
   system: systemRouter,
@@ -57,6 +58,7 @@ export const appRouter = router({
   billing: billingRouter,
   clientSubscriptions: clientSubscriptionsRouter,
   bulkMessaging: bulkMessagingRouter,
+  customers: customersRouter,
 });
 
 export type AppRouter = typeof appRouter;

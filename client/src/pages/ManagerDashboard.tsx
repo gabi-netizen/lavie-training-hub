@@ -56,6 +56,7 @@ import { DeclineTab } from "@/components/DeclineTab";
 import { CancelTab } from "@/components/CancelTab";
 import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
+import { CustomersTab } from "@/components/CustomersTab";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -358,7 +359,7 @@ function CustomerMessageEditor({
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab type
 // ─────────────────────────────────────────────────────────────────────────────
-type TabId = "leads" | "callbacks" | "messages" | "emails" | "allClients" | "decline" | "cancel" | "endInstalment" | "butler";
+type TabId = "leads" | "callbacks" | "messages" | "emails" | "allClients" | "decline" | "cancel" | "endInstalment" | "butler" | "customers";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Dashboard Component
@@ -371,7 +372,7 @@ export default function ManagerDashboard() {
   // ─── Tab State ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const saved = sessionStorage.getItem("command-centre-tab");
-    if (saved && ["leads", "callbacks", "messages", "emails", "allClients", "decline", "cancel", "endInstalment", "butler"].includes(saved)) {
+    if (saved && ["leads", "callbacks", "messages", "emails", "allClients", "decline", "cancel", "endInstalment", "butler", "customers"].includes(saved)) {
       return saved as TabId;
     }
     return "leads";
@@ -766,6 +767,16 @@ export default function ManagerDashboard() {
         >
           Sir Carlton
         </button>
+        <button
+          onClick={() => setActiveTab("customers")}
+          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "customers"
+              ? "border-amber-600 text-amber-700"
+              : "border-transparent text-amber-600 hover:text-amber-800"
+          }`}
+        >
+          Customers
+        </button>
       </div>
 
       {/* ─── Tab Content: Messages ─────────────────────────────────────────────── */}
@@ -821,6 +832,11 @@ export default function ManagerDashboard() {
       {/* ─── Tab Content: Sir Carlton ──────────────────────────────────────────── */}
       {activeTab === "butler" && (
         <PersonalButlerTab />
+      )}
+
+      {/* ─── Tab Content: Customers ───────────────────────────────────────────── */}
+      {activeTab === "customers" && (
+        <CustomersTab />
       )}
 
       {/* ─── Tab Content: Incoming Leads / Callbacks ───────────────────────────── */}

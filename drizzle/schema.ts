@@ -1051,3 +1051,24 @@ export const butlerUsageLog = mysqlTable("butler_usage_log", {
 });
 export type ButlerUsageLog = typeof butlerUsageLog.$inferSelect;
 export type InsertButlerUsageLog = typeof butlerUsageLog.$inferInsert;
+
+// ─── Customers (Old Zoho CRM — separate from contacts/leads) ─────────────────
+export const customers = mysqlTable("customers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 64 }),
+  address: text("address"),
+  totalSpent: decimal("totalSpent", { precision: 10, scale: 2 }),
+  lastPurchaseDate: date("lastPurchaseDate"),
+  source: varchar("source", { length: 128 }),
+  assignedAgent: varchar("assignedAgent", { length: 128 }),
+  department: mysqlEnum("department", ["opening", "retention"]),
+  status: varchar("status", { length: 32 }).default("new").notNull(),
+  notes: text("notes"),
+  importedAt: timestamp("importedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = typeof customers.$inferInsert;
