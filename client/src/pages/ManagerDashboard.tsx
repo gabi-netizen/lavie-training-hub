@@ -771,8 +771,8 @@ export default function ManagerDashboard() {
           onClick={() => setActiveTab("customers")}
           className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "customers"
-              ? "border-amber-600 text-amber-700"
-              : "border-transparent text-amber-600 hover:text-amber-800"
+              ? "border-green-500 text-green-600"
+              : "border-transparent text-green-500 hover:text-green-700"
           }`}
         >
           Customers
