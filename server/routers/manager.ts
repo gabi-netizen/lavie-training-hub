@@ -2126,7 +2126,10 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       function computeMetrics(subs: typeof allSubs, leads: typeof allLeads) {
         const totalLeads = leads.length;
         const doneDeals = subs.length;
-        const conversionRate = totalLeads > 0 ? (doneDeals / totalLeads) * 100 : 0;
+        // Conversion rate = only leads from Incoming Leads that were closed (done_deal)
+        // NOT comparing Zoho deals vs incoming leads (many deals are upsells unrelated to incoming)
+        const leadsClosedAsDeal = leads.filter((l) => l.workStatus === "done_deal").length;
+        const conversionRate = totalLeads > 0 ? (leadsClosedAsDeal / totalLeads) * 100 : 0;
 
         let totalRevenue = 0;
         let futureRevenue = 0;
