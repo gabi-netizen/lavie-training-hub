@@ -451,7 +451,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                 </div>
               </div>
 
-              {/* Breakdown: Instalments / Future / One-Time */}
+              {/* Breakdown: Instalments / Subs / Future / One-Time */}
               <div
                 style={{
                   display: "flex",
@@ -466,6 +466,12 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.textPrimary }}>{card.installments}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Instalments
+                  </div>
+                </div>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.teal }}>{card.subscriptions || 0}</div>
+                  <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Subs
                   </div>
                 </div>
                 <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
@@ -561,6 +567,9 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.green }} /> Instalments
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.teal }} /> Subs
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(59,130,246,0.6)" }} /> Future
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
@@ -577,6 +586,11 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                 {card.installments > 0 && (
                   <div style={{ flex: card.installments, background: `linear-gradient(90deg, ${colors.primary}, ${colors.dim})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
                     {card.installments} ({Math.round((card.installments / (card.totalDeals || 1)) * 100)}%)
+                  </div>
+                )}
+                {(card.subscriptions || 0) > 0 && (
+                  <div style={{ flex: card.subscriptions, background: `linear-gradient(90deg, ${COLORS.teal}, #0d9488)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                    {card.subscriptions} ({Math.round(((card.subscriptions || 0) / (card.totalDeals || 1)) * 100)}%)
                   </div>
                 )}
                 {card.future > 0 && (

@@ -2194,6 +2194,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         const installments = agentSubs.filter((s) => s.planType === "installment").length;
         const future = agentSubs.filter((s) => s.status === "future").length;
         const oneTime = agentSubs.filter((s) => s.planType === "one_payment").length;
+        const subscriptions = agentSubs.filter((s) => s.planType === "subscription" && s.status !== "future").length;
 
         let deposit = 0;
         let totalTurnOver = 0;
@@ -2254,6 +2255,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           agent,
           totalDeals,
           installments,
+          subscriptions,
           future,
           oneTime,
           deposit: Math.round(deposit * 100) / 100,

@@ -606,6 +606,15 @@ export function PerformanceTab() {
                     </div>
                     <div
                       style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }}
+                      onClick={() => openDrillDown(`${card.agent} - Subscriptions`, "subs", { agent: card.agent, planType: "subscription" })}
+                    >
+                      <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.teal }}>{card.subscriptions}</div>
+                      <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Subs
+                      </div>
+                    </div>
+                    <div
+                      style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }}
                       onClick={() => openDrillDown(`${card.agent} - Future`, "subs", { agent: card.agent, status: "future" })}
                     >
                       <div style={{ fontSize: 18, fontWeight: 700, color: COLORS.blue }}>{card.future}</div>
@@ -718,6 +727,10 @@ export function PerformanceTab() {
                 Instalments
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.teal }} />
+                Subs
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(59,130,246,0.6)" }} />
                 Future
               </div>
@@ -744,6 +757,7 @@ export function PerformanceTab() {
               const colors = AGENT_COLORS[card.agent] || AGENT_COLORS.Guy;
               const total = card.totalDeals || 1;
               const instPct = Math.round((card.installments / total) * 100);
+              const subsPct = Math.round(((card.subscriptions || 0) / total) * 100);
               const futPct = Math.round((card.future / total) * 100);
               const otPct = Math.round((card.oneTime / total) * 100);
               return (
@@ -769,6 +783,24 @@ export function PerformanceTab() {
                         onClick={() => openDrillDown(`${card.agent} - Instalments`, "subs", { agent: card.agent, planType: "installment" })}
                       >
                         {card.installments} ({instPct}%)
+                      </div>
+                    )}
+                    {(card.subscriptions || 0) > 0 && (
+                      <div
+                        style={{
+                          flex: card.subscriptions,
+                          background: `linear-gradient(90deg, ${COLORS.teal}, #0d9488)`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#fff",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => openDrillDown(`${card.agent} - Subscriptions`, "subs", { agent: card.agent, planType: "subscription" })}
+                      >
+                        {card.subscriptions} ({subsPct}%)
                       </div>
                     )}
                     {card.future > 0 && (
