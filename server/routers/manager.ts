@@ -2142,7 +2142,13 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           const fee = s.setupFee ? parseFloat(String(s.setupFee)) : 0;
 
           deposit += fee;
-
+          if (s.status !== "future") {
+            if (s.planType === "installment") {
+              deposit += amt; // first instalment payment collected
+            } else if (s.planType === "one_payment") {
+              deposit += totalAmt; // full one-time payment collected
+            }
+          }
           // Future deals = any planType with status 'future'
           if (s.status === "future") {
             futureDeals++;
@@ -2198,6 +2204,13 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           const amt = s.amount ? parseFloat(String(s.amount)) : 0;
           const fee = s.setupFee ? parseFloat(String(s.setupFee)) : 0;
           deposit += fee;
+          if (s.status !== "future") {
+            if (s.planType === "installment") {
+              deposit += amt; // first instalment payment collected
+            } else if (s.planType === "one_payment") {
+              deposit += totalAmt; // full one-time payment collected
+            }
+          }
 
           if (s.status === "future") {
             futureTurnOver += totalAmt;

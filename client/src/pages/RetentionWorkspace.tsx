@@ -33,6 +33,7 @@ import { DeclineTab } from "@/components/DeclineTab";
 import { CancelTab } from "@/components/CancelTab";
 import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
+import { AgentPerformanceTab } from "@/components/AgentPerformanceTab";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
@@ -122,9 +123,9 @@ const LEAD_TYPE_OPTIONS = [
 
 export default function RetentionWorkspace({ agentName: agentNameProp }: { agentName?: string } = {}) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "followups" | "messages" | "emails" | "clients" | "decline" | "cancel" | "endInstalment" | "butler">(() => {
+  const [activeTab, setActiveTab] = useState<"queue" | "callbacks" | "followups" | "messages" | "emails" | "clients" | "decline" | "cancel" | "endInstalment" | "butler" | "performance">(() => {
     const saved = sessionStorage.getItem("retention-workspace-tab");
-    if (saved && ["queue", "callbacks", "followups", "messages", "emails", "clients", "decline", "cancel", "endInstalment", "butler"].includes(saved)) {
+    if (saved && ["queue", "callbacks", "followups", "messages", "emails", "clients", "decline", "cancel", "endInstalment", "butler", "performance"].includes(saved)) {
       return saved as any;
     }
     return "queue";
@@ -684,6 +685,16 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         >
           Maximus Aurelius
         </button>
+        <button
+          onClick={() => setActiveTab("performance")}
+          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
+            activeTab === "performance"
+              ? "border-green-600 text-green-700"
+              : "border-transparent text-green-600 hover:text-green-800"
+          }`}
+        >
+          My Performance
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -824,6 +835,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
       {activeTab === "butler" && (
         <PersonalButlerTab />
+      )}
+      {activeTab === "performance" && (
+        <AgentPerformanceTab agentName={agentName} />
       )}
 
       {(activeTab === "queue" || activeTab === "callbacks" || activeTab === "followups") && (
