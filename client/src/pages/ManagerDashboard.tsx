@@ -63,6 +63,7 @@ import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { CustomersTab } from "@/components/CustomersTab";
 import { MaximusGreeting } from "@/components/MaximusGreeting";
+import { PerformanceTab } from "@/components/PerformanceTab";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -365,7 +366,8 @@ function CustomerMessageEditor({
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab type
 // ─────────────────────────────────────────────────────────────────────────────
-type TabId = "leads" | "callbacks" | "messages" | "emails" | "allClients" | "decline" | "cancel" | "endInstalment" | "butler" | "customers";
+type TabId = "leads" | "callbacks" | "messages" | "emails" | "allClients" | "decline" | "cancel" | "endInstalment" | "butler" | "customers" | "performance";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Dashboard Component
@@ -378,7 +380,7 @@ export default function ManagerDashboard() {
   // ─── Tab State ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const saved = sessionStorage.getItem("command-centre-tab");
-    if (saved && ["leads", "callbacks", "messages", "emails", "allClients", "decline", "cancel", "endInstalment", "butler", "customers"].includes(saved)) {
+    if (saved && ["leads", "callbacks", "messages", "emails", "allClients", "decline", "cancel", "endInstalment", "butler", "customers", "performance"].includes(saved)) {
       return saved as TabId;
     }
     return "leads";
@@ -819,6 +821,16 @@ export default function ManagerDashboard() {
           <UserCheck className="w-4 h-4" />
           Customers
         </button>
+        <button
+          onClick={() => setActiveTab("performance")}
+          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "performance"
+              ? "border-green-600 text-green-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Performance
+        </button>
       </div>
 
       {/* ─── Tab Content: Messages ─────────────────────────────────────────────── */}
@@ -875,10 +887,14 @@ export default function ManagerDashboard() {
       {activeTab === "butler" && (
         <PersonalButlerTab />
       )}
-
       {/* ─── Tab Content: Customers ───────────────────────────────────────────── */}
       {activeTab === "customers" && (
         <CustomersTab />
+      )}
+      {/* ─── Tab Content: Performance ─────────────────────────────────────────────── */}
+      {activeTab === "performance" && (
+        <PerformanceTab />
+      )}
       )}
 
       {/* ─── Tab Content: Incoming Leads / Callbacks ───────────────────────────── */}
@@ -978,30 +994,6 @@ export default function ManagerDashboard() {
             </button>
           </div>
 
-          {/* Agent Workload Cards */}
-          <div className="mb-4">
-            <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-              Agent Workload <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">Today</span>
-            </h2>
-            <div className="grid grid-cols-3 gap-3">
-              {agentCardData.map((card) => (
-                <div
-                  key={card.agent}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col items-center text-center"
-                >
-                  <p className="text-lg font-bold text-gray-900 mb-1">{card.agent}</p>
-                  <p className="text-3xl font-bold text-gray-900">{card.closings}</p>
-                  <p className="text-xs text-gray-600 font-medium mt-0.5">closings</p>
-                  <p className="text-xs text-gray-800 mt-2">
-                    {card.subClosings} sub / {card.instalmentClosings} instalment
-                  </p>
-                  <p className="text-xl font-bold text-green-600 mt-2">
-                    {formatCurrency(card.totalAmount)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-4">

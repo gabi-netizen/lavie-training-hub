@@ -11,7 +11,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes } from "../../drizzle/schema";
 import { addCallNote, updateContact } from "../contacts";
-import { eq, like, or, and, desc, sql, isNull, gte, lte } from "drizzle-orm";
+import { eq, like, or, and, desc, sql, isNull, gte, lte, inArray } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
 
@@ -1944,4 +1944,407 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       callbackAt: r.callbackAt,
     }));
   }),
+
+  // ─── Performance Dashboard ──────────────────────────────────────────────────
+  getPerformanceData: protectedProcedure
+    .input(
+      z.object({
+        dateRange: z.enum(["today", "yesterday", "7days", "this_month", "last_month", "custom"]).default("this_month"),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        agents: z.array(z.string()).optional(),
+        planType: z.enum(["all", "installment", "subscription", "one_payment"]).default("all"),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        return {
+          summary: { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, aov: 0 },
+          summaryDelta: { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, aov: 0 },
+          agentCards: [],
+          conversionByLeadType: [],
+          conversionByAgent: [],
+          drillDown: [],
+        };
+      }
+
+      // ── Date Range Calculation ──────────────────────────────────────────────
+      function getDateRange(range: string, customFrom?: string, customTo?: string): { from: string; to: string } {
+        const now = new Date();
+        let from: Date;
+        let to: Date;
+
+        switch (range) {
+          case "today":
+            from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            break;
+          case "yesterday":
+            from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+            break;
+          case "7days":
+            from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            break;
+          case "this_month":
+            from = new Date(now.getFullYear(), now.getMonth(), 1);
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            break;
+          case "last_month":
+            from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+            break;
+          case "custom":
+            from = customFrom ? new Date(customFrom) : new Date(now.getFullYear(), now.getMonth(), 1);
+            to = customTo ? new Date(customTo + "T23:59:59") : now;
+            break;
+          default:
+            from = new Date(now.getFullYear(), now.getMonth(), 1);
+            to = now;
+        }
+        return {
+          from: from.toISOString().split("T")[0],
+          to: to.toISOString().split("T")[0],
+        };
+      }
+
+      function getPreviousPeriod(range: string, customFrom?: string, customTo?: string): { from: string; to: string } {
+        const now = new Date();
+        let from: Date;
+        let to: Date;
+
+        switch (range) {
+          case "today":
+            from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+            break;
+          case "yesterday":
+            from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2);
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 23, 59, 59);
+            break;
+          case "7days":
+            from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13);
+            to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7, 23, 59, 59);
+            break;
+          case "this_month":
+            from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+            break;
+          case "last_month":
+            from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+            to = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59);
+            break;
+          case "custom": {
+            const cFrom = customFrom ? new Date(customFrom) : new Date(now.getFullYear(), now.getMonth(), 1);
+            const cTo = customTo ? new Date(customTo) : now;
+            const days = Math.ceil((cTo.getTime() - cFrom.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            to = new Date(cFrom.getTime() - 1000 * 60 * 60 * 24);
+            from = new Date(to.getTime() - (days - 1) * 1000 * 60 * 60 * 24);
+            break;
+          }
+          default:
+            from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        }
+        return {
+          from: from.toISOString().split("T")[0],
+          to: to.toISOString().split("T")[0],
+        };
+      }
+
+      const currentPeriod = getDateRange(input.dateRange, input.dateFrom, input.dateTo);
+      const previousPeriod = getPreviousPeriod(input.dateRange, input.dateFrom, input.dateTo);
+
+      // ── Fetch lead_assignments for current period ──────────────────────────
+      const allLeads = await db.select().from(leadAssignments);
+
+      function filterLeadsByPeriod(leads: typeof allLeads, period: { from: string; to: string }) {
+        return leads.filter((l) => {
+          if (!l.eventDate) return false;
+          const ed = l.eventDate.substring(0, 10);
+          return ed >= period.from && ed <= period.to;
+        });
+      }
+
+      function filterLeadsByAgents(leads: typeof allLeads, agents?: string[]) {
+        if (!agents || agents.length === 0) return leads;
+        return leads.filter((l) => l.assignedAgent && agents.includes(l.assignedAgent));
+      }
+
+      let currentLeads = filterLeadsByPeriod(allLeads, currentPeriod);
+      let previousLeads = filterLeadsByPeriod(allLeads, previousPeriod);
+
+      if (input.agents && input.agents.length > 0) {
+        currentLeads = filterLeadsByAgents(currentLeads, input.agents);
+        previousLeads = filterLeadsByAgents(previousLeads, input.agents);
+      }
+
+      // ── Fetch client_subscriptions for current period ──────────────────────
+      const allSubs = await db.select().from(clientSubscriptions);
+
+      function filterSubsByPeriod(subs: typeof allSubs, period: { from: string; to: string }) {
+        return subs.filter((s) => {
+          if (!s.createdOn) return false;
+          const cd = String(s.createdOn).substring(0, 10);
+          return cd >= period.from && cd <= period.to;
+        });
+      }
+
+      function filterSubsByAgents(subs: typeof allSubs, agents?: string[]) {
+        if (!agents || agents.length === 0) return subs;
+        return subs.filter((s) => agents.includes(s.salesPerson));
+      }
+
+      function filterSubsByPlanType(subs: typeof allSubs, planType: string) {
+        if (planType === "all") return subs;
+        return subs.filter((s) => s.planType === planType);
+      }
+
+      let currentSubs = filterSubsByPeriod(allSubs, currentPeriod);
+      let previousSubs = filterSubsByPeriod(allSubs, previousPeriod);
+
+      if (input.agents && input.agents.length > 0) {
+        currentSubs = filterSubsByAgents(currentSubs, input.agents);
+        previousSubs = filterSubsByAgents(previousSubs, input.agents);
+      }
+
+      currentSubs = filterSubsByPlanType(currentSubs, input.planType);
+      previousSubs = filterSubsByPlanType(previousSubs, input.planType);
+
+      // ── Helper: compute metrics from subs ─────────────────────────────────
+      function computeMetrics(subs: typeof allSubs, leads: typeof allLeads) {
+        const totalLeads = leads.length;
+        const doneDeals = subs.length;
+        const conversionRate = totalLeads > 0 ? (doneDeals / totalLeads) * 100 : 0;
+
+        let totalRevenue = 0;
+        let futureRevenue = 0;
+        let futureDeals = 0;
+        let deposit = 0;
+
+        for (const s of subs) {
+          const totalAmt = s.totalAmount ? parseFloat(String(s.totalAmount)) : 0;
+          const amt = s.amount ? parseFloat(String(s.amount)) : 0;
+          const fee = s.setupFee ? parseFloat(String(s.setupFee)) : 0;
+
+          deposit += fee;
+
+          if (s.planType === "installment" || s.planType === "one_payment") {
+            totalRevenue += totalAmt;
+          } else if (s.planType === "subscription") {
+            if (s.status === "future") {
+              futureDeals++;
+              futureRevenue += totalAmt;
+              totalRevenue += totalAmt;
+            } else {
+              totalRevenue += amt;
+            }
+          }
+        }
+
+        const netRevenue = totalRevenue - futureRevenue;
+        const netDeals = doneDeals - futureDeals;
+        const aov = netDeals > 0 ? netRevenue / netDeals : 0;
+
+        return { totalLeads, doneDeals, conversionRate, totalRevenue, futureDeals, futureRevenue, netRevenue, aov, deposit };
+      }
+
+      const current = computeMetrics(currentSubs, currentLeads);
+      const previous = computeMetrics(previousSubs, previousLeads);
+
+      // ── Percentage delta calculation ──────────────────────────────────────
+      function pctDelta(curr: number, prev: number): number {
+        if (prev === 0) return curr > 0 ? 100 : 0;
+        return ((curr - prev) / Math.abs(prev)) * 100;
+      }
+
+      const summaryDelta = {
+        totalLeads: pctDelta(current.totalLeads, previous.totalLeads),
+        doneDeals: pctDelta(current.doneDeals, previous.doneDeals),
+        conversionRate: pctDelta(current.conversionRate, previous.conversionRate),
+        totalRevenue: pctDelta(current.totalRevenue, previous.totalRevenue),
+        futureDeals: pctDelta(current.futureDeals, previous.futureDeals),
+        aov: pctDelta(current.aov, previous.aov),
+      };
+
+      // ── Agent Performance Cards ───────────────────────────────────────────
+      const agentNames = ["Guy", "Rob", "James"];
+      const agentCards = agentNames.map((agent) => {
+        const agentSubs = currentSubs.filter((s) => s.salesPerson === agent);
+        const totalDeals = agentSubs.length;
+        const installments = agentSubs.filter((s) => s.planType === "installment").length;
+        const future = agentSubs.filter((s) => s.planType === "subscription" && s.status === "future").length;
+        const oneTime = agentSubs.filter((s) => s.planType === "one_payment").length;
+
+        let deposit = 0;
+        let totalTurnOver = 0;
+        let futureTurnOver = 0;
+
+        for (const s of agentSubs) {
+          const totalAmt = s.totalAmount ? parseFloat(String(s.totalAmount)) : 0;
+          const amt = s.amount ? parseFloat(String(s.amount)) : 0;
+          const fee = s.setupFee ? parseFloat(String(s.setupFee)) : 0;
+          deposit += fee;
+
+          if (s.planType === "installment" || s.planType === "one_payment") {
+            totalTurnOver += totalAmt;
+          } else if (s.planType === "subscription") {
+            if (s.status === "future") {
+              futureTurnOver += totalAmt;
+              totalTurnOver += totalAmt;
+            } else {
+              totalTurnOver += amt;
+            }
+          }
+        }
+
+        const netTurnOver = totalTurnOver - futureTurnOver;
+        const netDeals = totalDeals - future;
+        const aov = netDeals > 0 ? netTurnOver / netDeals : 0;
+
+        // Declines for this agent
+        const declineTypes = ["Pre-Cycle-Decline", "Decline Live Sub"];
+        const agentDeclines = currentLeads.filter(
+          (l) => l.assignedAgent === agent && l.leadType && declineTypes.includes(l.leadType)
+        );
+        const declinesCount = agentDeclines.length;
+
+        // Calculate remaining amount for declines
+        let declineRemaining = 0;
+        for (const d of agentDeclines) {
+          // Try to find matching subscription by email
+          const matchingSub = d.email
+            ? allSubs.find((s) => s.email === d.email && s.subscriptionId !== d.subscriptionId)
+            : null;
+          if (matchingSub && matchingSub.totalAmount && matchingSub.currentBillingCycle && matchingSub.amount) {
+            const total = parseFloat(String(matchingSub.totalAmount));
+            const paid = matchingSub.currentBillingCycle * parseFloat(String(matchingSub.amount));
+            declineRemaining += Math.max(0, total - paid);
+          } else {
+            // Fallback to monthlyAmount from lead_assignments
+            declineRemaining += d.monthlyAmount ?? 0;
+          }
+        }
+
+        return {
+          agent,
+          totalDeals,
+          installments,
+          future,
+          oneTime,
+          deposit: Math.round(deposit * 100) / 100,
+          totalTurnOver: Math.round(totalTurnOver * 100) / 100,
+          futureTurnOver: Math.round(futureTurnOver * 100) / 100,
+          netTurnOver: Math.round(netTurnOver * 100) / 100,
+          aov: Math.round(aov * 100) / 100,
+          declinesCount,
+          declineRemaining: Math.round(declineRemaining * 100) / 100,
+        };
+      });
+
+      // ── Conversion by Lead Type ───────────────────────────────────────────
+      const leadTypes = [
+        "Cat to Rob",
+        "Pre-Cycle-Cancelled",
+        "Cancel Live Sub (Cycle 1)",
+        "Cancel Live Sub (Cycle 2+)",
+        "Pre-Cycle-Decline",
+        "Decline Live Sub",
+        "Hot Lead",
+      ];
+
+      const conversionByLeadType = leadTypes.map((lt) => {
+        const leadsOfType = currentLeads.filter((l) => l.leadType === lt);
+        const leadsIn = leadsOfType.length;
+        const doneDeal = leadsOfType.filter((l) => l.workStatus === "done_deal" || l.workStatus === "future_deal").length;
+        const lost = leadsOfType.filter(
+          (l) => l.workStatus === "not_interested" || l.workStatus === "cancelled_sub" || l.workStatus === "archived"
+        ).length;
+        const conversionPct = leadsIn > 0 ? (doneDeal / leadsIn) * 100 : 0;
+
+        return {
+          leadType: lt,
+          leadsIn,
+          doneDeal,
+          lost,
+          conversionPct: Math.round(conversionPct * 10) / 10,
+        };
+      });
+
+      // ── Conversion by Agent ───────────────────────────────────────────────
+      const conversionByAgent = agentNames.map((agent) => {
+        const agentLeads = currentLeads.filter((l) => l.assignedAgent === agent);
+        const assigned = agentLeads.length;
+        const deals = agentLeads.filter((l) => l.workStatus === "done_deal" || l.workStatus === "future_deal").length;
+        const convPct = assigned > 0 ? (deals / assigned) * 100 : 0;
+
+        return {
+          agent,
+          assigned,
+          deals,
+          conversionPct: Math.round(convPct * 10) / 10,
+        };
+      });
+
+      // ── Drill-down data (all leads + subs for the period, for modal) ──────
+      const drillDown = currentLeads.map((l) => ({
+        id: l.id,
+        customerName: l.customerName || "Unknown",
+        email: l.email || "",
+        phone: l.phone || null,
+        leadType: l.leadType || "",
+        planName: l.planName || "",
+        amount: l.totalSpend ?? l.monthlyAmount ?? 0,
+        eventDate: l.eventDate || "",
+        workStatus: l.workStatus || "new",
+        assignedAgent: l.assignedAgent || "",
+      }));
+
+      const drillDownSubs = currentSubs.map((s) => ({
+        id: s.id,
+        customerName: s.customerName || "Unknown",
+        email: s.email || "",
+        phone: s.phone || null,
+        leadType: "",
+        planType: s.planType,
+        planName: s.planName || "",
+        amount: s.totalAmount ? parseFloat(String(s.totalAmount)) : (s.amount ? parseFloat(String(s.amount)) : 0),
+        eventDate: s.createdOn ? String(s.createdOn) : "",
+        status: s.status,
+        salesPerson: s.salesPerson,
+      }));
+
+      return {
+        summary: {
+          totalLeads: current.totalLeads,
+          doneDeals: current.doneDeals,
+          conversionRate: Math.round(current.conversionRate * 10) / 10,
+          totalRevenue: Math.round(current.totalRevenue * 100) / 100,
+          futureDeals: current.futureDeals,
+          aov: Math.round(current.aov * 100) / 100,
+          futureRevenue: Math.round(current.futureRevenue ?? 0),
+        },
+        summaryDelta: {
+          totalLeads: Math.round(summaryDelta.totalLeads * 10) / 10,
+          doneDeals: Math.round(summaryDelta.doneDeals * 10) / 10,
+          conversionRate: Math.round(summaryDelta.conversionRate * 10) / 10,
+          totalRevenue: Math.round(summaryDelta.totalRevenue * 10) / 10,
+          futureDeals: Math.round(summaryDelta.futureDeals * 10) / 10,
+          aov: Math.round(summaryDelta.aov * 10) / 10,
+        },
+        agentCards,
+        conversionByLeadType,
+        conversionByAgent,
+        drillDown,
+        drillDownSubs,
+        periodLabel: input.dateRange === "today" ? "vs yesterday"
+          : input.dateRange === "yesterday" ? "vs day before"
+          : input.dateRange === "7days" ? "vs previous 7 days"
+          : input.dateRange === "this_month" ? "vs last month"
+          : input.dateRange === "last_month" ? "vs month before"
+          : "vs previous period",
+      };
+    }),
 });
