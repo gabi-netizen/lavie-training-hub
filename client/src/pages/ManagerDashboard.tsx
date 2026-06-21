@@ -48,6 +48,11 @@ import {
   MessageSquare,
   Calendar,
   Send,
+  Swords,
+  XCircle,
+  CreditCard,
+  TrendingDown,
+  UserCheck,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -674,22 +679,24 @@ export default function ManagerDashboard() {
       <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab("leads")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "leads"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Inbox className="w-4 h-4" />
           Incoming Leads
         </button>
         <button
           onClick={() => setActiveTab("callbacks")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "callbacks"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Clock className="w-4 h-4" />
           My Callbacks
           {callbackLeads.length > 0 && (
             <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white ${callbacksTodayCount > 0 ? 'bg-red-600' : 'bg-indigo-500'}`}>
@@ -699,82 +706,90 @@ export default function ManagerDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("messages")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "messages"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <MessageSquare className="w-4 h-4" />
           Messages
         </button>
         <button
           onClick={() => setActiveTab("emails")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "emails"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Mail className="w-4 h-4" />
           Emails
         </button>
         <button
           onClick={() => setActiveTab("allClients")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "allClients"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Users className="w-4 h-4" />
           All Clients
         </button>
         <button
           onClick={() => setActiveTab("decline")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "decline"
               ? "border-red-600 text-red-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <TrendingDown className="w-4 h-4" />
           Decline
         </button>
         <button
           onClick={() => setActiveTab("cancel")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "cancel"
               ? "border-gray-600 text-gray-800"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <XCircle className="w-4 h-4" />
           Cancel
         </button>
         <button
           onClick={() => setActiveTab("endInstalment")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "endInstalment"
               ? "border-purple-600 text-purple-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <CreditCard className="w-4 h-4" />
           End Instalment
         </button>
         <button
           onClick={() => setActiveTab("butler")}
-          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "butler"
               ? "border-purple-600 text-purple-700"
               : "border-transparent text-purple-600 hover:text-purple-800"
           }`}
         >
-          Sir Carlton
+          <Swords className="w-4 h-4" />
+          Maximus
         </button>
         <button
           onClick={() => setActiveTab("customers")}
-          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "customers"
               ? "border-green-500 text-green-600"
               : "border-transparent text-green-500 hover:text-green-700"
           }`}
         >
+          <UserCheck className="w-4 h-4" />
           Customers
         </button>
       </div>
