@@ -781,7 +781,7 @@ export default function ManagerDashboard() {
           }`}
         >
           <Swords className="w-4 h-4" />
-          Maximus
+          Maximus Aurelius
         </button>
         <button
           onClick={() => setActiveTab("customers")}
