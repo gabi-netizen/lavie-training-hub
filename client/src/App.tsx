@@ -197,6 +197,9 @@ function Router() {
         <Route path={"/retention-workspace/guy"}>
           {() => <AdminOrRetentionRoute component={RetentionWorkspace} componentProps={{ agentName: "Guy" }} />}
         </Route>
+        <Route path={"/retention-workspace/rob"}>
+          {() => <AdminOrRetentionRoute component={RetentionWorkspace} componentProps={{ agentName: "Rob" }} />}
+        </Route>
 
         {/* Workspace — agent calling workspace */}
         <Route path={"/workspace"} component={Workspace} />

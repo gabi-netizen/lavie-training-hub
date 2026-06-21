@@ -27,6 +27,7 @@ import {
   Brain,
   Gauge,
   Swords,
+  User,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -67,7 +68,9 @@ const OPENING_ITEMS = [
 
 // Retention dropdown items
 const RETENTION_ITEMS = [
-  { path: "/retention-workspace", label: "Retention Workspace", icon: Users },
+  { path: "/retention-workspace/guy", label: "Guy's Workspace", icon: User },
+  { path: "/retention-workspace/rob", label: "Rob's Workspace", icon: User },
+  { path: "/retention-workspace/james", label: "James's Workspace", icon: User },
   { path: "/command-centre?tab=customers", label: "Customers", icon: ContactRound },
 ];
 
