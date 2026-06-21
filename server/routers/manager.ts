@@ -2143,16 +2143,15 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
 
           deposit += fee;
 
-          if (s.planType === "installment" || s.planType === "one_payment") {
+          // Future deals = any planType with status 'future'
+          if (s.status === "future") {
+            futureDeals++;
+            futureRevenue += totalAmt;
+            totalRevenue += totalAmt;
+          } else if (s.planType === "installment" || s.planType === "one_payment") {
             totalRevenue += totalAmt;
           } else if (s.planType === "subscription") {
-            if (s.status === "future") {
-              futureDeals++;
-              futureRevenue += totalAmt;
-              totalRevenue += totalAmt;
-            } else {
-              totalRevenue += amt;
-            }
+            totalRevenue += amt;
           }
         }
 

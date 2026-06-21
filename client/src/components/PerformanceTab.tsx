@@ -440,7 +440,7 @@ export function PerformanceTab() {
           { label: "Done Deals", value: String(summary.doneDeals), delta: summaryDelta.doneDeals, color: COLORS.green },
           { label: "Conversion Rate", value: `${summary.conversionRate}%`, delta: summaryDelta.conversionRate, color: COLORS.gold },
           { label: "Total Revenue", value: formatCurrency(summary.totalRevenue), delta: summaryDelta.totalRevenue, color: COLORS.green },
-          { label: "Future Deals", value: String(summary.futureDeals), delta: summaryDelta.futureDeals, color: COLORS.blue },
+          { label: "Future Deals", value: String(summary.futureDeals), delta: summaryDelta.futureDeals, color: COLORS.blue, showPipelineValue: true },
           { label: "AOV", value: formatCurrency(summary.aov), delta: summaryDelta.aov, color: undefined },
         ].map((stat, i) => (
           <div
@@ -470,11 +470,13 @@ export function PerformanceTab() {
               style={{
                 fontSize: 11,
                 fontWeight: 500,
-                color: stat.delta >= 0 ? COLORS.green : COLORS.red,
+                color: (stat as any).showPipelineValue ? COLORS.blue : (stat.delta >= 0 ? COLORS.green : COLORS.red),
                 marginTop: 2,
               }}
             >
-              {formatPct(stat.delta)} {periodLabel}
+              {(stat as any).showPipelineValue
+                ? `Pipeline value: ${formatCurrency(summary.futureRevenue)}`
+                : `${formatPct(stat.delta)} ${periodLabel}`}
             </div>
           </div>
         ))}
