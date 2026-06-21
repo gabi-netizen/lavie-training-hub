@@ -389,7 +389,27 @@ export default function ManagerDashboard() {
   }, [activeTab]);
 
   // ─── Incoming Leads State ───────────────────────────────────────────────────
-  const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
+  // Generate month tabs from June 2026 to current month
+  const monthTabs = useMemo(() => {
+    const START_YEAR = 2026;
+    const START_MONTH = 5; // June (0-indexed)
+    const _now = new Date();
+    const tabs: { label: string; month: string }[] = [];
+    let y = START_YEAR;
+    let m = START_MONTH;
+    while (y < _now.getFullYear() || (y === _now.getFullYear() && m <= _now.getMonth())) {
+      const d = new Date(y, m);
+      tabs.push({
+        label: d.toLocaleString('en-US', { month: 'long' }),
+        month: `${y}-${String(m + 1).padStart(2, '0')}`,
+      });
+      m++;
+      if (m > 11) { m = 0; y++; }
+    }
+    return tabs;
+  }, []);
+  const defaultMonth = monthTabs.length > 0 ? monthTabs[monthTabs.length - 1].month : new Date().toISOString().substring(0, 7);
+  const [selectedLeadsMonth, setSelectedLeadsMonth] = useState<string>(defaultMonth);
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState("all");
@@ -424,9 +444,13 @@ export default function ManagerDashboard() {
       leadTypeFilter: leadTypeFilter !== "all" ? leadTypeFilter : undefined,
       workStatusFilter: statusFilter !== "all" ? statusFilter : undefined,
       sortBy: "leadStatus",
-      dateRangeFilter: dateRangeFilter === "custom" ? "custom" : dateRangeFilter,
-      customDateFrom: dateRangeFilter === "custom" && customDateFrom ? customDateFrom : undefined,
-      customDateTo: dateRangeFilter === "custom" && customDateTo ? customDateTo : undefined,
+      dateRangeFilter: activeTab === "leads" ? "custom" : (dateRangeFilter === "custom" ? "custom" : dateRangeFilter),
+      customDateFrom: activeTab === "leads"
+        ? `${selectedLeadsMonth}-01`
+        : (dateRangeFilter === "custom" && customDateFrom ? customDateFrom : undefined),
+      customDateTo: activeTab === "leads"
+        ? (() => { const [y, mo] = selectedLeadsMonth.split("-").map(Number); const next = new Date(y, mo, 0); return next.toISOString().substring(0, 10); })()
+        : (dateRangeFilter === "custom" && customDateTo ? customDateTo : undefined),
     },
     { refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000 }
   );
@@ -689,7 +713,7 @@ export default function ManagerDashboard() {
           }`}
         >
           <Inbox className="w-4 h-4" />
-          Incoming Leads {currentMonthName}
+          Incoming Leads
         </button>
         <button
           onClick={() => setActiveTab("callbacks")}
@@ -860,6 +884,24 @@ export default function ManagerDashboard() {
       {/* ─── Tab Content: Incoming Leads / Callbacks ───────────────────────────── */}
       {(activeTab === "leads" || activeTab === "callbacks") && (
         <>
+          {/* Month sub-tabs (Incoming Leads only) */}
+          {activeTab === "leads" && (
+            <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+              {monthTabs.map(({ label, month }) => (
+                <button
+                  key={month}
+                  onClick={() => setSelectedLeadsMonth(month)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-colors ${
+                    selectedLeadsMonth === month
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">

@@ -133,12 +133,13 @@ export default function TopNav() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Close all dropdowns helper
-  const closeAll = () => {
-    setCallsOpen(false);
-    setAiCoachOpen(false);
-    setOpeningOpen(false);
-    setRetentionOpen(false);
+  // Close all dropdowns helper except the one being toggled
+  const closeOthers = (current: string) => {
+    if (current !== "calls") setCallsOpen(false);
+    if (current !== "aiCoach") setAiCoachOpen(false);
+    if (current !== "opening") setOpeningOpen(false);
+    if (current !== "retention") setRetentionOpen(false);
+    if (current !== "menu") setMenuOpen(false);
   };
 
   // Active states
@@ -230,7 +231,7 @@ export default function TopNav() {
               {showOpening && (
                 <div className="relative" ref={openingRef}>
                   <button
-                    onClick={() => { closeAll(); setOpeningOpen(v => !v); }}
+                    onClick={() => { closeOthers("opening"); setOpeningOpen(v => !v); }}
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                       openingActive
@@ -271,7 +272,7 @@ export default function TopNav() {
               {showRetention && (
                 <div className="relative" ref={retentionRef}>
                   <button
-                    onClick={() => { closeAll(); setRetentionOpen(v => !v); }}
+                    onClick={() => { closeOthers("retention"); setRetentionOpen(v => !v); }}
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                       retentionActive
@@ -341,7 +342,7 @@ export default function TopNav() {
               {/* 6. AI Coach dropdown */}
               <div className="relative" ref={aiCoachRef}>
                 <button
-                  onClick={() => { closeAll(); setAiCoachOpen(v => !v); }}
+                  onClick={() => { closeOthers("aiCoach"); setAiCoachOpen(v => !v); }}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                     aiCoachActive
@@ -383,7 +384,7 @@ export default function TopNav() {
               {/* 7. Calls dropdown (Dialler, Contacts, etc.) */}
               <div className="relative" ref={callsRef}>
               <button
-                onClick={() => { closeAll(); setCallsOpen(v => !v); }}
+                onClick={() => { closeOthers("calls"); setCallsOpen(v => !v); }}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                   callsActive
@@ -426,7 +427,7 @@ export default function TopNav() {
         <div className="relative" ref={menuRef}>
           {isAuthenticated ? (
             <button
-              onClick={() => setMenuOpen(v => !v)}
+              onClick={() => { closeOthers("menu"); setMenuOpen(v => !v); }}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 group"
             >
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gradient-to-br from-cyan-400 to-teal-500 text-white shadow-md shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-shadow">
