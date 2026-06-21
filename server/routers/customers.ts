@@ -10,6 +10,48 @@ import { getDb } from "../db";
 import { customers } from "../../drizzle/schema";
 import { eq, like, or, and, sql, desc, inArray, isNull, isNotNull } from "drizzle-orm";
 
+// ─── Agent Name Mapping (Zoho full names → system short names) ───────────────
+const AGENT_NAME_MAP: Record<string, string> = {
+  "rob chidzik": "Rob",
+  "rob chidzick": "Rob",
+  "guy eli": "Guy",
+  "matthew holman": "Matthew",
+  "james huxley": "James",
+  "ashleigh walker": "Ashleigh",
+  "debbie forbes": "Debbie",
+  "shola marie": "Shola",
+  "andrea": "Andrea",
+  "ava monroe": "Ava",
+  "paige taylor": "Paige",
+  "darrell loynes": "Darrel",
+  "darrel loynes": "Darrel",
+  "cat mckay": "Cat",
+  "catriona mckay": "Cat",
+  "ryan spence": "Ryan",
+  "nisha greenwood": "Nisha",
+  "harrison joslin": "Harrison",
+  "carl": "Carl",
+  "kai": "Kai",
+  "tristan": "Tristan",
+  "alan": "Alan",
+  "bethany": "Bethany",
+  "gabi lavie": "Gabi",
+  "sara lavie": "Sara",
+};
+
+function normalizeAgentName(fullName: string | undefined | null): string | null {
+  if (!fullName || !fullName.trim()) return null;
+  const lower = fullName.trim().toLowerCase();
+  // Direct match
+  if (AGENT_NAME_MAP[lower]) return AGENT_NAME_MAP[lower];
+  // Try first name only
+  const firstName = lower.split(" ")[0];
+  const match = Object.entries(AGENT_NAME_MAP).find(([key]) => key.startsWith(firstName));
+  if (match) return match[1];
+  // If no match found, capitalize first letter of first name and return as-is
+  return fullName.trim().split(" ")[0].charAt(0).toUpperCase() + fullName.trim().split(" ")[0].slice(1).toLowerCase();
+}
+
 export const customersRouter = router({
   /**
    * getCustomers — paginated list with filters
@@ -116,6 +158,7 @@ export const customersRouter = router({
             lastPurchaseDate: z.string().optional(),
             source: z.string().optional(),
             notes: z.string().optional(),
+            assignedAgent: z.string().optional(),
           })
         ),
       })
@@ -158,6 +201,7 @@ export const customersRouter = router({
           lastPurchaseDate: row.lastPurchaseDate || null,
           source: row.source || null,
           notes: row.notes || null,
+          assignedAgent: normalizeAgentName((row as any).assignedAgent) || null,
         });
       }
 

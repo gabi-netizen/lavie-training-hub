@@ -137,6 +137,16 @@ export function CustomersTab() {
             lastPurchaseDate: r.lastPurchaseDate || r.LastPurchaseDate || r.last_purchase_date || undefined,
             source: r.source || r.Source || undefined,
             notes: r.notes || r.Notes || undefined,
+            assignedAgent:
+              r["Lead Owner"] ||
+              r["lead owner"] ||
+              r["Owner"] ||
+              r["owner"] ||
+              r["Assigned Agent"] ||
+              r["assigned agent"] ||
+              r["Agent"] ||
+              r["agent"] ||
+              undefined,
           }));
 
         if (mapped.length === 0) {
