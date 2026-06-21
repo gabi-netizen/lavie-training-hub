@@ -62,6 +62,7 @@ import { CancelTab } from "@/components/CancelTab";
 import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { CustomersTab } from "@/components/CustomersTab";
+import { MaximusGreeting } from "@/components/MaximusGreeting";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -665,6 +666,7 @@ export default function ManagerDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Manager Command Centre</h1>
           <p className="text-sm text-gray-600 mt-0.5">Retention Lead Management</p>
+          <MaximusGreeting userName={user?.name?.split(" ")[0] ?? "Commander"} />
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-800">
           <span className="font-medium">{allLeads.length} leads</span>

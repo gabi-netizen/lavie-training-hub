@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { MaximusGreeting } from "@/components/MaximusGreeting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -554,8 +555,13 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Retention Workspace</h1>
-          <span className="px-4 py-1.5 rounded-full bg-orange-500 text-white text-lg font-bold">{agentName}</span>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">Retention Workspace</h1>
+              <span className="px-4 py-1.5 rounded-full bg-orange-500 text-white text-lg font-bold">{agentName}</span>
+            </div>
+            <MaximusGreeting userName={user?.name?.split(" ")[0] ?? "Commander"} />
+          </div>
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-800">
           <span className="font-medium">{queueLeads.length} leads</span>
