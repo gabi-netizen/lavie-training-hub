@@ -2081,8 +2081,11 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         previousLeads = filterLeadsByAgents(previousLeads, input.agents);
       }
 
-      // ── Fetch client_subscriptions for current period ──────────────────────
-      const allSubs = await db.select().from(clientSubscriptions);
+      // ── Fetch client_subscriptions for retention agents ──────────────────────
+      const allSubs = await db.select().from(clientSubscriptions).where(
+        sql`${clientSubscriptions.salesPerson} IN ('Guy','Rob','James')`
+      );
+      console.log(`[Performance] Fetched ${allSubs.length} subs for retention agents`);
 
       function filterSubsByPeriod(subs: typeof allSubs, period: { from: string; to: string }) {
         return subs.filter((s) => {
