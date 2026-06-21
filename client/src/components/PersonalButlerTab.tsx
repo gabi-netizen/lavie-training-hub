@@ -1,6 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Send, Sparkles } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+
+const BUTLER_GREETINGS = [
+  "At your command, Caesar {name}",
+  "Maximus awaits your orders, Commander {name}",
+  "Strength and honor, Emperor {name}",
+  "Maximus bows before you, {name}",
+  "Ready to conquer, my liege {name}",
+  "The arena is yours, Caesar {name}",
+  "Victory awaits us, Commander {name}",
+  "Your gladiator stands ready, {name}",
+  "For glory and {name}!",
+];
 
 interface Message {
   id: number;
@@ -11,6 +24,13 @@ interface Message {
 }
 
 export function PersonalButlerTab() {
+  const { user } = useAuth();
+  const firstName = user?.name?.split(" ")[0] ?? "Commander";
+  const butlerGreeting = useMemo(() => {
+    const idx = Math.floor(Math.random() * BUTLER_GREETINGS.length);
+    return BUTLER_GREETINGS[idx].replace("{name}", firstName);
+  }, [firstName]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -142,10 +162,10 @@ export function PersonalButlerTab() {
                 <Sparkles size={28} color="#fff" />
               </div>
               <h3 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 8 }}>
-                How can I help you today?
+                {butlerGreeting}
               </h3>
               <p style={{ fontSize: 14, color: "#6b7280", maxWidth: 400, lineHeight: 1.5 }}>
-                I have access to all your leads, clients, call history, WhatsApp messages, emails, and Stripe data. Ask me anything.
+                Maximus Aurelius has access to your leads, clients, calls, WhatsApp messages, emails & Stripe data. Command me.
               </p>
               <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 480, width: "100%" }}>
                 {[
@@ -314,7 +334,7 @@ export function PersonalButlerTab() {
             </button>
           </div>
           <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 8 }}>
-            Maximus Aurelius has access to your leads, clients, calls, WhatsApp, emails & Stripe data
+            Maximus Aurelius has access to your leads, clients, calls, WhatsApp messages, emails & Stripe data
           </p>
         </div>
       </div>
