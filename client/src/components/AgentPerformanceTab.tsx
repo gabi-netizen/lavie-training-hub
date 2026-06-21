@@ -108,8 +108,19 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
     );
   }
 
-  const { summary, summaryDelta, agentCards } = data;
+  const { summary, summaryDelta, agentCards, conversionByLeadType, conversionByAgent } = data as any;
   const periodLabel = (data as any).periodLabel || "vs last month";
+
+  // Lead type dot colors
+  const leadTypeDotColor: Record<string, string> = {
+    "Cat to Rob": COLORS.green,
+    "Pre-Cycle-Cancelled": COLORS.gold,
+    "Cancel Live Sub (Cycle 1)": COLORS.gold,
+    "Cancel Live Sub (Cycle 2+)": COLORS.orange,
+    "Pre-Cycle-Decline": COLORS.red,
+    "Decline Live Sub": COLORS.red,
+    "Hot Lead": "#6b7280",
+  };
 
   // Find this agent's card (or fall back to first card)
   const card = agentCards.find((c: any) => c.agent === agentName) || agentCards[0];
@@ -367,6 +378,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
             </div>
           </div>
         ) : (
+          <>
           <div style={{ maxWidth: 520 }}>
             {/* ── Agent Performance Card ── */}
             <div
@@ -536,6 +548,145 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
               </div>
             </div>
           </div>
+
+          {/* ── Deal Type Distribution (single agent bar) ── */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary, textTransform: "uppercase", letterSpacing: 0.8, display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 3, height: 14, background: COLORS.gold, borderRadius: 2 }} />
+                Deal Type Distribution
+              </div>
+              <div style={{ display: "flex", gap: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.green }} /> Instalments
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(59,130,246,0.6)" }} /> Future
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.gold }} /> One-Time
+                </div>
+              </div>
+            </div>
+            <div style={{ background: COLORS.bgCard, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: "18px 22px", boxShadow: "0 4px 24px rgba(0,0,0,0.45)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>{card.agent}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>{card.totalDeals} deals</span>
+              </div>
+              <div style={{ display: "flex", height: 28, borderRadius: 6, overflow: "hidden", gap: 2 }}>
+                {card.installments > 0 && (
+                  <div style={{ flex: card.installments, background: `linear-gradient(90deg, ${colors.primary}, ${colors.dim})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                    {card.installments} ({Math.round((card.installments / (card.totalDeals || 1)) * 100)}%)
+                  </div>
+                )}
+                {card.future > 0 && (
+                  <div style={{ flex: card.future, background: "rgba(59,130,246,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                    {card.future} ({Math.round((card.future / (card.totalDeals || 1)) * 100)}%)
+                  </div>
+                )}
+                {card.oneTime > 0 && (
+                  <div style={{ flex: card.oneTime, background: `linear-gradient(90deg, ${COLORS.gold}, #d97706)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                    {card.oneTime} ({Math.round((card.oneTime / (card.totalDeals || 1)) * 100)}%)
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Tables Row: Conversion by Lead Type + Conversion by Agent ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginTop: 24 }}>
+            {/* Conversion by Lead Type (filtered to this agent's leads) */}
+            <div style={{ background: COLORS.bgCard, border: `1px solid ${COLORS.border}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.45)" }}>
+              <div style={{ padding: "16px 22px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bgCardAlt, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary, textTransform: "uppercase", letterSpacing: 0.8 }}>Conversion by Lead Type</div>
+                <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{summary.totalLeads} total leads</div>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Lead Type", "Leads In", "Done Deal", "Lost", "Conversion"].map((h, i) => (
+                      <th key={h} style={{ padding: "11px 18px", fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.9, textAlign: i === 0 ? "left" : "right", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${COLORS.border}` }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(conversionByLeadType || []).map((row: any) => {
+                    const pct = row.conversionPct;
+                    const pctColor = pct >= 50 ? COLORS.green : pct >= 20 ? COLORS.gold : pct > 0 ? COLORS.orange : COLORS.red;
+                    return (
+                      <tr key={row.leadType} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                        <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
+                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: leadTypeDotColor[row.leadType] || "#6b7280", flexShrink: 0 }} />
+                            {row.leadType}
+                          </div>
+                        </td>
+                        <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, textAlign: "right" }}>{row.leadsIn}</td>
+                        <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 700, color: COLORS.green, textAlign: "right" }}>{row.doneDeal}</td>
+                        <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 600, color: COLORS.red, textAlign: "right" }}>{row.lost}</td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+                            <div style={{ width: 60, height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${pct}%`, background: pctColor, borderRadius: 3 }} />
+                            </div>
+                            <span style={{ fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: "right", color: pctColor }}>{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Conversion by Agent (all agents) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ background: COLORS.bgCard, border: `1px solid ${COLORS.border}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.45)" }}>
+                <div style={{ padding: "16px 22px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bgCardAlt, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary, textTransform: "uppercase", letterSpacing: 0.8 }}>Conversion by Agent</div>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      {["Agent", "Assigned", "Deals", "Conv. %"].map((h, i) => (
+                        <th key={h} style={{ padding: "11px 18px", fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.9, textAlign: i === 0 ? "left" : "right", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${COLORS.border}` }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(conversionByAgent || []).sort((a: any, b: any) => b.conversionPct - a.conversionPct).map((row: any, idx: number) => {
+                      const agentColors = AGENT_COLORS[row.agent] || AGENT_COLORS.Guy;
+                      const pctColor = row.conversionPct >= 50 ? COLORS.green : row.conversionPct >= 30 ? COLORS.gold : COLORS.orange;
+                      return (
+                        <tr key={row.agent} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: agentColors.primary, flexShrink: 0 }} />
+                              <span style={{ fontWeight: 600 }}>{row.agent}</span>
+                              <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", fontSize: 10, fontWeight: 800, background: idx === 0 ? "rgba(168,85,247,0.15)" : "rgba(245,158,11,0.15)", color: idx === 0 ? COLORS.purple : COLORS.gold, border: `1px solid ${idx === 0 ? "rgba(168,85,247,0.3)" : "rgba(245,158,11,0.3)"}` }}>
+                                {idx + 1}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, textAlign: "right" }}>{row.assigned}</td>
+                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 700, color: COLORS.green, textAlign: "right" }}>{row.deals}</td>
+                          <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+                              <div style={{ width: 50, height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${row.conversionPct}%`, background: pctColor, borderRadius: 3 }} />
+                              </div>
+                              <span style={{ fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: "right", color: pctColor }}>{row.conversionPct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </>
         )}
       </div>
     </div>
