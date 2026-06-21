@@ -258,7 +258,7 @@ export function CustomersTab() {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-lg shadow-green-200 transition-colors"
         >
           <Upload className="w-4 h-4" />
           Import CSV
