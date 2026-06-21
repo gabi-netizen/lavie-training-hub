@@ -254,8 +254,8 @@ export default function TopNav() {
                           <div className={cn(
                             "flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer transition-all duration-150 mx-1.5 rounded-lg",
                             active
-                              ? "text-cyan-300 bg-cyan-500/10 font-medium"
-                              : "text-white/70 hover:text-white hover:bg-white/5"
+                              ? "text-cyan-300 bg-cyan-500/10 font-bold"
+                              : "text-white font-bold hover:text-cyan-300 hover:bg-white/10"
                           )}>
                             <Icon size={14} className={active ? "text-cyan-400" : "opacity-60"} />
                             {label}
@@ -295,8 +295,8 @@ export default function TopNav() {
                           <div className={cn(
                             "flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer transition-all duration-150 mx-1.5 rounded-lg",
                             active
-                              ? "text-cyan-300 bg-cyan-500/10 font-medium"
-                              : "text-white/70 hover:text-white hover:bg-white/5"
+                              ? "text-cyan-300 bg-cyan-500/10 font-bold"
+                              : "text-white font-bold hover:text-cyan-300 hover:bg-white/10"
                           )}>
                             <Icon size={14} className={active ? "text-cyan-400" : "opacity-60"} />
                             {label}
@@ -367,8 +367,8 @@ export default function TopNav() {
                         className={cn(
                           "w-full flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer transition-all duration-150 mx-1.5 rounded-lg text-left",
                           active
-                            ? "text-cyan-300 bg-cyan-500/10 font-medium"
-                            : "text-white/70 hover:text-white hover:bg-white/5"
+                            ? "text-cyan-300 bg-cyan-500/10 font-bold"
+                            : "text-white font-bold hover:text-cyan-300 hover:bg-white/10"
                         )}
                         style={{ width: "calc(100% - 12px)" }}
                       >
@@ -407,8 +407,8 @@ export default function TopNav() {
                         <div className={cn(
                           "flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer transition-all duration-150 mx-1.5 rounded-lg",
                           active
-                            ? "text-cyan-300 bg-cyan-500/10 font-medium"
-                            : "text-white/70 hover:text-white hover:bg-white/5"
+                            ? "text-cyan-300 bg-cyan-500/10 font-bold"
+                            : "text-white font-bold hover:text-cyan-300 hover:bg-white/10"
                         )}>
                           <Icon size={14} className={active ? "text-cyan-400" : "opacity-60"} />
                           {label}
