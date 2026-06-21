@@ -647,9 +647,9 @@ export const billingRouter = router({
             // Trials: subscription plans with amount <= 4.95
             conditions.push(eq(clientSubscriptions.planType, "subscription"));
             conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) <= 4.95`);
-            // Exclude customers who have another non-trial subscription (live/future/cancelled with amount > 4.95)
+            // Exclude customers who have another active non-trial subscription (live/future only)
             conditions.push(
-              sql`${clientSubscriptions.email} NOT IN (SELECT email FROM client_subscriptions WHERE CAST(amount AS DECIMAL(10,2)) > 4.95 AND status IN ('live','future','cancelled','canceled') AND email IS NOT NULL AND email != '')`
+              sql`${clientSubscriptions.email} NOT IN (SELECT email FROM client_subscriptions WHERE CAST(amount AS DECIMAL(10,2)) > 4.95 AND status IN ('live','future') AND email IS NOT NULL AND email != '')`
             );
           } else if (input.planType === "subscription") {
             // Live Sub: subscription plans with amount > 4.95, excluding installment-named plans
@@ -814,7 +814,7 @@ export const billingRouter = router({
             unpaid: sql<number>`SUM(CASE WHEN status = 'unpaid' THEN 1 ELSE 0 END)`,
             liveInstallment: sql<number>`SUM(CASE WHEN status = 'live' AND (planType = 'installment' OR (planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 AND (planName LIKE '%stall%' OR planName REGEXP '^[0-9]+ [Dd]ays'))) THEN 1 ELSE 0 END)`,
             liveSub: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) > 4.95 AND planName NOT LIKE '%stall%' AND planName NOT REGEXP '^[0-9]+ [Dd]ays' THEN 1 ELSE 0 END)`,
-            trials: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) <= 4.95 THEN 1 ELSE 0 END)`,
+            trials: sql<number>`SUM(CASE WHEN status = 'live' AND planType = 'subscription' AND CAST(amount AS DECIMAL(10,2)) <= 4.95 AND email NOT IN (SELECT email FROM client_subscriptions WHERE CAST(amount AS DECIMAL(10,2)) > 4.95 AND status IN ('live','future') AND email IS NOT NULL AND email != '') THEN 1 ELSE 0 END)`,
           })
           .from(clientSubscriptions)
           .where(summaryAgentCondition);
