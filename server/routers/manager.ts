@@ -2336,6 +2336,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         planName: s.planName || "",
         amount: s.totalAmount ? parseFloat(String(s.totalAmount)) : (s.amount ? parseFloat(String(s.amount)) : 0),
         eventDate: s.createdOn ? String(s.createdOn) : "",
+        activatedOn: s.activatedOn ? String(s.activatedOn) : "",
         status: s.status,
         salesPerson: s.salesPerson,
       }));

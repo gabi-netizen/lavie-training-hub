@@ -30,6 +30,7 @@ interface DrillDownSub {
   planName: string;
   amount: number;
   eventDate: string;
+  activatedOn: string;
   status: string;
   salesPerson: string;
 }
@@ -1186,7 +1187,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                             {h}
                           </th>
                         ))
-                      : ["Customer Name", "Email", "Phone", "Plan Type", "Plan Name", "Amount", "Date", "Status", "Agent"].map((h) => (
+                      : ["Customer Name", "Email", "Phone", "Plan Type", "Plan Name", "Amount", "Created", "Activated", "Status", "Agent"].map((h) => (
                           <th
                             key={h}
                             style={{
@@ -1232,6 +1233,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.planName}</td>
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{formatCurrency(item.amount)}</td>
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.eventDate}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.activatedOn || "-"}</td>
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.status}</td>
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.salesPerson}</td>
                         </tr>
@@ -1239,7 +1241,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                   {modalData.length === 0 && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         style={{ padding: "40px 14px", fontSize: 13, fontWeight: 500, color: COLORS.textSecondary, textAlign: "center" }}
                       >
                         No records found for this filter.
