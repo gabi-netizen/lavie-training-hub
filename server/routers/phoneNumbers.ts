@@ -3,6 +3,13 @@ import { adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { phoneNumbers } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
+import {
+  addPhoneToHiya,
+  deletePhoneFromHiya,
+  getPhoneFromHiya,
+  listPhonesFromHiya,
+  parseE164,
+} from "../hiya";
 
 const CLOUDTALK_API_BASE = "https://my.cloudtalk.io/api";
 
@@ -113,7 +120,21 @@ export const phoneNumbersRouter = router({
         notes: input.notes ?? null,
         historyJson: "[]",
       });
-      return { success: true };
+
+      // Register with Hiya (non-blocking — don't fail the local operation)
+      let hiyaRegistered = false;
+      try {
+        const { countryCode, nationalNumber } = parseE164(input.number);
+        const result = await addPhoneToHiya(countryCode, nationalNumber);
+        hiyaRegistered = result.success;
+        if (!result.success) {
+          console.warn(`[Hiya] Failed to register ${input.number}:`, result.error);
+        }
+      } catch (err) {
+        console.error("[Hiya] Unexpected error during add registration:", err);
+      }
+
+      return { success: true, hiyaRegistered };
     }),
 
   /** Assign a pool number to an agent */
@@ -190,6 +211,7 @@ export const phoneNumbersRouter = router({
    * Mark a number as spam.
    * CRITICAL: This MUST also call DELETE /numbers/delete/{cloudtalkNumberId}.json
    * to stop CloudTalk billing immediately.
+   * Also removes from Hiya branded calling.
    */
   markAsSpam: adminProcedure
     .input(z.object({ id: z.number() }))
@@ -204,6 +226,19 @@ export const phoneNumbersRouter = router({
       let cloudtalkDeleted = false;
       if (existing.cloudtalkNumberId) {
         cloudtalkDeleted = await deleteCloudTalkNumber(existing.cloudtalkNumberId);
+      }
+
+      // Remove from Hiya (non-blocking)
+      let hiyaDeleted = false;
+      try {
+        const { countryCode, nationalNumber } = parseE164(existing.number);
+        const result = await deletePhoneFromHiya(countryCode, nationalNumber);
+        hiyaDeleted = result.success;
+        if (!result.success) {
+          console.warn(`[Hiya] Failed to delete ${existing.number} from Hiya:`, result.error);
+        }
+      } catch (err) {
+        console.error("[Hiya] Unexpected error during spam deletion:", err);
       }
 
       // Close the last history entry if active
@@ -225,7 +260,7 @@ export const phoneNumbersRouter = router({
         })
         .where(eq(phoneNumbers.id, input.id));
 
-      return { success: true, cloudtalkDeleted };
+      return { success: true, cloudtalkDeleted, hiyaDeleted };
     }),
 
   /** Move a spam number back to pool (e.g. if marked spam by mistake) */
@@ -277,7 +312,97 @@ export const phoneNumbersRouter = router({
       if (existing.status === "active") {
         throw new Error("Cannot delete an active number — release it first");
       }
+
+      // Remove from Hiya (non-blocking)
+      try {
+        const { countryCode, nationalNumber } = parseE164(existing.number);
+        const result = await deletePhoneFromHiya(countryCode, nationalNumber);
+        if (!result.success) {
+          console.warn(`[Hiya] Failed to delete ${existing.number} from Hiya:`, result.error);
+        }
+      } catch (err) {
+        console.error("[Hiya] Unexpected error during delete:", err);
+      }
+
       await db!.delete(phoneNumbers).where(eq(phoneNumbers.id, input.id));
       return { success: true };
+    }),
+
+  // ─── Hiya-specific endpoints ─────────────────────────────────────────────
+
+  /** Check the Hiya registration status for a specific phone number */
+  checkHiyaStatus: adminProcedure
+    .input(z.object({ phoneNumber: z.string() }))
+    .query(async ({ input }) => {
+      const { countryCode, nationalNumber } = parseE164(input.phoneNumber);
+      const result = await getPhoneFromHiya(countryCode, nationalNumber);
+
+      if (!result.success) {
+        return {
+          registered: false,
+          status: "error" as const,
+          error: result.error,
+          data: null,
+        };
+      }
+
+      if (result.data === null) {
+        return {
+          registered: false,
+          status: "not_registered" as const,
+          error: null,
+          data: null,
+        };
+      }
+
+      return {
+        registered: true,
+        status: (result.data!.registrationStatus ?? "registered") as string,
+        error: null,
+        data: result.data!,
+      };
+    }),
+
+  /** Sync: list all numbers registered in Hiya */
+  syncFromHiya: adminProcedure.query(async () => {
+    const result = await listPhonesFromHiya(0, 200);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        numbers: [] as Array<{ countryCode: string; nationalNumber: string; displayName: string; registrationStatus?: string }>,
+      };
+    }
+
+    const numbers = (result.data?.content ?? []).map((entry) => ({
+      countryCode: entry.phoneNumber.countryCode,
+      nationalNumber: entry.phoneNumber.nationalNumber,
+      displayName: entry.displayName,
+      registrationStatus: entry.registrationStatus,
+    }));
+
+    return { success: true, error: null, numbers };
+  }),
+
+  /** Manually register an existing number with Hiya (for numbers already in DB but not in Hiya) */
+  registerWithHiya: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const [existing] = await db!
+        .select()
+        .from(phoneNumbers)
+        .where(eq(phoneNumbers.id, input.id));
+      if (!existing) throw new Error("Number not found");
+
+      const { countryCode, nationalNumber } = parseE164(existing.number);
+      const result = await addPhoneToHiya(countryCode, nationalNumber);
+
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      return { success: true, error: null };
     }),
 });

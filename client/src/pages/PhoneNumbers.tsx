@@ -45,6 +45,11 @@ import {
   Edit2,
   Users,
   Clock,
+  RefreshCw,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Loader2,
 } from "lucide-react";
 
 type PhoneStatus = "pool" | "active" | "spam";
@@ -95,6 +100,59 @@ function DaysActiveBadge({ days }: { days: number | null }) {
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}>
       <Clock size={10} />
       {days}d
+    </span>
+  );
+}
+
+/** Hiya registration status badge */
+function HiyaStatusBadge({ phoneNumber }: { phoneNumber: string }) {
+  const { data, isLoading } = trpc.phoneNumbers.checkHiyaStatus.useQuery(
+    { phoneNumber },
+    { staleTime: 60_000, refetchOnWindowFocus: false }
+  );
+
+  if (isLoading) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-gray-50 text-gray-400 border-gray-200">
+        <Loader2 size={10} className="animate-spin" />
+        Checking...
+      </span>
+    );
+  }
+
+  if (!data || data.status === "error") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-yellow-50 text-yellow-700 border-yellow-200">
+        <ShieldAlert size={10} />
+        Unknown
+      </span>
+    );
+  }
+
+  if (!data.registered || data.status === "not_registered") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-gray-50 text-gray-500 border-gray-200">
+        <Shield size={10} />
+        Not Registered
+      </span>
+    );
+  }
+
+  // Registered states
+  const statusLower = data.status.toLowerCase();
+  if (statusLower === "pending" || statusLower === "in_review") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200">
+        <Shield size={10} />
+        Pending
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
+      <ShieldCheck size={10} />
+      Registered
     </span>
   );
 }
@@ -169,6 +227,9 @@ function NumberRow({
       } else {
         toast.warning("Marked as spam — CloudTalk deletion may have failed (check manually)");
       }
+      if (data.hiyaDeleted) {
+        toast.success("Removed from Hiya branded calling");
+      }
       setSpamConfirmOpen(false);
       invalidateAll();
     },
@@ -187,6 +248,18 @@ function NumberRow({
 
   const deleteNum = trpc.phoneNumbers.delete.useMutation({
     onSuccess: () => { toast.success("Number deleted"); setDeleteConfirmOpen(false); invalidateAll(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const registerWithHiya = trpc.phoneNumbers.registerWithHiya.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success("Registered with Hiya");
+        utils.phoneNumbers.checkHiyaStatus.invalidate({ phoneNumber: num.number });
+      } else {
+        toast.error(`Hiya registration failed: ${data.error}`);
+      }
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -226,6 +299,14 @@ function NumberRow({
             <span className="text-xs text-gray-400">—</span>
           )}
         </td>
+        {/* Hiya Status column */}
+        <td className="py-3 px-4">
+          {num.status !== "spam" ? (
+            <HiyaStatusBadge phoneNumber={num.number} />
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
         <td className="py-3 px-4">
           <HistoryPanel historyJson={num.historyJson} />
         </td>
@@ -252,6 +333,22 @@ function NumberRow({
             {num.status === "spam" && (
               <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => unspam.mutate({ id: num.id })} disabled={unspam.isPending}>
                 <RotateCcw size={12} className="mr-1" />Restore
+              </Button>
+            )}
+            {num.status !== "spam" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                onClick={() => registerWithHiya.mutate({ id: num.id })}
+                disabled={registerWithHiya.isPending}
+                title="Register with Hiya"
+              >
+                {registerWithHiya.isPending ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <ShieldCheck size={12} />
+                )}
               </Button>
             )}
             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setEditCloudtalkId(num.cloudtalkNumberId ?? ""); setEditNotes(num.notes ?? ""); setEditOpen(true); }}>
@@ -324,6 +421,7 @@ function NumberRow({
             <AlertDialogDescription>
               This will mark <strong>{num.number}</strong> as spam
               {num.cloudtalkNumberId ? " and immediately DELETE it from CloudTalk to stop billing." : ". No CloudTalk ID is set — you will need to delete it from CloudTalk manually."}
+              {" "}It will also be removed from Hiya branded calling.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -340,6 +438,7 @@ function NumberRow({
             <AlertDialogTitle>Delete Number?</AlertDialogTitle>
             <AlertDialogDescription>
               Permanently remove <strong>{num.number}</strong> from the pool. This cannot be undone.
+              It will also be removed from Hiya branded calling.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -439,6 +538,76 @@ function AgentsView({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+/** Hiya Sync Panel — shows all numbers registered in Hiya */
+function HiyaSyncPanel() {
+  const { data, isLoading, refetch, isRefetching } = trpc.phoneNumbers.syncFromHiya.useQuery(
+    undefined,
+    { enabled: false } // Only fetch on demand
+  );
+
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  const handleSync = async () => {
+    setHasLoaded(true);
+    await refetch();
+  };
+
+  return (
+    <Dialog>
+      <Card className="shadow-none border border-gray-200 mb-4">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={16} className="text-emerald-600" />
+              <span className="text-sm font-medium text-gray-700">Hiya Branded Calling</span>
+              <span className="text-xs text-gray-400">— Sync to see all numbers registered with Hiya</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-3 text-xs"
+              onClick={handleSync}
+              disabled={isLoading || isRefetching}
+            >
+              {(isLoading || isRefetching) ? (
+                <Loader2 size={12} className="mr-1 animate-spin" />
+              ) : (
+                <RefreshCw size={12} className="mr-1" />
+              )}
+              Sync from Hiya
+            </Button>
+          </div>
+
+          {hasLoaded && data && (
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              {!data.success ? (
+                <div className="text-xs text-red-600">Error: {data.error}</div>
+              ) : data.numbers.length === 0 ? (
+                <div className="text-xs text-gray-400">No numbers registered in Hiya yet.</div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="text-xs text-gray-500 mb-2">{data.numbers.length} number{data.numbers.length !== 1 ? "s" : ""} registered in Hiya:</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {data.numbers.map((n, i) => (
+                      <div key={i} className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded text-xs">
+                        <ShieldCheck size={12} className="text-emerald-500 flex-shrink-0" />
+                        <span className="font-mono">+{n.countryCode}{n.nationalNumber}</span>
+                        {n.registrationStatus && (
+                          <span className="text-gray-400 ml-auto">{n.registrationStatus}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Dialog>
+  );
+}
+
 export default function PhoneNumbers() {
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
@@ -459,8 +628,12 @@ export default function PhoneNumbers() {
   const utils = trpc.useUtils();
 
   const add = trpc.phoneNumbers.add.useMutation({
-    onSuccess: () => {
-      toast.success("Number added to pool");
+    onSuccess: (data) => {
+      if (data.hiyaRegistered) {
+        toast.success("Number added to pool and registered with Hiya");
+      } else {
+        toast.success("Number added to pool (Hiya registration may be pending)");
+      }
       setAddOpen(false);
       setNewNumber("");
       setNewCloudtalkId("");
@@ -515,6 +688,9 @@ export default function PhoneNumbers() {
           Add Number
         </Button>
       </div>
+
+      {/* Hiya Sync Panel */}
+      <HiyaSyncPanel />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -576,6 +752,7 @@ export default function PhoneNumbers() {
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Days Active</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hiya</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">History</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
@@ -605,6 +782,7 @@ export default function PhoneNumbers() {
             <div>
               <Label>Phone Number *</Label>
               <Input className="mt-1" placeholder="+447893942312" value={newNumber} onChange={(e) => setNewNumber(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">Will be automatically registered with Hiya for branded calling</p>
             </div>
             <div>
               <Label>CloudTalk Number ID</Label>
