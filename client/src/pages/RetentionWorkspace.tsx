@@ -69,7 +69,7 @@ const LEAD_TYPE_COLORS: Record<string, string> = {
   "Live Sub 14days+": "#e6cff2",
   "Live Sub 2nd+": "#e6cff2",
   "From Cat to Rob": "#92400e",
-  "End of Instalment": "#f59e0b",
+  "End of Instalment": "#f97316",
   "Duplicate": "#9ca3af",
 };
 
