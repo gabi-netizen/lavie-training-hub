@@ -144,13 +144,18 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
     );
   }
 
-  const { summary, summaryDelta, agentCards, conversionByLeadType, conversionByAgent } = data as any;
+  const summary = (data as any).summary || { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, futureRevenue: 0, aov: 0, deposit: 0 };
+  const summaryDelta = (data as any).summaryDelta || { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, aov: 0 };
+  const agentCards = (data as any).agentCards || [];
+  const conversionByLeadType = (data as any).conversionByLeadType || [];
+  const conversionByAgent = (data as any).conversionByAgent || [];
   const periodLabel = (data as any).periodLabel || "vs last month";
 
   const modalData = useMemo(() => {
     if (!data) return [];
     if (modalType === "leads") {
-      let items = (data as any).drillDown as DrillDownItem[];
+      let items = ((data as any).drillDown || []) as DrillDownItem[];
+      if (!Array.isArray(items)) return [];
       if (modalFilter.agent) items = items.filter((i) => i.assignedAgent === modalFilter.agent);
       if (modalFilter.leadType) items = items.filter((i) => i.leadType === modalFilter.leadType);
       if (modalFilter.workStatus) {
@@ -160,6 +165,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
       return items;
     } else {
       let items = ((data as any).drillDownSubs || []) as DrillDownSub[];
+      if (!Array.isArray(items)) return [];
       if (modalFilter.agent) items = items.filter((i) => i.salesPerson === modalFilter.agent);
       if (modalFilter.planType) items = items.filter((i) => i.planType === modalFilter.planType);
       if (modalFilter.status) items = items.filter((i) => i.status === modalFilter.status);
