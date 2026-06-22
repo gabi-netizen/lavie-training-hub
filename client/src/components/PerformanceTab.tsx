@@ -494,7 +494,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               style={{
                 fontSize: 14,
                 fontWeight: 700,
-                color: "#1e293b",
+                color: "#000000",
                 textTransform: "uppercase",
                 letterSpacing: 1,
                 display: "flex",
@@ -529,19 +529,19 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                 alignItems: "center",
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", textAlign: "center" }}>#</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", borderLeft: "1px solid #93c5fd", paddingLeft: 10 }}>AGENT</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>TOTAL DEALS</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>INSTALLMENTS</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>FUTURE</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>ONE-TIME</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>DEPOSIT</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>TOTAL T/O</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>FUTURE T/O</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>DECLINES</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>DECLINE AMT</div>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>NET T/O ↑</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#1e40af", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 12 }}>AOV</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#000000", textAlign: "center" }}>#</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#000000", borderLeft: "2px solid #1e293b", paddingLeft: 10 }}>AGENT</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>TOTAL DEALS</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>INSTALLMENTS</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>FUTURE</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>ONE-TIME</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>DEPOSIT</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>TOTAL T/O</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>FUTURE T/O</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textAlign: "center", borderLeft: "2px solid #1e293b" }}>DECLINES</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>DECLINE AMT</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>NET T/O ↑</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#000000", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 12 }}>AOV</div>
             </div>
             {/* Table Rows - sorted by Net Turn Over descending */}
             {[...agentCards].sort((a: any, b: any) => b.netTurnOver - a.netTurnOver).map((card: any, idx: number) => {
@@ -558,8 +558,8 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                     background: idx % 2 === 0 ? "#fff" : "#f8fafc",
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", textAlign: "center" }}>{idx + 1}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, borderLeft: "1px solid #e2e8f0", paddingLeft: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#000000", textAlign: "center" }}>{idx + 1}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, borderLeft: "2px solid #1e293b", paddingLeft: 10 }}>
                     <div
                       style={{
                         width: 28,
@@ -576,44 +576,44 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                     >
                       {card.agent[0]}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>{card.agent}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#000000" }}>{card.agent}</span>
                   </div>
                   <div
-                    style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", textAlign: "center", cursor: "pointer", borderLeft: "1px solid #e2e8f0" }}
+                    style={{ fontSize: 14, fontWeight: 700, color: "#000000", textAlign: "center", cursor: "pointer", borderLeft: "2px solid #1e293b" }}
                     onClick={() => openDrillDown(`${card.agent} - All Deals`, "subs", { agent: card.agent })}
                   >
                     {card.totalDeals}
                   </div>
                   <div
-                    style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", textAlign: "center", cursor: "pointer", borderLeft: "1px solid #e2e8f0" }}
+                    style={{ fontSize: 14, fontWeight: 700, color: "#000000", textAlign: "center", cursor: "pointer", borderLeft: "2px solid #1e293b" }}
                     onClick={() => openDrillDown(`${card.agent} - Instalments`, "subs", { agent: card.agent, planType: "installment" })}
                   >
                     {card.installments}
                   </div>
                   <div
-                    style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", textAlign: "center", cursor: "pointer", borderLeft: "1px solid #e2e8f0" }}
+                    style={{ fontSize: 14, fontWeight: 700, color: "#000000", textAlign: "center", cursor: "pointer", borderLeft: "2px solid #1e293b" }}
                     onClick={() => openDrillDown(`${card.agent} - Future`, "subs", { agent: card.agent, status: "future" })}
                   >
                     {card.future}
                   </div>
                   <div
-                    style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", textAlign: "center", cursor: "pointer", borderLeft: "1px solid #e2e8f0" }}
+                    style={{ fontSize: 14, fontWeight: 700, color: "#000000", textAlign: "center", cursor: "pointer", borderLeft: "2px solid #1e293b" }}
                     onClick={() => openDrillDown(`${card.agent} - One-Time`, "subs", { agent: card.agent, planType: "one_payment" })}
                   >
                     {card.oneTime}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #e2e8f0", paddingRight: 8 }}>{formatCurrency(card.deposit)}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #e2e8f0", paddingRight: 8 }}>{formatCurrency(card.totalTurnOver)}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #e2e8f0", paddingRight: 8 }}>{formatCurrency(card.futureTurnOver)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(card.deposit)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(card.totalTurnOver)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(card.futureTurnOver)}</div>
                   <div
-                    style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", textAlign: "center", cursor: "pointer", borderLeft: "1px solid #e2e8f0" }}
+                    style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", textAlign: "center", cursor: "pointer", borderLeft: "2px solid #1e293b" }}
                     onClick={() => openDrillDown(`${card.agent} - Declines`, "leads", { agent: card.agent, leadType: "Pre-Cycle-Decline,Decline Live Sub" })}
                   >
                     {card.declinesCount}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "right", borderLeft: "1px solid #e2e8f0", paddingRight: 8 }}>{formatCurrency(card.declineRemaining)}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #e2e8f0", paddingRight: 8 }}>{formatCurrency(card.netTurnOver)}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", textAlign: "right", borderLeft: "1px solid #e2e8f0", paddingRight: 12 }}>{formatCurrency(card.aov)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(card.declineRemaining)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(card.netTurnOver)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#000000", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 12 }}>{formatCurrency(card.aov)}</div>
                 </div>
               );
             })}
@@ -629,18 +629,18 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               }}
             >
               <div></div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#1e293b", borderLeft: "1px solid #93c5fd", paddingLeft: 10 }}>Grand Summary:</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e293b", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>{agentCards.reduce((s: number, c: any) => s + c.totalDeals, 0)}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e293b", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>{agentCards.reduce((s: number, c: any) => s + c.installments, 0)}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e293b", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>{agentCards.reduce((s: number, c: any) => s + c.future, 0)}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e293b", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>{agentCards.reduce((s: number, c: any) => s + c.oneTime, 0)}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.deposit, 0))}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.totalTurnOver, 0))}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.futureTurnOver, 0))}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#dc2626", textAlign: "center", borderLeft: "1px solid #93c5fd" }}>{agentCards.reduce((s: number, c: any) => s + c.declinesCount, 0)}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#dc2626", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.declineRemaining, 0))}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.netTurnOver, 0))}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#1e293b", textAlign: "right", borderLeft: "1px solid #93c5fd", paddingRight: 12 }}>{formatCurrency(Math.round(agentCards.reduce((s: number, c: any) => s + c.aov, 0) / (agentCards.length || 1)))}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#000000", borderLeft: "2px solid #1e293b", paddingLeft: 10 }}>Grand Summary:</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>{agentCards.reduce((s: number, c: any) => s + c.totalDeals, 0)}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>{agentCards.reduce((s: number, c: any) => s + c.installments, 0)}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>{agentCards.reduce((s: number, c: any) => s + c.future, 0)}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#000000", textAlign: "center", borderLeft: "2px solid #1e293b" }}>{agentCards.reduce((s: number, c: any) => s + c.oneTime, 0)}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.deposit, 0))}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.totalTurnOver, 0))}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.futureTurnOver, 0))}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#dc2626", textAlign: "center", borderLeft: "2px solid #1e293b" }}>{agentCards.reduce((s: number, c: any) => s + c.declinesCount, 0)}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#dc2626", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.declineRemaining, 0))}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#16a34a", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 8 }}>{formatCurrency(agentCards.reduce((s: number, c: any) => s + c.netTurnOver, 0))}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#000000", textAlign: "right", borderLeft: "2px solid #1e293b", paddingRight: 12 }}>{formatCurrency(Math.round(agentCards.reduce((s: number, c: any) => s + c.aov, 0) / (agentCards.length || 1)))}</div>
             </div>
           </div>
         </section>

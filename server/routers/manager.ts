@@ -2223,11 +2223,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           }
         }
 
-        const netTurnOver = totalTurnOver - futureTurnOver;
-        const netDeals = totalDeals - future;
-        const aov = netDeals > 0 ? netTurnOver / netDeals : 0;
-
-        // Declines for this agent
+        // Declines for this agent (calculated before netTurnOver)
         const declineTypes = ["Pre-Cycle-Decline", "Decline Live Sub"];
         const agentDeclines = currentLeads.filter(
           (l) => l.assignedAgent === agent && l.leadType && declineTypes.includes(l.leadType)
@@ -2250,6 +2246,11 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             declineRemaining += d.monthlyAmount ?? 0;
           }
         }
+
+        // Net Turn Over = Total T/O - Future T/O - Decline Amount
+        const netTurnOver = totalTurnOver - futureTurnOver - declineRemaining;
+        const netDeals = totalDeals - future;
+        const aov = netDeals > 0 ? netTurnOver / netDeals : 0;
 
         return {
           agent,
