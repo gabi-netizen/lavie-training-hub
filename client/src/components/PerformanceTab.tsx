@@ -907,10 +907,12 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                   return (
                     <tr
                       key={row.leadType}
-                      style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" }}
-                      onClick={() => openDrillDown(`${row.leadType} - All Leads`, "leads", { leadType: row.leadType })}
+                      style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
                     >
-                      <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary }}>
+                      <td
+                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, cursor: "pointer" }}
+                        onClick={() => openDrillDown(`${row.leadType} - All Leads`, "leads", { leadType: row.leadType })}
+                      >
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
                           <div
                             style={{
@@ -924,13 +926,22 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                           {row.leadType}
                         </div>
                       </td>
-                      <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, textAlign: "right" }}>
+                      <td
+                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, textAlign: "right", cursor: "pointer" }}
+                        onClick={() => openDrillDown(`${row.leadType} - All Leads`, "leads", { leadType: row.leadType })}
+                      >
                         {row.leadsIn}
                       </td>
-                      <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 700, color: COLORS.green, textAlign: "right" }}>
+                      <td
+                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 700, color: COLORS.green, textAlign: "right", cursor: "pointer" }}
+                        onClick={() => openDrillDown(`${row.leadType} - Done Deals`, "leads", { leadType: row.leadType, workStatus: "done_deal,future_deal" })}
+                      >
                         {row.doneDeal}
                       </td>
-                      <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 600, color: COLORS.red, textAlign: "right" }}>
+                      <td
+                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 600, color: COLORS.red, textAlign: "right", cursor: "pointer" }}
+                        onClick={() => openDrillDown(`${row.leadType} - Lost`, "leads", { leadType: row.leadType, workStatus: "closed,not_interested" })}
+                      >
                         {row.lost}
                       </td>
                       <td style={{ padding: "12px 18px", textAlign: "right" }}>
