@@ -243,6 +243,8 @@ export const phoneNumbers = mysqlTable("phone_numbers", {
   cloudtalkNumberId: varchar("cloudtalkNumberId", { length: 64 }),
   /** Notes about this number (e.g. "Was Cat's primary number", "High spam rate") */
   notes: text("notes"),
+  /** Hiya category: 'branded' = registered for branded calling (expensive), 'spam_protection' = spam protection only */
+  hiyaCategory: varchar("hiyaCategory", { length: 32 }),
   /** When the number was marked as spam */
   spamMarkedAt: timestamp("spamMarkedAt"),
   /** When the number was assigned to the current agent */

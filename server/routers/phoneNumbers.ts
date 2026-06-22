@@ -109,6 +109,7 @@ export const phoneNumbersRouter = router({
         number: z.string().min(7).max(32),
         cloudtalkNumberId: z.string().optional(),
         notes: z.string().optional(),
+        hiyaCategory: z.enum(["branded", "spam_protection"]).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -118,20 +119,23 @@ export const phoneNumbersRouter = router({
         status: "pool",
         cloudtalkNumberId: input.cloudtalkNumberId ?? null,
         notes: input.notes ?? null,
+        hiyaCategory: input.hiyaCategory ?? null,
         historyJson: "[]",
       });
 
-      // Register with Hiya (non-blocking — don't fail the local operation)
+      // Only register with Hiya if category is 'branded'
       let hiyaRegistered = false;
-      try {
-        const { countryCode, nationalNumber } = parseE164(input.number);
-        const result = await addPhoneToHiya(countryCode, nationalNumber);
-        hiyaRegistered = result.success;
-        if (!result.success) {
-          console.warn(`[Hiya] Failed to register ${input.number}:`, result.error);
+      if (input.hiyaCategory === "branded") {
+        try {
+          const { countryCode, nationalNumber } = parseE164(input.number);
+          const result = await addPhoneToHiya(countryCode, nationalNumber);
+          hiyaRegistered = result.success;
+          if (!result.success) {
+            console.warn(`[Hiya] Failed to register ${input.number}:`, result.error);
+          }
+        } catch (err) {
+          console.error("[Hiya] Unexpected error during add registration:", err);
         }
-      } catch (err) {
-        console.error("[Hiya] Unexpected error during add registration:", err);
       }
 
       return { success: true, hiyaRegistered };

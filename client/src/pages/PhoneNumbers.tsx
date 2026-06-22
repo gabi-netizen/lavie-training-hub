@@ -62,6 +62,7 @@ interface PhoneNumber {
   assignedAgentName: string | null;
   cloudtalkNumberId: string | null;
   notes: string | null;
+  hiyaCategory: string | null;
   spamMarkedAt: Date | null;
   assignedAt: Date | null;
   historyJson: string | null;
@@ -299,10 +300,15 @@ function NumberRow({
             <span className="text-xs text-gray-400">—</span>
           )}
         </td>
-        {/* Hiya Status column */}
+        {/* Hiya / Category column */}
         <td className="py-3 px-4">
-          {num.status !== "spam" ? (
+          {num.hiyaCategory === "branded" && num.status !== "spam" ? (
             <HiyaStatusBadge phoneNumber={num.number} />
+          ) : num.hiyaCategory === "spam_protection" ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200">
+              <Shield size={10} />
+              Spam Protection
+            </span>
           ) : (
             <span className="text-xs text-gray-400">—</span>
           )}
@@ -335,14 +341,14 @@ function NumberRow({
                 <RotateCcw size={12} className="mr-1" />Restore
               </Button>
             )}
-            {num.status !== "spam" && (
+            {num.status !== "spam" && num.hiyaCategory === "branded" && (
               <Button
                 size="sm"
                 variant="outline"
                 className="h-7 px-2 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                 onClick={() => registerWithHiya.mutate({ id: num.id })}
                 disabled={registerWithHiya.isPending}
-                title="Register with Hiya"
+                title="Register with Hiya Branded Calling"
               >
                 {registerWithHiya.isPending ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -553,58 +559,56 @@ function HiyaSyncPanel() {
   };
 
   return (
-    <Dialog>
-      <Card className="shadow-none border border-gray-200 mb-4">
-        <CardContent className="py-3 px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-emerald-600" />
-              <span className="text-sm font-medium text-gray-700">Hiya Branded Calling</span>
-              <span className="text-xs text-gray-400">— Sync to see all numbers registered with Hiya</span>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-3 text-xs"
-              onClick={handleSync}
-              disabled={isLoading || isRefetching}
-            >
-              {(isLoading || isRefetching) ? (
-                <Loader2 size={12} className="mr-1 animate-spin" />
-              ) : (
-                <RefreshCw size={12} className="mr-1" />
-              )}
-              Sync from Hiya
-            </Button>
+    <Card className="shadow-none border border-gray-200 mb-4">
+      <CardContent className="py-3 px-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={16} className="text-emerald-600" />
+            <span className="text-sm font-medium text-gray-700">Hiya Branded Calling</span>
+            <span className="text-xs text-gray-400">— Sync to see all Branded numbers registered with Hiya</span>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-3 text-xs"
+            onClick={handleSync}
+            disabled={isLoading || isRefetching}
+          >
+            {(isLoading || isRefetching) ? (
+              <Loader2 size={12} className="mr-1 animate-spin" />
+            ) : (
+              <RefreshCw size={12} className="mr-1" />
+            )}
+            Sync from Hiya
+          </Button>
+        </div>
 
-          {hasLoaded && data && (
-            <div className="mt-3 border-t border-gray-100 pt-3">
-              {!data.success ? (
-                <div className="text-xs text-red-600">Error: {data.error}</div>
-              ) : data.numbers.length === 0 ? (
-                <div className="text-xs text-gray-400">No numbers registered in Hiya yet.</div>
-              ) : (
-                <div className="space-y-1">
-                  <div className="text-xs text-gray-500 mb-2">{data.numbers.length} number{data.numbers.length !== 1 ? "s" : ""} registered in Hiya:</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {data.numbers.map((n, i) => (
-                      <div key={i} className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded text-xs">
-                        <ShieldCheck size={12} className="text-emerald-500 flex-shrink-0" />
-                        <span className="font-mono">+{n.countryCode}{n.nationalNumber}</span>
-                        {n.registrationStatus && (
-                          <span className="text-gray-400 ml-auto">{n.registrationStatus}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+        {hasLoaded && data && (
+          <div className="mt-3 border-t border-gray-100 pt-3">
+            {!data.success ? (
+              <div className="text-xs text-red-600">Error: {data.error}</div>
+            ) : data.numbers.length === 0 ? (
+              <div className="text-xs text-gray-400">No numbers registered in Hiya yet.</div>
+            ) : (
+              <div className="space-y-1">
+                <div className="text-xs text-gray-500 mb-2">{data.numbers.length} number{data.numbers.length !== 1 ? "s" : ""} registered in Hiya:</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {data.numbers.map((n, i) => (
+                    <div key={i} className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded text-xs">
+                      <ShieldCheck size={12} className="text-emerald-500 flex-shrink-0" />
+                      <span className="font-mono">+{n.countryCode}{n.nationalNumber}</span>
+                      {n.registrationStatus && (
+                        <span className="text-gray-400 ml-auto">{n.registrationStatus}</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </Dialog>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -616,6 +620,8 @@ export default function PhoneNumbers() {
   const [newNumber, setNewNumber] = useState("");
   const [newCloudtalkId, setNewCloudtalkId] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [newHiyaCategory, setNewHiyaCategory] = useState<"branded" | "spam_protection" | "">("");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "branded" | "spam_protection">("all");
 
   const { data: numbers = [], isLoading } = trpc.phoneNumbers.list.useQuery(undefined, {
     enabled: user?.role === "admin",
@@ -630,14 +636,17 @@ export default function PhoneNumbers() {
   const add = trpc.phoneNumbers.add.useMutation({
     onSuccess: (data) => {
       if (data.hiyaRegistered) {
-        toast.success("Number added to pool and registered with Hiya");
+        toast.success("Number added and registered with Hiya Branded Calling");
+      } else if (newHiyaCategory === "spam_protection") {
+        toast.success("Number added for Spam Protection (local management)");
       } else {
-        toast.success("Number added to pool (Hiya registration may be pending)");
+        toast.success("Number added to pool");
       }
       setAddOpen(false);
       setNewNumber("");
       setNewCloudtalkId("");
       setNewNotes("");
+      setNewHiyaCategory("");
       utils.phoneNumbers.list.invalidate();
       utils.phoneNumbers.agentSummary.invalidate();
     },
@@ -650,10 +659,14 @@ export default function PhoneNumbers() {
     return null;
   }
 
-  const filtered =
+  const filteredByStatus =
     activeTab === "all" || activeTab === "agents"
       ? numbers
       : numbers.filter((n) => n.status === activeTab);
+
+  const filtered = categoryFilter === "all"
+    ? filteredByStatus
+    : filteredByStatus.filter((n: any) => n.hiyaCategory === categoryFilter);
 
   const counts = {
     all: numbers.length,
@@ -709,6 +722,30 @@ export default function PhoneNumbers() {
         ))}
       </div>
 
+      {/* Category filter */}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-sm font-medium text-gray-600">Category:</span>
+        <div className="flex gap-1">
+          {([
+            { key: "all", label: "All" },
+            { key: "branded", label: "Branded Calling" },
+            { key: "spam_protection", label: "Spam Protection" },
+          ] as const).map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => setCategoryFilter(cat.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                categoryFilter === cat.key
+                  ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-gray-200">
         {tabs.map((t) => (
@@ -752,7 +789,7 @@ export default function PhoneNumbers() {
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assigned To</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Days Active</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Hiya</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">History</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
@@ -782,7 +819,23 @@ export default function PhoneNumbers() {
             <div>
               <Label>Phone Number *</Label>
               <Input className="mt-1" placeholder="+447893942312" value={newNumber} onChange={(e) => setNewNumber(e.target.value)} />
-              <p className="text-xs text-gray-400 mt-1">Will be automatically registered with Hiya for branded calling</p>
+            </div>
+            <div>
+              <Label>Category *</Label>
+              <Select value={newHiyaCategory} onValueChange={(v) => setNewHiyaCategory(v as any)}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select category..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="branded">Branded Calling (Hiya API)</SelectItem>
+                  <SelectItem value="spam_protection">Spam Protection (Local only)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-400 mt-1">
+                {newHiyaCategory === "branded"
+                  ? "Will be registered with Hiya for branded caller ID display"
+                  : newHiyaCategory === "spam_protection"
+                  ? "Managed locally — no API registration (free)"
+                  : "Choose a category for this number"}
+              </p>
             </div>
             <div>
               <Label>CloudTalk Number ID</Label>
@@ -797,8 +850,8 @@ export default function PhoneNumbers() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button
-              disabled={!newNumber.trim() || add.isPending}
-              onClick={() => add.mutate({ number: newNumber.trim(), cloudtalkNumberId: newCloudtalkId.trim() || undefined, notes: newNotes.trim() || undefined })}
+              disabled={!newNumber.trim() || !newHiyaCategory || add.isPending}
+              onClick={() => add.mutate({ number: newNumber.trim(), cloudtalkNumberId: newCloudtalkId.trim() || undefined, notes: newNotes.trim() || undefined, hiyaCategory: newHiyaCategory || undefined })}
             >
               Add to Pool
             </Button>
