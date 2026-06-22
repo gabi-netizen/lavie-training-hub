@@ -596,8 +596,10 @@ export const contactsRouter = router({
         return { success: false, message: "Contact has no phone number" };
       }
 
-      // Block calling a contact that was already marked N/A today by this agent
-      if (contact.status === "no_answer" && contact.updatedAt) {
+      // Block calling a contact that was already marked N/A today (Opening only)
+      // Retention agents can call multiple times per day
+      const isRetentionAgent = freshUser?.team === "retention";
+      if (!isRetentionAgent && contact.status === "no_answer" && contact.updatedAt) {
         const updatedDate = new Date(contact.updatedAt);
         const today = new Date();
         if (
