@@ -819,10 +819,10 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   <div className="text-xs font-medium text-slate-800">
                     {formatCurrency(sub.recurringAmount)}
                   </div>
-                  {/* Total Amount (minus deposit) — hidden for subscriptions */}
+                  {/* Total Amount — hidden for subscriptions */}
                   {!isSubMode && (
                     <div className="text-xs font-medium text-slate-800">
-                      {formatCurrency((sub.totalAmount ?? 0) - (sub.setupFee ?? 0))}
+                      {formatCurrency(sub.totalAmount)}
                     </div>
                   )}
                   {/* Remaining Payments (installments) OR Cycle (subscriptions) */}
@@ -968,7 +968,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-slate-600 uppercase mb-1">Total Value</div>
-                        <div className="text-sm font-medium text-slate-900">{formatCurrency((sub.totalAmount ?? 0) - (sub.setupFee ?? 0))}</div>
+                        <div className="text-sm font-medium text-slate-900">{formatCurrency(sub.totalAmount)}</div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-slate-600 uppercase mb-1">Payment Progress</div>
