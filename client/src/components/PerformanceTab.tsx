@@ -84,12 +84,12 @@ function formatPct(value: number): string {
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
-export function PerformanceTab() {
+export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
   // ─── Filter State ──────────────────────────────────────────────────────────
   const [dateRange, setDateRange] = useState<DateRange>("this_month");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>(agentFilter ? [agentFilter] : []);
   const [planType, setPlanType] = useState<"all" | "installment" | "subscription" | "one_payment">("all");
 
   // ─── Drill-down Modal State ────────────────────────────────────────────────
@@ -355,6 +355,7 @@ export function PerformanceTab() {
         </div>
 
         {/* Agent Multi-select */}
+        {!agentFilter && (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.8 }}>
             Agents:
@@ -396,6 +397,7 @@ export function PerformanceTab() {
             </button>
           )}
         </div>
+        )}
 
         {/* Plan Type */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

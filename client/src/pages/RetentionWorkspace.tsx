@@ -33,7 +33,7 @@ import { DeclineTab } from "@/components/DeclineTab";
 import { CancelTab } from "@/components/CancelTab";
 import { EndInstalmentTab } from "@/components/EndInstalmentTab";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
-import { AgentPerformanceTab } from "@/components/AgentPerformanceTab";
+import { PerformanceTab } from "@/components/PerformanceTab";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
@@ -837,7 +837,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         <PersonalButlerTab />
       )}
       {activeTab === "performance" && (
-        <AgentPerformanceTab agentName={agentName} />
+        <PerformanceTab agentFilter={agentName} />
       )}
 
       {(activeTab === "queue" || activeTab === "callbacks" || activeTab === "followups") && (
