@@ -386,7 +386,7 @@ export function CustomersTab() {
         {/* Header */}
         <div
           className="grid gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide"
-          style={{ gridTemplateColumns: "32px 1.5fr 1.5fr 1fr 1fr 0.8fr 1fr 1fr 0.8fr 0.7fr 0.6fr" }}
+          style={{ gridTemplateColumns: "32px 1.5fr 1.5fr 1fr 1.2fr 1fr 0.8fr 1fr 1fr 0.8fr 0.7fr 0.6fr" }}
         >
           <div className="flex items-center">
             <input
@@ -399,6 +399,7 @@ export function CustomersTab() {
           <div>Name</div>
           <div>Email</div>
           <div>Phone</div>
+          <div>Address</div>
           <div>Source</div>
           <div>Total Spent</div>
           <div>Last Purchase</div>
@@ -418,7 +419,7 @@ export function CustomersTab() {
             <div
               key={customer.id}
               className="grid gap-2 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 items-center text-sm"
-              style={{ gridTemplateColumns: "32px 1.5fr 1.5fr 1fr 1fr 0.8fr 1fr 1fr 0.8fr 0.7fr 0.6fr" }}
+              style={{ gridTemplateColumns: "32px 1.5fr 1.5fr 1fr 1.2fr 1fr 0.8fr 1fr 1fr 0.8fr 0.7fr 0.6fr" }}
             >
               <div className="flex items-center">
                 <input
@@ -436,6 +437,9 @@ export function CustomersTab() {
               </div>
               <div className="text-gray-600 truncate">
                 {customer.phone || "—"}
+              </div>
+              <div className="text-gray-600 truncate" title={customer.address ?? ""}>
+                {customer.address || "—"}
               </div>
               <div className="text-gray-600 truncate" title={customer.source ?? ""}>
                 {customer.source || "—"}
