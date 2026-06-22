@@ -108,25 +108,8 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
     );
   }
 
-  const summary = (data as any).summary || { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, futureRevenue: 0, aov: 0, deposit: 0 };
-  const summaryDelta = (data as any).summaryDelta || { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, aov: 0 };
-  const agentCards = (data as any).agentCards || [];
-  const conversionByLeadType = (data as any).conversionByLeadType || [];
-  const conversionByAgent = (data as any).conversionByAgent || [];
+  const { summary, summaryDelta, agentCards, conversionByLeadType, conversionByAgent } = data as any;
   const periodLabel = (data as any).periodLabel || "vs last month";
-  // DrillDown modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
-  const [modalItems, setModalItems] = useState<any[]>([]);
-  const [modalMode, setModalMode] = useState<"leads" | "subs">("subs");
-  function openDrillDown(title: string, mode: "leads" | "subs", filterFn: (items: any[]) => any[]) {
-    const raw = mode === "leads" ? ((data as any).drillDown || []) : ((data as any).drillDownSubs || []);
-    const items = Array.isArray(raw) ? filterFn(raw) : [];
-    setModalTitle(title);
-    setModalMode(mode);
-    setModalItems(items);
-    setModalOpen(true);
-  }
 
   // Lead type dot colors
   const leadTypeDotColor: Record<string, string> = {
@@ -458,9 +441,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                   borderTop: `1px solid ${COLORS.border}`,
                   borderBottom: `1px solid ${COLORS.border}`,
                   marginBottom: 18,
-                  cursor: "pointer",
                 }}
-                onClick={() => openDrillDown(`${card.agent} - All Deals`, "subs", (items) => items.filter((i: any) => i.salesPerson === card.agent))}
               >
                 <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1, letterSpacing: -3, color: colors.primary }}>
                   {card.totalDeals}
@@ -481,25 +462,25 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                   padding: "12px 6px",
                 }}
               >
-                <div style={{ textAlign: "center", flex: 1, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - Instalments`, "subs", (items) => items.filter((i: any) => i.salesPerson === card.agent && i.planType === "installment"))}>
+                <div style={{ textAlign: "center", flex: 1 }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.textPrimary }}>{card.installments}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Instalments
                   </div>
                 </div>
-                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - Subscriptions`, "subs", (items) => items.filter((i: any) => i.salesPerson === card.agent && i.planType === "subscription"))}>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.teal }}>{card.subscriptions || 0}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Subs
                   </div>
                 </div>
-                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - Future Deals`, "subs", (items) => items.filter((i: any) => i.salesPerson === card.agent && i.status === "future"))}>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.blue }}>{card.future}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Future
                   </div>
                 </div>
-                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - One-Time`, "subs", (items) => items.filter((i: any) => i.salesPerson === card.agent && i.planType === "one_payment"))}>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.gold }}>{card.oneTime}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     One-Time
@@ -557,9 +538,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                     borderRadius: 7,
                     margin: "6px -4px 0",
                     border: "1px solid rgba(239,68,68,0.15)",
-                    cursor: "pointer",
                   }}
-                  onClick={() => openDrillDown(`${card.agent} - Declines`, "leads", (items) => items.filter((i: any) => i.assignedAgent === card.agent && (i.leadType || "").toLowerCase().includes("decline")))}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>Declines</span>
@@ -724,43 +703,6 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
         </>
         )}
       </div>
-      {/* ═══ DRILL-DOWN MODAL ═══ */}
-      {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} onClick={() => setModalOpen(false)} />
-          <div style={{ position: "relative", background: COLORS.bgCard, border: `1px solid ${COLORS.border}`, borderRadius: 14, width: "90%", maxWidth: 900, maxHeight: "80vh", overflow: "auto", padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.textPrimary, margin: 0 }}>{modalTitle}</h3>
-              <button onClick={() => setModalOpen(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, padding: "6px 14px", color: COLORS.textPrimary, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Close</button>
-            </div>
-            <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 12 }}>{modalItems.length} items</div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                  <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textAlign: "left", textTransform: "uppercase" }}>Customer</th>
-                  <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textAlign: "left", textTransform: "uppercase" }}>Email</th>
-                  <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textAlign: "left", textTransform: "uppercase" }}>{modalMode === "subs" ? "Plan" : "Lead Type"}</th>
-                  <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textAlign: "left", textTransform: "uppercase" }}>Amount</th>
-                  <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textAlign: "left", textTransform: "uppercase" }}>{modalMode === "subs" ? "Status" : "Work Status"}</th>
-                  <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 600, color: COLORS.textSecondary, textAlign: "left", textTransform: "uppercase" }}>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modalItems.map((item: any, idx: number) => (
-                  <tr key={item.id || idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{String(item.customerName || "")}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{String(item.email || "")}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{String(modalMode === "subs" ? (item.planName || item.planType || "") : (item.leadType || ""))}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.green }}>{formatCurrency(Number(item.amount) || 0)}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{String(modalMode === "subs" ? (item.status || "") : (item.workStatus || ""))}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{String(item.eventDate || "")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
