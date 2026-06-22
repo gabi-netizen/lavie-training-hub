@@ -60,6 +60,16 @@ export function CustomersTab() {
   const [assignAgent, setAssignAgent] = useState("");
   const [assignDepartment, setAssignDepartment] = useState<"opening" | "retention">("opening");
 
+  // Add Customer modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPhone, setAddPhone] = useState("");
+  const [addAddress, setAddAddress] = useState("");
+  const [addLeadType, setAddLeadType] = useState("");
+  const [addAgent, setAddAgent] = useState("");
+  const [addDepartment, setAddDepartment] = useState<"opening" | "retention">("retention");
+
   // ─── Queries ────────────────────────────────────────────────────────────────
   const { data, isLoading, refetch } = trpc.customers.getCustomers.useQuery({
     search: search || undefined,
@@ -101,6 +111,16 @@ export function CustomersTab() {
       utils.customers.getCustomers.invalidate();
     },
     onError: (err) => toast.error(`Delete failed: ${err.message}`),
+  });
+
+  const createCustomerMutation = trpc.customers.createCustomer.useMutation({
+    onSuccess: () => {
+      toast.success("Customer added successfully");
+      setShowAddModal(false);
+      setAddName(""); setAddEmail(""); setAddPhone(""); setAddAddress(""); setAddLeadType(""); setAddAgent(""); setAddDepartment("retention");
+      utils.customers.getCustomers.invalidate();
+    },
+    onError: (err) => toast.error(`Failed to add customer: ${err.message}`),
   });
 
   const updateStatusMutation = trpc.customers.updateCustomerStatus.useMutation({
@@ -288,6 +308,13 @@ export function CustomersTab() {
           className="hidden"
           onChange={handleCsvImport}
         />
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Customer
+        </button>
 
         {selectedIds.length > 0 && (
           <>
@@ -523,6 +550,134 @@ export function CustomersTab() {
       </div>
 
       {/* ─── Assign Modal ───────────────────────────────────────────────────────── */}
+      {/* ─── Add Customer Modal ──────────────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Add Customer</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  placeholder="Full name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={addPhone}
+                  onChange={(e) => setAddPhone(e.target.value)}
+                  placeholder="07xxx or +44xxx"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={addAddress}
+                  onChange={(e) => setAddAddress(e.target.value)}
+                  placeholder="Street, City, Postcode"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lead Type</label>
+                <select
+                  value={addLeadType}
+                  onChange={(e) => setAddLeadType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select lead type...</option>
+                  <option value="Cat to Rob">Cat to Rob</option>
+                  <option value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</option>
+                  <option value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</option>
+                  <option value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</option>
+                  <option value="Hot Lead">Hot Lead</option>
+                  <option value="Pre-Cycle-Decline">Pre-Cycle-Decline</option>
+                  <option value="Decline Live Sub">Decline Live Sub</option>
+                  <option value="End of Instalment">End of Instalment</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lead Owner</label>
+                <select
+                  value={addAgent}
+                  onChange={(e) => setAddAgent(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Unassigned</option>
+                  {agentList.map((a: any) => (
+                    <option key={a.id} value={a.name}>{a.name} ({a.team})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="addDept" value="retention" checked={addDepartment === "retention"} onChange={() => setAddDepartment("retention")} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm text-gray-800">Retention</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="addDept" value="opening" checked={addDepartment === "opening"} onChange={() => setAddDepartment("opening")} className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm text-gray-800">Opening</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!addName.trim()) { toast.error("Name is required"); return; }
+                  createCustomerMutation.mutate({
+                    name: addName.trim(),
+                    email: addEmail.trim() || undefined,
+                    phone: addPhone.trim() || undefined,
+                    address: addAddress.trim() || undefined,
+                    leadType: addLeadType || undefined,
+                    assignedAgent: addAgent || undefined,
+                    department: addDepartment,
+                  });
+                }}
+                disabled={createCustomerMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {createCustomerMutation.isPending ? "Adding..." : "Add Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAssignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">

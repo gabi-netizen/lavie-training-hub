@@ -7,7 +7,8 @@
 import { z } from "zod";
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { customers, contacts } from "../../drizzle/schema";
+import { customers, contacts, leadAssignments } from "../../drizzle/schema";
+import { normalisePhone } from "../contacts";
 import { eq, like, or, and, sql, desc, inArray, isNull, isNotNull } from "drizzle-orm";
 
 // ─── Agent Name Mapping (Zoho full names → system short names) ───────────────
@@ -383,6 +384,83 @@ export const customersRouter = router({
         .limit(1);
 
       return rows[0] ?? null;
+    }),
+
+  /**
+   * createCustomer — add a single customer manually (ad-hoc)
+   */
+  createCustomer: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        leadType: z.string().optional(),
+        assignedAgent: z.string().optional(),
+        department: z.enum(["opening", "retention"]).default("retention"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const phone = normalisePhone(input.phone) ?? (input.phone || null);
+
+      // 1. Insert into customers table
+      await db.insert(customers).values({
+        name: input.name,
+        email: input.email || null,
+        phone,
+        address: input.address || null,
+        assignedAgent: input.assignedAgent || null,
+        department: input.department,
+        status: "new",
+      });
+
+      // 2. Look up agent email from users table
+      let agentEmail: string | null = null;
+      if (input.assignedAgent) {
+        try {
+          const usersRows = await db.execute(sql`SELECT email FROM users WHERE active = 1 AND name = ${input.assignedAgent} LIMIT 1`);
+          const row = (usersRows[0] as any[])?.[0];
+          if (row?.email) agentEmail = row.email;
+        } catch (_e) { /* ignore */ }
+      }
+
+      // 3. Insert into contacts table so agent sees them in Workspace
+      const [contactResult] = await db.insert(contacts).values({
+        name: input.name,
+        email: input.email || null,
+        phone,
+        address: input.address || null,
+        source: "Manual Add",
+        agentName: input.assignedAgent || null,
+        agentEmail: agentEmail || "trial@lavielabs.com",
+        leadType: input.leadType || null,
+        status: "new",
+        department: input.department,
+        leadDate: new Date(),
+      });
+
+      // 4. If lead type is set and department is retention, create a lead_assignment
+      if (input.leadType && input.department === "retention") {
+        const contactId = (contactResult as any)?.insertId ?? null;
+        const subscriptionId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        await db.insert(leadAssignments).values({
+          subscriptionId,
+          customerName: input.name,
+          email: input.email || null,
+          phone,
+          leadType: input.leadType,
+          assignedAgent: input.assignedAgent || null,
+          assignedAt: input.assignedAgent ? Date.now() : null,
+          contactId: contactId || null,
+          workStatus: input.assignedAgent ? "assigned" : "new",
+        });
+      }
+
+      return { success: true };
     }),
 
   /**
