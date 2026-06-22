@@ -1,32 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 // @ts-ignore - trpc is provided by the project's lib/trpc module
 import { trpc } from "@/lib/trpc";
-
-interface DrillDownItem {
-  id: number;
-  customerName: string;
-  email: string;
-  phone: string | null;
-  leadType: string;
-  planName: string;
-  amount: number;
-  eventDate: string;
-  workStatus: string;
-  assignedAgent: string;
-}
-interface DrillDownSub {
-  id: number;
-  customerName: string;
-  email: string;
-  phone: string | null;
-  leadType: string;
-  planType: string;
-  planName: string;
-  amount: number;
-  eventDate: string;
-  status: string;
-  salesPerson: string;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -90,16 +64,6 @@ interface AgentPerformanceTabProps {
 export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
   const [dateRange, setDateRange] = useState<DateRange>("this_month");
   const [planType, setPlanType] = useState<"all" | "installment" | "subscription" | "one_payment">("all");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
-  const [modalType, setModalType] = useState<"leads" | "subs">("leads");
-  const [modalFilter, setModalFilter] = useState<{
-    agent?: string;
-    leadType?: string;
-    workStatus?: string;
-    planType?: string;
-    status?: string;
-  }>({});
 
   const { data, isLoading, refetch } = trpc.manager.getPerformanceData.useQuery(
     {
@@ -144,41 +108,8 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
     );
   }
 
-  const summary = (data as any).summary || { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, futureRevenue: 0, aov: 0, deposit: 0 };
-  const summaryDelta = (data as any).summaryDelta || { totalLeads: 0, doneDeals: 0, conversionRate: 0, totalRevenue: 0, futureDeals: 0, aov: 0 };
-  const agentCards = (data as any).agentCards || [];
-  const conversionByLeadType = (data as any).conversionByLeadType || [];
-  const conversionByAgent = (data as any).conversionByAgent || [];
+  const { summary, summaryDelta, agentCards, conversionByLeadType, conversionByAgent } = data as any;
   const periodLabel = (data as any).periodLabel || "vs last month";
-
-  const modalData = useMemo(() => {
-    if (!data) return [];
-    if (modalType === "leads") {
-      let items = ((data as any).drillDown || []) as DrillDownItem[];
-      if (!Array.isArray(items)) return [];
-      if (modalFilter.agent) items = items.filter((i) => i.assignedAgent === modalFilter.agent);
-      if (modalFilter.leadType) items = items.filter((i) => i.leadType === modalFilter.leadType);
-      if (modalFilter.workStatus) {
-        const statuses = modalFilter.workStatus.split(",");
-        items = items.filter((i) => statuses.includes(i.workStatus));
-      }
-      return items;
-    } else {
-      let items = ((data as any).drillDownSubs || []) as DrillDownSub[];
-      if (!Array.isArray(items)) return [];
-      if (modalFilter.agent) items = items.filter((i) => i.salesPerson === modalFilter.agent);
-      if (modalFilter.planType) items = items.filter((i) => i.planType === modalFilter.planType);
-      if (modalFilter.status) items = items.filter((i) => i.status === modalFilter.status);
-      return items;
-    }
-  }, [data, modalType, modalFilter]);
-
-  function openDrillDown(title: string, type: "leads" | "subs", filter: typeof modalFilter) {
-    setModalTitle(title);
-    setModalType(type);
-    setModalFilter(filter);
-    setModalOpen(true);
-  }
 
   // Lead type dot colors
   const leadTypeDotColor: Record<string, string> = {
@@ -510,9 +441,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                   borderTop: `1px solid ${COLORS.border}`,
                   borderBottom: `1px solid ${COLORS.border}`,
                   marginBottom: 18,
-                  cursor: "pointer",
                 }}
-                onClick={() => openDrillDown(`${card.agent} - All Deals`, "subs", { agent: card.agent })}
               >
                 <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1, letterSpacing: -3, color: colors.primary }}>
                   {card.totalDeals}
@@ -533,25 +462,25 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                   padding: "12px 6px",
                 }}
               >
-                <div style={{ textAlign: "center", flex: 1, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - Instalments`, "subs", { agent: card.agent, planType: "installment" })}>
+                <div style={{ textAlign: "center", flex: 1 }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.textPrimary }}>{card.installments}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Instalments
                   </div>
                 </div>
-                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - Subscriptions`, "subs", { agent: card.agent, planType: "subscription" })}>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.teal }}>{card.subscriptions || 0}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Subs
                   </div>
                 </div>
-                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - Future`, "subs", { agent: card.agent, status: "future" })}>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.blue }}>{card.future}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Future
                   </div>
                 </div>
-                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}`, cursor: "pointer" }} onClick={() => openDrillDown(`${card.agent} - One-Time`, "subs", { agent: card.agent, planType: "one_payment" })}>
+                <div style={{ textAlign: "center", flex: 1, borderLeft: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.gold }}>{card.oneTime}</div>
                   <div style={{ fontSize: 10, fontWeight: 500, color: COLORS.textSecondary, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     One-Time
@@ -609,9 +538,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
                     borderRadius: 7,
                     margin: "6px -4px 0",
                     border: "1px solid rgba(239,68,68,0.15)",
-                    cursor: "pointer",
                   }}
-                  onClick={() => openDrillDown(`${card.agent} - Declines`, "leads", { agent: card.agent, leadType: "Pre-Cycle-Decline,Decline Live Sub" })}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>Declines</span>
@@ -776,83 +703,6 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
         </>
         )}
       </div>
-      {/* ── Drill-Down Modal ── */}
-      {modalOpen && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}
-          onClick={() => setModalOpen(false)}
-        >
-          <div
-            style={{ background: COLORS.bgCard, border: `1px solid ${COLORS.border}`, borderRadius: 16, width: "90%", maxWidth: 1100, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bgCardAlt }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>{modalTitle}</div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: COLORS.textSecondary, marginTop: 2 }}>{modalData.length} records</div>
-              </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 16px", color: COLORS.textPrimary, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-              >
-                Close
-              </button>
-            </div>
-            {/* Modal Body */}
-            <div style={{ overflow: "auto", flex: 1, padding: "0 0 12px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    {modalType === "leads"
-                      ? ["Customer Name", "Email", "Phone", "Lead Type", "Amount", "Date", "Status", "Agent"].map((h) => (
-                          <th key={h} style={{ padding: "10px 14px", fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "left", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
-                        ))
-                      : ["Customer Name", "Email", "Phone", "Plan Type", "Plan Name", "Amount", "Date", "Status", "Agent"].map((h) => (
-                          <th key={h} style={{ padding: "10px 14px", fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "left", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
-                        ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {modalType === "leads"
-                    ? (modalData as DrillDownItem[]).map((item) => (
-                        <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.customerName}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.email}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.phone || "-"}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.leadType}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{formatCurrency(item.amount)}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.eventDate}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.workStatus}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.assignedAgent}</td>
-                        </tr>
-                      ))
-                    : (modalData as DrillDownSub[]).map((item) => (
-                        <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.customerName}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.email}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.phone || "-"}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.planType}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.planName}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{formatCurrency(item.amount)}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.eventDate}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.status}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.salesPerson}</td>
-                        </tr>
-                      ))}
-                  {modalData.length === 0 && (
-                    <tr>
-                      <td colSpan={9} style={{ padding: "40px 14px", fontSize: 13, fontWeight: 500, color: COLORS.textSecondary, textAlign: "center" }}>
-                        No records found for this filter.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
