@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { customers } from "../../drizzle/schema";
+import { customers, contacts } from "../../drizzle/schema";
 import { eq, like, or, and, sql, desc, inArray, isNull, isNotNull } from "drizzle-orm";
 
 // ─── Agent Name Mapping (Zoho full names → system short names) ───────────────
@@ -205,13 +205,55 @@ export const customersRouter = router({
         });
       }
 
-      // Insert in chunks
+      // Insert in chunks into customers table
       const CHUNK_SIZE = 500;
       for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
         const chunk = toInsert.slice(i, i + CHUNK_SIZE);
         if (chunk.length > 0) {
           await db.insert(customers).values(chunk);
           imported += chunk.length;
+        }
+      }
+
+      // Also insert into contacts table so agents see them in Workspace
+      // Look up agent emails from users table
+      const agentEmailMap: Record<string, string> = {};
+      try {
+        const usersRows = await db.execute(sql`SELECT name, email FROM users WHERE active = 1 AND email IS NOT NULL`);
+        for (const u of usersRows[0] as any[]) {
+          if (u.name && u.email) {
+            // Map normalized short name to email
+            const shortName = normalizeAgentName(u.name);
+            if (shortName) agentEmailMap[shortName] = u.email;
+          }
+        }
+      } catch (_e) { /* ignore if users table not accessible */ }
+
+      const contactsToInsert: any[] = [];
+      for (const row of toInsert) {
+        const agentName = row.assignedAgent;
+        const agentEmail = agentName ? agentEmailMap[agentName] || null : null;
+        contactsToInsert.push({
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          source: row.source || "CSV Import",
+          importedNotes: row.notes || null,
+          agentName: agentName || null,
+          agentEmail: agentEmail || "trial@lavielabs.com",
+          status: "new",
+          department: "opening",
+          leadDate: new Date(),
+        });
+      }
+
+      // Insert contacts in chunks
+      for (let i = 0; i < contactsToInsert.length; i += CHUNK_SIZE) {
+        const chunk = contactsToInsert.slice(i, i + CHUNK_SIZE);
+        if (chunk.length > 0) {
+          try {
+            await db.insert(contacts).values(chunk);
+          } catch (_e) { /* ignore duplicates */ }
         }
       }
 
