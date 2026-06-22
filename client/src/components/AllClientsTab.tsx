@@ -98,6 +98,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [cycleFilter, setCycleFilter] = useState("");
   const [subAgeFilter, setSubAgeFilter] = useState("");
   const [daysLeftFilter, setDaysLeftFilter] = useState("");
+  const [daysLeftDateFrom, setDaysLeftDateFrom] = useState("");
+  const [daysLeftDateTo, setDaysLeftDateTo] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -190,6 +192,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
       cycleFilter: cycleFilter || undefined,
       subAgeFilter: subAgeFilter || undefined,
       daysLeftFilter: daysLeftFilter || undefined,
+      daysLeftDateFrom: daysLeftFilter === "custom" ? (daysLeftDateFrom || undefined) : undefined,
+      daysLeftDateTo: daysLeftFilter === "custom" ? (daysLeftDateTo || undefined) : undefined,
       search: search || undefined,
       dateFrom: dateRange.from,
       dateTo: dateRange.to,
@@ -225,6 +229,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     }
     // Always reset sub-filters when switching cubes
     setDaysLeftFilter("");
+    setDaysLeftDateFrom("");
+    setDaysLeftDateTo("");
     setCycleFilter("");
     setSubAgeFilter("");
     setPage(1);
@@ -241,6 +247,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
     setCycleFilter("");
     setSubAgeFilter("");
     setDaysLeftFilter("");
+    setDaysLeftDateFrom("");
+    setDaysLeftDateTo("");
     setSearch("");
     setPage(1);
   };
@@ -506,26 +514,60 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           <option value="180+">180+ days</option>
         </select>
 
-        {/* Days Left Filter — visible when Trials cube is selected */}
-        {(statusFilter === "live" && planTypeFilter === "trial") && (
-          <select
-            value={daysLeftFilter}
-            onChange={(e) => {
-              setDaysLeftFilter(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2 text-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 bg-orange-50 font-medium"
-          >
-            <option value="">All Days Left</option>
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="2days">2 Days</option>
-            <option value="3days">3 Days</option>
-            <option value="4days">4 Days</option>
-            <option value="5days">5 Days</option>
-            <option value="6days">6 Days</option>
-            <option value="7days">7 Days</option>
-          </select>
+        {/* Days Left Filter — visible when Trials or Live Installments cube is selected */}
+        {(statusFilter === "live" && (planTypeFilter === "trial" || planTypeFilter === "installment")) && (
+          <>
+            <select
+              value={daysLeftFilter}
+              onChange={(e) => {
+                setDaysLeftFilter(e.target.value);
+                if (e.target.value !== "custom") {
+                  setDaysLeftDateFrom("");
+                  setDaysLeftDateTo("");
+                }
+                setPage(1);
+              }}
+              className="px-3 py-2 text-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 bg-orange-50 font-medium"
+            >
+              <option value="">All Days Left</option>
+              <option value="today">Today</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="2days">2 Days</option>
+              <option value="3days">3 Days</option>
+              <option value="4days">4 Days</option>
+              <option value="5days">5 Days</option>
+              <option value="6days">6 Days</option>
+              <option value="7days">7 Days</option>
+              <option value="this_week">This Week</option>
+              <option value="next_week">Next Week</option>
+              <option value="this_month">This Month</option>
+              <option value="custom">Custom</option>
+            </select>
+            {daysLeftFilter === "custom" && (
+              <>
+                <input
+                  type="date"
+                  value={daysLeftDateFrom}
+                  onChange={(e) => {
+                    setDaysLeftDateFrom(e.target.value);
+                    setPage(1);
+                  }}
+                  className="px-3 py-2 text-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 bg-orange-50"
+                  placeholder="From"
+                />
+                <input
+                  type="date"
+                  value={daysLeftDateTo}
+                  onChange={(e) => {
+                    setDaysLeftDateTo(e.target.value);
+                    setPage(1);
+                  }}
+                  className="px-3 py-2 text-sm border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 bg-orange-50"
+                  placeholder="To"
+                />
+              </>
+            )}
+          </>
         )}
 
         {/* Search Input */}
@@ -559,6 +601,15 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           Refresh
         </button>
       </div>
+
+      {/* Expected Income Summary — visible when Days Left filter is active AND on Live Installments */}
+      {daysLeftFilter && statusFilter === "live" && planTypeFilter === "installment" && (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-3 shadow-sm">
+          <span className="text-lg font-bold text-green-700">
+            {totalCount} customers &mdash; &pound;{(data?.expectedIncome ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} expected income
+          </span>
+        </div>
+      )}
 
       {/* Results count + Pagination */}
       <div className="flex items-center justify-between text-sm">

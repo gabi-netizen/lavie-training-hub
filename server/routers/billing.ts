@@ -580,6 +580,8 @@ export const billingRouter = router({
         cycleFilter: z.string().optional(),
         subAgeFilter: z.string().optional(),
         daysLeftFilter: z.string().optional(),
+        daysLeftDateFrom: z.string().optional(), // YYYY-MM-DD for custom days-left range
+        daysLeftDateTo: z.string().optional(),   // YYYY-MM-DD for custom days-left range
       })
     )
     .query(async ({ input }) => {
@@ -728,7 +730,7 @@ export const billingRouter = router({
           }
         }
 
-        // Days Left filter: filter by days until first billing (exact day, not cumulative)
+        // Days Left filter: filter by days until next billing
         // Use COALESCE(nextBillingOn, activatedOn + 21 days) since trials have NULL nextBillingOn
         if (input.daysLeftFilter) {
           const billingDateExpr = sql`COALESCE(${clientSubscriptions.nextBillingOn}, DATE_ADD(${clientSubscriptions.activatedOn}, INTERVAL 21 DAY))`;
@@ -748,6 +750,26 @@ export const billingRouter = router({
             conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 6 DAY)`);
           } else if (input.daysLeftFilter === "7days") {
             conditions.push(sql`${billingDateExpr} = DATE_ADD(CURDATE(), INTERVAL 7 DAY)`);
+          } else if (input.daysLeftFilter === "this_week") {
+            // From today to end of current week (Sunday)
+            conditions.push(sql`${billingDateExpr} >= CURDATE()`);
+            conditions.push(sql`${billingDateExpr} <= DATE_ADD(CURDATE(), INTERVAL (7 - WEEKDAY(CURDATE())) DAY)`);
+          } else if (input.daysLeftFilter === "next_week") {
+            // Next week: Monday to Sunday
+            conditions.push(sql`${billingDateExpr} >= DATE_ADD(CURDATE(), INTERVAL (7 - WEEKDAY(CURDATE()) + 1) DAY)`);
+            conditions.push(sql`${billingDateExpr} <= DATE_ADD(CURDATE(), INTERVAL (7 - WEEKDAY(CURDATE()) + 7) DAY)`);
+          } else if (input.daysLeftFilter === "this_month") {
+            // From today to end of current month
+            conditions.push(sql`${billingDateExpr} >= CURDATE()`);
+            conditions.push(sql`${billingDateExpr} <= LAST_DAY(CURDATE())`);
+          } else if (input.daysLeftFilter === "custom") {
+            // Custom date range using daysLeftDateFrom / daysLeftDateTo params
+            if (input.daysLeftDateFrom) {
+              conditions.push(sql`${billingDateExpr} >= ${input.daysLeftDateFrom}`);
+            }
+            if (input.daysLeftDateTo) {
+              conditions.push(sql`${billingDateExpr} <= ${input.daysLeftDateTo}`);
+            }
           } else if (input.daysLeftFilter === "overdue") {
             conditions.push(sql`DATEDIFF(${billingDateExpr}, CURDATE()) < 0`);
           }
@@ -767,12 +789,16 @@ export const billingRouter = router({
           .filter((a: any) => a && a.trim() !== "")
           .sort();
 
-        // Get total count for pagination
+        // Get total count for pagination + expected income (sum of recurringAmount for all matching)
         const countResult = await db
-          .select({ count: sql<number>`COUNT(*)` })
+          .select({
+            count: sql<number>`COUNT(*)`,
+            expectedIncome: sql<number>`COALESCE(SUM(CAST(${clientSubscriptions.recurringAmount} AS DECIMAL(10,2))), 0)`,
+          })
           .from(clientSubscriptions)
           .where(whereClause);
         const totalCount = Number(countResult[0]?.count ?? 0);
+        const expectedIncome = Number(countResult[0]?.expectedIncome ?? 0);
 
         // Get paginated results sorted by the requested column descending
         const offset = (input.page - 1) * input.perPage;
@@ -864,6 +890,7 @@ export const billingRouter = router({
           subscriptions,
           summary,
           totalCount,
+          expectedIncome,
           page: input.page,
           perPage: input.perPage,
           hasMore: end < totalCount,
