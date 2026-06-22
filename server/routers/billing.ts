@@ -967,6 +967,7 @@ export const billingRouter = router({
         }
 
         // Create new lead assignment
+        const detectedLeadType = isInstallmentPlan(sub.planName || "") ? "End of Instalment" : "Live Sub";
         await db.insert(leadAssignments).values({
           subscriptionId: sub.subscriptionId,
           customerId: null,
@@ -974,7 +975,7 @@ export const billingRouter = router({
           email: sub.email || null,
           phone: sub.phone || null,
           leadCategory: "subscription",
-          leadType: "Live Sub",
+          leadType: detectedLeadType,
           planName: sub.planName || null,
           billingCycles: sub.billingCycles || 0,
           cyclesCompleted: sub.currentBillingCycle || 0,
