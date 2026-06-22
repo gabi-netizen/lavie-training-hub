@@ -724,19 +724,19 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               Deal Type Distribution
             </div>
             <div style={{ display: "flex", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.green }} />
                 Instalments
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.teal }} />
                 Subs
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(59,130,246,0.6)" }} />
                 Future
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: COLORS.textSecondary }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.gold }} />
                 One-Time
               </div>
@@ -765,15 +765,15 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               return (
                 <div key={card.agent}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>{card.agent}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>{card.totalDeals} deals</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#ffffff" }}>{card.agent}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#ffffff" }}>{card.totalDeals} deals</span>
                   </div>
                   <div style={{ display: "flex", height: 24, borderRadius: 6, overflow: "hidden", gap: 2 }}>
                     {card.installments > 0 && (
                       <div
                         style={{
                           flex: card.installments,
-                          background: `linear-gradient(90deg, ${colors.primary}, ${colors.dim})`,
+                          background: `linear-gradient(90deg, ${COLORS.green}, ${COLORS.greenDim})`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
