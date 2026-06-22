@@ -112,14 +112,14 @@ function get24hWindowRemaining(messages: any[]): { expired: boolean; remaining: 
 }
 
 // ─── Callback Booking Section ────────────────────────────────────────────────
-function CallbackBookingSection({ phone, agentName }: { phone: string; agentName: string }) {
+function CallbackBookingSection({ phone, agentName, contactName }: { phone: string; agentName: string; contactName?: string }) {
   const [mode, setMode] = useState<"idle" | "callback" | "followup">("idle");
   const [dateVal, setDateVal] = useState("");
   const [timeVal, setTimeVal] = useState("");
   const [note, setNote] = useState("");
   const [success, setSuccess] = useState("");
 
-  const { data: leadData } = trpc.manager.getLeadByPhone.useQuery(
+  const { data: leadData, isLoading: leadLoading } = trpc.manager.getLeadByPhone.useQuery(
     { phone },
     { enabled: !!phone }
   );
@@ -135,11 +135,22 @@ function CallbackBookingSection({ phone, agentName }: { phone: string; agentName
     },
   });
 
+  if (leadLoading) {
+    return (
+      <div className="bg-white rounded-lg p-3 border border-gray-200">
+        <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Schedule</p>
+        <p className="text-[10px] text-black italic">
+          {contactName ? `Loading for ${contactName}\u2026` : "Loading\u2026"}
+        </p>
+      </div>
+    );
+  }
+
   if (!leadData) {
     return (
       <div className="bg-white rounded-lg p-3 border border-gray-200">
         <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Schedule</p>
-        <p className="text-[10px] text-gray-500 italic">No lead found for this number</p>
+        <p className="text-[10px] text-black italic">No lead found for this number</p>
       </div>
     );
   }
@@ -849,6 +860,7 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
                 <CallbackBookingSection
                   phone={selectedConversation.fromNumber}
                   agentName={user?.name || "Unknown"}
+                  contactName={selectedConversation?.contact?.name || undefined}
                 />
               )}
             </div>

@@ -10,7 +10,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes } from "../../drizzle/schema";
-import { addCallNote, updateContact } from "../contacts";
+import { addCallNote, updateContact, normalisePhone } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte, inArray } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
@@ -2379,14 +2379,45 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return null;
-      // Normalize the phone for matching
-      let phone = input.phone.replace(/[\s\-()]/g, "");
-      if (!phone.startsWith("+")) phone = "+" + phone;
-      const results = await db
+
+      // Normalize the phone using the shared normalisePhone helper
+      const phone = normalisePhone(input.phone) ?? input.phone;
+
+      // 1. Try lead_assignments first (existing behaviour)
+      const leadResults = await db
         .select({ subscriptionId: leadAssignments.subscriptionId, customerName: leadAssignments.customerName })
         .from(leadAssignments)
         .where(eq(leadAssignments.phone, phone))
         .limit(1);
-      return results[0] || null;
+      if (leadResults[0]) return leadResults[0];
+
+      // 2. Fallback: look up in contacts table
+      const contactResults = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          email: contacts.email,
+          agentName: contacts.agentName,
+        })
+        .from(contacts)
+        .where(eq(contacts.phone, phone))
+        .limit(1);
+      if (!contactResults[0]) return null;
+
+      const contact = contactResults[0];
+
+      // 3. Create a lead_assignment on the fly so the callback can be booked
+      const subscriptionId = `msg_callback_${contact.id}_${Date.now()}`;
+      await db.insert(leadAssignments).values({
+        subscriptionId,
+        customerName: contact.name,
+        email: contact.email ?? undefined,
+        phone,
+        assignedAgent: contact.agentName ?? undefined,
+        contactId: contact.id,
+        workStatus: "new",
+      });
+
+      return { subscriptionId, customerName: contact.name };
     }),
 });
