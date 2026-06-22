@@ -25,6 +25,13 @@ import {
   Calendar,
   Clock,
   Copy,
+  Inbox,
+  Users,
+  TrendingDown,
+  XCircle,
+  CreditCard,
+  Swords,
+  BarChart3,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -577,22 +584,24 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
       <div className="flex items-center gap-1 border-b border-gray-200 mb-6">
         <button
           onClick={() => setActiveTab("queue")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "queue"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Inbox className="w-4 h-4" />
           Incoming Lead June
         </button>
         <button
           onClick={() => setActiveTab("callbacks")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "callbacks"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Clock className="w-4 h-4" />
           My Callbacks
           {callbackLeads.length > 0 && (
             <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white ${callbacksTodayCount > 0 ? 'bg-red-600' : 'bg-indigo-500'}`}>
@@ -602,12 +611,13 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         </button>
         <button
           onClick={() => setActiveTab("followups")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "followups"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Calendar className="w-4 h-4" />
           My Follow Ups
           {followUpLeads.length > 0 && (
             <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white bg-sky-500">
@@ -617,82 +627,90 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         </button>
         <button
           onClick={() => setActiveTab("messages")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "messages"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <MessageSquare className="w-4 h-4" />
           Messages
         </button>
         <button
           onClick={() => setActiveTab("emails")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "emails"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Mail className="w-4 h-4" />
           Emails
         </button>
         <button
           onClick={() => setActiveTab("clients")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "clients"
               ? "border-blue-600 text-blue-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <Users className="w-4 h-4" />
           My Clients
         </button>
         <button
           onClick={() => setActiveTab("decline")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "decline"
               ? "border-red-600 text-red-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <TrendingDown className="w-4 h-4" />
           Decline
         </button>
         <button
           onClick={() => setActiveTab("cancel")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "cancel"
               ? "border-gray-600 text-gray-800"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <XCircle className="w-4 h-4" />
           Cancel
         </button>
         <button
           onClick={() => setActiveTab("endInstalment")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "endInstalment"
               ? "border-purple-600 text-purple-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <CreditCard className="w-4 h-4" />
           End Instalment
         </button>
         <button
           onClick={() => setActiveTab("butler")}
-          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "butler"
               ? "border-purple-600 text-purple-700"
               : "border-transparent text-purple-600 hover:text-purple-800"
           }`}
         >
+          <Swords className="w-4 h-4" />
           Maximus Aurelius
         </button>
         <button
           onClick={() => setActiveTab("performance")}
-          className={`px-4 py-2.5 text-sm font-bold transition-colors border-b-2 ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "performance"
               ? "border-green-600 text-green-700"
               : "border-transparent text-green-600 hover:text-green-800"
           }`}
         >
+          <BarChart3 className="w-4 h-4" />
           My Performance
         </button>
       </div>

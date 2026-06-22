@@ -53,6 +53,7 @@ import {
   CreditCard,
   TrendingDown,
   UserCheck,
+  BarChart3,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -823,12 +824,13 @@ export default function ManagerDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("performance")}
-          className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "performance"
               ? "border-green-600 text-green-700"
               : "border-transparent text-gray-600 hover:text-gray-800"
           }`}
         >
+          <BarChart3 className="w-4 h-4" />
           Performance
         </button>
       </div>
