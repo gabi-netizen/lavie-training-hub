@@ -237,6 +237,7 @@ export const customersRouter = router({
           name: row.name,
           email: row.email,
           phone: row.phone,
+          address: row.address || null,
           source: row.source || "CSV Import",
           importedNotes: row.notes || null,
           agentName: agentName || null,
