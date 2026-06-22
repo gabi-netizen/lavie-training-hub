@@ -111,6 +111,121 @@ function get24hWindowRemaining(messages: any[]): { expired: boolean; remaining: 
   return { expired: false, remaining: `${hours}h ${mins}m` };
 }
 
+// ─── Callback Booking Section ────────────────────────────────────────────────
+function CallbackBookingSection({ phone, agentName }: { phone: string; agentName: string }) {
+  const [mode, setMode] = useState<"idle" | "callback" | "followup">("idle");
+  const [dateVal, setDateVal] = useState("");
+  const [timeVal, setTimeVal] = useState("");
+  const [note, setNote] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const { data: leadData } = trpc.manager.getLeadByPhone.useQuery(
+    { phone },
+    { enabled: !!phone }
+  );
+
+  const logCallAttempt = trpc.manager.logCallAttempt.useMutation({
+    onSuccess: () => {
+      setSuccess(mode === "callback" ? "Callback booked!" : "Follow-up booked!");
+      setMode("idle");
+      setDateVal("");
+      setTimeVal("");
+      setNote("");
+      setTimeout(() => setSuccess(""), 3000);
+    },
+  });
+
+  if (!leadData) {
+    return (
+      <div className="bg-white rounded-lg p-3 border border-gray-200">
+        <p className="text-[10px] text-black uppercase tracking-wide mb-1 font-semibold">Schedule</p>
+        <p className="text-[10px] text-gray-500 italic">No lead found for this number</p>
+      </div>
+    );
+  }
+
+  const handleBook = () => {
+    if (!dateVal || !timeVal) return;
+    const ts = new Date(`${dateVal}T${timeVal}`).getTime();
+    if (isNaN(ts)) return;
+    logCallAttempt.mutate({
+      subscriptionId: leadData.subscriptionId,
+      agentName,
+      result: mode === "callback" ? "callback" : "follow_up",
+      callbackAt: mode === "callback" ? ts : undefined,
+      followUpAt: mode === "followup" ? ts : undefined,
+      followUpNote: mode === "followup" && note ? note : undefined,
+      note: mode === "callback" && note ? note : undefined,
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <p className="text-[10px] text-black uppercase tracking-wide mb-2 font-semibold">Schedule</p>
+      {success && (
+        <p className="text-[10px] text-green-600 font-semibold mb-2">{success}</p>
+      )}
+      {mode === "idle" && (
+        <div className="space-y-1.5">
+          <button
+            onClick={() => setMode("callback")}
+            className="w-full text-[11px] px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500 flex items-center justify-center gap-1 font-semibold"
+          >
+            <Clock size={12} /> Book Callback
+          </button>
+          <button
+            onClick={() => setMode("followup")}
+            className="w-full text-[11px] px-2 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-500 flex items-center justify-center gap-1 font-semibold"
+          >
+            <Clock size={12} /> Book Follow Up
+          </button>
+        </div>
+      )}
+      {(mode === "callback" || mode === "followup") && (
+        <div className="space-y-2">
+          <p className="text-[10px] text-black font-semibold">
+            {mode === "callback" ? "Book Callback" : "Book Follow Up"}
+          </p>
+          <input
+            type="date"
+            value={dateVal}
+            onChange={(e) => setDateVal(e.target.value)}
+            className="w-full text-[11px] px-2 py-1 border border-gray-300 rounded text-black"
+          />
+          <input
+            type="time"
+            value={timeVal}
+            onChange={(e) => setTimeVal(e.target.value)}
+            className="w-full text-[11px] px-2 py-1 border border-gray-300 rounded text-black"
+          />
+          <input
+            type="text"
+            placeholder="Note (optional)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full text-[11px] px-2 py-1 border border-gray-300 rounded text-black"
+          />
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleBook}
+              disabled={!dateVal || !timeVal || logCallAttempt.isPending}
+              className="flex-1 text-[11px] px-2 py-1.5 bg-green-600 text-white rounded hover:bg-green-500 font-semibold disabled:opacity-50"
+            >
+              {logCallAttempt.isPending ? "Saving..." : "Confirm"}
+            </button>
+            <button
+              onClick={() => { setMode("idle"); setDateVal(""); setTimeVal(""); setNote(""); }}
+              className="flex-1 text-[11px] px-2 py-1.5 bg-gray-200 text-black rounded hover:bg-gray-300 font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 interface WhatsAppChatPanelProps {
   open: boolean;
@@ -728,6 +843,14 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
                   )}
                 </div>
               </div>
+
+              {/* Book Callback / Follow Up */}
+              {selectedConversation?.fromNumber && (
+                <CallbackBookingSection
+                  phone={selectedConversation.fromNumber}
+                  agentName={user?.name || "Unknown"}
+                />
+              )}
             </div>
           )}
         </div>

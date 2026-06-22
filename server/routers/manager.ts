@@ -2372,4 +2372,21 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           : "vs previous period",
       };
     }),
+
+  // ─── Get lead_assignment by phone number (for WhatsApp callback booking) ──
+  getLeadByPhone: protectedProcedure
+    .input(z.object({ phone: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      // Normalize the phone for matching
+      let phone = input.phone.replace(/[\s\-()]/g, "");
+      if (!phone.startsWith("+")) phone = "+" + phone;
+      const results = await db
+        .select({ subscriptionId: leadAssignments.subscriptionId, customerName: leadAssignments.customerName })
+        .from(leadAssignments)
+        .where(eq(leadAssignments.phone, phone))
+        .limit(1);
+      return results[0] || null;
+    }),
 });
