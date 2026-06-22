@@ -642,6 +642,11 @@ export default function ContactCard() {
     toast.success("Address updated");
   };
 
+  const handleSavePhone = (newPhone: string) => {
+    updateMutation.mutate({ id: contactId, phone: newPhone });
+    toast.success("Phone updated");
+  };
+
   // Helper: initials from name
   const getInitials = (name: string) =>
     name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -1177,6 +1182,29 @@ export default function ContactCard() {
 
           {/* ── White Info Card (with inline editing when from retention) ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            {/* Phone */}
+            <div className="mb-4">
+              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Phone</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <InlineEditableField
+                    label="Phone"
+                    value={contact.phone ?? ""}
+                    onSave={handleSavePhone}
+                    icon={<Phone size={14} />}
+                  />
+                </div>
+                {contact.phone && (
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(contact.phone || ""); toast.success("Phone copied"); }}
+                    className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
+                    title="Copy phone"
+                  >
+                    <Copy size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
             {/* Email */}
             {(contact.email || isFromRetention) && (
               <div className="mb-4">
