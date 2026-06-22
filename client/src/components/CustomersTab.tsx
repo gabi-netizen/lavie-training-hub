@@ -127,30 +127,48 @@ export function CustomersTab() {
       complete: (results) => {
         const rows = results.data as Record<string, string>[];
         const mapped = rows
-          .filter((r) => r.name || r.Name)
-          .map((r) => ({
-            name: r.name || r.Name || "",
-            email: r.email || r.Email || undefined,
-            phone: r.phone || r.Phone || undefined,
-            address: r.address || r.Address || undefined,
-            totalSpent: r.totalSpent || r.TotalSpent || r.total_spent || undefined,
-            lastPurchaseDate: r.lastPurchaseDate || r.LastPurchaseDate || r.last_purchase_date || undefined,
-            source: r.source || r.Source || undefined,
-            notes: r.notes || r.Notes || undefined,
-            assignedAgent:
-              r["Lead Owner"] ||
-              r["lead owner"] ||
-              r["Owner"] ||
-              r["owner"] ||
-              r["Assigned Agent"] ||
-              r["assigned agent"] ||
-              r["Agent"] ||
-              r["agent"] ||
-              undefined,
-          }));
+          .filter((r) => r.name || r.Name || r["First Name"] || r["first name"] || r["Last Name"] || r["last name"])
+          .map((r) => {
+            // Build name from first+last or single name field
+            const firstName = r["First Name"] || r["first name"] || r["firstName"] || "";
+            const lastName = r["Last Name"] || r["last name"] || r["lastName"] || "";
+            const fullName = r.name || r.Name || [firstName, lastName].filter(Boolean).join(" ") || "";
+
+            // Build address from mailing fields or single address field
+            const street = r["Mailing Street"] || r["mailing street"] || r["mailingStreet"] || "";
+            const city = r["Mailing City"] || r["mailing city"] || r["mailingCity"] || "";
+            const postcode = r["Mailing Postcode"] || r["mailing postcode"] || r["Mailing Zip"] || r["mailing zip"] || r["mailingPostcode"] || "";
+            const combinedAddress = [street, city, postcode].filter(Boolean).join(", ");
+            const address = r.address || r.Address || combinedAddress || undefined;
+
+            return {
+              name: fullName,
+              email: r.email || r.Email || undefined,
+              phone: r.phone || r.Phone || r.mobile || r.Mobile || r["Mobile"] || r["mobile"] || undefined,
+              address,
+              totalSpent: r.totalSpent || r.TotalSpent || r.total_spent || r["Total Amount"] || r["total amount"] || r["totalAmount"] || undefined,
+              lastPurchaseDate: r.lastPurchaseDate || r.LastPurchaseDate || r.last_purchase_date || undefined,
+              source: r.source || r.Source || undefined,
+              notes: r.notes || r.Notes || undefined,
+              assignedAgent:
+                r["Customers Owner"] ||
+                r["customers owner"] ||
+                r["Customer Owner"] ||
+                r["customer owner"] ||
+                r["Lead Owner"] ||
+                r["lead owner"] ||
+                r["Owner"] ||
+                r["owner"] ||
+                r["Assigned Agent"] ||
+                r["assigned agent"] ||
+                r["Agent"] ||
+                r["agent"] ||
+                undefined,
+            };
+          });
 
         if (mapped.length === 0) {
-          toast.error("No valid rows found in CSV. Expected column: name");
+          toast.error("No valid rows found in CSV. Expected columns: name (or First Name + Last Name)");
           return;
         }
 
