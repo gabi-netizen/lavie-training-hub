@@ -361,18 +361,18 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
     if (hasSelectedConversation && open) markAsRead.mutate({ contactId: selectedContactId, phoneNumber: selectedPhoneNumber });
     setShowTemplatePicker(false);
     setShowEmojiPicker(false);
-  }, [selectedContactId, open]);
+  }, [selectedContactId, selectedPhoneNumber, open]);
 
   // Reply channel defaults to WhatsApp (agent manually switches to SMS if needed)
   // Auto-detect logic removed: agents should consciously choose the reply channel
 
   useEffect(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  }, [messages, selectedContactId]);
+  }, [messages, selectedContactId, selectedPhoneNumber]);
 
   useEffect(() => {
-    if (selectedContactId !== null) setTimeout(() => messageInputRef.current?.focus(), 150);
-  }, [selectedContactId]);
+    if (selectedContactId !== null || selectedPhoneNumber) setTimeout(() => messageInputRef.current?.focus(), 150);
+  }, [selectedContactId, selectedPhoneNumber]);
 
   // ─── Derived State ────────────────────────────────────────────────────────
   const windowInfo = useMemo(() => {
@@ -390,10 +390,15 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
     });
   }, [conversations, searchQuery]);
 
-  const selectedConversation = useMemo(() =>
-    conversations?.find((c: any) => c.contactId === selectedContactId),
-    [conversations, selectedContactId]
-  );
+  const selectedConversation = useMemo(() => {
+    if (selectedContactId !== null) {
+      return conversations?.find((c: any) => c.contactId === selectedContactId) ?? null;
+    }
+    if (selectedPhoneNumber) {
+      return conversations?.find((c: any) => c.contactId === null && c.fromNumber === selectedPhoneNumber) ?? null;
+    }
+    return null;
+  }, [conversations, selectedContactId, selectedPhoneNumber]);
 
   const currentAssignment = selectedConversation?.assignedTo;
 
@@ -469,7 +474,9 @@ export function WhatsAppChatPanel({ open, onClose, inline, contactIds }: WhatsAp
               </div>
             ) : (
               filteredConversations.map((conv: any) => {
-                const isSelected = conv.contactId === selectedContactId;
+                const isSelected = conv.contactId !== null
+                  ? conv.contactId === selectedContactId
+                  : (conv.fromNumber === selectedPhoneNumber && selectedContactId === null);
                 const displayName = conv.contact?.name || conv.fromNumber || "Unknown";
                 const lastBody = conv.lastMessage?.body || "";
                 const truncatedBody = lastBody.length > 45 ? lastBody.substring(0, 45) + "..." : lastBody;
