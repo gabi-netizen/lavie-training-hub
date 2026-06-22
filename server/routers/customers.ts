@@ -183,6 +183,16 @@ export const customersRouter = router({
 
       // Batch insert (chunks of 500)
       const toInsert: any[] = [];
+      // Normalize UK phone numbers to +44 format
+      function normalizePhone(phone: string | undefined | null): string | null {
+        if (!phone) return null;
+        let p = phone.replace(/[\s\-()]/g, ""); // strip spaces, dashes, parens
+        if (p.startsWith("07")) p = "+44" + p.slice(1);
+        else if (p.startsWith("447") && !p.startsWith("+")) p = "+" + p;
+        else if (/^7\d{9}$/.test(p)) p = "+44" + p;
+        return p;
+      }
+
       for (const row of input.customers) {
         if (row.email && existingEmails.has(row.email.toLowerCase())) {
           skipped++;
@@ -195,7 +205,7 @@ export const customersRouter = router({
         toInsert.push({
           name: row.name,
           email: row.email || null,
-          phone: row.phone || null,
+          phone: normalizePhone(row.phone),
           address: row.address || null,
           totalSpent: row.totalSpent || null,
           lastPurchaseDate: row.lastPurchaseDate || null,
