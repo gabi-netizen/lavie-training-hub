@@ -2082,6 +2082,29 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
               </ul>
             </div>
 
+            {/* Manager Features */}
+            <div>
+              <h3 className="font-bold text-base text-red-700 mb-2">Manager Features</h3>
+              <p className="mb-2">These features are only visible to managers (not agents):</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Import CSV</strong> — Purple button in the top right. Upload a CSV file from Zoho CRM with leads. Columns supported: Full Name, Subject (becomes notes), Call Owner (auto-assigned to agent), Email, Phone, Call Start Time (becomes callback date), Mailing fields (address). Leads with a Call Start Time will enter as "Callback" status. If a customer already exists (by email or phone), their status is updated instead of creating duplicates.</li>
+                <li><strong>Return to Command Centre</strong> — Orange button (↺ icon) on each lead row. Returns the lead back to Command Centre unassigned, so it can be reassigned to a different agent. Also available as a bulk action when multiple leads are selected.</li>
+                <li><strong>Assign Leads</strong> — From Command Centre, managers can assign leads to specific agents. The lead then appears in that agent's Retention Workspace automatically.</li>
+              </ul>
+            </div>
+
+            {/* Payment */}
+            <div>
+              <h3 className="font-bold text-base text-pink-700 mb-2">Taking Payment</h3>
+              <p className="mb-2">When you close a deal and need to take payment:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Open the Contact Card and click "Payment".</li>
+                <li>Enter the card details OR send a payment link via email (Google Pay / Apple Pay or Credit Card Only).</li>
+                <li>After successful payment, the system shows a success message but does NOT auto-mark as Sold.</li>
+                <li><strong>Important:</strong> Add your notes first, then click "Sold" when you're ready to move on.</li>
+              </ol>
+            </div>
+
             {/* Tips */}
             <div>
               <h3 className="font-bold text-base text-emerald-700 mb-2">Tips & Tricks</h3>
@@ -2089,6 +2112,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                 <li><strong>Start your day</strong> with the Callbacks tab — handle overdue ones first.</li>
                 <li><strong>Use bulk messaging</strong> to send a template to all your "No Answer" leads at once.</li>
                 <li><strong>Always add a note</strong> after every call — future you will thank you.</li>
+                <li><strong>After payment</strong> — don't forget to add notes before clicking Sold!</li>
                 <li><strong>Check Messages tab</strong> regularly for customer replies on WhatsApp.</li>
                 <li><strong>Use the search bar</strong> to find any customer instantly by name, email, or phone.</li>
                 <li><strong>Custom status</strong> — If you need something specific (e.g. "Waiting for husband"), use + Custom Status.</li>

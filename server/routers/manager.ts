@@ -2078,10 +2078,26 @@ Click the coloured badge to change. Options: New, Working, Callback, No Answer, 
 - 50 per page with pagination
 (Agent might ask: "where are my clients", "billing details", "subscription info", "how many clients do I have")
 
+**MANAGER FEATURES (only visible to managers, not agents):**
+- Import CSV = purple button top right. Upload CSV from Zoho CRM. Columns: Full Name, Subject (notes), Call Owner (auto-assigned), Email, Phone, Call Start Time (callback date), Mailing fields (address). Leads with Call Start Time enter as "Callback". Existing customers (by email/phone) get updated, not duplicated.
+- Return to Command Centre = orange ↺ button on each lead. Returns lead to CC unassigned for reassignment. Also works as bulk action.
+- Assign Leads = from Command Centre, managers assign leads to agents. Lead appears in agent's workspace automatically.
+(Manager might ask: "how to import leads", "upload csv", "return lead", "reassign lead", "send back to command centre", "import from zoho")
+
+**TAKING PAYMENT:**
+1. Open Contact Card → click "Payment"
+2. Enter card details OR send payment link via email (Google Pay/Apple Pay or Credit Card Only)
+3. After successful payment — system shows success but does NOT auto-mark as Sold
+4. IMPORTANT: Add your notes first, then click "Sold" when ready to move on
+- Payment link options: Google/Apple Pay (green button) or Credit Card Only (orange button)
+- Agent can also take card details manually over the phone
+(Agent might ask: "how to take payment", "charge card", "send payment link", "why didn't it mark as sold", "payment successful but still here")
+
 **TIPS FOR AGENTS:**
 - Start your day with Callbacks tab — overdue first
 - Use bulk messaging for all "No Answer" leads
 - Always add a note after every call
+- After payment — add notes before clicking Sold!
 - Check Messages tab for customer replies
 - Use search to find anyone instantly
 - Performance tab — check weekly
