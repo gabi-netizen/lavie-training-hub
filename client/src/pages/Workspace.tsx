@@ -3111,6 +3111,7 @@ export default function Workspace() {
 
   // How to Use guide modal
   const [showGuide, setShowGuide] = useState(false);
+  const [pitchDropOpen, setPitchDropOpen] = useState(false);
 
   // WhatsApp unread badge — poll conversations to get total unread count
   const { data: waConversations } = trpc.whatsapp.conversations.useQuery(undefined, {
@@ -3546,22 +3547,51 @@ export default function Workspace() {
                 borderRadius: 10,
                 padding: "4px 6px",
               }}>
-                {/* My Pitch */}
-                <button
-                  onClick={() => setActiveTab("pitch")}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
-                    background: activeTab === "pitch" ? "#fff" : "transparent",
-                    color: activeTab === "pitch" ? "#2563eb" : "#111827",
-                    boxShadow: activeTab === "pitch" ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
-                    borderBottom: activeTab === "pitch" ? "2px solid #2563eb" : "2px solid transparent",
-                    transition: "all 0.15s",
-                  }}
+                {/* My Pitch with dropdown */}
+                <div
+                  style={{ position: "relative" }}
+                  onMouseEnter={() => setPitchDropOpen(true)}
+                  onMouseLeave={() => setPitchDropOpen(false)}
                 >
-                  <Edit3 size={14} /> My Pitch
-                </button>
+                  <button
+                    onClick={() => setActiveTab("pitch")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
+                      fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
+                      background: (activeTab === "pitch" || activeTab === "fullscript") ? "#fff" : "transparent",
+                      color: (activeTab === "pitch" || activeTab === "fullscript") ? "#2563eb" : "#111827",
+                      boxShadow: (activeTab === "pitch" || activeTab === "fullscript") ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+                      borderBottom: (activeTab === "pitch" || activeTab === "fullscript") ? "2px solid #2563eb" : "2px solid transparent",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <Edit3 size={14} /> {activeTab === "fullscript" ? "Full Script" : "My Pitch"}
+                    <svg width="10" height="10" viewBox="0 0 10 10" style={{ marginLeft: 2 }}><path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  {pitchDropOpen && (
+                    <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, paddingTop: 4 }}>
+                      <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.18)", border: "2px solid #2563eb", overflow: "hidden", minWidth: 170 }}>
+                        <button
+                          onClick={() => { setActiveTab("pitch"); setPitchDropOpen(false); }}
+                          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "12px 16px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, background: activeTab === "pitch" ? "#eff6ff" : "#fff", color: activeTab === "pitch" ? "#2563eb" : "#111827", textAlign: "left" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#dbeafe"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = activeTab === "pitch" ? "#eff6ff" : "#fff"; }}
+                        >
+                          <Edit3 size={14} /> My Pitch
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab("fullscript"); setPitchDropOpen(false); }}
+                          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "12px 16px", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, background: activeTab === "fullscript" ? "#eff6ff" : "#fff", color: activeTab === "fullscript" ? "#2563eb" : "#111827", textAlign: "left", borderTop: "1px solid #e2e8f0" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#dbeafe"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = activeTab === "fullscript" ? "#eff6ff" : "#fff"; }}
+                        >
+                          <FileText size={14} /> Full Script
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* My Callbacks */}
                 <button
@@ -3655,22 +3685,7 @@ export default function Workspace() {
                   <Mail size={14} /> Emails
                 </button>
 
-                {/* Full Script */}
-                <button
-                  onClick={() => setActiveTab("fullscript")}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
-                    background: activeTab === "fullscript" ? "#fff" : "transparent",
-                    color: activeTab === "fullscript" ? "#2563eb" : "#111827",
-                    boxShadow: activeTab === "fullscript" ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
-                    borderBottom: activeTab === "fullscript" ? "2px solid #2563eb" : "2px solid transparent",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <FileText size={14} /> Full Script
-                </button>
+
 
                 {/* Divider */}
                 <div style={{ flex: 1 }} />
