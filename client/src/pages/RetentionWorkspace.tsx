@@ -1,6 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { MaximusGreeting } from "@/components/MaximusGreeting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +39,7 @@ import {
   CreditCard,
   Swords,
   BarChart3,
+  BookOpen,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -146,6 +154,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
   const [selectedLeadContactId, setSelectedLeadContactId] = useState<number | null>(null);
+
+  // Usage Protocol modal
+  const [protocolOpen, setProtocolOpen] = useState(false);
 
   // Email template modal state
   const [emailTemplateOpen, setEmailTemplateOpen] = useState(false);
@@ -573,6 +584,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-800">
+          <Button onClick={() => setProtocolOpen(true)} className="bg-[#FF6B00] hover:bg-[#E55F00] text-white font-bold flex items-center gap-2 h-9 px-4 text-sm">
+            <BookOpen size={14} />
+            Usage Protocol
+          </Button>
           <span className="font-medium">{queueLeads.length} leads</span>
           <span className="text-gray-400">|</span>
           <span className="font-medium">{callbacksTodayCount} callbacks today</span>
@@ -1730,6 +1745,200 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         onClose={() => setBulkMsgChannel(null)}
         onSuccess={bulkClearSelection}
       />
+
+      {/* Usage Protocol Modal */}
+      <Dialog open={protocolOpen} onOpenChange={setProtocolOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Retention Workspace — Usage Protocol</DialogTitle></DialogHeader>
+          <div className="space-y-6 py-2 text-sm text-gray-800">
+
+            {/* Overview */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">What is the Retention Workspace?</h3>
+              <p>Your personal command centre for managing retention leads. Every lead assigned to you appears here — you can call, message, email, schedule callbacks, and track your deals all from one place.</p>
+            </div>
+
+            {/* Tabs */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Navigation Tabs</h3>
+              <p className="mb-2">The tabs at the top switch between different views:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Incoming Leads</strong> — Your main queue. All new leads land here.</li>
+                <li><strong>My Callbacks</strong> — Leads you scheduled a callback for. Shows date/time due. Overdue ones appear in red.</li>
+                <li><strong>My Follow Ups</strong> — Leads you scheduled a follow-up for (less urgent than callbacks).</li>
+                <li><strong>Messages</strong> — WhatsApp conversations with your customers. Unread count shown as a badge.</li>
+                <li><strong>Emails</strong> — View and send emails to your customers.</li>
+                <li><strong>My Clients</strong> — All your active subscriptions with billing details, payment history, and products.</li>
+                <li><strong>Decline / Cancel / End Instalment</strong> — Filtered views by lead type for focused work.</li>
+                <li><strong>Maximus Aurelius</strong> — Your AI assistant for quick lookups and help.</li>
+                <li><strong>My Performance</strong> — Your personal stats: deals closed, revenue, conversion rates.</li>
+              </ul>
+            </div>
+
+            {/* Leads Table */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">The Leads Table</h3>
+              <p className="mb-2">Each row is one lead. Here's what each column means:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Checkbox</strong> — Tick to select multiple leads for bulk actions.</li>
+                <li><strong>Name</strong> — Customer name. Click to open their full contact card.</li>
+                <li><strong>Email</strong> — Click to open your email app.</li>
+                <li><strong>Status</strong> — Coloured badge showing where this lead is (New, Working, Done Deal, etc). Click to change it.</li>
+                <li><strong>Date</strong> — When the lead was created or when their term ends.</li>
+                <li><strong>Lead Type</strong> — Category badge (Pre-Cycle-Decline, Cancel Live Sub, Hot Lead, etc).</li>
+                <li><strong>Customer Note</strong> — Note from management. Hover to see full text.</li>
+                <li><strong>Agent Note</strong> — Your personal notes. Click to edit and save.</li>
+                <li><strong>Actions</strong> — Quick buttons: Call, WhatsApp, SMS, Email, Schedule Callback, Open Card.</li>
+              </ul>
+            </div>
+
+            {/* Filters */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Filtering Your Leads</h3>
+              <p className="mb-2">Use the filters above the table to narrow down what you see:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Date Filter</strong> (Queue tab) — Show leads from: All Dates, Today, Last 7 Days, This Month, Last Month.</li>
+                <li><strong>Callback Date Filter</strong> (Callbacks tab) — Show: All Callbacks, Today, Tomorrow, This Week.</li>
+                <li><strong>Lead Type Filter</strong> — Show only specific types (e.g. only "Hot Lead" or only "Pre-Cycle-Decline").</li>
+                <li><strong>Search</strong> — Type a name, email, or phone number to find a specific customer instantly.</li>
+              </ul>
+            </div>
+
+            {/* Bulk Actions */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Bulk Actions (Send to Multiple Customers)</h3>
+              <p className="mb-2">Want to message several customers at once? Here's how:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Tick the checkboxes next to the leads you want (or use the top checkbox to select all).</li>
+                <li>A blue bar appears at the bottom showing how many are selected.</li>
+                <li>Click <strong>WhatsApp</strong>, <strong>SMS</strong>, or <strong>Email</strong> on that bar.</li>
+                <li>Choose a template from the list that appears.</li>
+                <li>Confirm — the message is sent to all selected customers at once.</li>
+              </ol>
+              <p className="mt-2 text-xs text-gray-500">Tip: Use "Clear Selection" on the bar to deselect everyone quickly.</p>
+            </div>
+
+            {/* Contact Card */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Contact Card (Opening a Lead)</h3>
+              <p className="mb-2">Click a customer's name or the arrow icon to open their full card. From here you can:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Edit details</strong> — Change name, phone, email, address. Click Save when done.</li>
+                <li><strong>Call</strong> — Start a call directly.</li>
+                <li><strong>Schedule Callback</strong> — Pick a date, time, and add a note. The lead moves to your Callbacks tab.</li>
+                <li><strong>Mark as Sold</strong> — Marks a successful deal.</li>
+                <li><strong>Not Interested / N/A</strong> — Skip or close the lead.</li>
+                <li><strong>Send Payment</strong> — Opens the Stripe payment section to take a card payment.</li>
+                <li><strong>Send Email</strong> — Opens the email template picker.</li>
+                <li><strong>Send WhatsApp</strong> — Opens WhatsApp template picker.</li>
+                <li><strong>Send SMS</strong> — Opens SMS composer.</li>
+                <li><strong>Free Notes</strong> — Write anything. Remember to click Save Notes!</li>
+                <li><strong>Navigate</strong> — Use Previous/Next arrows to move between leads without going back to the table.</li>
+              </ul>
+            </div>
+
+            {/* Callbacks */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Callbacks & Follow-ups</h3>
+              <p className="mb-2">How to schedule and manage callbacks:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Click the calendar icon on any lead (or "Callback" in the contact card).</li>
+                <li>Choose a date: Today, Tomorrow, In 2 Days, Next Week, or pick a Custom date.</li>
+                <li>Choose a time (15-minute intervals).</li>
+                <li>Add a note (optional) — e.g. "Customer said call after 3pm".</li>
+                <li>Click Confirm. The lead moves to your Callbacks tab automatically.</li>
+              </ol>
+              <p className="mt-2"><strong>When a callback is due:</strong> You'll get a notification toast. Overdue callbacks appear in red with an "OVERDUE" badge.</p>
+              <p className="mt-1"><strong>Actions on callbacks:</strong> Reschedule, Close (mark as done), or Call Now.</p>
+            </div>
+
+            {/* WhatsApp */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Sending WhatsApp Messages</h3>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Click the WhatsApp icon on any lead.</li>
+                <li>A panel shows available templates (filtered for your team).</li>
+                <li>Click a template to send it instantly.</li>
+                <li>The button goes grey briefly to prevent double-sends.</li>
+              </ol>
+              <p className="mt-2 text-xs text-gray-500">Note: If the customer has no phone number, you'll see a warning and can't send.</p>
+            </div>
+
+            {/* Email */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Sending Emails</h3>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Click the email icon on any lead.</li>
+                <li>A large modal opens with templates on the left and preview on the right.</li>
+                <li>Click a template to preview it (customer name is auto-filled).</li>
+                <li>Click Send to dispatch it.</li>
+                <li><strong>Or</strong> click "Compose" to write a custom email (your own subject + message).</li>
+              </ol>
+              <p className="mt-2 text-xs text-gray-500">Note: If the customer has no email, the send button is disabled.</p>
+            </div>
+
+            {/* Status */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Changing Lead Status</h3>
+              <p className="mb-2">Click the coloured status badge on any lead to open the dropdown. Options:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>New</strong> — Fresh lead, not yet contacted.</li>
+                <li><strong>Working</strong> — You're actively working on this lead.</li>
+                <li><strong>Callback</strong> — Scheduled for a future call.</li>
+                <li><strong>No Answer</strong> — Called but no answer.</li>
+                <li><strong>Done Deal</strong> — Successfully retained/sold!</li>
+                <li><strong>Retained Sub</strong> — Subscription saved.</li>
+                <li><strong>Closed</strong> — Lead is closed (no deal).</li>
+                <li><strong>Not Interested</strong> — Customer declined.</li>
+                <li><strong>+ Custom Status</strong> — Type your own status if none of the above fit.</li>
+              </ul>
+              <p className="mt-2 text-xs text-gray-500">Tip: Some actions auto-update the status (e.g. scheduling a callback sets it to "Callback").</p>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Notes</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Customer Note</strong> (read-only) — Written by management. Hover to see full text, click to expand.</li>
+                <li><strong>Agent Note</strong> (editable) — Your personal notes. Click the note area in the table to edit. Click Save when done.</li>
+                <li><strong>Contact Card Notes</strong> — Larger text area in the contact card. Don't forget to click "Save Notes"!</li>
+                <li><strong>Auto-notes</strong> — The system automatically adds notes when you schedule callbacks or complete actions.</li>
+              </ul>
+            </div>
+
+            {/* My Clients */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">My Clients Tab</h3>
+              <p className="mb-2">Shows all your active subscriptions with full billing details:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Filters</strong> — Date range (Today, Last 7 Days, This Month, Custom), Status (Live, Dunning, Cancelled), Plan Type, Search.</li>
+                <li><strong>Columns</strong> — Name, Email, Plan, Setup Fee, Monthly Amount, Total, Billing Cycle progress, Status, Next Billing Date, Actions.</li>
+                <li><strong>Expand row</strong> — Click the arrow to see product breakdown and payment progress bar.</li>
+                <li><strong>Bulk actions</strong> — Same as leads table: tick multiple, then WhatsApp/SMS/Email.</li>
+                <li><strong>Pagination</strong> — 50 clients per page. Use Previous/Next at the bottom.</li>
+              </ul>
+            </div>
+
+            {/* Tips */}
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Tips & Tricks</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Start your day</strong> with the Callbacks tab — handle overdue ones first.</li>
+                <li><strong>Use bulk messaging</strong> to send a template to all your "No Answer" leads at once.</li>
+                <li><strong>Always add a note</strong> after every call — future you will thank you.</li>
+                <li><strong>Check Messages tab</strong> regularly for customer replies on WhatsApp.</li>
+                <li><strong>Use the search bar</strong> to find any customer instantly by name, email, or phone.</li>
+                <li><strong>Custom status</strong> — If you need something specific (e.g. "Waiting for husband"), use + Custom Status.</li>
+                <li><strong>Performance tab</strong> — Check your stats weekly to see how you're doing.</li>
+              </ul>
+            </div>
+
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProtocolOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

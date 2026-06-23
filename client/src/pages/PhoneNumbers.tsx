@@ -698,7 +698,7 @@ export default function PhoneNumbers() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setProtocolOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+          <Button onClick={() => setProtocolOpen(true)} className="bg-[#FF6B00] hover:bg-[#E55F00] text-white font-bold flex items-center gap-2">
             Usage Protocol
           </Button>
           <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
