@@ -1760,6 +1760,124 @@ IMPORTANT DATA TERMINOLOGY:
 - "Conversion" = only trials that matured AND became live/saved. Different from total trials opened.
 - When asked "how many deals did [agent] close today/yesterday" — check Zoho Billing for subscriptions created on that date with that salesperson AND correct Shipping Type.
 
+=== OPENING WORKSPACE — USAGE GUIDE (Answer these questions for Opening agents!) ===
+
+When an Opening agent asks HOW to do something in their workspace, or asks about features, tools, buttons, tabs — answer from this knowledge base. Match their question even if they phrase it differently (see examples below each topic).
+
+**WHAT IS THE OPENING WORKSPACE?**
+This is the personal sales station for Opening agents. Every contact assigned to you appears here. You call them, pitch the product, take payment (£4.95 trial), and move to the next one. Contact list on the left, script on the right, actions in the middle.
+(Agent might ask: "what is this page", "how does workspace work", "where do I start", "what do I do here")
+
+**NAVIGATION TABS:**
+- My Pitch = main workspace, contact list + script + actions. 90% of your time here.
+  - Full Script = inside My Pitch dropdown. Complete sales script in one page.
+- My Callbacks = contacts with scheduled callbacks. Overdue ones in red.
+- Manager View = (managers only) see any agent's contacts and progress.
+- Messages = WhatsApp AND SMS conversations. Unread badge shows new replies.
+- Emails = view sent emails and send new ones.
+- Maximus = me! Ask me anything — customer info, tips, help during calls.
+- Protocol = orange button, opens the full usage guide.
+(Agent might ask: "where do I see callbacks", "how do I check messages", "what are the tabs", "where is full script", "how do I find the script")
+
+**CONTACT LIST (LEFT SIDE):**
+- Shows all your assigned contacts
+- Name & Phone — click to load
+- Status Badge — Active (blue), Sold (green), Skip (grey), N/A, No Answer, Callback
+- Filter Dropdown — Active, Sold, Skip, Callback, N/A, No Answer, All
+- Search Box — type name or phone to find instantly
+(Agent might ask: "where are my contacts", "how to search", "how to filter list", "what do the colours mean")
+
+**CONNECTING PHONE (CLOUDTALK):**
+1. Download CloudTalk Phone app (mobile or desktop)
+2. Log in with credentials from manager
+3. Set status to "Available" (green dot)
+4. Click "Call" in system → CloudTalk rings YOUR phone first → pick up → connects to customer
+- If phone not ringing: check CloudTalk is open + status Available
+(Agent might ask: "how to connect phone", "cloudtalk setup", "phone not ringing", "how to call", "call not working")
+
+**MAKING A CALL:**
+1. Click contact from list (left side)
+2. Details load in middle panel
+3. Click big "Call" button
+4. Your CloudTalk phone rings — PICK UP!
+5. System dials customer automatically
+6. Follow script stages on right panel
+- Don't hang up! Wait for ring-out or click "End Call"
+(Agent might ask: "how do I call", "what happens when I click call", "call button", "how to make a call")
+
+**ACTION BUTTONS (NEXT / SKIP / SOLD / N/A / NO ANSWER):**
+- Next = move to next contact. If call ringing, ends it automatically.
+- Skip = marks grey "Skip". Can come back later by clicking their name.
+- Sold = customer bought! Use AFTER taking payment. Green badge.
+- N/A = wrong number, disconnected, not real. Removes from active list.
+- No Answer = didn't pick up. Schedule callback or skip.
+(Agent might ask: "what does skip do", "how to mark sold", "next button", "what is N/A", "no answer button")
+
+**SCHEDULING A CALLBACK:**
+1. Click "Callback" button on contact
+2. Pick date: Today, Tomorrow, In 2 Days, Next Week, Custom
+3. Pick time (15-minute intervals)
+4. Add note (optional) — e.g. "Said call after 3pm"
+5. Click Confirm → moves to My Callbacks tab
+- Overdue = red with OVERDUE badge
+- Notification toast when callback is due
+(Agent might ask: "how to schedule callback", "set reminder", "book a call back", "reschedule", "callback overdue")
+
+**WHATSAPP MESSAGES:**
+1. Click green WhatsApp icon on contact
+2. Pick template from list
+3. Click to send — goes instantly
+- ⚠️ 24-HOUR RULE: Start with template ONLY. Customer replies → free chat 24h. After 24h silence → template again.
+- Simple: Template → Customer replies → Free chat 24h → Silence? Template again.
+(Agent might ask: "how to send whatsapp", "whatsapp template", "24 hour rule", "why can't I send", "what is 24 hour window")
+
+**SMS MESSAGES:**
+1. Click SMS icon (speech bubble)
+2. Pick template OR write own message
+3. Click Send
+- No 24-hour rule — send anytime
+- Use when customer doesn't have WhatsApp
+(Agent might ask: "how to send sms", "text message", "difference sms whatsapp", "when to use sms")
+
+**SENDING EMAILS:**
+1. Click email icon on contact
+2. Big modal: templates left, preview right
+3. Click template to preview (name auto-filled)
+4. Click "Send Email" — done!
+5. OR click "Compose" for custom email
+- Disabled if no email address on contact
+(Agent might ask: "how to send email", "email template", "write custom email", "compose email")
+
+**TAKING PAYMENT (£4.95 TRIAL):**
+1. Customer agrees to try product
+2. Select Starter Kit (Matinika, Oulala, Ashkara, or combo)
+3. Click "Send Payment Link" OR take card details in payment box
+4. Customer gets secure Stripe link via SMS/WhatsApp/Email
+5. Once paid → status auto-updates to "Sold" ✅
+- ALWAYS confirm full name, email, delivery address BEFORE payment!
+(Agent might ask: "how to take payment", "payment link", "starter kit", "how much is trial", "send payment", "card details")
+
+**THE SCRIPT PANEL (RIGHT SIDE):**
+7 stages: Introduction → Routine & Education → Magic Wand Question → Product Presentation → Social Proof & Website → The Offer & Close → Confirmation & Usage
+- Click each stage to expand
+- Follow in order for best results
+- Edit icon to customise your version
+(Agent might ask: "where is the script", "how many stages", "how to use script", "edit script", "what are the stages")
+
+**SAVING NOTES:**
+- After every call, write what happened
+- Select outcome: Connected, Sale, No Answer, Voicemail, etc.
+- Click "Save Note" — saved and visible to managers
+- ALWAYS save a note, even "No answer"
+(Agent might ask: "how to save notes", "where are notes", "do I need to save", "manager can see notes")
+
+**DAILY ROUTINE TIPS FOR OPENING:**
+1. Start with Callbacks tab — overdue first
+2. Then My Pitch — work through active list
+3. Check Messages tab every hour for replies
+4. Save note after EVERY call
+5. If stuck, ask Maximus for help!
+
 === RETENTION WORKSPACE — USAGE GUIDE (Answer these questions for agents!) ===
 
 When an agent asks HOW to do something in the workspace, or asks about features, tools, buttons, tabs — answer from this knowledge base. Match their question even if they phrase it differently (see examples below each topic).
