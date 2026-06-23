@@ -819,7 +819,8 @@ export interface CallAnalysisReport {
     rapport: string | null;           // Personal info, rapport topics, things discussed outside products
     currentRoutine: string | null;    // How customer currently uses products
     productsToSend: string | null;    // What was agreed to send (quantities, sizes, specific products)
-    financials: string | null;        // Deposit, monthly cost, total, installment plan details
+    customerSituation: string | null; // Customer's situation, concerns, objections, emotional state
+    keyCommitments: string | null;    // What was promised/committed to by the agent during the call
     nextActions: string | null;       // Follow-up actions (check-in date, emails to send, etc.)
   } | null;
 }
@@ -1219,7 +1220,8 @@ ${isRetentionLongCall ? `
     "rapport": "<Personal info about the customer: age, family situation, hobbies, personality traits, things discussed outside of products. Include any emotional context (e.g. 'retired in August 2025, cares for husband diagnosed with dementia'). null if no personal info shared>",
     "currentRoutine": "<How the customer currently uses products: which products, how often, morning/evening, any issues. null if not discussed>",
     "productsToSend": "<Exact products agreed to send with quantities and sizes (e.g. '6x Ashkara 15ml DROPPERS, 3x Oulala 30ml BLACK BOTTLES'). Include any special shipping notes (e.g. 'SHIP WHEN READY'). Also include sample sizes if mentioned. null if no products discussed>",
-    "financials": "<Per-product pricing (e.g. '37 GBP per Ashkara & Oulala, 35 GBP per Matinika, 69 GBP per Immortality'), deposit amount, monthly payment, total value, number of installments, which card to use. Include any special payment instructions (e.g. 'DO NOT USE EXISTING CARD ENDING 0471 FOR DEPOSIT'). null if no financials discussed>",
+    "customerSituation": "<Customer's current situation and concerns: skin issues, health conditions, reasons for calling, emotional state, objections raised, hesitations. Include context like 'on medication affecting skin', 'worried about cost', 'wants to cancel because not seeing results'. null if no situation details discussed>",
+    "keyCommitments": "<What the agent promised or committed to during the call: products to send, discounts offered, follow-up calls scheduled, emails to send, specific dates mentioned. Include exact promises like 'will call back in 2 weeks', 'sending confirmation email today', 'agreed to reduce monthly payment'. null if no commitments made>",
     "nextActions": "<Follow-up actions: when to call back, emails to send, things to check. Include specific timeframes (e.g. 'Speak to Claire in 2 weeks, then 2 months'). null if no follow-up discussed>"
   },
 
@@ -1229,9 +1231,8 @@ ${isRetentionLongCall ? `
   - Use the customer's name where relevant
   - If a field has no relevant information from the call, set it to null
   - For productsToSend: list EVERY product mentioned with exact quantities and sizes
-  - For financials: include ALL numbers mentioned — per-product prices, deposit, monthly payment, total, installments, and card details
-  - For financials: if per-product prices are mentioned (e.g. rep states the cost of each product), list each product with its price before other financial details
-  - For financials: Do NOT calculate total value yourself — ONLY report numbers that were explicitly stated in the conversation. If the total was not mentioned, do not include it.
+  - For customerSituation: include the customer's emotional state, specific skin/health concerns, reasons for the call, and any objections or hesitations they expressed
+  - For keyCommitments: include EVERY promise made by the agent — products, discounts, follow-up dates, emails, anything the agent said they would do. Be specific with dates and amounts.
   - For nextActions: include specific dates/timeframes, not vague "follow up later"
 ` : ''}}
 ${dealTypeBlock}${complianceRules}
@@ -1539,8 +1540,11 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
         if (notes.productsToSend) {
           lines.push("", "PRODUCTS TO SEND:", notes.productsToSend);
         }
-        if (notes.financials) {
-          lines.push("", "FINANCIALS:", notes.financials);
+        if (notes.customerSituation) {
+          lines.push("", "CUSTOMER SITUATION:", notes.customerSituation);
+        }
+        if (notes.keyCommitments) {
+          lines.push("", "KEY COMMITMENTS:", notes.keyCommitments);
         }
         if (notes.nextActions) {
           lines.push("", "NEXT ACTIONS:", notes.nextActions);

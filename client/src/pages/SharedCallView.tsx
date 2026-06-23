@@ -79,7 +79,8 @@ interface CallAnalysisReport {
     rapport: string | null;
     currentRoutine: string | null;
     productsToSend: string | null;
-    financials: string | null;
+    customerSituation: string | null;
+    keyCommitments: string | null;
     nextActions: string | null;
   } | null;
 }
@@ -406,10 +407,16 @@ export default function SharedCallView() {
                       <p className="text-sm text-gray-800 whitespace-pre-line">{report.retentionNotes.productsToSend}</p>
                     </div>
                   )}
-                  {report.retentionNotes.financials && (
-                    <div className="border-l-4 border-green-400 pl-4 py-1">
-                      <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">Financials</p>
-                      <p className="text-sm text-gray-800">{report.retentionNotes.financials}</p>
+                  {report.retentionNotes.customerSituation && (
+                    <div className="mb-3">
+                      <p className="text-xs font-bold text-orange-600 uppercase tracking-wide mb-0.5">Customer Situation</p>
+                      <p className="text-sm text-gray-800">{report.retentionNotes.customerSituation}</p>
+                    </div>
+                  )}
+                  {report.retentionNotes.keyCommitments && (
+                    <div className="mb-3">
+                      <p className="text-xs font-bold text-orange-600 uppercase tracking-wide mb-0.5">Key Commitments</p>
+                      <p className="text-sm text-gray-800">{report.retentionNotes.keyCommitments}</p>
                     </div>
                   )}
                   {report.retentionNotes.nextActions && (

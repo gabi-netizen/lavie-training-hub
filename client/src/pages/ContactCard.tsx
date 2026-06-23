@@ -1885,12 +1885,18 @@ export default function ContactCard() {
                                   <p className="text-sm text-gray-800 whitespace-pre-line">{note.retentionNotes.productsToSend}</p>
                                 </div>
                               )}
-                              {note.retentionNotes.financials && (
-                                <div className="border-l-4 border-green-400 pl-3 py-1">
-                                  <p className="text-[10px] font-bold text-green-700 uppercase">Financials</p>
-                                  <p className="text-sm text-gray-800">{note.retentionNotes.financials}</p>
-                                </div>
-                              )}
+                              {note.retentionNotes.customerSituation && (
+                                 <div className="mb-3">
+                                   <p className="text-[10px] font-bold text-orange-600 uppercase">Customer Situation</p>
+                                   <p className="text-sm text-gray-800">{note.retentionNotes.customerSituation}</p>
+                                 </div>
+                               )}
+                              {note.retentionNotes.keyCommitments && (
+                                 <div className="mb-3">
+                                   <p className="text-[10px] font-bold text-orange-600 uppercase">Key Commitments</p>
+                                   <p className="text-sm text-gray-800">{note.retentionNotes.keyCommitments}</p>
+                                 </div>
+                               )}
                               {note.retentionNotes.nextActions && (
                                 <div className="border-l-4 border-orange-400 pl-3 py-1">
                                   <p className="text-[10px] font-bold text-orange-700 uppercase">Next Actions</p>
