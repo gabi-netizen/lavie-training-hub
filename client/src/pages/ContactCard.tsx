@@ -624,7 +624,7 @@ export default function ContactCard() {
   };
 
   const handleCallNow = () => {
-    if (!contact.phone) {
+    if (!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone) {
       toast.error("No phone number on file");
       return;
     }
@@ -2034,7 +2034,7 @@ export default function ContactCard() {
               {/* CloudTalk History */}
               {centerBottomTab === "cloudtalk" && (
                 <div>
-                  {!contact.phone ? (
+                  {!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone ? (
                     <div className="flex flex-col items-center py-12 text-gray-600">
                       <PhoneOff size={28} className="mb-2 opacity-40" />
                       <p className="text-sm">No phone number on file</p>
