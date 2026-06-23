@@ -1080,8 +1080,6 @@ export const billingRouter = router({
             assignedAgent: input.assignedAgent,
             assignedAt: Date.now(),
             workStatus: "assigned",
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
           });
         }
         return { success: true, action: "reassigned" };
