@@ -4,14 +4,14 @@ import { Send, Sparkles } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const BUTLER_GREETINGS = [
-  "At your command, Caesar {name}",
-  "Maximus awaits your orders, Commander {name}",
-  "Strength and honor, Emperor {name}",
-  "Maximus bows before you, {name}",
-  "Ready to conquer, my liege {name}",
-  "The arena is yours, Caesar {name}",
-  "Victory awaits us, Commander {name}",
-  "Your gladiator stands ready, {name}",
+  "At your command Caesar {name}",
+  "Maximus awaits your orders Commander {name}",
+  "Strength and honor Emperor {name}",
+  "Maximus bows before you {name}",
+  "Ready to conquer my liege {name}",
+  "The arena is yours Caesar {name}",
+  "Victory awaits us Commander {name}",
+  "Your gladiator stands ready {name}",
   "For glory and {name}!",
 ];
 
@@ -165,7 +165,7 @@ export function PersonalButlerTab() {
                 {butlerGreeting}
               </h3>
               <p style={{ fontSize: 14, color: "#6b7280", maxWidth: 400, lineHeight: 1.5 }}>
-                Maximus Aurelius has access to your leads, clients, calls, WhatsApp messages, emails & Stripe data. Command me.
+                Maximus Aurelius has access to your leads clients calls WhatsApp messages emails & Stripe data. Command me.
               </p>
               <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 480, width: "100%" }}>
                 {[
@@ -334,7 +334,7 @@ export function PersonalButlerTab() {
             </button>
           </div>
           <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 8 }}>
-            Maximus Aurelius has access to your leads, clients, calls, WhatsApp messages, emails & Stripe data
+            Maximus Aurelius has access to your leads clients calls WhatsApp messages emails & Stripe data
           </p>
         </div>
       </div>
