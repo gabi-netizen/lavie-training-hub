@@ -3685,11 +3685,6 @@ export default function Workspace() {
                   <Mail size={14} /> Emails
                 </button>
 
-
-
-                {/* Divider */}
-                <div style={{ flex: 1 }} />
-
                 {/* Maximus Aurelius — AI assistant */}
                 <button
                   onClick={() => setActiveTab("butler")}
