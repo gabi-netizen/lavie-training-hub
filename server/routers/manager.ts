@@ -2103,7 +2103,83 @@ Email inbox for customer support. Every email from customers arrives here automa
 7. Aim: 20+ resolved per day
 (Agent might ask: "what should I do first", "daily routine", "how to start my day", "what order")
 
-LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However, when quoting scripts, pitches, or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations, not the scripts themselves.
+=== CONTACTS PAGE — USAGE GUIDE (Answer these questions for all agents!) ===
+
+When an agent asks HOW to do something in the Contacts page or asks about searching finding importing or managing contacts — answer from this knowledge base.
+
+**WHAT IS THE CONTACTS PAGE?**
+Master database of ALL customer leads. Every person ever imported or added lives here. Search filter view details assign agents import new data.
+(Agent might ask: "what is contacts" "where are all my leads" "how to find a customer" "master list")
+
+**DEPARTMENT TABS:**
+- Opening = contacts for sales team (cold calling new leads)
+- Retention = contacts for retention team (customers wanting to cancel)
+- Data Management = unassigned pool waiting to be distributed
+- Billing = contacts with payment/billing info
+(Agent might ask: "what are the tabs" "where is retention" "what is data management" "which tab am I")
+
+**SEARCH:**
+Type name phone or email in the search box. Finds instantly. Works across all contacts in current department.
+(Agent might ask: "how to search" "find a customer" "look up phone number" "search by email")
+
+**FILTERS:**
+- Lead Type = Pre-Cycle-Cancelled / Cancel Live Sub / Hot Lead / Decline etc
+- Status = New / Working / Callback / Done Deal / Closed / Not Interested / No Answer / Skip
+- Agent = filter by assigned agent
+- Source = where data came from (40-60 premium / Facebook / Website)
+- Lead Date = when contact was created (from/to)
+- Status Date = when status last changed
+- Show = how many per page (50 / 100 / 200 / 500)
+(Agent might ask: "how to filter" "show only new" "filter by agent" "filter by source" "date filter")
+
+**TABLE COLUMNS:**
+- NAME = customer name + email. Click to open Contact Card
+- LEAD TYPE = category badge
+- STATUS = coloured badge. Click to change
+- PHONE = click to call
+- ADDRESS = delivery address
+- AGENT = who is assigned
+- SOURCE = where data came from
+- NA = number of No Answer attempts
+- LEAD DATE = when created/imported
+(Agent might ask: "what do the columns mean" "what is NA" "what is lead date" "what is source")
+
+**IMPORTING CONTACTS (CSV/XLSX):**
+1. Click Import CSV/XLSX (purple button)
+2. Choose department: Opening or Retention
+3. Enter Source name (REQUIRED! e.g. "40-60 premium")
+4. Select file
+5. Auto-imports. Shows count of imported + skipped
+CSV must have: name (required) phone (required) email (optional) address (optional)
+(Agent might ask: "how to import" "upload csv" "add data" "import spreadsheet" "what format")
+
+**ADDING A CONTACT MANUALLY:**
+1. Click Add Contact (green button)
+2. Fill in: Name Phone Email Address Lead Type Status Notes
+3. Click Save
+(Agent might ask: "add new contact" "create contact" "add manually" "new lead")
+
+**BULK ACTIONS:**
+1. Tick checkboxes on contacts (or select all)
+2. Action bar appears: Assign Agent / Send WhatsApp / Send SMS / Send Email / Delete
+(Agent might ask: "select all" "bulk assign" "send to everyone" "mass message" "delete multiple")
+
+**OPENING A CONTACT CARD:**
+Click any name to open full details. Inside: edit details / call / WhatsApp / SMS / Email / message history / transactions / notes / callbacks / status change / subscription info
+(Agent might ask: "how to open contact" "see details" "contact card" "view customer")
+
+**STATUSES:**
+- New (blue) = fresh not yet called
+- Working (purple) = actively working
+- Callback (amber) = callback scheduled
+- Done Deal (green) = sold!
+- Closed (grey) = won't buy
+- Not Interested (red) = said no
+- No Answer (orange) = didn't pick up
+- Skip (light grey) = skipped for now
+(Agent might ask: "what statuses" "change status" "what does new mean" "what is working")
+
+LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However when quoting scripts pitches or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations not the scripts themselves.
 
 === ZOHO IMPORT CSV GENERATION (CRITICAL) ===
 When the user asks to "generate zoho import" or "download csv" or "zoho csv" for a customer email:
