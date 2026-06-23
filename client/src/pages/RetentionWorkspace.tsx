@@ -1766,7 +1766,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                 <li><strong>Incoming Leads</strong> — Your main queue. All new leads land here.</li>
                 <li><strong>My Callbacks</strong> — Leads you scheduled a callback for. Shows date/time due. Overdue ones appear in red.</li>
                 <li><strong>My Follow Ups</strong> — Leads you scheduled a follow-up for (less urgent than callbacks).</li>
-                <li><strong>Messages</strong> — WhatsApp conversations with your customers. Unread count shown as a badge.</li>
+                <li><strong>Messages</strong> — This is where you read and reply to WhatsApp AND SMS conversations with your customers. If someone replied to you, you'll see an unread badge (a little number) on this tab. Go here to check what customers wrote back to you.</li>
                 <li><strong>Emails</strong> — View and send emails to your customers.</li>
                 <li><strong>My Clients</strong> — All your active subscriptions with billing details, payment history, and products.</li>
                 <li><strong>Decline / Cancel / End Instalment</strong> — Filtered views by lead type for focused work.</li>
@@ -1852,16 +1852,37 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
               <p className="mt-1"><strong>Actions on callbacks:</strong> Reschedule, Close (mark as done), or Call Now.</p>
             </div>
 
-            {/* WhatsApp */}
+            {/* WhatsApp & SMS */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Sending WhatsApp Messages</h3>
-              <ol className="list-decimal pl-5 space-y-1">
-                <li>Click the WhatsApp icon on any lead.</li>
-                <li>A panel shows available templates (filtered for your team).</li>
-                <li>Click a template to send it instantly.</li>
-                <li>The button goes grey briefly to prevent double-sends.</li>
-              </ol>
-              <p className="mt-2 text-xs text-gray-500">Note: If the customer has no phone number, you'll see a warning and can't send.</p>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Sending Messages (WhatsApp & SMS)</h3>
+              <p className="mb-2">You have two ways to message a customer. Both are inside the Contact Card and also available as quick icons in the leads table:</p>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                <h4 className="font-bold text-green-800 mb-1">📱 WhatsApp</h4>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li>Click the green WhatsApp icon on any lead (or the WhatsApp button inside the Contact Card).</li>
+                  <li>You'll see a list of message templates — these are pre-written messages ready to go.</li>
+                  <li>Click the template you want to send. That's it! It sends immediately.</li>
+                  <li>The button goes grey for a second to stop you accidentally sending twice.</li>
+                </ol>
+                <div className="mt-2 bg-green-100 rounded p-2">
+                  <p className="text-xs font-bold text-green-900">⚠️ THE 24-HOUR RULE (Very Important!):</p>
+                  <p className="text-xs text-green-800 mt-1">WhatsApp has a strict rule: You can ONLY send a template message to start a conversation. Once the customer replies, you have a 24-hour window where you can send free-text messages back and forth. After 24 hours of no reply from them, the window closes and you must use a template again.</p>
+                  <p className="text-xs text-green-800 mt-1"><strong>In simple words:</strong> Template first → Customer replies → You can chat freely for 24 hours → After 24 hours of silence, use a template again.</p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h4 className="font-bold text-blue-800 mb-1">💬 SMS</h4>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li>Click the SMS icon (speech bubble) on any lead, or the "Send SMS" button inside the Contact Card.</li>
+                  <li>You can either pick a template OR write your own message.</li>
+                  <li>Type your message and click Send.</li>
+                </ol>
+                <p className="text-xs text-blue-700 mt-2"><strong>When to use SMS instead of WhatsApp?</strong> If the customer doesn't have WhatsApp, or if you need to send a quick personal message without template restrictions. SMS has no 24-hour rule — you can send anytime.</p>
+              </div>
+
+              <p className="mt-3 text-xs text-gray-500">⚠️ If the customer has no phone number on file, you'll see a warning and won't be able to send either WhatsApp or SMS.</p>
             </div>
 
             {/* Email */}
