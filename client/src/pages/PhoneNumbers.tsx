@@ -50,7 +50,9 @@ import {
   ShieldCheck,
   ShieldAlert,
   Loader2,
+  Sparkles,
 } from "lucide-react";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 
 type PhoneStatus = "pool" | "active" | "spam";
 
@@ -618,6 +620,7 @@ export default function PhoneNumbers() {
   const [activeTab, setActiveTab] = useState<PhoneStatus | "all" | "agents">("all");
   const [addOpen, setAddOpen] = useState(false);
   const [protocolOpen, setProtocolOpen] = useState(false);
+  const [maximusOpen, setMaximusOpen] = useState(false);
   const [newNumber, setNewNumber] = useState("");
   const [newCloudtalkId, setNewCloudtalkId] = useState("");
   const [newNotes, setNewNotes] = useState("");
@@ -698,8 +701,11 @@ export default function PhoneNumbers() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setMaximusOpen(true)} className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold flex items-center gap-2">
+            <Sparkles size={14} /> Maximus
+          </Button>
           <Button onClick={() => setProtocolOpen(true)} className="bg-[#FF6B00] hover:bg-[#E55F00] text-white font-bold flex items-center gap-2">
-            Usage Protocol
+            Protocol
           </Button>
           <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
             <Plus size={16} />
@@ -940,6 +946,18 @@ export default function PhoneNumbers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Maximus Modal ── */}
+      {maximusOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 700, height: "80vh", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+            <button onClick={() => setMaximusOpen(false)} style={{ position: "absolute", top: 12, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280", zIndex: 10 }}>✕</button>
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <PersonalButlerTab />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

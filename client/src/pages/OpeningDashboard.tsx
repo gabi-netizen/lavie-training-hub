@@ -35,9 +35,11 @@ import {
   Check,
   ChevronsUpDown,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import EditWorkingHoursModal from "../components/EditWorkingHoursModal";
 import EditTrialsOverrideModal from "../components/EditTrialsOverrideModal";
 
@@ -442,6 +444,7 @@ export default function OpeningDashboard() {
   // ── Add Agent modal (admin only) ──
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [protocolOpen, setProtocolOpen] = useState(false);
+  const [maximusOpen, setMaximusOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState("");
   const addAgentMutation = trpc.openingDashboard.upsertAgentDailyHours.useMutation({
     onSuccess: () => {
@@ -618,6 +621,14 @@ export default function OpeningDashboard() {
             </p>
           </div>
         </div>
+        <button
+          onClick={() => setMaximusOpen(true)}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#7c3aed", color: "#ffffff", height: 36 }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#6d28d9"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#7c3aed"; }}
+        >
+          <Sparkles size={14} /> Maximus
+        </button>
         <button
           onClick={() => setProtocolOpen(true)}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#FF6B00", color: "#ffffff", height: 36 }}
@@ -1468,6 +1479,18 @@ export default function OpeningDashboard() {
                   <li>Ave/Day below 3 = agent might need more data or coaching.</li>
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Maximus Modal ── */}
+      {maximusOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 700, height: "80vh", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+            <button onClick={() => setMaximusOpen(false)} style={{ position: "absolute", top: 12, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280", zIndex: 10 }}>✕</button>
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <PersonalButlerTab />
             </div>
           </div>
         </div>

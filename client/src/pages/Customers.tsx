@@ -24,6 +24,7 @@ import {
   BarChart3,
   RotateCcw,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -44,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -275,6 +277,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [filterStatusDateTo, setFilterStatusDateTo] = useState("");
   const [importing, setImporting] = useState(false);
   const [protocolOpen, setProtocolOpen] = useState(false);
+  const [maximusOpen, setMaximusOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
@@ -562,6 +565,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <p className="text-sm text-gray-700 mt-0.5 hidden sm:block">Manage and track your customer leads</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMaximusOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#7c3aed", color: "#ffffff", height: 36 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#6d28d9"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#7c3aed"; }}
+            >
+              <Sparkles size={14} /> Maximus
+            </button>
             <button
               onClick={() => setProtocolOpen(true)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#FF6B00", color: "#ffffff", height: 36 }}
@@ -1745,6 +1756,18 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <li>Bulk assign to distribute data evenly across agents.</li>
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Maximus Modal ── */}
+      {maximusOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 700, height: "80vh", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+            <button onClick={() => setMaximusOpen(false)} style={{ position: "absolute", top: 12, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280", zIndex: 10 }}>✕</button>
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <PersonalButlerTab />
             </div>
           </div>
         </div>
