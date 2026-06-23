@@ -8,8 +8,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions, leadAssignments } from "../../drizzle/schema";
-import { eq, like, or, and, sql, desc, getTableColumns } from "drizzle-orm";
+import { clientSubscriptions, leadAssignments, contacts } from "../../drizzle/schema";
+import { eq, like, or, and, sql, desc, getTableColumns, isNull } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 
 // ─── Zoho Billing API Credentials ────────────────────────────────────────────
@@ -857,6 +857,37 @@ export const billingRouter = router({
           liveSub: Number(summaryResult[0]?.liveSub ?? 0),
           trials: Number(summaryResult[0]?.trials ?? 0),
         };
+
+        // ─── Auto-link unlinked subscriptions to contacts (fire-and-forget) ───
+        const unlinkedRows = rows.filter((r: any) => !r.contactId && (r.email || r.phone));
+        if (unlinkedRows.length > 0) {
+          (async () => {
+            for (const sub of unlinkedRows) {
+              try {
+                let existingContact: { id: number } | undefined;
+                if (sub.email) {
+                  const byEmail = await db.select({ id: contacts.id }).from(contacts).where(eq(contacts.email, sub.email)).limit(1);
+                  existingContact = byEmail[0];
+                }
+                if (!existingContact && sub.phone) {
+                  const normalizedPhone = (sub.phone as string).replace(/[\s\-().+]/g, "");
+                  const byPhone = await db.select({ id: contacts.id }).from(contacts).where(or(like(contacts.phone, `%${normalizedPhone}%`), like(contacts.phone, `%${sub.phone}%`))).limit(1);
+                  existingContact = byPhone[0];
+                }
+                if (existingContact) {
+                  await db.update(clientSubscriptions).set({ contactId: existingContact.id }).where(eq(clientSubscriptions.subscriptionId, sub.subscriptionId));
+                } else {
+                  const [result] = await db.insert(contacts).values({ name: sub.customerName || "Unknown", email: sub.email || null, phone: sub.phone || null, department: "retention", status: "new" });
+                  const newContactId = (result as any).insertId as number;
+                  if (newContactId) {
+                    await db.update(clientSubscriptions).set({ contactId: newContactId }).where(eq(clientSubscriptions.subscriptionId, sub.subscriptionId));
+                    sub.contactId = newContactId;
+                  }
+                }
+              } catch (e) { /* non-fatal */ }
+            }
+          })().catch(() => {});
+        }
 
         // Map DB rows to the MyClientSubscription response format
         const subscriptions: MyClientSubscription[] = rows.map((row: any) => ({

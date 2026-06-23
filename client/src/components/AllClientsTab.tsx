@@ -1162,7 +1162,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Assign to Retention Agent</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Assign {selectedCount} selected subscription(s) to a retention agent. They will appear as "Live Sub" leads.
+              Assign {selectedCount} selected subscription(s) to a retention agent. They will appear as <strong>{statusFilter === "expired" ? "End of Instalment" : planTypeFilter === "trial" ? "Pre-Cycle" : "Live Sub"}</strong> leads.
             </p>
             <label className="block text-sm font-semibold text-gray-800 mb-2">Retention Agent</label>
             <select
