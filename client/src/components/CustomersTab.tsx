@@ -147,12 +147,12 @@ export function CustomersTab() {
       complete: (results) => {
         const rows = results.data as Record<string, string>[];
         const mapped = rows
-          .filter((r) => r.name || r.Name || r["First Name"] || r["first name"] || r["Last Name"] || r["last name"])
+          .filter((r) => r.name || r.Name || r["Full Name"] || r["full name"] || r["Customers Name"] || r["First Name"] || r["first name"] || r["Last Name"] || r["last name"])
           .map((r) => {
             // Build name from first+last or single name field
             const firstName = r["First Name"] || r["first name"] || r["firstName"] || "";
             const lastName = r["Last Name"] || r["last name"] || r["lastName"] || "";
-            const fullName = r.name || r.Name || [firstName, lastName].filter(Boolean).join(" ") || "";
+            const fullName = r["Full Name"] || r["full name"] || r["Customers Name"] || r.name || r.Name || [firstName, lastName].filter(Boolean).join(" ") || "";
 
             // Build address from mailing fields or single address field
             const street = r["Mailing Street"] || r["mailing street"] || r["mailingStreet"] || "";
