@@ -1792,8 +1792,9 @@ This is the personal sales station for Opening agents. Every contact assigned to
 2. Log in with credentials from manager
 3. Set status to "Available" (green dot)
 4. Click "Call" in system → CloudTalk rings YOUR phone first → pick up → connects to customer
-- If phone not ringing: check CloudTalk is open + status Available
-(Agent might ask: "how to connect phone", "cloudtalk setup", "phone not ringing", "how to call", "call not working")
+- If click-to-call not working: Step 1 = click the green "Refresh Click to Call" button (bottom right corner). Step 2 = if still not working clear your browser cache and cookies (Settings > Clear browsing data > All time). Step 3 = close the browser completely and reopen the application. That fixes it 99% of the time.
+- Also check CloudTalk app is open + status set to Available (green dot)
+(Agent might ask: "how to connect phone", "cloudtalk setup", "phone not ringing", "how to call", "call not working", "click to call not working", "refresh click to call", "dialler not working", "can't make calls", "calls not connecting")
 
 **MAKING A CALL:**
 1. Click contact from list (left side)
