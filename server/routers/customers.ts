@@ -161,6 +161,7 @@ export const customersRouter = router({
             notes: z.string().optional(),
             assignedAgent: z.string().optional(),
             status: z.string().optional(),
+            callbackAt: z.string().optional(),
           })
         ),
       })
@@ -199,6 +200,13 @@ export const customersRouter = router({
 
       for (const row of input.customers) {
         const normalizedAgent = normalizeAgentName((row as any).assignedAgent) || null;
+        // Parse callbackAt date
+        let callbackAt: Date | null = null;
+        if (row.callbackAt) {
+          const parsed = new Date(row.callbackAt);
+          if (!isNaN(parsed.getTime())) callbackAt = parsed;
+        }
+
         const rowData = {
           name: row.name,
           email: row.email || null,
@@ -210,6 +218,7 @@ export const customersRouter = router({
           notes: row.notes || null,
           assignedAgent: normalizedAgent,
           status: row.status || "new",
+          callbackAt,
         };
 
         if (row.email && existingEmailMap.has(row.email.toLowerCase())) {
@@ -235,6 +244,7 @@ export const customersRouter = router({
           notes: data.notes,
           address: data.address,
           phone: data.phone,
+          callbackAt: data.callbackAt,
         }).where(eq(customers.id, id));
       }
 
@@ -278,6 +288,7 @@ export const customersRouter = router({
           status: row.status || "new",
           department: agentName ? "retention" : "opening",
           leadDate: new Date(),
+          callbackAt: row.callbackAt || null,
         });
       }
 

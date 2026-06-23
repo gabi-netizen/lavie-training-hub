@@ -198,8 +198,11 @@ export function CustomersTab() {
               }
             }
 
+            // Call Start Time = callback due date
+            const rawCallStartTime = r["Call Start Time"] || r["call start time"] || r["CallStartTime"] || r["Callback Date"] || r["callback date"] || "";
+
             // Status mapping from CSV (Call Back, No Answer, Follow Up, etc.)
-            const rawStatus = r["Status"] || r["status"] || r["Call Status"] || r["call status"] || "";
+            const rawStatus = r["Status"] || r["status"] || r["Call Status"] || r["call status"] || r["Call Type"] || r["call type"] || "";
             let status: string | undefined;
             const statusLower = rawStatus.toLowerCase();
             if (statusLower.includes("call back") || statusLower.includes("callback")) status = "callback";
@@ -207,6 +210,8 @@ export function CustomersTab() {
             else if (statusLower.includes("no answer") || statusLower.includes("no_answer")) status = "no_answer";
             else if (statusLower.includes("not interest")) status = "not_interested";
             else if (statusLower.includes("sold") || statusLower.includes("done")) status = "done_deal";
+            // If Call Start Time has a value, auto-set as callback
+            if (rawCallStartTime && !status) status = "callback";
 
             // Notes: use Subject or Notes column
             const notes = r.Subject || r.subject || r.notes || r.Notes || undefined;
@@ -222,6 +227,7 @@ export function CustomersTab() {
               notes,
               assignedAgent,
               status,
+              callbackAt: rawCallStartTime || undefined,
             };
           });
 

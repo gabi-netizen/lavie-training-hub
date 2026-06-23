@@ -1068,6 +1068,7 @@ export const customers = mysqlTable("customers", {
   department: mysqlEnum("department", ["opening", "retention"]),
   status: varchar("status", { length: 32 }).default("new").notNull(),
   notes: text("notes"),
+  callbackAt: timestamp("callbackAt"),
   importedAt: timestamp("importedAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
