@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 import { MessageCircle, Phone, Volume2, VolumeX, X } from "lucide-react";
 
 interface NotificationMessage {
@@ -20,6 +21,7 @@ interface NotificationMessage {
  */
 export default function MessageNotifications() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [muted, setMuted] = useState(() => localStorage.getItem("msg_notifications_muted") === "true");
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
   const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
@@ -115,6 +117,12 @@ export default function MessageNotifications() {
         {notifications.map((n) => (
           <div
             key={n.id}
+            onClick={() => {
+              // Navigate to retention workspace messages tab
+              sessionStorage.setItem("retention-workspace-tab", "messages");
+              navigate("/retention-workspace");
+              dismiss(n.id);
+            }}
             style={{
               background: "#fff",
               borderRadius: 12,
@@ -125,6 +133,7 @@ export default function MessageNotifications() {
               gap: 10,
               borderLeft: n.channel === "whatsapp" ? "4px solid #25D366" : "4px solid #3b82f6",
               animation: "slideIn 0.3s ease-out",
+              cursor: "pointer",
             }}
           >
             {/* Icon */}
