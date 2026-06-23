@@ -2927,4 +2927,34 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
 
       return { subscriptionId, customerName: contact.name };
     }),
+
+  /**
+   * Return leads back to Command Centre (unassign them).
+   * Sets assignedAgent = null, workStatus = 'new'.
+   * Only accessible by users without a team (managers).
+   */
+  returnToCommandCentre: protectedProcedure
+    .input(z.object({ subscriptionIds: z.array(z.string()).min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Only allow users without a team (managers)
+      if ((ctx as any).user?.team) {
+        throw new Error("Only managers can return leads to Command Centre");
+      }
+
+      for (const subId of input.subscriptionIds) {
+        await db
+          .update(leadAssignments)
+          .set({
+            assignedAgent: null,
+            workStatus: "new",
+            statusChangedAt: Date.now(),
+          })
+          .where(eq(leadAssignments.subscriptionId, subId));
+      }
+
+      return { returned: input.subscriptionIds.length };
+    }),
 });

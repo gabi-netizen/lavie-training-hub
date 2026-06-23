@@ -40,6 +40,7 @@ import {
   Swords,
   BarChart3,
   BookOpen,
+  RotateCcw,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -307,6 +308,16 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
     onSuccess: () => {
       refetch();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  // Return leads to Command Centre (managers only)
+  const returnToCCMutation = trpc.manager.returnToCommandCentre.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.returned} lead${data.returned > 1 ? "s" : ""} returned to Command Centre`);
+      refetch();
+      bulkClearSelection();
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
@@ -948,6 +959,22 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                 onEmail={() => setBulkMsgChannel("email")}
                 onClear={bulkClearSelection}
               />
+              {/* Bulk Return to CC (managers only) */}
+              {!user?.team && bulkSelectedCount > 0 && (
+                <div className="mb-3 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (confirm(`Return ${bulkSelectedCount} lead${bulkSelectedCount > 1 ? "s" : ""} to Command Centre?`)) {
+                        returnToCCMutation.mutate({ subscriptionIds: Array.from(bulkSelectedIds) });
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Return to CC ({bulkSelectedCount})
+                  </button>
+                </div>
+              )}
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -1305,6 +1332,22 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                             >
                               <ChevronRight className="h-4 w-4" />
                             </button>
+
+                            {/* Return to Command Centre (managers only) */}
+                            {!user?.team && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Return ${lead.customerName || "this lead"} to Command Centre?`)) {
+                                    returnToCCMutation.mutate({ subscriptionIds: [lead.subscriptionId] });
+                                  }
+                                }}
+                                className="p-1.5 rounded hover:bg-orange-50 transition-colors text-orange-600"
+                                title="Return to Command Centre"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
