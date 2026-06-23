@@ -160,6 +160,7 @@ export const customersRouter = router({
             source: z.string().optional(),
             notes: z.string().optional(),
             assignedAgent: z.string().optional(),
+            status: z.string().optional(),
           })
         ),
       })
@@ -169,21 +170,18 @@ export const customersRouter = router({
       if (!db) throw new Error("Database not available");
 
       let imported = 0;
-      let skipped = 0;
+      let updated = 0;
 
-      // Get existing emails for dedup
+      // Get existing emails for upsert
       const existingEmailRows = await db
-        .select({ email: customers.email })
+        .select({ id: customers.id, email: customers.email })
         .from(customers)
         .where(isNotNull(customers.email));
-      const existingEmails = new Set(
-        existingEmailRows
-          .map((r) => r.email?.toLowerCase())
-          .filter(Boolean)
-      );
+      const existingEmailMap = new Map<string, number>();
+      for (const r of existingEmailRows) {
+        if (r.email) existingEmailMap.set(r.email.toLowerCase(), r.id);
+      }
 
-      // Batch insert (chunks of 500)
-      const toInsert: any[] = [];
       // Normalize UK phone numbers to +44 format
       function normalizePhone(phone: string | undefined | null): string | null {
         if (!phone) return null;
@@ -194,16 +192,14 @@ export const customersRouter = router({
         return p;
       }
 
+      // Batch insert (chunks of 500)
+      const toInsert: any[] = [];
+      const toUpdate: { id: number; data: any }[] = [];
+      const seenEmails = new Set<string>();
+
       for (const row of input.customers) {
-        if (row.email && existingEmails.has(row.email.toLowerCase())) {
-          skipped++;
-          continue;
-        }
-        // Also track within this import batch
-        if (row.email) {
-          existingEmails.add(row.email.toLowerCase());
-        }
-        toInsert.push({
+        const normalizedAgent = normalizeAgentName((row as any).assignedAgent) || null;
+        const rowData = {
           name: row.name,
           email: row.email || null,
           phone: normalizePhone(row.phone),
@@ -212,8 +208,34 @@ export const customersRouter = router({
           lastPurchaseDate: row.lastPurchaseDate || null,
           source: row.source || null,
           notes: row.notes || null,
-          assignedAgent: normalizeAgentName((row as any).assignedAgent) || null,
-        });
+          assignedAgent: normalizedAgent,
+          status: row.status || "new",
+        };
+
+        if (row.email && existingEmailMap.has(row.email.toLowerCase())) {
+          // Update existing customer
+          const existingId = existingEmailMap.get(row.email.toLowerCase())!;
+          toUpdate.push({ id: existingId, data: rowData });
+          updated++;
+          continue;
+        }
+        // Dedup within batch
+        if (row.email) {
+          if (seenEmails.has(row.email.toLowerCase())) continue;
+          seenEmails.add(row.email.toLowerCase());
+        }
+        toInsert.push(rowData);
+      }
+
+      // Update existing customers
+      for (const { id, data } of toUpdate) {
+        await db.update(customers).set({
+          assignedAgent: data.assignedAgent,
+          status: data.status,
+          notes: data.notes,
+          address: data.address,
+          phone: data.phone,
+        }).where(eq(customers.id, id));
       }
 
       // Insert in chunks into customers table
@@ -253,8 +275,8 @@ export const customersRouter = router({
           importedNotes: row.notes || null,
           agentName: agentName || null,
           agentEmail: agentEmail || "trial@lavielabs.com",
-          status: "new",
-          department: "opening",
+          status: row.status || "new",
+          department: agentName ? "retention" : "opening",
           leadDate: new Date(),
         });
       }
@@ -269,7 +291,7 @@ export const customersRouter = router({
         }
       }
 
-      return { imported, skipped };
+      return { imported, updated };
     }),
 
   /**

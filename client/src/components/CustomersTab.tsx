@@ -87,7 +87,7 @@ export function CustomersTab() {
   // ─── Mutations ──────────────────────────────────────────────────────────────
   const importMutation = trpc.customers.importCustomers.useMutation({
     onSuccess: (result) => {
-      toast.success(`Imported ${result.imported} customers, ${result.skipped} skipped (duplicate email)`);
+      toast.success(`Imported ${result.imported} new, ${result.updated} updated`);
       utils.customers.getCustomers.invalidate();
       utils.customers.getCustomerSources.invalidate();
     },
@@ -156,10 +156,60 @@ export function CustomersTab() {
 
             // Build address from mailing fields or single address field
             const street = r["Mailing Street"] || r["mailing street"] || r["mailingStreet"] || "";
+            const street2 = r["Mailing Street 2"] || r["Mailing Street2"] || "";
             const city = r["Mailing City"] || r["mailing city"] || r["mailingCity"] || "";
-            const postcode = r["Mailing Postcode"] || r["mailing postcode"] || r["Mailing Zip"] || r["mailing zip"] || r["mailingPostcode"] || "";
-            const combinedAddress = [street, city, postcode].filter(Boolean).join(", ");
+            const postcode = r["Mailing Postcode"] || r["mailing postcode"] || r["Mailing Zip"] || r["mailing zip"] || r["mailingPostcode"] || r["Mailing Poc"] || "";
+            const country = r["Mailing Country"] || r["Mailing Co"] || "";
+            const combinedAddress = [street, street2, city, postcode, country].filter(Boolean).join(", ");
             const address = r.address || r.Address || combinedAddress || undefined;
+
+            // Agent name normalization
+            const rawAgent =
+                r["Call Owner"] || r["call owner"] ||
+                r["Customers Owner"] || r["customers owner"] ||
+                r["Customer Owner"] || r["customer owner"] ||
+                r["Lead Owner"] || r["lead owner"] ||
+                r["Owner"] || r["owner"] ||
+                r["Assigned Agent"] || r["assigned agent"] ||
+                r["Agent"] || r["agent"] || undefined;
+            // Normalize: "Rob Chidzi" → "Rob", "Guy Eli" → "Guy", etc.
+            const AGENT_MAP: Record<string, string> = {
+              "rob chidzik": "Rob", "rob chidzi": "Rob", "rob chidzick": "Rob", "rob": "Rob",
+              "guy eli": "Guy", "guy": "Guy",
+              "james huxley": "James", "james": "James",
+              "matthew holman": "Matthew", "matthew": "Matthew",
+              "ashleigh walker": "Ashleigh", "ashleigh": "Ashleigh",
+              "debbie forbes": "Debbie", "debbie": "Debbie",
+              "shola marie": "Shola", "shola": "Shola",
+              "andrea": "Andrea", "ava monroe": "Ava", "ava": "Ava",
+              "paige taylor": "Paige", "paige": "Paige",
+              "darrell loynes": "Darrel", "darrel loynes": "Darrel", "darrel": "Darrel",
+              "cat mckay": "Cat", "catriona mckay": "Cat", "cat": "Cat",
+              "carl": "Carl", "kai": "Kai", "tristan": "Tristan", "alan": "Alan",
+            };
+            let assignedAgent: string | undefined;
+            if (rawAgent) {
+              const lower = rawAgent.trim().toLowerCase();
+              assignedAgent = AGENT_MAP[lower];
+              if (!assignedAgent) {
+                const first = lower.split(" ")[0];
+                const match = Object.entries(AGENT_MAP).find(([k]) => k.startsWith(first));
+                assignedAgent = match ? match[1] : rawAgent.trim().split(" ")[0].charAt(0).toUpperCase() + rawAgent.trim().split(" ")[0].slice(1).toLowerCase();
+              }
+            }
+
+            // Status mapping from CSV (Call Back, No Answer, Follow Up, etc.)
+            const rawStatus = r["Status"] || r["status"] || r["Call Status"] || r["call status"] || "";
+            let status: string | undefined;
+            const statusLower = rawStatus.toLowerCase();
+            if (statusLower.includes("call back") || statusLower.includes("callback")) status = "callback";
+            else if (statusLower.includes("follow up") || statusLower.includes("follow_up")) status = "follow_up";
+            else if (statusLower.includes("no answer") || statusLower.includes("no_answer")) status = "no_answer";
+            else if (statusLower.includes("not interest")) status = "not_interested";
+            else if (statusLower.includes("sold") || statusLower.includes("done")) status = "done_deal";
+
+            // Notes: use Subject or Notes column
+            const notes = r.Subject || r.subject || r.notes || r.Notes || undefined;
 
             return {
               name: fullName,
@@ -169,21 +219,9 @@ export function CustomersTab() {
               totalSpent: r.totalSpent || r.TotalSpent || r.total_spent || r["Total Amount"] || r["total amount"] || r["totalAmount"] || undefined,
               lastPurchaseDate: r.lastPurchaseDate || r.LastPurchaseDate || r.last_purchase_date || undefined,
               source: r.source || r.Source || undefined,
-              notes: r.notes || r.Notes || undefined,
-              assignedAgent:
-                r["Customers Owner"] ||
-                r["customers owner"] ||
-                r["Customer Owner"] ||
-                r["customer owner"] ||
-                r["Lead Owner"] ||
-                r["lead owner"] ||
-                r["Owner"] ||
-                r["owner"] ||
-                r["Assigned Agent"] ||
-                r["assigned agent"] ||
-                r["Agent"] ||
-                r["agent"] ||
-                undefined,
+              notes,
+              assignedAgent,
+              status,
             };
           });
 
