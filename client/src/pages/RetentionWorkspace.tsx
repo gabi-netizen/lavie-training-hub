@@ -1920,7 +1920,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             <div>
               <h3 className="font-bold text-base text-fuchsia-700 mb-2">Notes</h3>
               <ul className="list-disc pl-5 space-y-1">
-                <li><strong>Customer Note</strong> (read-only) — Written by management. Click to expand and see the full text.</li>
+                <li><strong>Customer Note</strong> (read-only) — Written by management. Hover over it with your mouse to see the full text.</li>
                 <li><strong>Agent Note</strong> (editable) — Your personal notes. Click the note area in the table to edit. Click Save when done.</li>
                 <li><strong>Contact Card Notes</strong> — Larger text area in the contact card. Don't forget to click "Save Notes"!</li>
                 <li><strong>Auto-notes</strong> — The system automatically adds notes when you schedule callbacks or complete actions.</li>
