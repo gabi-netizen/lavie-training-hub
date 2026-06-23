@@ -1386,7 +1386,6 @@ function ContactCard({
               isAdmin={isAdmin}
               onSuccess={() => {
                 setPayOpen(false);
-                onAction("sold");
               }}
               onCreditCardClick={() => {
                 setEmailTemplateOpen(true);
