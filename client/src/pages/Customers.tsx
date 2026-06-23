@@ -23,6 +23,7 @@ import {
   Target,
   BarChart3,
   RotateCcw,
+  BookOpen,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -273,6 +274,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [filterStatusDateFrom, setFilterStatusDateFrom] = useState("");
   const [filterStatusDateTo, setFilterStatusDateTo] = useState("");
   const [importing, setImporting] = useState(false);
+  const [protocolOpen, setProtocolOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
@@ -560,6 +562,14 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
             <p className="text-sm text-gray-700 mt-0.5 hidden sm:block">Manage and track your customer leads</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setProtocolOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#FF6B00", color: "#ffffff", height: 36 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#e55f00"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#FF6B00"; }}
+            >
+              <BookOpen size={14} /> Protocol
+            </button>
             <Button
               variant="outline"
               size="sm"
@@ -1578,6 +1588,168 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Protocol Modal ── */}
+      {protocolOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 750, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>
+            <button onClick={() => setProtocolOpen(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1f2937", marginBottom: 20 }}>📖 Contacts — Usage Protocol</h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>What is the Contacts Page?</h3>
+                <p>This is your master database of ALL customer leads. Every person who was ever imported, added manually, or came through a form lives here. You can search, filter, view details, assign agents, import new data, and manage contacts across departments (Opening, Retention, Data Management, Billing).</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#2563eb", marginBottom: 6 }}>Department Tabs (Top of page)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Opening</strong> — Contacts assigned to Opening agents (sales team). New leads for cold calling.</li>
+                  <li><strong>Retention</strong> — Contacts assigned to Retention agents (Rob, Guy, James). Customers who want to cancel.</li>
+                  <li><strong>Data Management</strong> — Unassigned data pool. Contacts waiting to be distributed to agents.</li>
+                  <li><strong>Billing</strong> — Contacts with billing/payment information.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#7c3aed", marginBottom: 6 }}>Summary Cards</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Total Contacts</strong> — How many contacts are in the current department view.</li>
+                  <li><strong>Done Deals</strong> — Contacts marked as sold/done deal.</li>
+                  <li><strong>In Progress</strong> — Contacts currently being worked on.</li>
+                  <li><strong>Callbacks Set</strong> — Contacts with scheduled callbacks.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0d9488", marginBottom: 6 }}>Search & Filters</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Search Box</strong> — Type name, phone, or email to find anyone instantly.</li>
+                  <li><strong>Filters Button</strong> — Click to expand filter options:</li>
+                </ul>
+                <ul style={{ paddingLeft: 40, margin: "6px 0 0" }}>
+                  <li><strong>Lead Type</strong> — Filter by type (Pre-Cycle-Cancelled, Cancel Live Sub, Hot Lead, etc).</li>
+                  <li><strong>Status</strong> — New, Working, Callback, Done Deal, Closed, Not Interested, No Answer, Skip.</li>
+                  <li><strong>Agent</strong> — Show contacts assigned to a specific agent.</li>
+                  <li><strong>Source</strong> — Where the data came from (40-60 premium, Facebook, Website, etc).</li>
+                  <li><strong>Lead Date</strong> — Filter by when the contact was created (from/to).</li>
+                  <li><strong>Status Date</strong> — Filter by when status last changed.</li>
+                </ul>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Show dropdown: change how many contacts per page (50, 100, 200, 500).</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>Table Columns Explained</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Checkbox</strong> — Select contacts for bulk actions.</li>
+                  <li><strong>NAME</strong> — Customer name + email. Click to open Contact Card.</li>
+                  <li><strong>LEAD TYPE</strong> — Category badge (Pre-Cycle-Decline, Cancel Live Sub, Hot Lead, etc). "—" if not set.</li>
+                  <li><strong>STATUS</strong> — Coloured badge showing current status. Click to change.</li>
+                  <li><strong>PHONE</strong> — Customer phone number. Click to call.</li>
+                  <li><strong>ADDRESS</strong> — Delivery address (if available).</li>
+                  <li><strong>AGENT</strong> — Who is assigned to this contact. "—" if unassigned.</li>
+                  <li><strong>AGENT EMAIL</strong> — The agent's email address.</li>
+                  <li><strong>SOURCE</strong> — Where this data came from (e.g. "40-60 premium", "Facebook").</li>
+                  <li><strong>NA</strong> — Number of "No Answer" attempts.</li>
+                  <li><strong>LEAD DATE</strong> — When this contact was created/imported.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#ea580c", marginBottom: 6 }}>Importing Contacts (CSV / XLSX)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click <strong>"Import CSV / XLSX"</strong> button (purple, top right).</li>
+                  <li>Choose department: Opening or Retention.</li>
+                  <li>Enter Source name (e.g. "40-60 premium", "Facebook June") — REQUIRED!</li>
+                  <li>Select your file (.csv or .xlsx).</li>
+                  <li>System imports automatically. Shows count of imported + skipped.</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>⚠️ CSV must have columns: name (required), phone (required), email (optional), address (optional). Phone numbers auto-normalised to +44 format.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#16a34a", marginBottom: 6 }}>Adding a Contact Manually</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click <strong>"Add Contact"</strong> button (green, top right).</li>
+                  <li>Fill in: Name, Phone, Email, Address, Lead Type, Status, Notes.</li>
+                  <li>Click Save.</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#b45309", marginBottom: 6 }}>Bulk Actions (Select multiple contacts)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Tick checkboxes on the left of contacts.</li>
+                  <li>Or tick the top checkbox to select all visible.</li>
+                  <li>Action bar appears at bottom with options:</li>
+                </ol>
+                <ul style={{ paddingLeft: 40, margin: "6px 0 0" }}>
+                  <li><strong>Assign Agent</strong> — Assign all selected to a specific agent.</li>
+                  <li><strong>Send WhatsApp</strong> — Send a template to all selected.</li>
+                  <li><strong>Send SMS</strong> — Send a text to all selected.</li>
+                  <li><strong>Send Email</strong> — Send an email template to all selected.</li>
+                  <li><strong>Delete</strong> — Remove selected contacts (asks confirmation!).</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#be185d", marginBottom: 6 }}>Opening a Contact Card</h3>
+                <p>Click any contact name to open their full Contact Card. Inside you can:</p>
+                <ul style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                  <li>Edit details (name, phone, email, address)</li>
+                  <li>Call them (CloudTalk)</li>
+                  <li>Send WhatsApp / SMS / Email</li>
+                  <li>View message history</li>
+                  <li>View transactions (Stripe payments)</li>
+                  <li>Add/edit notes</li>
+                  <li>Schedule callbacks</li>
+                  <li>Change status</li>
+                  <li>See subscription info (Zoho Billing)</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#9333ea", marginBottom: 6 }}>Data Management Tab</h3>
+                <p>This is the pool of unassigned contacts. Managers use this to:</p>
+                <ul style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                  <li>See all imported data that hasn't been assigned yet.</li>
+                  <li>Filter by date (Today, This Week, This Month, All).</li>
+                  <li>Select contacts and assign them to agents.</li>
+                  <li>Track burn rate (how fast data is being used).</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0284c7", marginBottom: 6 }}>Statuses Explained</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong style={{ color: "#2563eb" }}>New</strong> — Fresh contact, not yet called.</li>
+                  <li><strong style={{ color: "#7c3aed" }}>Working</strong> — Agent is actively working this contact.</li>
+                  <li><strong style={{ color: "#ca8a04" }}>Callback</strong> — Callback scheduled.</li>
+                  <li><strong style={{ color: "#16a34a" }}>Done Deal</strong> — Sold! Payment taken.</li>
+                  <li><strong style={{ color: "#6b7280" }}>Closed</strong> — Not interested, won't buy.</li>
+                  <li><strong style={{ color: "#dc2626" }}>Not Interested</strong> — Explicitly said no.</li>
+                  <li><strong style={{ color: "#ea580c" }}>No Answer</strong> — Didn't pick up.</li>
+                  <li><strong style={{ color: "#9ca3af" }}>Skip</strong> — Skipped for now, can come back later.</li>
+                </ul>
+              </div>
+
+              <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 10, padding: "14px 18px", marginTop: 4 }}>
+                <p style={{ margin: 0, fontWeight: 700, color: "#166534", fontSize: 15 }}>💡 Tips:</p>
+                <ul style={{ paddingLeft: 20, margin: "8px 0 0" }}>
+                  <li>Use Search to find anyone instantly — works with name, phone, or email.</li>
+                  <li>Import new data regularly to keep agents busy.</li>
+                  <li>Always add a Source when importing — helps track which data converts best.</li>
+                  <li>Use Data Management tab to see unassigned contacts.</li>
+                  <li>Bulk assign to distribute data evenly across agents.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
