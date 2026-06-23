@@ -1754,13 +1754,13 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Overview */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">What is the Retention Workspace?</h3>
+              <h3 className="font-bold text-base text-indigo-700 mb-2">What is the Retention Workspace?</h3>
               <p>Your personal command centre for managing retention leads. Every lead assigned to you appears here — you can call, message, email, schedule callbacks, and track your deals all from one place.</p>
             </div>
 
             {/* Tabs */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Navigation Tabs</h3>
+              <h3 className="font-bold text-base text-blue-700 mb-2">Navigation Tabs</h3>
               <p className="mb-2">The tabs at the top switch between different views:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Incoming Leads</strong> — Your main queue. All new leads land here.</li>
@@ -1777,7 +1777,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Leads Table */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">The Leads Table</h3>
+              <h3 className="font-bold text-base text-purple-700 mb-2">The Leads Table</h3>
               <p className="mb-2">Each row is one lead. Here's what each column means:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Checkbox</strong> — Tick to select multiple leads for bulk actions.</li>
@@ -1794,7 +1794,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Filters */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Filtering Your Leads</h3>
+              <h3 className="font-bold text-base text-teal-700 mb-2">Filtering Your Leads</h3>
               <p className="mb-2">Use the filters above the table to narrow down what you see:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Date Filter</strong> (Queue tab) — Show leads from: All Dates, Today, Last 7 Days, This Month, Last Month.</li>
@@ -1806,7 +1806,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Bulk Actions */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Bulk Actions (Send to Multiple Customers)</h3>
+              <h3 className="font-bold text-base text-orange-700 mb-2">Bulk Actions (Send to Multiple Customers)</h3>
               <p className="mb-2">Want to message several customers at once? Here's how:</p>
               <ol className="list-decimal pl-5 space-y-1">
                 <li>Tick the checkboxes next to the leads you want (or use the top checkbox to select all).</li>
@@ -1820,7 +1820,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Contact Card */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Contact Card (Opening a Lead)</h3>
+              <h3 className="font-bold text-base text-rose-700 mb-2">Contact Card (Opening a Lead)</h3>
               <p className="mb-2">Click a customer's name or the arrow icon to open their full card. From here you can:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Edit details</strong> — Change name, phone, email, address. Click Save when done.</li>
@@ -1839,7 +1839,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Callbacks */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Callbacks & Follow-ups</h3>
+              <h3 className="font-bold text-base text-amber-700 mb-2">Callbacks & Follow-ups</h3>
               <p className="mb-2">How to schedule and manage callbacks:</p>
               <ol className="list-decimal pl-5 space-y-1">
                 <li>Click the calendar icon on any lead (or "Callback" in the contact card).</li>
@@ -1854,7 +1854,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* WhatsApp & SMS */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Sending Messages (WhatsApp & SMS)</h3>
+              <h3 className="font-bold text-base text-green-700 mb-2">Sending Messages (WhatsApp & SMS)</h3>
               <p className="mb-2">You have two ways to message a customer. Both are inside the Contact Card and also available as quick icons in the leads table:</p>
               
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
@@ -1887,7 +1887,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Email */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Sending Emails</h3>
+              <h3 className="font-bold text-base text-sky-700 mb-2">Sending Emails</h3>
               <ol className="list-decimal pl-5 space-y-1">
                 <li>Click the email icon on any lead.</li>
                 <li>A large modal opens with templates on the left and preview on the right.</li>
@@ -1900,7 +1900,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Status */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Changing Lead Status</h3>
+              <h3 className="font-bold text-base text-violet-700 mb-2">Changing Lead Status</h3>
               <p className="mb-2">Click the coloured status badge on any lead to open the dropdown. Options:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>New</strong> — Fresh lead, not yet contacted.</li>
@@ -1918,9 +1918,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Notes */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Notes</h3>
+              <h3 className="font-bold text-base text-fuchsia-700 mb-2">Notes</h3>
               <ul className="list-disc pl-5 space-y-1">
-                <li><strong>Customer Note</strong> (read-only) — Written by management. Hover to see full text, click to expand.</li>
+                <li><strong>Customer Note</strong> (read-only) — Written by management. Click to expand and see the full text.</li>
                 <li><strong>Agent Note</strong> (editable) — Your personal notes. Click the note area in the table to edit. Click Save when done.</li>
                 <li><strong>Contact Card Notes</strong> — Larger text area in the contact card. Don't forget to click "Save Notes"!</li>
                 <li><strong>Auto-notes</strong> — The system automatically adds notes when you schedule callbacks or complete actions.</li>
@@ -1929,7 +1929,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* My Clients */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">My Clients Tab</h3>
+              <h3 className="font-bold text-base text-cyan-700 mb-2">My Clients Tab</h3>
               <p className="mb-2">Shows all your active subscriptions with full billing details:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Filters</strong> — Date range (Today, Last 7 Days, This Month, Custom), Status (Live, Dunning, Cancelled), Plan Type, Search.</li>
@@ -1942,7 +1942,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
             {/* Tips */}
             <div>
-              <h3 className="font-bold text-base text-gray-900 mb-2">Tips & Tricks</h3>
+              <h3 className="font-bold text-base text-emerald-700 mb-2">Tips & Tricks</h3>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Start your day</strong> with the Callbacks tab — handle overdue ones first.</li>
                 <li><strong>Use bulk messaging</strong> to send a template to all your "No Answer" leads at once.</li>
