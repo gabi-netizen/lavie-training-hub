@@ -4301,13 +4301,13 @@ export default function Workspace() {
       {/* ── Floating Need Help Button ── */}
       <button
         onClick={() => setHelpOpen(!helpOpen)}
-        style={{ position: "fixed", bottom: 80, left: 20, zIndex: 9998, background: "#dc2626", color: "#fff", border: "none", borderRadius: 30, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(220,38,38,0.4)", display: "flex", alignItems: "center", gap: 6 }}
+        style={{ position: "fixed", bottom: 130, right: 20, zIndex: 9998, background: "#dc2626", color: "#fff", border: "none", borderRadius: 30, padding: "12px 22px", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(220,38,38,0.4)", display: "flex", alignItems: "center", gap: 6 }}
       >
         ❓ Need Help?
       </button>
 
       {helpOpen && (
-        <div style={{ position: "fixed", bottom: 130, left: 20, zIndex: 9999, background: "#fff", borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.25)", padding: 20, width: 360, maxHeight: "60vh", overflowY: "auto" }}>
+        <div style={{ position: "fixed", bottom: 185, right: 20, zIndex: 9999, background: "#fff", borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.25)", padding: 20, width: 360, maxHeight: "60vh", overflowY: "auto" }}>
           <button onClick={() => setHelpOpen(false)} style={{ position: "absolute", top: 8, right: 12, background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#6b7280" }}>✕</button>
           <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#1d4ed8" }}>🔵 Click-to-Call Not Working?</h3>
           <div style={{ fontSize: 13, lineHeight: 1.6 }}>
