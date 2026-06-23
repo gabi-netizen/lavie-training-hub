@@ -144,7 +144,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     if (saved && ["queue", "callbacks", "followups", "messages", "emails", "clients", "decline", "cancel", "endInstalment", "butler", "performance"].includes(saved)) {
       return saved as any;
     }
-    return "queue";
+    return "performance";
   });
 
   // Persist active tab to sessionStorage
@@ -871,7 +871,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         <PersonalButlerTab />
       )}
       {activeTab === "performance" && (
-        <PerformanceTab agentFilter={agentName} />
+        <PerformanceTab />
       )}
 
       {(activeTab === "queue" || activeTab === "callbacks" || activeTab === "followups") && (
