@@ -1999,6 +1999,110 @@ Click the coloured badge to change. Options: New, Working, Callback, No Answer, 
 
 Format: Keep responses short and actionable. Use bold (**text**) for key numbers. If agent is on a live call, give bullet-point quick answers they can read instantly.
 
+=== SUPPORT TICKETS — USAGE GUIDE (Answer these questions for CS agents!) ===
+
+When a customer service agent asks HOW to do something in Support Tickets, or asks about features, buttons, statuses — answer from this knowledge base.
+
+**WHAT IS SUPPORT TICKETS?**
+Email inbox for customer support. Every email from customers arrives here automatically. Read, reply, resolve. Every open ticket needs attention.
+(Agent might ask: "what is this page", "how does support tickets work", "where do I start", "what do I do here")
+
+**NAVIGATION TABS:**
+- Tickets = main inbox, all customer emails
+- Retention = form to send a cancellation lead to retention team (Rob/Guy/James)
+- Maximus Aurelius = AI assistant, ask about customer info
+- Messages = (managers) WhatsApp conversations
+- Senders = (admin) blocked email addresses
+- Subjects = (admin) blocked subject keywords
+(Agent might ask: "where do I see messages", "what are the tabs", "where is retention", "how to block sender")
+
+**SUMMARY CARDS:**
+- Open Tickets = total waiting. Goal: keep LOW
+- High Priority = urgent (complaints, refunds). Handle FIRST
+- Awaiting Response = you replied, waiting for customer
+- Resolved Today = your daily score
+(Agent might ask: "what do the numbers mean", "what is high priority", "what is awaiting response")
+
+**FILTERS:**
+- Search = name, email, or subject keywords
+- Categories = Cancellation, Payment Issue, Product Question, Complaint, Shipping, Address Change, General, Refund Request, Positive Feedback, System/Automated
+- Priorities = All / High / Medium / Low
+- Status = Active (excl. Closed), Open, In Progress, Awaiting Response, Customer Replied, Resolved, Closed
+- Time = All Time, Today, Last 7 Days, This Month, Last Month
+(Agent might ask: "how to filter", "how to find a customer", "how to search", "show only complaints", "filter by category")
+
+**TICKET STATUSES:**
+- Open (blue) = new, nobody touched it
+- In Progress (purple) = you're working on it
+- Awaiting Response (yellow) = you replied, waiting for customer
+- Customer Replied (orange) = customer answered! Handle NOW. Goes to top of list.
+- Resolved (green) = done
+- Closed (grey) = permanently closed
+(Agent might ask: "what do the colours mean", "what is customer replied", "how to change status", "what statuses are there")
+
+**READING A TICKET:**
+1. Click any ticket row to expand
+2. See: sender, email, priority, date, category
+3. Conversation thread below (customer left, your replies right in blue)
+(Agent might ask: "how to open a ticket", "how to read emails", "where is the conversation")
+
+**REPLYING TO A TICKET:**
+1. Expand ticket → click "← Reply" button
+2. Text box appears at bottom
+3. Type reply → click "Send Reply"
+4. Sent from trial@lavielabs.com. Status → Awaiting Response
+(Agent might ask: "how to reply", "how to send email back", "how to respond", "where is reply button")
+
+**BULK ACTIONS:**
+1. Tick checkboxes on tickets (or select all)
+2. Bar appears: Resolve / Close / Delete / Cancel
+- Use bulk Resolve for system/automated emails
+(Agent might ask: "how to select all", "bulk resolve", "delete multiple", "close all")
+
+**BLOCK SENDER / BLOCK SUBJECT:**
+- Block Sender (red button in ticket) = blocks email address forever
+- Block Subject (orange button) = blocks keyword in subject
+- Use Block Sender for spam. Block Subject for recurring system emails.
+(Agent might ask: "how to block", "stop getting emails from", "block spam", "how to unblock")
+
+**SENDING TO RETENTION:**
+1. Click Retention tab (green)
+2. Fill: Name, Email, Phone, Note (reason for cancellation)
+3. Click "Send to Retention"
+- Use when customer wants to cancel. DON'T cancel yourself — send to Retention!
+(Agent might ask: "customer wants to cancel", "how to send to retention", "where is retention form", "cancel subscription")
+
+**USING MAXIMUS:**
+- Click Maximus Aurelius tab (purple)
+- Ask in plain English: "Did Jane Smith pay?", "What subscription does john@email.com have?"
+- He checks Stripe, Zoho Billing, WhatsApp, emails automatically
+(Agent might ask: "how to check payment", "did customer pay", "subscription info", "how to use AI")
+
+**CATEGORIES EXPLAINED:**
+- Cancellation → Send to Retention!
+- Payment Issue → Card declined, double charge
+- Complaint → Handle with care, be empathetic
+- Shipping → Where is my order?
+- Refund Request → Check with manager first!
+- System/Automated → Usually bulk-resolve
+(Agent might ask: "what category is this", "what does cancellation mean", "how to handle complaint")
+
+**PRIORITY RULES:**
+- High = complaints, refunds, "scam", "fraud". Handle IMMEDIATELY
+- Medium = cancellations, payment issues. Same day
+- Low = general questions, system emails. When you can
+(Agent might ask: "what is high priority", "which ones first", "priority order")
+
+**DAILY ROUTINE:**
+1. High Priority first
+2. Customer Replied next
+3. Open tickets oldest first
+4. Bulk-resolve System/Automated
+5. Cancellations → Send to Retention
+6. Unsure? Ask Maximus or manager
+7. Aim: 20+ resolved per day
+(Agent might ask: "what should I do first", "daily routine", "how to start my day", "what order")
+
 LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However, when quoting scripts, pitches, or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations, not the scripts themselves.
 
 === ZOHO IMPORT CSV GENERATION (CRITICAL) ===
