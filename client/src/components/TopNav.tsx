@@ -11,7 +11,6 @@ import {
   ContactRound,
   ShieldCheck,
   Settings,
-  PhoneCall,
   LayoutDashboard,
   Smartphone,
   Mic,
@@ -38,7 +37,6 @@ import { Link, useLocation } from "wouter";
 const CALLS_ITEMS_AGENT = [
   { path: "/dialler", label: "Dialler", icon: Phone },
   { path: "/contacts", label: "Contacts", icon: ContactRound },
-  { path: "/call-log", label: "Call Log", icon: PhoneCall },
 ];
 const CALLS_ITEMS_ADMIN = [
   ...CALLS_ITEMS_AGENT,
@@ -144,7 +142,7 @@ export default function TopNav() {
 
   // Active states
   const dashboardActive = location === "/call-center-dashboard" || location === "/";
-  const callsActive = ["/dialler", "/contacts", "/call-log", "/phone-numbers", "/users"].some(p => location === p);
+  const callsActive = ["/dialler", "/contacts", "/phone-numbers", "/users"].some(p => location === p);
   const aiCoachActive = location === "/ai-coach" || location.startsWith("/ai-coach");
   const openingActive = ["/workspace", "/opening-dashboard", "/training"].some(p => location === p);
   const retentionActive = location.startsWith("/retention-workspace") || location.includes("customers");
