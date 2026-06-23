@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -45,6 +46,7 @@ function formatCurrency(amount: string | number | null | undefined): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export function CustomersTab() {
+  const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -500,7 +502,26 @@ export function CustomersTab() {
                   className="w-4 h-4 rounded border-gray-300"
                 />
               </div>
-              <div className="font-medium text-blue-700 truncate" title={customer.name}>
+              <div
+                className="font-medium text-blue-700 truncate cursor-pointer hover:underline"
+                title={customer.name}
+                onClick={async () => {
+                  // Look up contact ID by email or phone, then navigate
+                  try {
+                    const result = await utils.customers.findContactId.fetch({
+                      email: customer.email || undefined,
+                      phone: customer.phone || undefined,
+                    });
+                    if (result?.contactId) {
+                      navigate(`/contacts/${result.contactId}`);
+                    } else {
+                      toast.error("Contact card not found for this customer");
+                    }
+                  } catch {
+                    toast.error("Failed to look up contact");
+                  }
+                }}
+              >
                 {customer.name}
               </div>
               <div className="text-gray-600 truncate" title={customer.email ?? ""}>

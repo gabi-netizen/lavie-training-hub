@@ -529,4 +529,25 @@ export const customersRouter = router({
       .map((r) => r.source)
       .filter((s): s is string => s !== null && s !== "");
   }),
+
+  findContactId: protectedProcedure
+    .input(z.object({ email: z.string().optional(), phone: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { contactId: null };
+      let row: any = null;
+      if (input.email) {
+        const result = await db.execute(
+          sql`SELECT id FROM contacts WHERE email = ${input.email} ORDER BY id DESC LIMIT 1`
+        );
+        row = (result[0] as any[])?.[0];
+      }
+      if (!row && input.phone) {
+        const result = await db.execute(
+          sql`SELECT id FROM contacts WHERE phone = ${input.phone} ORDER BY id DESC LIMIT 1`
+        );
+        row = (result[0] as any[])?.[0];
+      }
+      return { contactId: row?.id ?? null };
+    }),
 });
