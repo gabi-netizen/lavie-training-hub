@@ -2179,6 +2179,67 @@ Click any name to open full details. Inside: edit details / call / WhatsApp / SM
 - Skip (light grey) = skipped for now
 (Agent might ask: "what statuses" "change status" "what does new mean" "what is working")
 
+=== OPENING DASHBOARD — USAGE GUIDE (Answer these questions for managers!) ===
+
+When someone asks about the Opening Dashboard performance metrics conversions trials or agent stats — answer from this knowledge base.
+
+**WHAT IS THE OPENING DASHBOARD?**
+Performance tracker for the Opening (sales) team. Shows trials opened by each agent and conversion rates. Managers use it to monitor team performance.
+(User might ask: "what is opening dashboard" "how to check performance" "where do I see trials" "agent stats")
+
+**FILTERS:**
+- Month = which month to view (default = current)
+- Agent = multi-select checkboxes to filter specific agents
+- Date Range = Today / Yesterday / This Week / Last 7 Days / This Month / Previous Month / Last 3 Months / Custom
+- Reset = clear all filters
+- + Add Agent = admin only
+(User might ask: "how to filter" "change month" "filter by agent" "custom date")
+
+**TOTAL TRIALS BANNER:**
+Big purple number = total £4.95 trials opened in selected period. Gross count of all trials created by the team.
+(User might ask: "what is total trials" "what does the big number mean")
+
+**SUMMARY CARDS (6 cards):**
+- Retention Help % = percentage saved by Retention team. Click to see list
+- Still in Trial = customers in 21-day trial. Click to see list
+- Matured = trials past 21 days. Click to see list
+- Conversion Rate % = (Converted / Matured) × 100. Click to see list
+- Best Agent = highest conversion rate
+- Cancelled After Payment = paid £44.90 then cancelled. Click to see list
+All cards are clickable! Shows customer list grouped by agent.
+(User might ask: "what do the cards mean" "conversion rate" "still in trial" "matured" "best agent")
+
+**AGENT PERFORMANCE TABLE:**
+- # = rank
+- Agent = name (click arrow to expand)
+- Daily Openings = trials today or in date range
+- W.Days = working days from Hubstaff (admin can edit)
+- Ave/Day = trials per working day. Green = 3+ good. Red = below target
+- Trials = total trials (admin can override)
+- Matured = past 21-day trial
+- Converted = became paying customers
+- Conv% = conversion rate
+- Lost = cancelled without paying (red)
+(User might ask: "what do the columns mean" "what is W.Days" "what is Ave/Day" "what is matured" "what is converted")
+
+**EXPANDING AGENT ROW:**
+Click arrow next to agent name. Shows breakdown:
+- Live Sub = paying £44.90/60 days (success)
+- Saved by Retention = cancelled but retention saved them
+- Cancelled After Payment = paid then cancelled (still counts as conversion)
+- Cancelled Before Payment = cancelled during trial (loss)
+- Dunning = card declined
+- Still in Trial = within 21 days
+Click any number to see customer list.
+(User might ask: "expand row" "breakdown" "what is live sub" "what is dunning" "saved by retention")
+
+**KEY METRICS:**
+- Conversion Rate = (Live Sub + Saved + Cancelled After Payment) / Matured × 100
+- Matured = Total Trials - Still in Trial
+- Target Ave/Day = 3+ good. Below 2.7 = needs attention
+- Working Day = 7+ hours on Hubstaff = 1 full day. Less = proportional (4h = 0.5 day)
+(User might ask: "how is conversion calculated" "what is a good rate" "target per day" "working day calculation")
+
 LANGUAGE: Respond in the same language the user asks in. If they ask in Hebrew — answer in Hebrew. If they ask in English — answer in English. However when quoting scripts pitches or objection responses — ALWAYS keep those in English (because agents use them in English with customers). Only translate your explanations not the scripts themselves.
 
 === ZOHO IMPORT CSV GENERATION (CRITICAL) ===
