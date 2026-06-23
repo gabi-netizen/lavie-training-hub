@@ -1060,8 +1060,29 @@ export const billingRouter = router({
             })
             .where(eq(leadAssignments.subscriptionId, input.subscriptionId));
         } else {
-          // Shouldn't happen normally, but handle gracefully
-          return { success: false, action: "not_found" };
+          // Lead not in lead_assignments yet — create a new assignment from client_subscriptions data
+          const subData = await db
+            .select({
+              customerName: clientSubscriptions.customerName,
+              email: clientSubscriptions.email,
+              phone: clientSubscriptions.phone,
+            })
+            .from(clientSubscriptions)
+            .where(eq(clientSubscriptions.subscriptionId, input.subscriptionId))
+            .limit(1);
+          const sub = subData[0];
+          await db.insert(leadAssignments).values({
+            subscriptionId: input.subscriptionId,
+            customerName: sub?.customerName || "Unknown",
+            email: sub?.email || null,
+            phone: sub?.phone || null,
+            leadType: "Cancel Live Sub (Cycle 1)",
+            assignedAgent: input.assignedAgent,
+            assignedAt: Date.now(),
+            workStatus: "assigned",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          });
         }
         return { success: true, action: "reassigned" };
       }
