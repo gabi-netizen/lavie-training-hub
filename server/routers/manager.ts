@@ -19,6 +19,31 @@ import OpenAI from "openai";
 
 export const AGENTS = ["Guy", "Rob", "James"] as const;
 
+// ─── Agent Name Normalization (for CSV imports from Zoho) ────────────────────
+const AGENT_NAME_MAP: Record<string, string> = {
+  "rob chidzik": "Rob", "rob chidzi": "Rob", "rob chidzick": "Rob",
+  "guy eli": "Guy", "james huxley": "James",
+  "matthew holman": "Matthew", "ashleigh walker": "Ashleigh",
+  "debbie forbes": "Debbie", "shola marie": "Shola",
+  "andrea": "Andrea", "ava monroe": "Ava", "paige taylor": "Paige",
+  "darrell loynes": "Darrel", "darrel loynes": "Darrel",
+  "cat mckay": "Cat", "catriona mckay": "Cat",
+  "ryan spence": "Ryan", "nisha greenwood": "Nisha",
+  "harrison joslin": "Harrison", "carl": "Carl", "kai": "Kai",
+  "tristan": "Tristan", "alan": "Alan", "bethany": "Bethany",
+  "gabi lavie": "Gabi", "sara lavie": "Sara",
+};
+
+function normalizeAgentName(fullName: string | undefined | null): string | null {
+  if (!fullName || !fullName.trim()) return null;
+  const lower = fullName.trim().toLowerCase();
+  if (AGENT_NAME_MAP[lower]) return AGENT_NAME_MAP[lower];
+  const firstName = lower.split(" ")[0];
+  const match = Object.entries(AGENT_NAME_MAP).find(([key]) => key.startsWith(firstName));
+  if (match) return match[1];
+  return fullName.trim().split(" ")[0].charAt(0).toUpperCase() + fullName.trim().split(" ")[0].slice(1).toLowerCase();
+}
+
 export const WORK_STATUSES = [
   "new",
   "assigned",
@@ -843,6 +868,10 @@ export const managerRouter = router({
             billingStatus: z.string().optional(),
             cyclesCompleted: z.number().default(0),
             customerNote: z.string().optional(),
+            assignedAgent: z.string().optional(),
+            callbackAt: z.number().optional(),
+            workStatus: z.string().optional(),
+            address: z.string().optional(),
           })
         ),
       })
@@ -852,50 +881,83 @@ export const managerRouter = router({
       if (!db) throw new Error("Database not available");
 
       let inserted = 0;
+      let updated = 0;
       let skipped = 0;
 
       for (const lead of input.leads) {
         const subscriptionId = `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
         try {
-          // Check for duplicate by email
+          // Check for duplicate by email or phone (upsert logic)
+          let existingId: number | null = null;
           if (lead.email) {
             const existing = await db
               .select({ id: leadAssignments.id })
               .from(leadAssignments)
               .where(eq(leadAssignments.email, lead.email))
               .limit(1);
-            if (existing.length > 0) {
-              skipped++;
-              continue;
-            }
+            if (existing.length > 0) existingId = existing[0].id;
+          }
+          if (!existingId && lead.phone) {
+            const existing = await db
+              .select({ id: leadAssignments.id })
+              .from(leadAssignments)
+              .where(eq(leadAssignments.phone, lead.phone))
+              .limit(1);
+            if (existing.length > 0) existingId = existing[0].id;
           }
 
-          await db.insert(leadAssignments).values({
-            subscriptionId,
-            customerName: lead.customerName,
-            email: lead.email || null,
-            phone: lead.phone || null,
-            leadType: lead.leadType || "pre_cycle_cancelled",
-            leadCategory: lead.leadCategory,
-            planName: lead.planName || null,
-            totalSpend: lead.totalSpend,
-            monthlyAmount: lead.monthlyAmount,
-            urgencyScore: lead.urgencyScore,
-            eventDate: lead.eventDate || new Date().toISOString().split("T")[0],
-            billingStatus: lead.billingStatus || null,
-            cyclesCompleted: lead.cyclesCompleted,
-            workStatus: "new",
-            managerNote: lead.customerNote ? stripHtml(lead.customerNote) : null,
-          });
-          inserted++;
+          // Determine work status
+          const effectiveStatus = lead.workStatus || (lead.callbackAt ? "callback" : "new");
+          const normalizedAgent = normalizeAgentName(lead.assignedAgent);
+
+          if (existingId) {
+            // Update existing lead with new data
+            await db.update(leadAssignments)
+              .set({
+                customerName: lead.customerName,
+                phone: lead.phone || undefined,
+                email: lead.email || undefined,
+                assignedAgent: normalizedAgent || undefined,
+                workStatus: effectiveStatus,
+                callbackAt: lead.callbackAt || undefined,
+                managerNote: lead.customerNote ? stripHtml(lead.customerNote) : undefined,
+                statusChangedAt: Date.now(),
+              })
+              .where(eq(leadAssignments.id, existingId));
+            updated++;
+          } else {
+            // Insert new lead
+            await db.insert(leadAssignments).values({
+              subscriptionId,
+              customerName: lead.customerName,
+              email: lead.email || null,
+              phone: lead.phone || null,
+              leadType: lead.leadType || "Pre-Cycle-Cancelled",
+              leadCategory: lead.leadCategory,
+              planName: lead.planName || null,
+              totalSpend: lead.totalSpend,
+              monthlyAmount: lead.monthlyAmount,
+              urgencyScore: lead.urgencyScore,
+              eventDate: lead.eventDate || new Date().toISOString().split("T")[0],
+              billingStatus: lead.billingStatus || null,
+              cyclesCompleted: lead.cyclesCompleted,
+              workStatus: effectiveStatus,
+              assignedAgent: normalizedAgent || null,
+              assignedAt: normalizedAgent ? Date.now() : null,
+              callbackAt: lead.callbackAt || null,
+              managerNote: lead.customerNote ? stripHtml(lead.customerNote) : null,
+              agentNote: lead.address || null,
+            });
+            inserted++;
+          }
         } catch (e) {
           console.error(`[importLeads] Error importing ${lead.customerName}:`, e);
           skipped++;
         }
       }
 
-      return { success: true, inserted, skipped };
+      return { success: true, inserted, updated, skipped };
     }),
 
   /**

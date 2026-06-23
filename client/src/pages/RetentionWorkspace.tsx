@@ -41,6 +41,7 @@ import {
   BarChart3,
   BookOpen,
   RotateCcw,
+  Upload,
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -52,6 +53,7 @@ import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { PerformanceTab } from "@/components/PerformanceTab";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
+import Papa from "papaparse";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
 
 // ─── Lead Type Badge Colors ──────────────────────────────────────────────────
@@ -321,6 +323,86 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
+
+  // CSV Import for leads (managers only)
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const importLeadsMutation = trpc.manager.importLeads.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Imported: ${data.inserted} new, ${data.updated} updated, ${data.skipped} skipped`);
+      refetch();
+    },
+    onError: (e: { message: string }) => toast.error(`Import failed: ${e.message}`),
+  });
+
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows = results.data as Record<string, string>[];
+        const mapped = rows
+          .filter((r) => r["Full Name"] || r["full name"] || r.name || r.Name)
+          .map((r) => {
+            const name = r["Full Name"] || r["full name"] || r.name || r.Name || "";
+            const email = r.Email || r.email || undefined;
+            const phone = r.Phone || r.phone || r.Mobile || r.mobile || undefined;
+            const callOwner = r["Call Owner"] || r["call owner"] || r["Agent"] || r["agent"] || undefined;
+            const subject = r.Subject || r.subject || r.Notes || r.notes || undefined;
+            const callStartTime = r["Call Start Time"] || r["call start time"] || r["Callback"] || r["callback"] || undefined;
+
+            // Build address from mailing fields
+            const street = r["Mailing Street"] || r["Mailing Str"] || "";
+            const street2 = r["Mailing Street 2"] || r["Mailing Street2"] || "";
+            const city = r["Mailing City"] || "";
+            const postcode = r["Mailing Postcode"] || r["Mailing Poc"] || r["Mailing Zip"] || "";
+            const country = r["Mailing Country"] || r["Mailing Co"] || "";
+            const address = [street, street2, city, postcode, country].filter(Boolean).join(", ") || undefined;
+
+            // Parse callback date
+            let callbackAt: number | undefined;
+            if (callStartTime) {
+              const parsed = new Date(callStartTime);
+              if (!isNaN(parsed.getTime())) callbackAt = parsed.getTime();
+            }
+
+            // Map Zoho status to our workStatus
+            const callType = r["Call Type"] || r["call type"] || "";
+            const status = r["Status"] || r["status"] || r["Call Status"] || r["call status"] || "";
+            let workStatus: string | undefined;
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes("no answer") || statusLower.includes("no_answer")) workStatus = "no_answer";
+            else if (statusLower.includes("call back") || statusLower.includes("callback")) workStatus = "callback";
+            else if (statusLower.includes("follow up") || statusLower.includes("follow_up")) workStatus = "follow_up";
+            else if (statusLower.includes("not interest")) workStatus = "not_interested";
+            else if (statusLower.includes("sold") || statusLower.includes("done")) workStatus = "done_deal";
+            else if (callbackAt) workStatus = "callback";
+
+            return {
+              customerName: name,
+              email,
+              phone,
+              assignedAgent: callOwner,
+              customerNote: subject,
+              callbackAt,
+              workStatus,
+              address,
+            };
+          });
+
+        if (mapped.length === 0) {
+          toast.error("No valid rows found. Expected column: Full Name");
+          return;
+        }
+        toast.info(`Importing ${mapped.length} leads...`);
+        importLeadsMutation.mutate({ leads: mapped });
+      },
+      error: (err) => toast.error(`CSV parse error: ${err.message}`),
+    });
+    // Reset input so same file can be re-uploaded
+    e.target.value = "";
+  };
 
   type Lead = NonNullable<typeof leadsData>["leads"][number];
   const allLeads: Lead[] = useMemo(
@@ -597,6 +679,21 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-800">
+          {!user?.team && (
+            <>
+              <Button onClick={() => csvInputRef.current?.click()} className="bg-purple-600 hover:bg-purple-700 text-white font-bold flex items-center gap-2 h-9 px-4 text-sm">
+                <Upload size={14} />
+                Import CSV
+              </Button>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleCsvImport}
+              />
+            </>
+          )}
           <Button onClick={() => setProtocolOpen(true)} className="bg-[#FF6B00] hover:bg-[#E55F00] text-white font-bold flex items-center gap-2 h-9 px-4 text-sm">
             <BookOpen size={14} />
             Usage Protocol
