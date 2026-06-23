@@ -3112,6 +3112,7 @@ export default function Workspace() {
   // How to Use guide modal
   const [showGuide, setShowGuide] = useState(false);
   const [pitchDropOpen, setPitchDropOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // WhatsApp unread badge — poll conversations to get total unread count
   const { data: waConversations } = trpc.whatsapp.conversations.useQuery(undefined, {
@@ -4263,8 +4264,16 @@ export default function Workspace() {
 
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>❓ Having Issues?</h3>
+                <div style={{ background: "#eff6ff", border: "2px solid #93c5fd", borderRadius: 8, padding: "12px 16px", marginBottom: 10 }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: "#1d4ed8", fontSize: 14 }}>🔵 Click-to-Call not working?</p>
+                  <ol style={{ paddingLeft: 20, margin: "6px 0 0", fontSize: 13 }}>
+                    <li>Look at the <strong>bottom right corner</strong> of your screen. See the blue button "Refresh Click to Call"? <strong>Click it.</strong> Try calling again.</li>
+                    <li>Still not working? Click the <strong>3 dots ⋮</strong> at the very top right of Chrome → click "Delete browsing data" → set Time Range to "All time" → tick "Cookies" and "Cached images" → click "Delete data".</li>
+                    <li>Close Chrome completely (the X at the top right — not just the tab!). Wait 5 seconds. Open Chrome again. Go back to Workspace. Try calling.</li>
+                    <li>Still broken? Make sure CloudTalk app is open and status is green (Available). If nothing works — tell your manager.</li>
+                  </ol>
+                </div>
                 <ul style={{ paddingLeft: 20, margin: 0 }}>
-                  <li><strong>Phone not ringing?</strong> — Check CloudTalk app is open and status is "Available"</li>
                   <li><strong>Can't see contacts?</strong> — Your manager hasn't assigned data to you yet. Ask them.</li>
                   <li><strong>Payment not working?</strong> — Contact your manager immediately.</li>
                   <li><strong>System slow?</strong> — Refresh the page (F5 or Ctrl+R).</li>
@@ -4283,6 +4292,34 @@ export default function Workspace() {
                 </ol>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Floating Need Help Button ── */}
+      <button
+        onClick={() => setHelpOpen(!helpOpen)}
+        style={{ position: "fixed", bottom: 80, left: 20, zIndex: 9998, background: "#dc2626", color: "#fff", border: "none", borderRadius: 30, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(220,38,38,0.4)", display: "flex", alignItems: "center", gap: 6 }}
+      >
+        ❓ Need Help?
+      </button>
+
+      {helpOpen && (
+        <div style={{ position: "fixed", bottom: 130, left: 20, zIndex: 9999, background: "#fff", borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.25)", padding: 20, width: 360, maxHeight: "60vh", overflowY: "auto" }}>
+          <button onClick={() => setHelpOpen(false)} style={{ position: "absolute", top: 8, right: 12, background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#6b7280" }}>✕</button>
+          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "#1d4ed8" }}>🔵 Click-to-Call Not Working?</h3>
+          <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+            <p style={{ margin: "0 0 10px", fontWeight: 600 }}>Step 1:</p>
+            <p style={{ margin: "0 0 10px" }}>Look at the <strong>bottom right corner</strong> of your screen. See the blue button that says "Refresh Click to Call"? Click it. Try calling again.</p>
+            <p style={{ margin: "0 0 10px", fontWeight: 600 }}>Step 2 (if Step 1 didn't work):</p>
+            <p style={{ margin: "0 0 10px" }}>Click the <strong>3 dots ⋮</strong> at the very top right corner of Chrome. Click "Delete browsing data". Set Time Range to "All time". Tick "Cookies and other site data" and "Cached images and files". Click the blue "Delete data" button.</p>
+            <p style={{ margin: "0 0 10px", fontWeight: 600 }}>Step 3:</p>
+            <p style={{ margin: "0 0 10px" }}>Close Chrome completely (click the X at the very top right — not just the tab!). Wait 5 seconds. Open Chrome again. Go back to your Workspace. Try calling.</p>
+            <p style={{ margin: "0 0 10px", fontWeight: 600 }}>✅ Still not working?</p>
+            <p style={{ margin: 0 }}>Make sure CloudTalk is open and your status is green (Available). If nothing works — tell your manager.</p>
+          </div>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>For any other question click the purple <strong>Maximus</strong> button or the orange <strong>Protocol</strong> button at the top of your page.</p>
           </div>
         </div>
       )}

@@ -1792,9 +1792,21 @@ This is the personal sales station for Opening agents. Every contact assigned to
 2. Log in with credentials from manager
 3. Set status to "Available" (green dot)
 4. Click "Call" in system → CloudTalk rings YOUR phone first → pick up → connects to customer
-- If click-to-call not working: Step 1 = click the BLUE "Refresh Click to Call" button in the bottom right corner of your screen. Step 2 = if still not working you need to clear your browser cache and cookies. Here is how: click the 3 dots in the top right corner of your Chrome browser > click "Delete browsing data" > set Time Range to "All time" > make sure "Cookies" and "Cached images and files" are both ticked > click "Delete data". Step 3 = close Chrome completely (not just the tab — close the whole browser) and reopen the application. That fixes it 99% of the time.
-- Also check CloudTalk app is open + status set to Available (green dot)
-(Agent might ask: "how to connect phone", "cloudtalk setup", "phone not ringing", "how to call", "call not working", "click to call not working", "refresh click to call", "dialler not working", "can't make calls", "calls not connecting")
+- If click-to-call not working follow these steps one by one:
+
+🔵 STEP 1 — Refresh Click to Call:
+Look at the bottom right corner of your screen. You will see a blue button that says "Refresh Click to Call". Click it. Now try calling again. Did it work? Great you are done! If not go to Step 2.
+
+⋮ STEP 2 — Clear your browser history:
+Look at the very top right corner of Chrome. See the 3 little dots ⋮ ? Click them. A menu drops down. Click "Delete browsing data". A box pops up. At the top where it says "Time range" change it to "All time". Make sure these two boxes are ticked: "Cookies and other site data" and "Cached images and files". Now click the blue "Delete data" button. Done!
+
+🔄 STEP 3 — Close and reopen:
+Close Chrome completely. Not just the tab — close the WHOLE browser (click the X at the very top right). Wait 5 seconds. Open Chrome again. Go back to your Workspace. Try calling. It should work now!
+
+✅ STILL NOT WORKING?
+Make sure your CloudTalk app is open on your phone/computer and your status is set to Available (the green dot). If it still does not work after all these steps let your manager know.
+
+(Agent might ask: "how to connect phone", "cloudtalk setup", "phone not ringing", "how to call", "call not working", "click to call not working", "refresh click to call", "dialler not working", "can't make calls", "calls not connecting", "it wont let me call", "nothing happens when I click call")
 
 **MAKING A CALL:**
 1. Click contact from list (left side)
