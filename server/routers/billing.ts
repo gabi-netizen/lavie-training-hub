@@ -1030,6 +1030,7 @@ export const billingRouter = router({
       z.object({
         subscriptionId: z.string(),
         assignedAgent: z.string().nullable(),
+        leadType: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -1076,7 +1077,7 @@ export const billingRouter = router({
             customerName: sub?.customerName || "Unknown",
             email: sub?.email || null,
             phone: sub?.phone || null,
-            leadType: "Cancel Live Sub (Cycle 1)",
+            leadType: input.leadType || "Live Sub",
             assignedAgent: input.assignedAgent,
             assignedAt: Date.now(),
             workStatus: "assigned",

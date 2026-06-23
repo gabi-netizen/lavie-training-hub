@@ -779,10 +779,16 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                         value={(sub as any).retentionAgent || ""}
                         onChange={(e) => {
                           const val = e.target.value;
+                          // Determine lead type from context
+                          const inferredLeadType = statusFilter === "expired" ? "End of Instalment" 
+                            : sub.status === "cancelled" ? "Cancel Live Sub (Cycle 1)" 
+                            : sub.status === "live" ? "Live Sub" 
+                            : sub.status === "trial" ? "Pre-Cycle-Cancelled" 
+                            : "Live Sub";
                           if (val === "__unassign__") {
                             reassignRetention.mutate({ subscriptionId: sub.subscriptionId, assignedAgent: null });
                           } else if (val) {
-                            reassignRetention.mutate({ subscriptionId: sub.subscriptionId, assignedAgent: val });
+                            reassignRetention.mutate({ subscriptionId: sub.subscriptionId, assignedAgent: val, leadType: inferredLeadType });
                           }
                         }}
                         className={`w-full px-1 py-0.5 border rounded text-xs cursor-pointer ${
