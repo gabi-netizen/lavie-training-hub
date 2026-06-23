@@ -697,6 +697,7 @@ export default function SupportTickets() {
 
   // Multi-select
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [protocolOpen, setProtocolOpen] = useState(false);
 
   const toggleSelect = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1081,6 +1082,14 @@ export default function SupportTickets() {
                 </>
               )}
             </div>
+            <button
+              onClick={() => setProtocolOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#FF6B00", color: "#ffffff", transition: "all 0.15s" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#e55f00"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#FF6B00"; }}
+            >
+              <BookOpen className="h-3.5 w-3.5" /> Protocol
+            </button>
             <Button
               variant="outline"
               size="sm"
@@ -1722,6 +1731,190 @@ export default function SupportTickets() {
           </div>
         </>
       )}
+      {/* ── Protocol Modal ── */}
+      {protocolOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 750, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>
+            <button onClick={() => setProtocolOpen(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1f2937", marginBottom: 20 }}>📖 Support Tickets — Usage Protocol</h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>What is Support Tickets?</h3>
+                <p>This is your email inbox for customer support. Every email from customers (cancellations, complaints, questions, payment issues) arrives here automatically. Your job is to read each ticket, reply to the customer, and resolve it. Think of it as your to-do list — every open ticket needs attention.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#2563eb", marginBottom: 6 }}>Navigation Tabs (Top bar)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Tickets</strong> — Main inbox. All customer emails land here. This is where you spend most of your time.</li>
+                  <li><strong>Retention</strong> — Quick form to send a lead to the Retention team (Rob/Guy/James). Use when a customer wants to cancel.</li>
+                  <li><strong>Maximus Aurelius</strong> — AI assistant. Ask him anything about a customer (payment history, subscription status, etc).</li>
+                  <li><strong>Messages</strong> — (Managers only) WhatsApp conversations with customers.</li>
+                  <li><strong>Senders</strong> — (Admin only) Blocked email addresses. Emails from blocked senders won't create tickets.</li>
+                  <li><strong>Subjects</strong> — (Admin only) Blocked subject keywords. Emails with these words in subject won't create tickets.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#7c3aed", marginBottom: 6 }}>Summary Cards (Top of page)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Open Tickets</strong> — Total tickets waiting for action. Your goal: keep this number LOW.</li>
+                  <li><strong>High Priority</strong> — Urgent tickets (complaints, refund requests, angry customers). Handle these FIRST.</li>
+                  <li><strong>Awaiting Response</strong> — Tickets where you replied and are waiting for the customer to answer back.</li>
+                  <li><strong>Resolved Today</strong> — How many tickets you closed today. Your daily score!</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0d9488", marginBottom: 6 }}>Filters (Below summary cards)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Search</strong> — Type customer name, email, or keywords from the subject to find a ticket instantly.</li>
+                  <li><strong>Categories</strong> — Filter by type: Cancellation, Payment Issue, Product Question, Complaint, Shipping, Address Change, General, Refund Request, Positive Feedback, System/Automated.</li>
+                  <li><strong>Priorities</strong> — All / High / Medium / Low. High = urgent (complaints, refunds). Low = automated system emails.</li>
+                  <li><strong>Status</strong> — Active (excl. Closed) shows open + in_progress + awaiting + customer_replied. Or filter: Open, In Progress, Awaiting Response, Customer Replied, Resolved, Closed.</li>
+                  <li><strong>Time</strong> — All Time, Today, Last 7 Days, This Month, Last Month.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>Ticket Statuses (What each colour means)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong style={{ color: "#2563eb" }}>Open</strong> — New ticket, nobody touched it yet. Needs your attention!</li>
+                  <li><strong style={{ color: "#7c3aed" }}>In Progress</strong> — You're working on it (auto-set when you reply).</li>
+                  <li><strong style={{ color: "#ca8a04" }}>Awaiting Response</strong> — You replied, waiting for customer to answer.</li>
+                  <li><strong style={{ color: "#ea580c" }}>Customer Replied</strong> — Customer answered! Goes to top of list. Handle it now.</li>
+                  <li><strong style={{ color: "#16a34a" }}>Resolved</strong> — Issue fixed, customer happy. Done!</li>
+                  <li><strong style={{ color: "#6b7280" }}>Closed</strong> — Permanently closed. Won't show in active view.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#ea580c", marginBottom: 6 }}>Reading a Ticket (Click to expand)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click any ticket row to expand it.</li>
+                  <li>You'll see: sender name, email, priority badge, received date, category badge.</li>
+                  <li>Below that: the <strong>Conversation</strong> — the full email thread (customer messages + your replies).</li>
+                  <li>Most recent message at the bottom.</li>
+                  <li>Customer messages = left side. Your replies = right side (blue).</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#16a34a", marginBottom: 6 }}>Replying to a Ticket</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Expand the ticket (click on it).</li>
+                  <li>Click the <strong>"← Reply"</strong> button (top left of expanded ticket).</li>
+                  <li>A text box appears at the bottom.</li>
+                  <li>Type your reply.</li>
+                  <li>Click <strong>"Send Reply"</strong>.</li>
+                  <li>Your reply is sent to the customer's email AND saved in the conversation.</li>
+                  <li>Status auto-changes to "Awaiting Response".</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>⚠️ Replies are sent from trial@lavielabs.com. The customer sees it as a normal email reply.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#b45309", marginBottom: 6 }}>Bulk Actions (Multiple tickets at once)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Tick the checkbox on the left of each ticket you want to action.</li>
+                  <li>Or tick the top checkbox to select ALL visible tickets.</li>
+                  <li>A bar appears showing "X selected" with buttons:</li>
+                </ol>
+                <ul style={{ paddingLeft: 40, margin: "6px 0 0" }}>
+                  <li><strong>Resolve</strong> — Mark all selected as Resolved (green).</li>
+                  <li><strong>Close</strong> — Close all selected permanently.</li>
+                  <li><strong>Delete</strong> — Delete all selected (asks for confirmation!).</li>
+                  <li><strong>Cancel</strong> — Deselect everything.</li>
+                </ul>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Use bulk Resolve for system/automated emails you don't need to reply to.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#be185d", marginBottom: 6 }}>Block Sender / Block Subject</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Block Sender</strong> (red button inside ticket) — Blocks that email address forever. Future emails from them won't create tickets.</li>
+                  <li><strong>Block Subject</strong> (orange button inside ticket) — Blocks a keyword in the subject. Any email with that keyword won't create a ticket.</li>
+                  <li>Use Block Sender for spam. Use Block Subject for recurring system emails you don't need (e.g. "Received Online Payment").</li>
+                  <li>Manage blocked lists in the "Senders" and "Subjects" tabs (admin only).</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#9333ea", marginBottom: 6 }}>Sending to Retention (Customer wants to cancel)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click the <strong>"Retention"</strong> tab (green button in top bar).</li>
+                  <li>Fill in: Customer Name, Email, Phone (if you have it), Note (reason for cancellation).</li>
+                  <li>Click <strong>"Send to Retention"</strong>.</li>
+                  <li>The lead appears in the Retention Command Centre for Rob/Guy/James to call.</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>⚠️ Use this when a customer says they want to cancel their subscription. Don't cancel it yourself — send to Retention and let them try to save it!</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0284c7", marginBottom: 6 }}>Using Maximus (AI Assistant)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click the <strong>"Maximus Aurelius"</strong> tab (purple button).</li>
+                  <li>Type your question in plain English.</li>
+                  <li>He can look up: payment history, subscription status, WhatsApp messages, email logs, Zoho Billing data, Stripe charges.</li>
+                </ol>
+                <p style={{ marginTop: 8 }}>Examples of what to ask:</p>
+                <ul style={{ paddingLeft: 20, margin: "4px 0 0" }}>
+                  <li>"Did Jane Smith pay?" → Shows Stripe charges</li>
+                  <li>"What subscription does john@email.com have?" → Shows Zoho Billing data</li>
+                  <li>"Generate zoho import for sarah@email.com" → Creates CSV for Zoho Billing</li>
+                  <li>"How many deals did Rob close this week?" → Shows retention stats</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>Categories Explained</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Cancellation</strong> — Customer wants to cancel. Send to Retention!</li>
+                  <li><strong>Payment Issue</strong> — Card declined, double charge, wrong amount.</li>
+                  <li><strong>Product Question</strong> — Asking about ingredients, usage, which product to use.</li>
+                  <li><strong>Complaint</strong> — Unhappy customer. Handle with care, be empathetic.</li>
+                  <li><strong>Shipping</strong> — Where is my order? Tracking? Delivery issue.</li>
+                  <li><strong>Address Change</strong> — Customer moved, needs new delivery address.</li>
+                  <li><strong>Refund Request</strong> — Wants money back. Check with manager before refunding.</li>
+                  <li><strong>Positive Feedback</strong> — Happy customer! Reply with thanks.</li>
+                  <li><strong>System/Automated</strong> — Auto-generated (Zoho Billing, payment notifications). Usually resolve in bulk.</li>
+                  <li><strong>General</strong> — Doesn't fit other categories.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>Priority Rules</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>High Priority</strong> — Complaints, refund requests, angry customers, words like "scam", "fraud", "legal". Handle IMMEDIATELY.</li>
+                  <li><strong>Medium Priority</strong> — Cancellations, payment issues, shipping problems. Handle same day.</li>
+                  <li><strong>Low Priority</strong> — General questions, positive feedback, system emails. Handle when you can.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#16a34a", marginBottom: 6 }}>"Customer Replied" — What to do</h3>
+                <p>When a ticket turns <strong style={{ color: "#ea580c" }}>orange (Customer Replied)</strong>, it means the customer answered your email. It jumps to the top of the list. Open it, read their reply, and respond. Don't leave it sitting there!</p>
+              </div>
+
+              <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 10, padding: "14px 18px", marginTop: 4 }}>
+                <p style={{ margin: 0, fontWeight: 700, color: "#166534", fontSize: 15 }}>💡 Daily Routine for Support:</p>
+                <ol style={{ paddingLeft: 20, margin: "8px 0 0" }}>
+                  <li>Start with <strong>High Priority</strong> tickets — filter by priority.</li>
+                  <li>Then check <strong>Customer Replied</strong> — they're waiting for you!</li>
+                  <li>Work through <strong>Open</strong> tickets oldest first.</li>
+                  <li>Bulk-resolve <strong>System/Automated</strong> emails you don't need.</li>
+                  <li>If a customer wants to cancel → Send to Retention tab.</li>
+                  <li>If unsure about something → Ask Maximus or your manager.</li>
+                  <li>End of day: check "Resolved Today" card — aim for 20+ per day!</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
