@@ -4102,6 +4102,25 @@ export default function Workspace() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
 
               <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>❓ Having Issues?</h3>
+                <div style={{ background: "#eff6ff", border: "2px solid #93c5fd", borderRadius: 8, padding: "12px 16px", marginBottom: 10 }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: "#1d4ed8", fontSize: 14 }}>🔵 Click-to-Call not working?</p>
+                  <ol style={{ paddingLeft: 20, margin: "6px 0 0", fontSize: 13 }}>
+                    <li>Look at the <strong>bottom right corner</strong> of your screen. See the blue button "Refresh Click to Call"? <strong>Click it.</strong> Try calling again.</li>
+                    <li>Still not working? Click the <strong>3 dots ⋮</strong> at the very top right of Chrome → click "Delete browsing data" → set Time Range to "All time" → tick "Cookies" and "Cached images" → click "Delete data".</li>
+                    <li>Close Chrome completely (the X at the top right — not just the tab!). Wait 5 seconds. Open Chrome again. Go back to Workspace. Try calling.</li>
+                    <li>Still broken? Make sure CloudTalk app is open and status is green (Available). If nothing works — tell your manager.</li>
+                  </ol>
+                </div>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Can't see contacts?</strong> — Your manager hasn't assigned data to you yet. Ask them.</li>
+                  <li><strong>Payment not working?</strong> — Contact your manager immediately.</li>
+                  <li><strong>System slow?</strong> — Refresh the page (F5 or Ctrl+R).</li>
+                  <li><strong>WhatsApp won't send?</strong> — Check the 24-hour rule above. You might need to use a template first.</li>
+                </ul>
+              </div>
+
+              <div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>What is the Opening Workspace?</h3>
                 <p>This is your personal sales station. Every contact assigned to you appears here. You call them, pitch the product, take payment, and move to the next one. Everything you need is on one screen — contact list on the left, script on the right, actions in the middle.</p>
               </div>
@@ -4262,24 +4281,7 @@ export default function Workspace() {
                 <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Just type your question in plain English — he understands everything!</p>
               </div>
 
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>❓ Having Issues?</h3>
-                <div style={{ background: "#eff6ff", border: "2px solid #93c5fd", borderRadius: 8, padding: "12px 16px", marginBottom: 10 }}>
-                  <p style={{ margin: 0, fontWeight: 700, color: "#1d4ed8", fontSize: 14 }}>🔵 Click-to-Call not working?</p>
-                  <ol style={{ paddingLeft: 20, margin: "6px 0 0", fontSize: 13 }}>
-                    <li>Look at the <strong>bottom right corner</strong> of your screen. See the blue button "Refresh Click to Call"? <strong>Click it.</strong> Try calling again.</li>
-                    <li>Still not working? Click the <strong>3 dots ⋮</strong> at the very top right of Chrome → click "Delete browsing data" → set Time Range to "All time" → tick "Cookies" and "Cached images" → click "Delete data".</li>
-                    <li>Close Chrome completely (the X at the top right — not just the tab!). Wait 5 seconds. Open Chrome again. Go back to Workspace. Try calling.</li>
-                    <li>Still broken? Make sure CloudTalk app is open and status is green (Available). If nothing works — tell your manager.</li>
-                  </ol>
-                </div>
-                <ul style={{ paddingLeft: 20, margin: 0 }}>
-                  <li><strong>Can't see contacts?</strong> — Your manager hasn't assigned data to you yet. Ask them.</li>
-                  <li><strong>Payment not working?</strong> — Contact your manager immediately.</li>
-                  <li><strong>System slow?</strong> — Refresh the page (F5 or Ctrl+R).</li>
-                  <li><strong>WhatsApp won't send?</strong> — Check the 24-hour rule above. You might need to use a template first.</li>
-                </ul>
-              </div>
+
 
               <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 10, padding: "14px 18px", marginTop: 4 }}>
                 <p style={{ margin: 0, fontWeight: 700, color: "#166534", fontSize: 15 }}>💡 Daily Routine Tips:</p>
