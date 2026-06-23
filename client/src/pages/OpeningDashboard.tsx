@@ -34,6 +34,7 @@ import {
   Search,
   Check,
   ChevronsUpDown,
+  BookOpen,
 } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -440,6 +441,7 @@ export default function OpeningDashboard() {
   const [editTrialsAgent, setEditTrialsAgent] = useState<{ agentName: string; currentTrials: number } | null>(null);
   // ── Add Agent modal (admin only) ──
   const [showAddAgent, setShowAddAgent] = useState(false);
+  const [protocolOpen, setProtocolOpen] = useState(false);
   const [newAgentName, setNewAgentName] = useState("");
   const addAgentMutation = trpc.openingDashboard.upsertAgentDailyHours.useMutation({
     onSuccess: () => {
@@ -616,6 +618,14 @@ export default function OpeningDashboard() {
             </p>
           </div>
         </div>
+        <button
+          onClick={() => setProtocolOpen(true)}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", background: "#FF6B00", color: "#ffffff", height: 36 }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#e55f00"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#FF6B00"; }}
+        >
+          <BookOpen size={14} /> Protocol
+        </button>
       </div>
       <div className="px-4 sm:px-6 py-4 space-y-5">
         {/* ── Filters ── */}
@@ -1355,6 +1365,114 @@ export default function OpeningDashboard() {
           </div>
         </div>
       )}
+
+      {/* ── Protocol Modal ── */}
+      {protocolOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 750, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>
+            <button onClick={() => setProtocolOpen(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1f2937", marginBottom: 20 }}>📊 Opening Dashboard — Usage Protocol</h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>What is the Opening Dashboard?</h3>
+                <p>This is the performance tracking page for the Opening (sales) team. It shows how many trials each agent opened and their conversion rates. Managers use this to monitor team performance and identify top performers.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#2563eb", marginBottom: 6 }}>Filters (Top of page)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Month</strong> — Select which month to view. Default = current month.</li>
+                  <li><strong>Agent</strong> — Multi-select checkboxes. Filter by specific agents or view all.</li>
+                  <li><strong>Date Range</strong> — Today / Yesterday / This Week / Last 7 Days / This Month / Previous Month / Last 3 Months / Custom Date.</li>
+                  <li><strong>Reset</strong> — Clear all filters back to defaults.</li>
+                  <li><strong>+ Add Agent</strong> — (Admin only) Add a new agent to the dashboard.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#7c3aed", marginBottom: 6 }}>Total Trials Banner (Purple)</h3>
+                <p>Big number showing total trials opened in the selected period. This is the gross count of all £4.95 trials created by the team.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0d9488", marginBottom: 6 }}>Summary Cards (6 cards below banner)</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Retention Help %</strong> — Percentage of trials saved by the Retention team. Click to see list.</li>
+                  <li><strong>Still in Trial</strong> — Customers still in their 21-day trial period. Click to see list.</li>
+                  <li><strong>Matured</strong> — Trials that passed 21 days (no longer in trial). Click to see list.</li>
+                  <li><strong>Conversion Rate %</strong> — (Converted / Matured) × 100. Click to see converted customers.</li>
+                  <li><strong>Best Agent</strong> — Agent with highest conversion rate this period.</li>
+                  <li><strong>Cancelled After Payment</strong> — Customers who paid £44.90 but then cancelled. Click to see list.</li>
+                </ul>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>💡 Click any card to see the full list of customers in that category grouped by agent.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>Agent Performance Table</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>#</strong> — Rank (sorted by trials highest first by default).</li>
+                  <li><strong>Agent</strong> — Agent name. Click the expand arrow to see breakdown.</li>
+                  <li><strong>Daily Openings</strong> — Trials opened today (or in selected date range).</li>
+                  <li><strong>W.Days</strong> — Working days from Hubstaff. Admin can edit with pencil icon.</li>
+                  <li><strong>Ave/Day</strong> — Average trials per working day. Green = 3+ (good). Red = below target.</li>
+                  <li><strong>Trials</strong> — Total trials this period. Admin can override with pencil icon.</li>
+                  <li><strong>Matured</strong> — How many of their trials passed the 21-day trial period.</li>
+                  <li><strong>Converted</strong> — How many became paying customers (Live Sub + Saved + Cancelled After Payment).</li>
+                  <li><strong>Conv%</strong> — Conversion rate. Green = good. Higher is better.</li>
+                  <li><strong>Lost</strong> — Customers who cancelled without paying. Red number.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#ea580c", marginBottom: 6 }}>Expanding an Agent Row</h3>
+                <p>Click the arrow next to any agent name to expand their row. You will see a detailed breakdown:</p>
+                <ul style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                  <li><strong>Live Sub</strong> — Paying £44.90/60 days (success!)</li>
+                  <li><strong>Saved by Retention</strong> — Cancelled trial but Retention team saved them</li>
+                  <li><strong>Cancelled After Payment</strong> — Paid £44.90 then cancelled (still counts as conversion)</li>
+                  <li><strong>Cancelled Before Payment</strong> — Cancelled during trial (loss)</li>
+                  <li><strong>Dunning</strong> — Card declined on £44.90 charge</li>
+                  <li><strong>Still in Trial</strong> — Still within 21-day trial</li>
+                </ul>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Click any category number to see the full list of customers.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#16a34a", marginBottom: 6 }}>Admin Features</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Edit W.Days (pencil icon)</strong> — Manually adjust working days for an agent.</li>
+                  <li><strong>Edit Trials (pencil icon)</strong> — Override the trial count from Zoho with a manual number.</li>
+                  <li><strong>+ Add Agent</strong> — Add a new agent to the dashboard.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#b45309", marginBottom: 6 }}>Key Metrics Explained</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Conversion Rate</strong> = (Live Sub + Saved by Retention + Cancelled After Payment) / Matured × 100</li>
+                  <li><strong>Matured</strong> = Total Trials - Still in Trial</li>
+                  <li><strong>Target Ave/Day</strong> = 3+ trials per day is good. Below 2.7 needs attention.</li>
+                  <li><strong>Working Day</strong> = 7+ hours on Hubstaff = 1 full day. Less = proportional (e.g. 4h = 0.5 day)</li>
+                </ul>
+              </div>
+
+              <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 10, padding: "14px 18px", marginTop: 4 }}>
+                <p style={{ margin: 0, fontWeight: 700, color: "#166534", fontSize: 15 }}>💡 Tips:</p>
+                <ul style={{ paddingLeft: 20, margin: "8px 0 0" }}>
+                  <li>Check this dashboard daily to track team performance.</li>
+                  <li>Click summary cards to drill down into specific customer lists.</li>
+                  <li>Use Date Range filter to compare performance across different periods.</li>
+                  <li>Expand agent rows to understand WHY conversion is high or low.</li>
+                  <li>Ave/Day below 3 = agent might need more data or coaching.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
