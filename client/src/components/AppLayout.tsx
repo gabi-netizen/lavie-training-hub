@@ -1,5 +1,6 @@
 import TopNav from "./TopNav";
 import FloatingDialler from "./FloatingDialler";
+import MessageNotifications from "./MessageNotifications";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </main>
       {/* Persistent floating CloudTalk widget (admin only) */}
       <FloatingDialler />
+      {/* Global message notifications (WhatsApp/SMS) */}
+      <MessageNotifications />
     </div>
   );
 }

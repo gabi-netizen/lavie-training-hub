@@ -1621,4 +1621,81 @@ export const whatsappRouter = router({
 
       return { success: true };
     }),
+
+  // ─── Poll for new inbound messages (for toast notifications) ─────────────
+  // Returns inbound messages received after the given timestamp for the current user's assigned contacts
+  pollNewMessages: protectedProcedure
+    .input(z.object({ since: z.number() })) // unix timestamp in ms
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) return { messages: [] };
+
+      const userId = ctx.user.id;
+      const sinceDate = new Date(input.since);
+
+      // Get contacts assigned to this user (via conversation assignments or contact.assignedUserId)
+      const assignedContacts = await db
+        .select({ contactId: whatsappConversationAssignments.contactId })
+        .from(whatsappConversationAssignments)
+        .where(eq(whatsappConversationAssignments.assignedUserId, userId));
+
+      const contactsFromTable = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(eq(contacts.assignedUserId, userId));
+
+      const assignedContactIds = new Set([
+        ...assignedContacts.map((r) => r.contactId),
+        ...contactsFromTable.map((r) => r.id),
+      ]);
+
+      if (assignedContactIds.size === 0) return { messages: [] };
+
+      // Get inbound messages since timestamp for these contacts
+      const contactIdArray = Array.from(assignedContactIds);
+      const newMessages = await db
+        .select({
+          id: whatsappMessages.id,
+          contactId: whatsappMessages.contactId,
+          body: whatsappMessages.body,
+          channel: whatsappMessages.channel,
+          fromNumber: whatsappMessages.fromNumber,
+          createdAt: whatsappMessages.createdAt,
+        })
+        .from(whatsappMessages)
+        .where(
+          and(
+            eq(whatsappMessages.direction, "inbound"),
+            sql`${whatsappMessages.createdAt} > ${sinceDate}`,
+            sql`${whatsappMessages.contactId} IN (${sql.join(contactIdArray.map(id => sql`${id}`), sql`, `)})`
+          )
+        )
+        .orderBy(desc(whatsappMessages.createdAt))
+        .limit(10);
+
+      // Get contact names for the messages
+      const contactIds = [...new Set(newMessages.map(m => m.contactId).filter(Boolean))];
+      let contactNames: Record<number, string> = {};
+      if (contactIds.length > 0) {
+        const nameRows = await db
+          .select({ id: contacts.id, name: contacts.name })
+          .from(contacts)
+          .where(sql`${contacts.id} IN (${sql.join(contactIds.map(id => sql`${id}`), sql`, `)})`);
+        for (const row of nameRows) {
+          contactNames[row.id] = row.name;
+        }
+      }
+
+      return {
+        messages: newMessages.map((m) => ({
+          id: m.id,
+          contactId: m.contactId,
+          contactName: m.contactId ? contactNames[m.contactId] || "Unknown" : "Unknown",
+          body: m.body ? m.body.substring(0, 80) : "",
+          channel: m.channel,
+          fromNumber: m.fromNumber,
+          createdAt: m.createdAt.getTime(),
+        })),
+      };
+    }),
 });
