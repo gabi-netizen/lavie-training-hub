@@ -203,8 +203,25 @@ export const customersRouter = router({
         // Parse callbackAt date
         let callbackAt: Date | null = null;
         if (row.callbackAt) {
-          const parsed = new Date(row.callbackAt);
-          if (!isNaN(parsed.getTime())) callbackAt = parsed;
+          const raw = row.callbackAt.trim();
+          // Skip obvious non-dates ("######", empty, very short numbers)
+          if (raw && raw !== "######" && !/^#+$/.test(raw)) {
+            // Try Excel serial date number (e.g. 45500 = days since 1900-01-01)
+            if (/^\d{4,5}$/.test(raw)) {
+              const serial = parseInt(raw, 10);
+              if (serial > 40000 && serial < 60000) {
+                // Excel serial date: days since 1899-12-30
+                const excelEpoch = new Date(1899, 11, 30);
+                callbackAt = new Date(excelEpoch.getTime() + serial * 86400000);
+              }
+            } else {
+              // Try standard date parsing
+              const parsed = new Date(raw);
+              if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000 && parsed.getFullYear() < 2100) {
+                callbackAt = parsed;
+              }
+            }
+          }
         }
 
         const rowData = {
