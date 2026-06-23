@@ -114,6 +114,7 @@ export function AgentPerformanceTab({ agentName }: AgentPerformanceTabProps) {
   // Lead type dot colors
   const leadTypeDotColor: Record<string, string> = {
     "Cat to Rob": COLORS.green,
+    "Gabi to Rob": "#dc2626",
     "Pre-Cycle-Cancelled": COLORS.gold,
     "Cancel Live Sub (Cycle 1)": COLORS.gold,
     "Cancel Live Sub (Cycle 2+)": COLORS.orange,

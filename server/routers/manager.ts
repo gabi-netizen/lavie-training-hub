@@ -2777,6 +2777,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       // ── Conversion by Lead Type ───────────────────────────────────────────
       const leadTypes = [
         "Cat to Rob",
+        "Gabi to Rob",
         "Pre-Cycle-Cancelled",
         "Cancel Live Sub (Cycle 1)",
         "Cancel Live Sub (Cycle 2+)",

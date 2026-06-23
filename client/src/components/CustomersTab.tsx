@@ -611,6 +611,7 @@ export function CustomersTab() {
                 >
                   <option value="">Select lead type...</option>
                   <option value="Cat to Rob">Cat to Rob</option>
+                  <option value="Gabi to Rob">Gabi to Rob</option>
                   <option value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</option>
                   <option value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</option>
                   <option value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</option>

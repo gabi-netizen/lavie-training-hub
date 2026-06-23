@@ -1414,6 +1414,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cat to Rob">Cat to Rob</SelectItem>
+                  <SelectItem value="Gabi to Rob">Gabi to Rob</SelectItem>
                   <SelectItem value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</SelectItem>
                   <SelectItem value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</SelectItem>
                   <SelectItem value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</SelectItem>

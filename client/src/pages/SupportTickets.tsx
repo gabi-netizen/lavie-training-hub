@@ -886,6 +886,7 @@ export default function SupportTickets() {
                   <SelectItem value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</SelectItem>
                   <SelectItem value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</SelectItem>
                   <SelectItem value="Cat to Rob">Cat to Rob</SelectItem>
+                  <SelectItem value="Gabi to Rob">Gabi to Rob</SelectItem>
                   <SelectItem value="Pre-Cycle-Decline">Pre-Cycle-Decline</SelectItem>
                   <SelectItem value="Hot Lead">Hot Lead</SelectItem>
                   <SelectItem value="Decline Live Sub">Decline Live Sub</SelectItem>

@@ -103,6 +103,7 @@ function getLeadTypeBadge(
 ): { bg: string; text: string; label: string; rowTint: string } {
   const map: Record<string, { bg: string; text: string; label: string; rowTint: string }> = {
     "Cat to Rob":                 { bg: "bg-[#92400e]", text: "text-white", label: "Cat to Rob",                 rowTint: "bg-white" },
+    "Gabi to Rob":                { bg: "bg-[#dc2626]", text: "text-white", label: "Gabi to Rob",                rowTint: "bg-white" },
     "Pre-Cycle-Cancelled":        { bg: "bg-[#22c55e]", text: "text-white", label: "Pre-Cycle-Cancelled",        rowTint: "bg-white" },
     "Cancel Live Sub (Cycle 1)":  { bg: "bg-[#2563eb]", text: "text-white", label: "Cancel Live Sub (Cycle 1)",  rowTint: "bg-white" },
     "Cancel Live Sub (Cycle 2+)": { bg: "bg-[#3b82f6]", text: "text-white", label: "Cancel Live Sub (Cycle 2+)", rowTint: "bg-white" },
@@ -116,6 +117,7 @@ function getLeadTypeBadge(
 
 const LEAD_TYPE_OPTIONS = [
   "Cat to Rob",
+  "Gabi to Rob",
   "Pre-Cycle-Cancelled",
   "Cancel Live Sub (Cycle 1)",
   "Cancel Live Sub (Cycle 2+)",

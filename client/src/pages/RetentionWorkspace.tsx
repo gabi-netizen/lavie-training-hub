@@ -77,6 +77,7 @@ const LEAD_TYPE_COLORS: Record<string, string> = {
   "Live Sub 14days+": "#e6cff2",
   "Live Sub 2nd+": "#e6cff2",
   "From Cat to Rob": "#92400e",
+  "Gabi to Rob": "#dc2626",
   "End of Instalment": "#f97316",
   "Duplicate": "#9ca3af",
 };
@@ -126,6 +127,7 @@ const STATUS_OPTIONS = ["new", "working", "closed", "done_deal", "retained_sub",
 
 const LEAD_TYPE_OPTIONS = [
   "Cat to Rob",
+  "Gabi to Rob",
   "Pre-Cycle-Cancelled",
   "Cancel Live Sub (Cycle 1)",
   "Cancel Live Sub (Cycle 2+)",
