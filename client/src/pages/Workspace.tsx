@@ -3700,15 +3700,14 @@ export default function Workspace() {
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
-                    background: "transparent", color: "#111827",
-                    borderBottom: "2px solid transparent",
+                    fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+                    background: "#FF6B00", color: "#ffffff",
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.10)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#e55f00"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#FF6B00"; }}
                 >
-                  <BookOpen size={14} /> How to Use
+                  <BookOpen size={14} /> Usage Protocol
                 </button>
               </div>
 
@@ -4085,98 +4084,193 @@ export default function Workspace() {
 
       {showGuide && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 750, maxHeight: "85vh", overflow: "auto", padding: "32px 36px", position: "relative" }}>
             <button onClick={() => setShowGuide(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1f2937", marginBottom: 20 }}>📖 How to Use the Workspace</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1f2937", marginBottom: 20 }}>📖 Opening Workspace — Usage Protocol</h2>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 20, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
 
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>🔌 Connecting Your Phone (CloudTalk)</h3>
-                <ol style={{ paddingLeft: 20, margin: 0 }}>
-                  <li>Download the <strong>CloudTalk Phone</strong> app on your mobile or use the desktop app</li>
-                  <li>Log in with the credentials provided by your manager</li>
-                  <li>Make sure your status is set to <strong>"Available"</strong></li>
-                  <li>When you click "Call Now" in the system, CloudTalk will ring YOUR phone first, then connect you to the customer</li>
-                </ol>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>What is the Opening Workspace?</h3>
+                <p>This is your personal sales station. Every contact assigned to you appears here. You call them, pitch the product, take payment, and move to the next one. Everything you need is on one screen — contact list on the left, script on the right, actions in the middle.</p>
               </div>
 
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📋 Today's List</h3>
-                <p>Your daily contact list appears on the left. Each contact shows their name, phone, and status. Click on a contact to load their details and start working.</p>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📞 Making a Call</h3>
-                <ol style={{ paddingLeft: 20, margin: 0 }}>
-                  <li>Click the <strong>"Call"</strong> button</li>
-                  <li>Your CloudTalk phone will ring — pick up!</li>
-                  <li>Once you answer, the system connects you to the customer</li>
-                  <li>Follow the script stages on the right panel</li>
-                </ol>
-              </div>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>⏭️ Next Button</h3>
-                <p>Click <strong>"Next"</strong> to move to the next contact in your list. If a call is currently ringing, it will automatically end the call and move you forward.</p>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📝 Saving a Call Note</h3>
-                <ol style={{ paddingLeft: 20, margin: 0 }}>
-                  <li>After the call, select the outcome (Connected, Sale, No Answer, etc.)</li>
-                  <li>Write what happened — key objections, outcome, next steps</li>
-                  <li>Click <strong>"Save Note"</strong></li>
-                  <li>The note is saved and visible to managers</li>
-                </ol>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>💬 WhatsApp / Email / SMS</h3>
-                <p>Use the action buttons below the contact details:</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#2563eb", marginBottom: 6 }}>Navigation Tabs (Top of the page)</h3>
                 <ul style={{ paddingLeft: 20, margin: 0 }}>
-                  <li><strong>WhatsApp</strong> — Opens WhatsApp with the customer's number</li>
-                  <li><strong>Email</strong> — Opens email compose or use "Send Email Template" for pre-made emails</li>
-                  <li><strong>SMS</strong> — Opens your phone's SMS app with the number</li>
+                  <li><strong>My Pitch</strong> — Your main workspace. Contact list + script + actions. This is where you spend 90% of your time.</li>
+                  <li><strong>My Callbacks</strong> — Contacts you scheduled a callback for. Shows date, time, and your note. Overdue ones appear in red.</li>
+                  <li><strong>Manager View</strong> — (Managers only) See any agent's contacts and progress.</li>
+                  <li><strong>Messages</strong> — WhatsApp AND SMS conversations. Unread count shown as a badge number.</li>
+                  <li><strong>Emails</strong> — View sent emails and send new ones to your contacts.</li>
+                  <li><strong>Full Script</strong> — The complete sales script in one page. Read it, learn it, love it.</li>
+                  <li><strong>Maximus Aurelius</strong> — Your AI assistant. Ask him anything — customer info, tips, help during calls.</li>
                 </ul>
               </div>
 
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>💳 Taking Payment (£4.95 Trial)</h3>
-                <ol style={{ paddingLeft: 20, margin: 0 }}>
-                  <li>Select the Starter Kit the customer wants</li>
-                  <li>Click <strong>"Send Payment Link"</strong> or use the payment box</li>
-                  <li>The customer receives a secure Stripe payment link</li>
-                  <li>Once paid, the status updates automatically</li>
-                </ol>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#7c3aed", marginBottom: 6 }}>Your Contact List (Left Side)</h3>
+                <p style={{ marginBottom: 8 }}>The left panel shows all your contacts for today. Here's what you see:</p>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Name & Phone</strong> — The customer's details. Click any contact to load them.</li>
+                  <li><strong>Status Badge</strong> — Shows where this contact is: Active (blue), Sold (green), Skip (grey), N/A, No Answer, Callback.</li>
+                  <li><strong>Filter Dropdown</strong> — At the top: Active, Sold, Skip, Callback, N/A, No Answer, All. Use this to see only the contacts you need.</li>
+                  <li><strong>Search Box</strong> — Type a name or phone number to find someone instantly.</li>
+                </ul>
               </div>
 
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>📅 Scheduling a Callback</h3>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0d9488", marginBottom: 6 }}>🔌 Connecting Your Phone (CloudTalk)</h3>
                 <ol style={{ paddingLeft: 20, margin: 0 }}>
-                  <li>Click the <strong>"Callback"</strong> button on the contact</li>
-                  <li>Select date and time</li>
-                  <li>The callback will appear in your "My Callbacks" tab</li>
-                  <li>You'll see a reminder when it's time to call back</li>
+                  <li>Download the <strong>CloudTalk Phone</strong> app on your mobile or use the desktop app.</li>
+                  <li>Log in with the credentials your manager gave you.</li>
+                  <li>Make sure your status is set to <strong>"Available"</strong> (green dot).</li>
+                  <li>When you click "Call" in the system — CloudTalk rings YOUR phone first. Pick up! Then it connects you to the customer.</li>
                 </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>⚠️ If your phone doesn't ring: Check CloudTalk is open and your status is Available. If still not working — tell your manager.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>📞 Making a Call</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click on a contact from your list (left side).</li>
+                  <li>Their details load in the middle panel.</li>
+                  <li>Click the big <strong>"Call"</strong> button.</li>
+                  <li>Your CloudTalk phone rings — <strong>pick up!</strong></li>
+                  <li>Once you answer, the system dials the customer automatically.</li>
+                  <li>Follow the script stages on the right panel.</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>⚠️ Don't hang up on your end! If the customer doesn't answer, wait for it to ring out or click "End Call".</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#ea580c", marginBottom: 6 }}>⏭️ Next / Skip / Sold / N/A Buttons</h3>
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  <li><strong>Next</strong> — Moves to the next contact. If a call is ringing, it ends it automatically.</li>
+                  <li><strong>Skip</strong> — Marks this contact as "Skip" (grey). You can come back to them later by clicking their name again.</li>
+                  <li><strong>Sold</strong> — Customer bought! Marks as green "Sold". Use this AFTER you've taken payment.</li>
+                  <li><strong>N/A</strong> — Wrong number, disconnected, not a real lead. Removes from your active list.</li>
+                  <li><strong>No Answer</strong> — Customer didn't pick up. You can schedule a callback or skip.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#b45309", marginBottom: 6 }}>📅 Scheduling a Callback</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click the <strong>"Callback"</strong> button on any contact.</li>
+                  <li>Pick a date: Today, Tomorrow, In 2 Days, Next Week, or Custom.</li>
+                  <li>Pick a time (15-minute intervals).</li>
+                  <li>Add a note (optional) — e.g. "Said call after 3pm".</li>
+                  <li>Click Confirm. The contact moves to your <strong>My Callbacks</strong> tab.</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>When a callback is due: You'll see a notification. Overdue callbacks show in red with an "OVERDUE" badge.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#16a34a", marginBottom: 6 }}>💬 Sending Messages (WhatsApp & SMS)</h3>
+                <p style={{ marginBottom: 8 }}>You have two ways to message a customer:</p>
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", marginBottom: 10 }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: "#166534" }}>📱 WhatsApp</p>
+                  <ol style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                    <li>Click the green WhatsApp icon on the contact.</li>
+                    <li>Pick a template from the list.</li>
+                    <li>Click to send — it goes instantly.</li>
+                  </ol>
+                  <p style={{ margin: "8px 0 0", fontSize: 12, fontWeight: 700, color: "#15803d" }}>⚠️ 24-HOUR RULE: You can ONLY start with a template. Once the customer replies, you have 24 hours to chat freely. After 24 hours of silence — must use a template again.</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#166534" }}>Simple: Template → Customer replies → Free chat 24h → Silence? Template again.</p>
+                </div>
+                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, padding: "12px 16px" }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: "#1e40af" }}>💬 SMS</p>
+                  <ol style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                    <li>Click the SMS icon (speech bubble).</li>
+                    <li>Pick a template OR write your own message.</li>
+                    <li>Click Send.</li>
+                  </ol>
+                  <p style={{ margin: "8px 0 0", fontSize: 12, color: "#1e40af" }}>No 24-hour rule — send anytime. Use when customer doesn't have WhatsApp.</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0284c7", marginBottom: 6 }}>📧 Sending Emails</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Click the Email icon on the contact.</li>
+                  <li>A big modal opens — templates on the left, preview on the right.</li>
+                  <li>Click a template to preview it (customer name fills in automatically).</li>
+                  <li>Click <strong>"Send Email"</strong> — done!</li>
+                  <li>OR click <strong>"Compose"</strong> to write your own custom email.</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>If the contact has no email address, the button will be disabled.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#7c3aed", marginBottom: 6 }}>💳 Taking Payment (£4.95 Trial)</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>Customer agrees to try the product — great!</li>
+                  <li>Select the <strong>Starter Kit</strong> they want (Matinika, Oulala, Ashkara, or combo).</li>
+                  <li>Click <strong>"Send Payment Link"</strong> — OR take card details directly in the payment box.</li>
+                  <li>If using payment link: customer gets a secure Stripe link via SMS/WhatsApp/Email.</li>
+                  <li>Once paid — status updates automatically to "Sold" ✅</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>⚠️ Always confirm the full name, email, and delivery address BEFORE taking payment!</p>
               </div>
 
               <div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>🎯 The Script Panel (Right Side)</h3>
-                <p>The right panel shows your pitch stages (1-7). Click each stage to expand it and see the script. Follow the stages in order for best results. You can customise stages by clicking the edit icon.</p>
+                <p>The right panel shows your 7-stage pitch script:</p>
+                <ol style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                  <li><strong>Introduction</strong> — Who you are, why you're calling</li>
+                  <li><strong>Qualification</strong> — Ask about their skin concerns</li>
+                  <li><strong>Magic Wand</strong> — "If you could change one thing about your skin..."</li>
+                  <li><strong>Product Pitch</strong> — Match the product to their concern</li>
+                  <li><strong>The Offer</strong> — £4.95 trial, free product, 21 days</li>
+                  <li><strong>The Close</strong> — Take payment details</li>
+                  <li><strong>Confirmation</strong> — Confirm what they're getting + usage tips</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Click each stage to expand it. Follow them in order for best results!</p>
               </div>
 
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#4338ca", marginBottom: 6 }}>❓ Having Issues?</h3>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#be185d", marginBottom: 6 }}>📝 Saving Notes</h3>
+                <ol style={{ paddingLeft: 20, margin: 0 }}>
+                  <li>After every call, write what happened in the notes area.</li>
+                  <li>Select the outcome: Connected, Sale, No Answer, Voicemail, etc.</li>
+                  <li>Click <strong>"Save Note"</strong> — it's saved and visible to managers.</li>
+                </ol>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Always save a note! Even if it's just "No answer". This helps everyone track progress.</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#9333ea", marginBottom: 6 }}>🤖 Maximus Aurelius (AI Assistant)</h3>
+                <p>Click the "Maximus Aurelius" tab to chat with your AI assistant. He can help you with:</p>
+                <ul style={{ paddingLeft: 20, margin: "6px 0 0" }}>
+                  <li>Quick customer lookups ("did this customer pay?")</li>
+                  <li>Objection handling tips during live calls</li>
+                  <li>Script suggestions for tricky situations</li>
+                  <li>How to use any feature in the workspace</li>
+                </ul>
+                <p style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>Just type your question in plain English — he understands everything!</p>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>❓ Having Issues?</h3>
                 <ul style={{ paddingLeft: 20, margin: 0 }}>
                   <li><strong>Phone not ringing?</strong> — Check CloudTalk app is open and status is "Available"</li>
-                  <li><strong>Can't see contacts?</strong> — Make sure your manager assigned contacts to you</li>
-                  <li><strong>Payment not working?</strong> — Contact your manager immediately</li>
-                  <li><strong>System slow?</strong> — Refresh the page (F5)</li>
+                  <li><strong>Can't see contacts?</strong> — Your manager hasn't assigned data to you yet. Ask them.</li>
+                  <li><strong>Payment not working?</strong> — Contact your manager immediately.</li>
+                  <li><strong>System slow?</strong> — Refresh the page (F5 or Ctrl+R).</li>
+                  <li><strong>WhatsApp won't send?</strong> — Check the 24-hour rule above. You might need to use a template first.</li>
                 </ul>
               </div>
 
               <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 10, padding: "14px 18px", marginTop: 4 }}>
-                <p style={{ margin: 0, fontWeight: 600, color: "#166534" }}>💡 Tip: If something doesn't work, don't waste time — tell your manager right away!</p>
+                <p style={{ margin: 0, fontWeight: 700, color: "#166534", fontSize: 15 }}>💡 Daily Routine Tips:</p>
+                <ol style={{ paddingLeft: 20, margin: "8px 0 0" }}>
+                  <li>Start with your <strong>Callbacks tab</strong> — call back overdue ones first.</li>
+                  <li>Then go to <strong>My Pitch</strong> and work through your active list.</li>
+                  <li>Check <strong>Messages</strong> tab every hour for customer replies.</li>
+                  <li>Save a note after EVERY call — even "No answer".</li>
+                  <li>If stuck on a call, ask <strong>Maximus</strong> for help!</li>
+                </ol>
               </div>
             </div>
           </div>
