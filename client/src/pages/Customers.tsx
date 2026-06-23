@@ -138,8 +138,8 @@ function mapCsvRow(row: Record<string, string>) {
   const combinedName = forename && surname
     ? `${forename} ${surname}`.trim()
     : forename || surname;
-  // "Customers Name" is Zoho's full-name column; fall back to combined parts
-  const name = get("Customers Name") || combinedName || find("fullname") || "";
+  // "Customers Name" is Zoho's full-name column; "Full Name" is another common Zoho export column
+  const name = get("Customers Name") || get("Full Name") || combinedName || find("fullname", "full name") || "";
 
   // ── Address: Zoho Mailing columns take priority, then purchased-data columns ──
   const zohoAddrParts = [
