@@ -617,6 +617,7 @@ export default function PhoneNumbers() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<PhoneStatus | "all" | "agents">("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [protocolOpen, setProtocolOpen] = useState(false);
   const [newNumber, setNewNumber] = useState("");
   const [newCloudtalkId, setNewCloudtalkId] = useState("");
   const [newNotes, setNewNotes] = useState("");
@@ -696,10 +697,15 @@ export default function PhoneNumbers() {
             <p className="text-sm text-gray-500">Manage the team's number pool</p>
           </div>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
-          <Plus size={16} />
-          Add Number
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setProtocolOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+            Usage Protocol
+          </Button>
+          <Button onClick={() => setAddOpen(true)} className="flex items-center gap-2">
+            <Plus size={16} />
+            Add Number
+          </Button>
+        </div>
       </div>
 
       {/* Hiya Sync Panel */}
@@ -810,6 +816,82 @@ export default function PhoneNumbers() {
           </CardContent>
         </Card>
       )}
+
+      {/* Usage Protocol dialog */}
+      <Dialog open={protocolOpen} onOpenChange={setProtocolOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Phone Numbers — Usage Protocol</DialogTitle></DialogHeader>
+          <div className="space-y-5 py-2 text-sm text-gray-800">
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Overview</h3>
+              <p>Numbers are split into two categories:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li><strong>Branded Calling</strong> — Premium service via Hiya API. The recipient sees "Lavie Labs" on their screen instead of an unknown number. Increases answer rates by 30–50%. <span className="text-red-600 font-medium">Costs money per number.</span></li>
+                <li><strong>Spam Protection</strong> — Local management only. Numbers tracked for rotation and spam monitoring. No external API. <span className="text-green-700 font-medium">Free.</span></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Rules & Approval</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Spam Protection</strong> — Any admin can add. No approval needed.</li>
+                <li><strong>Branded Calling</strong> — <span className="text-red-600 font-bold">ONLY with Gabi's explicit approval.</span> Each number costs money monthly.</li>
+                <li>Assigning, releasing, marking as spam, deleting — any admin, no approval needed.</li>
+                <li>The green shield button (Register with Hiya) — only for Branded numbers, only with Gabi's approval.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">How to Add a Number</h3>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Click <strong>"Add Number"</strong> (top right)</li>
+                <li>Enter the phone number in international format (e.g. +447893942312)</li>
+                <li>Select <strong>Category</strong>:
+                  <ul className="list-disc pl-5 mt-1">
+                    <li><strong>Branded Calling (Hiya API)</strong> — ONLY if Gabi approved</li>
+                    <li><strong>Spam Protection (Local only)</strong> — For all other numbers</li>
+                  </ul>
+                </li>
+                <li>Optionally add CloudTalk Number ID and Notes</li>
+                <li>Click <strong>"Add to Pool"</strong></li>
+              </ol>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Category Column Badges</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><span className="text-emerald-700 font-medium">Green "Registered"</span> — Branded, successfully registered with Hiya</li>
+                <li><span className="text-amber-700 font-medium">Amber "Pending"</span> — Branded, registration in progress</li>
+                <li><span className="text-gray-500 font-medium">Grey "Not Registered"</span> — Branded, registration failed or pending</li>
+                <li><span className="text-purple-700 font-medium">Purple "Spam Protection"</span> — Managed locally, no API</li>
+                <li><span className="text-gray-400">Dash (—)</span> — Legacy number, no category assigned</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Hiya Sync Panel</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Click "Sync from Hiya" to see all Branded numbers currently registered</li>
+                <li>Spam Protection numbers will never appear here</li>
+                <li>Use this to verify successful registration</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-base text-gray-900 mb-2">Important Notes</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Never add Branded without Gabi's approval</strong> — it costs money</li>
+                <li>If a Branded number is marked as spam → automatically removed from Hiya</li>
+                <li>Spam Protection works even if Hiya is down (no dependency)</li>
+                <li>Future: when we get a Hiya Number Reputation key, Spam Protection will also connect to Hiya for automated detection</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProtocolOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Number dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
