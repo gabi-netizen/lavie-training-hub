@@ -482,7 +482,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
   // Tab filtering - show ALL leads in queue
   const queueLeads = useMemo(
-    () => filteredLeads,
+    () => filteredLeads.filter((l) => l.workStatus !== "callback" && l.workStatus !== "follow_up"),
     [filteredLeads]
   );
 
