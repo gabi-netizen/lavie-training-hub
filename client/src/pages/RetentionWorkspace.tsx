@@ -1194,18 +1194,22 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                     const cbTime = lead.callbackAt ?? 0;
                     const cbTodayStart = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
                     const cbTodayEnd = new Date(new Date().setHours(23, 59, 59, 999)).getTime();
+                    const cbTomorrowEnd = cbTodayEnd + 24 * 60 * 60 * 1000;
+                    const cbWeekEnd = cbTodayEnd + 7 * 24 * 60 * 60 * 1000;
                     const isOverdue = activeTab === "callbacks" && cbTime > 0 && cbTime < cbTodayStart;
                     const isToday = activeTab === "callbacks" && cbTime >= cbTodayStart && cbTime <= cbTodayEnd;
+                    const isTomorrow = activeTab === "callbacks" && cbTime > cbTodayEnd && cbTime <= cbTomorrowEnd;
+                    const isThisWeek = activeTab === "callbacks" && cbTime > cbTomorrowEnd && cbTime <= cbWeekEnd;
 
                     return (
                       <tr
                         key={lead.subscriptionId}
                         onClick={() => lead.contactId && setSelectedLeadContactId(lead.contactId)}
                         className={`group/row border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
-                          isOverdue ? "bg-red-50" : isToday ? "bg-orange-50" : ""
+                          isOverdue ? "bg-red-50" : isToday ? "bg-green-50" : isTomorrow ? "bg-blue-50" : isThisWeek ? "bg-purple-50" : ""
                         } ${
-                          selectedLeadContactId === lead.contactId ? "bg-blue-50" : ""
-                        } ${bulkIsSelected(lead.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
+                          selectedLeadContactId === lead.contactId ? "!bg-blue-100" : ""
+                        } ${bulkIsSelected(lead.subscriptionId) ? "ring-2 ring-inset ring-blue-400 !bg-blue-50" : ""}`}
                       >
                         {/* Checkbox */}
                         <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
@@ -1253,12 +1257,14 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                         {/* Callback Due (only in callbacks tab) */}
                         {activeTab === "callbacks" && (
                           <td className={`py-3 px-3 text-sm whitespace-nowrap font-medium ${
-                            isOverdue ? "text-red-700" : isToday ? "text-orange-700" : "text-gray-800"
+                            isOverdue ? "text-red-700" : isToday ? "text-green-700" : isTomorrow ? "text-blue-700" : isThisWeek ? "text-purple-700" : "text-gray-800"
                           }`}>
                             {lead.callbackAt
                               ? <>
                                   {isOverdue && <span className="inline-block bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Overdue</span>}
-                                  {isToday && <span className="inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Today</span>}
+                                  {isToday && <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Today</span>}
+                                  {isTomorrow && <span className="inline-block bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Tomorrow</span>}
+                                  {isThisWeek && <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">This Week</span>}
                                   {new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}
                                 </>
                               : "—"}
