@@ -128,8 +128,9 @@ function CallTypeBadge({ callType }: { callType?: string | null }) {
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function SharedCallView() {
-  const [, params] = useRoute("/shared/call/:shareToken/:slug*");
-  const shareToken = params?.shareToken ?? "";
+  const [, paramsWithSlug] = useRoute("/shared/call/:shareToken/:slug*");
+  const [, paramsNoSlug] = useRoute("/shared/call/:shareToken");
+  const shareToken = paramsWithSlug?.shareToken ?? paramsNoSlug?.shareToken ?? "";
 
   const { data: analysis, isLoading, error } = trpc.callCoach.getSharedAnalysis.useQuery(
     { shareToken },
