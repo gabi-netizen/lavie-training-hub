@@ -144,12 +144,35 @@ export async function listContacts({
     }
   }
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
-  if (status) conditions.push(eq(contacts.status, status as ContactStatus));
+  if (status) {
+    if (status.includes(',')) {
+      const statusArray = status.split(',').map(s => s.trim()) as ContactStatus[];
+      conditions.push(inArray(contacts.status, statusArray));
+    } else {
+      conditions.push(eq(contacts.status, status as ContactStatus));
+    }
+  }
   if (agentName) conditions.push(eq(contacts.agentName, agentName));
-  if (agentEmail === 'unassigned') {
-    conditions.push(or(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com')));
-  } else if (agentEmail) {
-    conditions.push(eq(contacts.agentEmail, agentEmail));
+  if (agentEmail) {
+    if (agentEmail.includes(',')) {
+      const emailArray = agentEmail.split(',').map(e => e.trim());
+      const emailConditions = [];
+      const hasUnassigned = emailArray.includes('unassigned');
+      const realEmails = emailArray.filter(e => e !== 'unassigned');
+      if (hasUnassigned) {
+        emailConditions.push(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com'));
+      }
+      if (realEmails.length > 0) {
+        emailConditions.push(inArray(contacts.agentEmail, realEmails));
+      }
+      if (emailConditions.length > 0) {
+        conditions.push(or(...emailConditions));
+      }
+    } else if (agentEmail === 'unassigned') {
+      conditions.push(or(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com')));
+    } else {
+      conditions.push(eq(contacts.agentEmail, agentEmail));
+    }
   }
   if (department) conditions.push(eq(contacts.department, department as "opening" | "retention"));
   if (source) conditions.push(eq(contacts.source, source));
@@ -240,12 +263,35 @@ export async function countContacts({
     }
   }
   if (leadType) conditions.push(eq(contacts.leadType, leadType));
-  if (status) conditions.push(eq(contacts.status, status as ContactStatus));
+  if (status) {
+    if (status.includes(',')) {
+      const statusArray = status.split(',').map(s => s.trim()) as ContactStatus[];
+      conditions.push(inArray(contacts.status, statusArray));
+    } else {
+      conditions.push(eq(contacts.status, status as ContactStatus));
+    }
+  }
   if (agentName) conditions.push(eq(contacts.agentName, agentName));
-  if (agentEmail === 'unassigned') {
-    conditions.push(or(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com')));
-  } else if (agentEmail) {
-    conditions.push(eq(contacts.agentEmail, agentEmail));
+  if (agentEmail) {
+    if (agentEmail.includes(',')) {
+      const emailArray = agentEmail.split(',').map(e => e.trim());
+      const emailConditions = [];
+      const hasUnassigned = emailArray.includes('unassigned');
+      const realEmails = emailArray.filter(e => e !== 'unassigned');
+      if (hasUnassigned) {
+        emailConditions.push(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com'));
+      }
+      if (realEmails.length > 0) {
+        emailConditions.push(inArray(contacts.agentEmail, realEmails));
+      }
+      if (emailConditions.length > 0) {
+        conditions.push(or(...emailConditions));
+      }
+    } else if (agentEmail === 'unassigned') {
+      conditions.push(or(isNull(contacts.agentEmail), eq(contacts.agentEmail, ''), eq(contacts.agentEmail, 'trial@lavielabs.com')));
+    } else {
+      conditions.push(eq(contacts.agentEmail, agentEmail));
+    }
   }
   if (department) conditions.push(eq(contacts.department, department as "opening" | "retention"));
   if (source) conditions.push(eq(contacts.source, source));

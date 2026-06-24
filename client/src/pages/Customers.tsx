@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -268,8 +268,13 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
   const [search, setSearch] = useState("");
   const [filterLeadType, setFilterLeadType] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterAgent, setFilterAgent] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterAgent, setFilterAgent] = useState<string[]>([]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<string[]>([]);
+  const [draftAgent, setDraftAgent] = useState<string[]>([]);
+  const [agentSearchQuery, setAgentSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState("");
   const [filterLeadDateFrom, setFilterLeadDateFrom] = useState("");
   const [filterLeadDateTo, setFilterLeadDateTo] = useState("");
@@ -309,8 +314,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const { data: totalCount = 0 } = trpc.contacts.count.useQuery({
     search: search || undefined,
     leadType: filterLeadType || undefined,
-    status: filterStatus || undefined,
-    agentEmail: filterAgent || undefined,
+    status: filterStatus.length > 0 ? filterStatus.join(",") : undefined,
+    agentEmail: filterAgent.length > 0 ? filterAgent.join(",") : undefined,
     department: (department === "data_management" || department === "billing") ? "opening" : department,
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
@@ -321,8 +326,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
     leadType: filterLeadType || undefined,
-    status: filterStatus || undefined,
-    agentEmail: filterAgent || undefined,
+    status: filterStatus.length > 0 ? filterStatus.join(",") : undefined,
+    agentEmail: filterAgent.length > 0 ? filterAgent.join(",") : undefined,
     department: (department === "data_management" || department === "billing") ? "opening" : department,
     source: filterSource || undefined,
     leadDateFrom: filterLeadDateFrom || undefined,
@@ -546,7 +551,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     { value: "assigned", label: "Callback Set" },
   ] as const;
 
-  const activeFilters = [filterLeadType, filterStatus, filterAgent, filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo].filter(Boolean).length;
+  const activeFilters = [filterLeadType, filterStatus.length > 0 ? "active" : "", filterAgent.length > 0 ? "active" : "", filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo].filter(Boolean).length;
 
   // Stats
   const totalContacts = contacts.length;
@@ -623,7 +628,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
         {/* ── Department Tabs ── */}
         <div className="mt-4">
-          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management" | "billing"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
+          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management" | "billing"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus([]); setFilterAgent([]); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
             <TabsList>
               <TabsTrigger value="opening" className="px-6">Opening</TabsTrigger>
               <TabsTrigger value="retention" className="px-6">Retention</TabsTrigger>
@@ -865,32 +870,130 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
 
-              {/* Status filter (Opening-specific statuses) */}
-              <Select value={filterStatus || "__all__"} onValueChange={v => { setFilterStatus(v === "__all__" ? "" : v); resetPage(); }}>
-                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="__all__" className="text-gray-700 text-sm">All statuses</SelectItem>
-                  {OPENING_STATUSES.map(s => (
-                    <SelectItem key={s.value} value={s.value} className="text-gray-800 text-sm">{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Status filter (Opening-specific statuses) - Multi-select */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setDraftStatus([...filterStatus]); setShowStatusDropdown(!showStatusDropdown); setShowAgentDropdown(false); }}
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 bg-white h-9 min-w-[140px] text-left flex items-center justify-between"
+                >
+                  <span>{filterStatus.length === 0 ? "All statuses" : `${filterStatus.length} status${filterStatus.length > 1 ? "es" : ""}`}</span>
+                  <ChevronDown size={13} className="ml-2 text-gray-400" />
+                </button>
+                {showStatusDropdown && (
+                  <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto min-w-[180px]">
+                    <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={draftStatus.length === 0}
+                        onChange={() => setDraftStatus([])}
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium text-gray-800">All Statuses</span>
+                    </label>
+                    {OPENING_STATUSES.map(s => (
+                      <label key={s.value} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draftStatus.includes(s.value)}
+                          onChange={() => {
+                            setDraftStatus(prev =>
+                              prev.includes(s.value) ? prev.filter(x => x !== s.value) : [...prev, s.value]
+                            );
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-800">{s.label}</span>
+                      </label>
+                    ))}
+                    <div className="flex justify-end gap-2 px-3 py-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { setDraftStatus([]); setFilterStatus([]); resetPage(); setShowStatusDropdown(false); }}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >Clear</button>
+                      <button
+                        onClick={() => { setFilterStatus([...draftStatus]); resetPage(); setShowStatusDropdown(false); }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                      >OK</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              {/* Agent filter */}
-              <Select value={filterAgent || "__all__"} onValueChange={v => { setFilterAgent(v === "__all__" ? "" : v); resetPage(); }}>
-                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
-                  <SelectValue placeholder="All agents" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200 max-h-64">
-                  <SelectItem value="__all__" className="text-gray-700 text-sm">All agents</SelectItem>
-                  <SelectItem value="unassigned" className="text-gray-800 text-sm">Unassigned</SelectItem>
-                  {agentList.filter((a: any) => a.team === "opening").map((a: any) => (
-                    <SelectItem key={a.id} value={a.email ?? `agent-${a.id}`} className="text-gray-800 text-sm">{a.name ?? `Agent #${a.id}`}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Agent filter - Multi-select */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setDraftAgent([...filterAgent]); setAgentSearchQuery(""); setShowAgentDropdown(!showAgentDropdown); setShowStatusDropdown(false); }}
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 bg-white h-9 min-w-[160px] text-left flex items-center justify-between"
+                >
+                  <span>{filterAgent.length === 0 ? "All agents" : `${filterAgent.length} agent${filterAgent.length > 1 ? "s" : ""}`}</span>
+                  <ChevronDown size={13} className="ml-2 text-gray-400" />
+                </button>
+                {showAgentDropdown && (
+                  <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto min-w-[200px]">
+                    <div className="px-3 py-2 border-b border-gray-200">
+                      <input
+                        type="text"
+                        placeholder="Search agents..."
+                        value={agentSearchQuery}
+                        onChange={e => setAgentSearchQuery(e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 text-gray-800"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={draftAgent.length === 0}
+                        onChange={() => setDraftAgent([])}
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium text-gray-800">All Agents</span>
+                    </label>
+                    {(!agentSearchQuery || "unassigned".includes(agentSearchQuery.toLowerCase())) && (
+                      <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draftAgent.includes("unassigned")}
+                          onChange={() => {
+                            setDraftAgent(prev =>
+                              prev.includes("unassigned") ? prev.filter(x => x !== "unassigned") : [...prev, "unassigned"]
+                            );
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-800">Unassigned</span>
+                      </label>
+                    )}
+                    {agentList.filter((a: any) => a.team === "opening" && (!agentSearchQuery || (a.name ?? "").toLowerCase().includes(agentSearchQuery.toLowerCase()))).map((a: any) => (
+                      <label key={a.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draftAgent.includes(a.email ?? `agent-${a.id}`)}
+                          onChange={() => {
+                            const val = a.email ?? `agent-${a.id}`;
+                            setDraftAgent(prev =>
+                              prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]
+                            );
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-800">{a.name ?? `Agent #${a.id}`}</span>
+                      </label>
+                    ))}
+                    <div className="flex justify-end gap-2 px-3 py-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { setDraftAgent([]); setFilterAgent([]); resetPage(); setShowAgentDropdown(false); }}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >Clear</button>
+                      <button
+                        onClick={() => { setFilterAgent([...draftAgent]); resetPage(); setShowAgentDropdown(false); }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                      >OK</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Lead Date range filter */}
               <div className="flex items-center gap-1.5">
@@ -940,7 +1043,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   variant="ghost"
                   size="sm"
                   className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
-                  onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
+                  onClick={() => { setFilterSource(""); setFilterStatus([]); setFilterAgent([]); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
                 >
                   <X size={13} /> Clear
                 </Button>
@@ -963,39 +1066,137 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 </SelectContent>
               </Select>
 
-              {/* Status filter (Retention - all statuses) */}
-              <Select value={filterStatus || "__all__"} onValueChange={v => { setFilterStatus(v === "__all__" ? "" : v); resetPage(); }}>
-                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-40">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="__all__" className="text-gray-700 text-sm">All statuses</SelectItem>
-                  {meta?.statuses.map(s => (
-                    <SelectItem key={s} value={s} className="text-gray-800 text-sm">{STATUS_LABELS[s] ?? s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Status filter (Retention - all statuses) - Multi-select */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setDraftStatus([...filterStatus]); setShowStatusDropdown(!showStatusDropdown); setShowAgentDropdown(false); }}
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 bg-white h-9 min-w-[140px] text-left flex items-center justify-between"
+                >
+                  <span>{filterStatus.length === 0 ? "All statuses" : `${filterStatus.length} status${filterStatus.length > 1 ? "es" : ""}`}</span>
+                  <ChevronDown size={13} className="ml-2 text-gray-400" />
+                </button>
+                {showStatusDropdown && (
+                  <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto min-w-[180px]">
+                    <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={draftStatus.length === 0}
+                        onChange={() => setDraftStatus([])}
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium text-gray-800">All Statuses</span>
+                    </label>
+                    {(meta?.statuses ?? []).map(s => (
+                      <label key={s} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draftStatus.includes(s)}
+                          onChange={() => {
+                            setDraftStatus(prev =>
+                              prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+                            );
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-800">{STATUS_LABELS[s] ?? s}</span>
+                      </label>
+                    ))}
+                    <div className="flex justify-end gap-2 px-3 py-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { setDraftStatus([]); setFilterStatus([]); resetPage(); setShowStatusDropdown(false); }}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >Clear</button>
+                      <button
+                        onClick={() => { setFilterStatus([...draftStatus]); resetPage(); setShowStatusDropdown(false); }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                      >OK</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              {/* Agent filter */}
-              <Select value={filterAgent || "__all__"} onValueChange={v => { setFilterAgent(v === "__all__" ? "" : v); resetPage(); }}>
-                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-48">
-                  <SelectValue placeholder="All agents" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200 max-h-64">
-                  <SelectItem value="__all__" className="text-gray-700 text-sm">All agents</SelectItem>
-                  <SelectItem value="unassigned" className="text-gray-800 text-sm">Unassigned</SelectItem>
-                  {agentList.filter((a: any) => a.team === "retention").map((a: any) => (
-                    <SelectItem key={a.id} value={a.email ?? `agent-${a.id}`} className="text-gray-800 text-sm">{a.name ?? `Agent #${a.id}`}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Agent filter (Retention) - Multi-select */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setDraftAgent([...filterAgent]); setAgentSearchQuery(""); setShowAgentDropdown(!showAgentDropdown); setShowStatusDropdown(false); }}
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 bg-white h-9 min-w-[160px] text-left flex items-center justify-between"
+                >
+                  <span>{filterAgent.length === 0 ? "All agents" : `${filterAgent.length} agent${filterAgent.length > 1 ? "s" : ""}`}</span>
+                  <ChevronDown size={13} className="ml-2 text-gray-400" />
+                </button>
+                {showAgentDropdown && (
+                  <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto min-w-[200px]">
+                    <div className="px-3 py-2 border-b border-gray-200">
+                      <input
+                        type="text"
+                        placeholder="Search agents..."
+                        value={agentSearchQuery}
+                        onChange={e => setAgentSearchQuery(e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 text-gray-800"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={draftAgent.length === 0}
+                        onChange={() => setDraftAgent([])}
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium text-gray-800">All Agents</span>
+                    </label>
+                    {(!agentSearchQuery || "unassigned".includes(agentSearchQuery.toLowerCase())) && (
+                      <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draftAgent.includes("unassigned")}
+                          onChange={() => {
+                            setDraftAgent(prev =>
+                              prev.includes("unassigned") ? prev.filter(x => x !== "unassigned") : [...prev, "unassigned"]
+                            );
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-800">Unassigned</span>
+                      </label>
+                    )}
+                    {agentList.filter((a: any) => a.team === "retention" && (!agentSearchQuery || (a.name ?? "").toLowerCase().includes(agentSearchQuery.toLowerCase()))).map((a: any) => (
+                      <label key={a.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={draftAgent.includes(a.email ?? `agent-${a.id}`)}
+                          onChange={() => {
+                            const val = a.email ?? `agent-${a.id}`;
+                            setDraftAgent(prev =>
+                              prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]
+                            );
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-800">{a.name ?? `Agent #${a.id}`}</span>
+                      </label>
+                    ))}
+                    <div className="flex justify-end gap-2 px-3 py-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { setDraftAgent([]); setFilterAgent([]); resetPage(); setShowAgentDropdown(false); }}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >Clear</button>
+                      <button
+                        onClick={() => { setFilterAgent([...draftAgent]); resetPage(); setShowAgentDropdown(false); }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                      >OK</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {activeFilters > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
-                  onClick={() => { setFilterLeadType(""); setFilterStatus(""); setFilterAgent(""); }}
+                  onClick={() => { setFilterLeadType(""); setFilterStatus([]); setFilterAgent([]); }}
                 >
                   <X size={13} /> Clear
                 </Button>
@@ -1087,9 +1288,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                   <p className="text-sm text-gray-600">Your active filters returned 0 results:</p>
                   <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                     {filterSource && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Source: {filterSource}</span>}
-                    {filterStatus && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Status: {OPENING_STATUSES.find(s => s.value === filterStatus)?.label || ((meta?.statuses as unknown as string[]) || []).find(s => s === filterStatus) || filterStatus}</span>}
-                    {filterAgent && filterAgent !== 'unassigned' && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: {agentList.find((a: any) => a.email === filterAgent)?.name || filterAgent}</span>}
-                    {filterAgent === 'unassigned' && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: Unassigned</span>}
+                    {filterStatus.length > 0 && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Status: {filterStatus.length === 1 ? (OPENING_STATUSES.find(s => s.value === filterStatus[0])?.label || STATUS_LABELS[filterStatus[0]] || filterStatus[0]) : `${filterStatus.length} selected`}</span>}
+                    {filterAgent.length > 0 && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Agent: {filterAgent.length === 1 ? (filterAgent[0] === 'unassigned' ? 'Unassigned' : (agentList.find((a: any) => a.email === filterAgent[0])?.name || filterAgent[0])) : `${filterAgent.length} selected`}</span>}
                     {filterLeadType && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Lead Type: {filterLeadType}</span>}
                     {filterLeadDateFrom && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Lead From: {filterLeadDateFrom}</span>}
                     {filterLeadDateTo && <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Lead To: {filterLeadDateTo}</span>}
@@ -1107,7 +1307,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 size="sm"
                 variant="outline"
                 className="mt-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
-                onClick={() => { setFilterSource(""); setFilterStatus(""); setFilterAgent(""); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
+                onClick={() => { setFilterSource(""); setFilterStatus([]); setFilterAgent([]); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
               >
                 Clear All Filters
               </Button>
