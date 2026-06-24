@@ -419,10 +419,32 @@ export async function importContacts(rows: CsvContactRow[], department: string =
     // Default to today (import date) if no leadDate provided
     if (!leadDate) leadDate = new Date();
 
+    const normPhone = normalisePhone(row.phone) || undefined;
+    const normEmail = row.email?.trim().toLowerCase() || undefined;
+
+    // ── Duplicate prevention: skip if phone or email already exists ──
+    if (normPhone) {
+      const [existingByPhone] = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(eq(contacts.phone, normPhone))
+        .limit(1);
+      if (existingByPhone) { skipped++; continue; }
+    }
+    if (normEmail) {
+      const [existingByEmail] = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(eq(contacts.email, normEmail))
+        .limit(1);
+      if (existingByEmail) { skipped++; continue; }
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     const insert: InsertContact = {
       name: row.name.trim(),
-      email: row.email?.trim().toLowerCase() || undefined,
-      phone: normalisePhone(row.phone) || undefined,
+      email: normEmail,
+      phone: normPhone,
       leadType: row.leadType?.trim() || undefined,
       status,
       agentName: row.agentName?.trim() || undefined,
