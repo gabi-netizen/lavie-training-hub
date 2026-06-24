@@ -85,13 +85,13 @@ export default function MessageNotifications() {
 
   return (
     <>
-      {/* Mute/Unmute toggle — fixed top right */}
+      {/* Mute/Unmute toggle — fixed top left, below navbar */}
       <button
         onClick={toggleMute}
         style={{
           position: "fixed",
           top: 70,
-          right: 16,
+          left: 16,
           zIndex: 10000,
           background: muted ? "#ef4444" : "#22c55e",
           color: "#fff",
