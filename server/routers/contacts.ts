@@ -914,12 +914,11 @@ export const contactsRouter = router({
 
       const { contacts: contactsTable } = await import("../../drizzle/schema");
 
-      // Save Stripe Customer ID and mark as sold (done_deal)
+      // Save Stripe Customer ID (don't auto-mark as sold — agent does it manually)
       await db
         .update(contactsTable)
         .set({
           stripeCustomerId,
-          status: "done_deal",
         })
         .where(eq(contactsTable.id, contactId));
 
