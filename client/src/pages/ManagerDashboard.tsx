@@ -491,6 +491,12 @@ export default function ManagerDashboard() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch ALL billing callbacks (from client_subscriptions) for manager view
+  const { data: allBillingCallbacksData } = trpc.billing.getAllClientCallbacks.useQuery(
+    undefined,
+    { refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000 }
+  );
+
   // ─── Upcoming Callbacks Polling (toast notifications) ──────────────────────
   const { data: upcomingCallbacks = [] } = trpc.manager.getUpcomingCallbacks.useQuery(
     undefined,
@@ -529,8 +535,67 @@ export default function ManagerDashboard() {
   }, [allLeads, leadStatusFilter]);
 
   // Callbacks: leads with callbackAt in the future, filtered + sorted soonest first
+  // Merges lead_assignments callbacks + client_subscriptions callbacks
   const callbackLeads = useMemo(() => {
-    let cbs = allLeads.filter((l: any) => l.callbackAt && l.callbackAt > Date.now());
+    // Lead-assignment callbacks
+    let cbs: any[] = allLeads
+      .filter((l: any) => l.callbackAt && l.callbackAt > Date.now())
+      .map((l: any) => ({ ...l, source: "lead" }));
+
+    // Billing (client_subscriptions) callbacks — map to lead-compatible shape
+    const billingCbs: any[] = (allBillingCallbacksData?.callbacks ?? [])
+      .filter((cb: any) => cb.callbackAt && cb.callbackAt > Date.now())
+      .map((cb: any) => ({
+        subscriptionId: cb.subscriptionId,
+        customerId: null,
+        customerName: cb.customerName,
+        email: cb.email,
+        phone: cb.phone,
+        planName: cb.planName,
+        billingStatus: cb.status,
+        cyclesCompleted: 0,
+        totalSpend: 0,
+        monthlyAmount: cb.amount ?? 0,
+        currencyCode: "GBP",
+        retryAttempts: 0,
+        nextBillingAt: null,
+        currentTermEndsAt: null,
+        leadCategory: "subscription",
+        leadType: "Billing Callback",
+        urgencyScore: 0,
+        urgencyFlags: [],
+        urgencyLabel: "Low",
+        daysSinceEvent: 0,
+        valueScore: 0,
+        reachabilityScore: 50,
+        queuePriority: 0,
+        callPurpose: null,
+        callPurposeNote: null,
+        actionRequired: null,
+        maxCallAttempts: 3,
+        assignmentId: 0,
+        assignedAgent: cb.retentionAgent,
+        workStatus: "callback",
+        managerNote: null,
+        agentNote: cb.callbackNote ?? null,
+        attemptCount: 0,
+        noAnswerCount: 0,
+        lastCallAt: null,
+        lastCallResult: null,
+        callbackAt: cb.callbackAt,
+        followUpAt: null,
+        followUpNote: null,
+        assignedAt: null,
+        statusChangedAt: null,
+        lastTransactionDate: null,
+        lastShipmentDate: null,
+        contactId: cb.contactId,
+        createdAt: null,
+        source: "billing",
+      }));
+
+    cbs = [...cbs, ...billingCbs];
+
     // Apply callback date filter
     if (callbackDateFilter !== "all") {
       const now = new Date();
@@ -552,7 +617,7 @@ export default function ManagerDashboard() {
     // Sort by soonest callback first
     cbs.sort((a: any, b: any) => (a.callbackAt ?? 0) - (b.callbackAt ?? 0));
     return cbs;
-  }, [allLeads, callbackDateFilter]);
+  }, [allLeads, allBillingCallbacksData, callbackDateFilter]);
 
   const callbacksTodayCount = useMemo(() => {
     const todayStart = new Date();

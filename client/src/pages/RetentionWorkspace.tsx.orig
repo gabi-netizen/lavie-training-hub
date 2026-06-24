@@ -208,7 +208,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     { refetchOnWindowFocus: false, refetchInterval: 30_000 }
   );
 
-  // Fetch billing callbacks for this agent (from client_subscriptions)
+  // Fetch client_subscriptions callbacks for this agent (merged into My Callbacks)
   const { data: billingCallbacksData } = trpc.billing.getClientCallbacks.useQuery(
     { agentName },
     { refetchOnWindowFocus: false, refetchInterval: 30_000 }
@@ -478,65 +478,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   );
 
   const callbackLeads = useMemo(() => {
-    // Lead-assignment callbacks
-    let cbs: (Lead & { source?: string })[] = allLeads
-      .filter((l: Lead) => l.callbackAt && l.callbackAt > Date.now())
-      .map((l) => ({ ...l, source: "lead" as const }));
-
-    // Billing (client_subscriptions) callbacks — map to Lead-compatible shape
-    const billingCbs: (Lead & { source?: string })[] = (billingCallbacksData?.callbacks ?? [])
-      .filter((cb) => cb.callbackAt && cb.callbackAt > Date.now())
-      .map((cb) => ({
-        subscriptionId: cb.subscriptionId,
-        customerId: null,
-        customerName: cb.customerName,
-        email: cb.email,
-        phone: cb.phone,
-        planName: cb.planName,
-        billingStatus: cb.status,
-        cyclesCompleted: 0,
-        totalSpend: 0,
-        monthlyAmount: cb.amount ?? 0,
-        currencyCode: "GBP",
-        retryAttempts: 0,
-        nextBillingAt: null,
-        currentTermEndsAt: null,
-        leadCategory: "subscription",
-        leadType: "Billing Callback",
-        urgencyScore: 0,
-        urgencyFlags: [],
-        urgencyLabel: "Low",
-        daysSinceEvent: 0,
-        valueScore: 0,
-        reachabilityScore: 50,
-        queuePriority: 0,
-        callPurpose: null,
-        callPurposeNote: null,
-        actionRequired: null,
-        maxCallAttempts: 3,
-        assignmentId: 0,
-        assignedAgent: cb.retentionAgent,
-        workStatus: "callback",
-        managerNote: null,
-        agentNote: cb.callbackNote ?? null,
-        attemptCount: 0,
-        noAnswerCount: 0,
-        lastCallAt: null,
-        lastCallResult: null,
-        callbackAt: cb.callbackAt,
-        followUpAt: null,
-        followUpNote: null,
-        assignedAt: null,
-        statusChangedAt: null,
-        lastTransactionDate: null,
-        lastShipmentDate: null,
-        contactId: cb.contactId,
-        createdAt: null,
-        source: "billing" as const,
-      } as Lead & { source?: string }));
-
-    cbs = [...cbs, ...billingCbs];
-
+    let cbs = allLeads.filter((l: Lead) => l.callbackAt && l.callbackAt > Date.now());
     // Apply callback date filter
     if (callbackDateFilter !== "all") {
       const now = new Date();
@@ -558,7 +500,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     // Sort by soonest callback first
     cbs.sort((a, b) => (a.callbackAt ?? 0) - (b.callbackAt ?? 0));
     return cbs;
-  }, [allLeads, billingCallbacksData, callbackDateFilter]);
+  }, [allLeads, callbackDateFilter]);
 
   const doneDealCount = useMemo(
     () => allLeads.filter((l: Lead) => l.workStatus === "done_deal" || l.workStatus === "retained").length,

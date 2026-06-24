@@ -9,7 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { clientSubscriptions, leadAssignments, contacts } from "../../drizzle/schema";
-import { eq, like, or, and, sql, desc, getTableColumns, isNull } from "drizzle-orm";
+import { eq, like, or, and, sql, desc, getTableColumns, isNull, isNotNull } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 
 // ─── Zoho Billing API Credentials ────────────────────────────────────────────
@@ -1090,5 +1090,96 @@ export const billingRouter = router({
         }
         return { success: true, action: "reassigned" };
       }
+    }),
+
+  /**
+   * Get callbacks from client_subscriptions for a specific retention agent.
+   * Returns rows where callbackAt IS NOT NULL and retentionAgent matches.
+   */
+  getClientCallbacks: protectedProcedure
+    .input(z.object({ agentName: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { callbacks: [] };
+
+      const rows = await db
+        .select({
+          subscriptionId: clientSubscriptions.subscriptionId,
+          customerName: clientSubscriptions.customerName,
+          email: clientSubscriptions.email,
+          phone: clientSubscriptions.phone,
+          callbackAt: clientSubscriptions.callbackAt,
+          callbackNote: clientSubscriptions.callbackNote,
+          planName: clientSubscriptions.planName,
+          status: clientSubscriptions.status,
+          amount: clientSubscriptions.amount,
+          contactId: clientSubscriptions.contactId,
+          retentionAgent: clientSubscriptions.retentionAgent,
+        })
+        .from(clientSubscriptions)
+        .where(
+          and(
+            isNotNull(clientSubscriptions.callbackAt),
+            eq(clientSubscriptions.retentionAgent, input.agentName)
+          )
+        );
+
+      const callbacks = rows.map((row) => ({
+        subscriptionId: row.subscriptionId,
+        customerName: row.customerName,
+        email: row.email || "",
+        phone: row.phone || null,
+        callbackAt: row.callbackAt ? new Date(row.callbackAt).getTime() : null,
+        callbackNote: row.callbackNote || null,
+        planName: row.planName || null,
+        status: row.status,
+        amount: row.amount ? parseFloat(String(row.amount)) : null,
+        contactId: row.contactId ?? null,
+        retentionAgent: row.retentionAgent || null,
+      }));
+
+      return { callbacks };
+    }),
+
+  /**
+   * Get ALL callbacks from client_subscriptions (for manager view — no agent filter).
+   */
+  getAllClientCallbacks: protectedProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return { callbacks: [] };
+
+      const rows = await db
+        .select({
+          subscriptionId: clientSubscriptions.subscriptionId,
+          customerName: clientSubscriptions.customerName,
+          email: clientSubscriptions.email,
+          phone: clientSubscriptions.phone,
+          callbackAt: clientSubscriptions.callbackAt,
+          callbackNote: clientSubscriptions.callbackNote,
+          planName: clientSubscriptions.planName,
+          status: clientSubscriptions.status,
+          amount: clientSubscriptions.amount,
+          contactId: clientSubscriptions.contactId,
+          retentionAgent: clientSubscriptions.retentionAgent,
+        })
+        .from(clientSubscriptions)
+        .where(isNotNull(clientSubscriptions.callbackAt));
+
+      const callbacks = rows.map((row) => ({
+        subscriptionId: row.subscriptionId,
+        customerName: row.customerName,
+        email: row.email || "",
+        phone: row.phone || null,
+        callbackAt: row.callbackAt ? new Date(row.callbackAt).getTime() : null,
+        callbackNote: row.callbackNote || null,
+        planName: row.planName || null,
+        status: row.status,
+        amount: row.amount ? parseFloat(String(row.amount)) : null,
+        contactId: row.contactId ?? null,
+        retentionAgent: row.retentionAgent || null,
+      }));
+
+      return { callbacks };
     }),
 });

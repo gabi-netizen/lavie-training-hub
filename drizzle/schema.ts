@@ -1030,12 +1030,17 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
   salesPerson: varchar("salesPerson", { length: 128 }).notNull(),
   /** JSON object of product quantities: {"Matinika 20ml": 2, ...} */
   products: json("products"),
-  /** FK to contacts table for linking to ContactCard */
+    /** FK to contacts table for linking to ContactCard */
   contactId: int("contactId"),
+  /** Callback date/time for retention follow-up */
+  callbackAt: timestamp("callbackAt"),
+  /** Short note about why to call back */
+  callbackNote: text("callbackNote"),
+  /** Retention agent assigned to this callback */
+  retentionAgent: varchar("retentionAgent", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
 export type ClientSubscription = typeof clientSubscriptions.$inferSelect;
 export type InsertClientSubscription = typeof clientSubscriptions.$inferInsert;
 
