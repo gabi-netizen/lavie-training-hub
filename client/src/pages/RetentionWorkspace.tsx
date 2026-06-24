@@ -804,6 +804,17 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
           Incoming Lead June
         </button>
         <button
+          onClick={() => setActiveTab("clients")}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === "clients"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          My Clients
+        </button>
+        <button
           onClick={() => setActiveTab("callbacks")}
           className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
             activeTab === "callbacks"
@@ -856,17 +867,6 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         >
           <Mail className="w-4 h-4" />
           Emails
-        </button>
-        <button
-          onClick={() => setActiveTab("clients")}
-          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${
-            activeTab === "clients"
-              ? "border-blue-600 text-blue-700"
-              : "border-transparent text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          My Clients
         </button>
         <button
           onClick={() => setActiveTab("decline")}
