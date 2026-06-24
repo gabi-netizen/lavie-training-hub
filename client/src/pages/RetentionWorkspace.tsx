@@ -330,6 +330,15 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  // Clear billing callback (dismiss from My Callbacks)
+  const clearCallbackMutation = trpc.billing.clearClientCallback.useMutation({
+    onSuccess: () => {
+      toast.success("Callback dismissed");
+      refetch();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   // CSV Import for leads (managers only)
   const csvInputRef = useRef<HTMLInputElement>(null);
   const importLeadsMutation = trpc.manager.importLeads.useMutation({
@@ -555,8 +564,19 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         cbs = cbs.filter((l) => l.callbackAt! >= weekStart && l.callbackAt! <= weekEnd);
       }
     }
-    // Sort by soonest callback first
-    cbs.sort((a, b) => (a.callbackAt ?? 0) - (b.callbackAt ?? 0));
+    // Sort: overdue first (oldest first), then today, then future (soonest first)
+    const now = Date.now();
+    const todayStartMs = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+    const todayEndMs = new Date(new Date().setHours(23, 59, 59, 999)).getTime();
+    cbs.sort((a, b) => {
+      const aTime = a.callbackAt ?? 0;
+      const bTime = b.callbackAt ?? 0;
+      const aOverdue = aTime < todayStartMs ? 0 : aTime <= todayEndMs ? 1 : 2;
+      const bOverdue = bTime < todayStartMs ? 0 : bTime <= todayEndMs ? 1 : 2;
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+      // Within same group: overdue = oldest first, today/future = soonest first
+      return aTime - bTime;
+    });
     return cbs;
   }, [allLeads, billingCallbacksData, callbackDateFilter]);
 
@@ -1170,11 +1190,20 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                     const currentNote = editingNotes[noteKey] ?? lead.agentNote ?? "";
                     const noteChanged = currentNote !== (lead.agentNote ?? "");
 
+                    // Determine callback urgency coloring
+                    const cbTime = lead.callbackAt ?? 0;
+                    const cbTodayStart = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+                    const cbTodayEnd = new Date(new Date().setHours(23, 59, 59, 999)).getTime();
+                    const isOverdue = activeTab === "callbacks" && cbTime > 0 && cbTime < cbTodayStart;
+                    const isToday = activeTab === "callbacks" && cbTime >= cbTodayStart && cbTime <= cbTodayEnd;
+
                     return (
                       <tr
                         key={lead.subscriptionId}
                         onClick={() => lead.contactId && setSelectedLeadContactId(lead.contactId)}
                         className={`group/row border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                          isOverdue ? "bg-red-50" : isToday ? "bg-orange-50" : ""
+                        } ${
                           selectedLeadContactId === lead.contactId ? "bg-blue-50" : ""
                         } ${bulkIsSelected(lead.subscriptionId) ? "ring-2 ring-inset ring-blue-400 bg-blue-50" : ""}`}
                       >
@@ -1223,9 +1252,15 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
                         {/* Callback Due (only in callbacks tab) */}
                         {activeTab === "callbacks" && (
-                          <td className="py-3 px-3 text-sm text-gray-800 whitespace-nowrap">
+                          <td className={`py-3 px-3 text-sm whitespace-nowrap font-medium ${
+                            isOverdue ? "text-red-700" : isToday ? "text-orange-700" : "text-gray-800"
+                          }`}>
                             {lead.callbackAt
-                              ? new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                              ? <>
+                                  {isOverdue && <span className="inline-block bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Overdue</span>}
+                                  {isToday && <span className="inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Today</span>}
+                                  {new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                                </>
                               : "—"}
                           </td>
                         )}
@@ -1493,6 +1528,22 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                             >
                               <ChevronRight className="h-4 w-4" />
                             </button>
+
+                            {/* Dismiss callback (billing source only) */}
+                            {activeTab === "callbacks" && (lead as any).source === "billing" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Dismiss callback for ${lead.customerName || "this client"}?`)) {
+                                    clearCallbackMutation.mutate({ subscriptionId: lead.subscriptionId });
+                                  }
+                                }}
+                                className="p-1.5 rounded hover:bg-red-50 transition-colors text-red-600"
+                                title="Dismiss callback"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            )}
 
                             {/* Return to Command Centre (managers only) */}
                             {!user?.team && (

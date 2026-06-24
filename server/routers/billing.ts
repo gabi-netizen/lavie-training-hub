@@ -1182,4 +1182,22 @@ export const billingRouter = router({
 
       return { callbacks };
     }),
+
+  /**
+   * Clear a callback from client_subscriptions (sets callbackAt/callbackNote/retentionAgent to null).
+   * Used by agents/managers to dismiss a completed callback.
+   */
+  clearClientCallback: protectedProcedure
+    .input(z.object({ subscriptionId: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { success: false };
+
+      await db
+        .update(clientSubscriptions)
+        .set({ callbackAt: null, callbackNote: null, retentionAgent: null })
+        .where(eq(clientSubscriptions.subscriptionId, input.subscriptionId));
+
+      return { success: true };
+    }),
 });
