@@ -184,6 +184,9 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
 
   const dateRange = getDateRange();
 
+  // Default sort: Live Sub → lastBilledOn (newest billed first), others → createdOn
+  const defaultSort = planTypeFilter === "subscription" ? "lastBilledOn" as const : undefined;
+
   const { data, isLoading, refetch, isFetching } = trpc.billing.getMyClientsData.useQuery(
     {
       ...(agentFilter.length > 0 ? { salesperson: agentFilter.join(",") } : {}),
@@ -199,6 +202,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
       dateTo: dateRange.to,
       page,
       perPage: 50,
+      sortBy: defaultSort,
     },
     { refetchOnWindowFocus: false, placeholderData: (prev: any) => prev }
   );

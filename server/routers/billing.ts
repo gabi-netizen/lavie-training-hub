@@ -575,7 +575,7 @@ export const billingRouter = router({
         page: z.number().int().positive().default(1),
         perPage: z.number().int().positive().max(100).default(50),
         forceRefresh: z.boolean().optional(),
-        sortBy: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
+        sortBy: z.enum(["createdOn", "lastBilledOn", "cancelledDate", "activatedOn"]).optional(),
         dateFilterColumn: z.enum(["createdOn", "lastBilledOn", "cancelledDate"]).optional(),
         cycleFilter: z.string().optional(),
         subAgeFilter: z.string().optional(),
@@ -811,7 +811,9 @@ export const billingRouter = router({
           ? clientSubscriptions.lastBilledOn
           : input.sortBy === "cancelledDate"
             ? clientSubscriptions.cancelledDate
-            : clientSubscriptions.createdOn;
+            : input.sortBy === "activatedOn"
+              ? clientSubscriptions.activatedOn
+              : clientSubscriptions.createdOn;
         const rows = await db
           .select({
             ...getTableColumns(clientSubscriptions),
