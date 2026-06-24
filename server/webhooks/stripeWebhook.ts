@@ -21,7 +21,7 @@ import type { Request, Response } from "express";
 import Stripe from "stripe";
 import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
-import { stripeAuditLog, stripeCustomers, contacts } from "../../drizzle/schema";
+import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 // ─── Signature Verification & Event Construction ─────────────────────────────
@@ -348,6 +348,10 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
   if (invoice.parent?.subscription_details?.subscription) {
     const sub = invoice.parent.subscription_details.subscription;
     subscriptionId = typeof sub === "string" ? sub : sub.id;
+  } else if ((invoice as any).subscription) {
+    // Fallback for older Stripe API structure
+    const sub = (invoice as any).subscription;
+    subscriptionId = typeof sub === "string" ? sub : sub.id;
   }
 
   await insertAuditLog({
@@ -360,6 +364,98 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
     status: "processed",
     metadata: { invoiceId: invoice.id, invoiceStatus: invoice.status },
   });
+
+  // Handle client_subscriptions update for paid invoices > £4.95
+  if (invoice.amount_paid > 495 && customerId && subscriptionId) {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      // 1. Look up the contact via stripe_customers table
+      const [mapping] = await db
+        .select({
+          contactId: stripeCustomers.contactId,
+          agentName: stripeCustomers.agentName,
+          agentEmail: stripeCustomers.agentEmail
+        })
+        .from(stripeCustomers)
+        .where(eq(stripeCustomers.stripeCustomerId, customerId))
+        .limit(1);
+
+      if (mapping) {
+        // 2. Look up contact details
+        const [contact] = await db
+          .select({
+            name: contacts.name,
+            email: contacts.email,
+            phone: contacts.phone,
+            trialKit: contacts.trialKit,
+            agentName: contacts.agentName
+          })
+          .from(contacts)
+          .where(eq(contacts.id, mapping.contactId))
+          .limit(1);
+
+        if (contact) {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const nextBillingDate = new Date();
+          nextBillingDate.setDate(nextBillingDate.getDate() + 60);
+          const nextBillingStr = nextBillingDate.toISOString().split('T')[0];
+          
+          const amountInPounds = (invoice.amount_paid / 100).toString();
+          const salesPerson = mapping.agentName || contact.agentName || "Unknown";
+
+          // 3. Check if client_subscriptions record exists
+          const [existingSub] = await db
+            .select()
+            .from(clientSubscriptions)
+            .where(eq(clientSubscriptions.subscriptionId, subscriptionId))
+            .limit(1);
+
+          if (existingSub) {
+            // Update existing subscription
+            await db
+              .update(clientSubscriptions)
+              .set({
+                status: 'live',
+                lastBilledOn: todayStr as any,
+                currentBillingCycle: (existingSub.currentBillingCycle || 0) + 1,
+                nextBillingOn: nextBillingStr as any,
+                updatedAt: new Date()
+              })
+              .where(eq(clientSubscriptions.subscriptionId, subscriptionId));
+            
+            console.log(`[Stripe Webhook] Updated existing client_subscription ${subscriptionId} to live for contact ${mapping.contactId}`);
+          } else {
+            // Create new subscription
+            await db.insert(clientSubscriptions).values({
+              subscriptionId: subscriptionId,
+              planName: '1 x Matinika 60 ML',
+              planType: 'subscription',
+              customerName: contact.name || 'Unknown',
+              email: contact.email,
+              phone: contact.phone,
+              amount: amountInPounds,
+              recurringAmount: amountInPounds,
+              billingCycles: null,
+              currentBillingCycle: 1,
+              nextBillingOn: nextBillingStr as any,
+              lastBilledOn: todayStr as any,
+              status: 'live',
+              salesPerson: salesPerson,
+              activatedOn: todayStr as any,
+              createdOn: todayStr as any,
+              contactId: mapping.contactId
+            });
+            
+            console.log(`[Stripe Webhook] Created new client_subscription ${subscriptionId} for contact ${mapping.contactId}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`[Stripe Webhook] Error updating client_subscriptions on invoice.paid for sub ${subscriptionId}:`, err);
+    }
+  }
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
@@ -369,6 +465,9 @@ async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
   let subscriptionId: string | null = null;
   if (invoice.parent?.subscription_details?.subscription) {
     const sub = invoice.parent.subscription_details.subscription;
+    subscriptionId = typeof sub === "string" ? sub : sub.id;
+  } else if ((invoice as any).subscription) {
+    const sub = (invoice as any).subscription;
     subscriptionId = typeof sub === "string" ? sub : sub.id;
   }
 
@@ -382,6 +481,33 @@ async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
     status: "failed",
     metadata: { invoiceId: invoice.id, attemptCount: invoice.attempt_count },
   });
+
+  if (subscriptionId) {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      const [existingSub] = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(eq(clientSubscriptions.subscriptionId, subscriptionId))
+        .limit(1);
+
+      if (existingSub) {
+        await db
+          .update(clientSubscriptions)
+          .set({
+            status: 'dunning',
+            updatedAt: new Date()
+          })
+          .where(eq(clientSubscriptions.subscriptionId, subscriptionId));
+          
+        console.log(`[Stripe Webhook] Updated client_subscription ${subscriptionId} to dunning`);
+      }
+    } catch (err) {
+      console.error(`[Stripe Webhook] Error updating client_subscriptions on invoice.payment_failed for sub ${subscriptionId}:`, err);
+    }
+  }
 }
 
 async function handleChargeDisputeCreated(event: Stripe.Event): Promise<void> {
