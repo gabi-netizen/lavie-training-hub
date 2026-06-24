@@ -1528,9 +1528,14 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
         const messageText = `⚠️ Low Product Value Alert\nAgent: ${agentName}\nScore: ${score}/100\nDeal: Closed\nReview: ${shareLink}`;
         
         const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+        const apiKeySid = process.env.TWILIO_API_KEY_SID || "";
+        const apiKeySecret = process.env.TWILIO_API_KEY_SECRET || "";
         const authToken = process.env.TWILIO_AUTH_TOKEN || "";
-        if (!accountSid || !authToken) {
-          console.warn(`[CallAnalysis] WhatsApp alert skipped: TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not set`);
+        // Prefer API Key auth (works reliably), fallback to Account SID + Auth Token
+        const authUser = apiKeySid || accountSid;
+        const authPass = apiKeySid ? apiKeySecret : authToken;
+        if (!accountSid || !authUser || !authPass) {
+          console.warn(`[CallAnalysis] WhatsApp alert skipped: Twilio credentials not set`);
         } else {
         const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
         
@@ -1539,7 +1544,7 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
         bodyParams.append("To", "whatsapp:+972522222828");
         bodyParams.append("Body", messageText);
         
-        const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+        const twilioAuth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
         
         console.log(`[CallAnalysis] Sending WhatsApp alert for low product value (${score}) on closed deal by ${agentName}`);
         
