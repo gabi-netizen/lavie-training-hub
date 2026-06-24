@@ -280,6 +280,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
   const [filterLeadDateTo, setFilterLeadDateTo] = useState("");
   const [filterStatusDateFrom, setFilterStatusDateFrom] = useState("");
   const [filterStatusDateTo, setFilterStatusDateTo] = useState("");
+  const [filterNaCount, setFilterNaCount] = useState("");
+  const [sortBy, setSortBy] = useState("");
   const [importing, setImporting] = useState(false);
   const [protocolOpen, setProtocolOpen] = useState(false);
   const [maximusOpen, setMaximusOpen] = useState(false);
@@ -322,6 +324,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadDateTo: filterLeadDateTo || undefined,
     statusDateFrom: filterStatusDateFrom || undefined,
     statusDateTo: filterStatusDateTo || undefined,
+    naCountFilter: filterNaCount || undefined,
   });
   const { data: contacts = [], isLoading, refetch } = trpc.contacts.list.useQuery({
     search: search || undefined,
@@ -334,6 +337,8 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     leadDateTo: filterLeadDateTo || undefined,
     statusDateFrom: filterStatusDateFrom || undefined,
     statusDateTo: filterStatusDateTo || undefined,
+    naCountFilter: filterNaCount || undefined,
+    sortBy: sortBy || undefined,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   });
@@ -556,7 +561,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
     { value: "assigned", label: "Callback Set" },
   ] as const;
 
-  const activeFilters = [filterLeadType, filterStatus.length > 0 ? "active" : "", filterAgent.length > 0 ? "active" : "", filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo].filter(Boolean).length;
+  const activeFilters = [filterLeadType, filterStatus.length > 0 ? "active" : "", filterAgent.length > 0 ? "active" : "", filterSource, filterLeadDateFrom, filterLeadDateTo, filterStatusDateFrom, filterStatusDateTo, filterNaCount, sortBy].filter(Boolean).length;
 
   // Stats
   const totalContacts = contacts.length;
@@ -633,7 +638,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
         {/* ── Department Tabs ── */}
         <div className="mt-4">
-          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management" | "billing"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus([]); setFilterAgent([]); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); }}>
+          <Tabs value={department} onValueChange={(v: string) => { setDepartment(v as "opening" | "retention" | "data_management" | "billing"); resetPage(); setSelectedIds(new Set()); setFilterLeadType(""); setFilterStatus([]); setFilterAgent([]); setFilterSource(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterNaCount(""); setSortBy(""); }}>
             <TabsList>
               <TabsTrigger value="opening" className="px-6">Opening</TabsTrigger>
               <TabsTrigger value="retention" className="px-6">Retention</TabsTrigger>
@@ -1043,12 +1048,37 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 />
               </div>
 
+              {/* NA Count filter */}
+              <Select value={filterNaCount || "__all__"} onValueChange={v => { setFilterNaCount(v === "__all__" ? "" : v); resetPage(); }}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-[120px]">
+                  <SelectValue placeholder="All NAs" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="__all__" className="text-gray-700 text-sm">All NAs</SelectItem>
+                  <SelectItem value="any" className="text-gray-800 text-sm">Has NA</SelectItem>
+                  <SelectItem value="1" className="text-gray-800 text-sm">1 NA</SelectItem>
+                  <SelectItem value="2" className="text-gray-800 text-sm">2 NAs</SelectItem>
+                  <SelectItem value="3+" className="text-gray-800 text-sm">3+ NAs</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Sort dropdown */}
+              <Select value={sortBy || "__default__"} onValueChange={v => { setSortBy(v === "__default__" ? "" : v); resetPage(); }}>
+                <SelectTrigger className="bg-white border-gray-200 text-gray-700 text-sm h-9 w-[180px]">
+                  <SelectValue placeholder="Default sort" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="__default__" className="text-gray-700 text-sm">Default sort</SelectItem>
+                  <SelectItem value="na_oldest_first" className="text-gray-800 text-sm">NA oldest first</SelectItem>
+                </SelectContent>
+              </Select>
+
               {activeFilters > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-gray-800 hover:text-gray-700 h-9 px-2 gap-1"
-                  onClick={() => { setFilterSource(""); setFilterStatus([]); setFilterAgent([]); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
+                  onClick={() => { setFilterSource(""); setFilterStatus([]); setFilterAgent([]); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); setFilterNaCount(""); setSortBy(""); }}
                 >
                   <X size={13} /> Clear
                 </Button>
@@ -1312,7 +1342,7 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
                 size="sm"
                 variant="outline"
                 className="mt-2 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
-                onClick={() => { setFilterSource(""); setFilterStatus([]); setFilterAgent([]); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); }}
+                onClick={() => { setFilterSource(""); setFilterStatus([]); setFilterAgent([]); setFilterLeadType(""); setFilterLeadDateFrom(""); setFilterLeadDateTo(""); setFilterStatusDateFrom(""); setFilterStatusDateTo(""); setFilterNaCount(""); setSortBy(""); }}
               >
                 Clear All Filters
               </Button>

@@ -82,6 +82,8 @@ export async function listContacts({
   leadDateTo,
   statusDateFrom,
   statusDateTo,
+  naCountFilter,
+  sortBy,
   limit = 50,
   offset = 0,
 }: {
@@ -96,6 +98,8 @@ export async function listContacts({
   leadDateTo?: string;
   statusDateFrom?: string;
   statusDateTo?: string;
+  naCountFilter?: string;
+  sortBy?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -189,18 +193,30 @@ export async function listContacts({
     toEnd.setHours(23, 59, 59, 999);
     conditions.push(lte(contacts.updatedAt, toEnd));
   }
+  // NA count filter
+  if (naCountFilter) {
+    if (naCountFilter === '1') conditions.push(eq(contacts.naCount, 1));
+    else if (naCountFilter === '2') conditions.push(eq(contacts.naCount, 2));
+    else if (naCountFilter === '3+') conditions.push(gte(contacts.naCount, 3));
+    else if (naCountFilter === 'any') conditions.push(gte(contacts.naCount, 1));
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // Sort logic
+  const orderClauses = sortBy === 'na_oldest_first'
+    ? [sql`${contacts.lastNaAt} ASC`, desc(contacts.createdAt)]
+    : [
+        sql`CASE WHEN (${contacts.email} IS NOT NULL AND ${contacts.email} != '' AND ${contacts.address} IS NOT NULL AND ${contacts.address} != '') THEN 0 WHEN (${contacts.email} IS NOT NULL AND ${contacts.email} != '') OR (${contacts.address} IS NOT NULL AND ${contacts.address} != '') THEN 1 ELSE 2 END`,
+        sql`CASE WHEN ${contacts.status} = 'new' THEN 0 ELSE 1 END`,
+        desc(contacts.createdAt)
+      ];
 
   return db
     .select()
     .from(contacts)
     .where(where)
-    .orderBy(
-      sql`CASE WHEN (${contacts.email} IS NOT NULL AND ${contacts.email} != '' AND ${contacts.address} IS NOT NULL AND ${contacts.address} != '') THEN 0 WHEN (${contacts.email} IS NOT NULL AND ${contacts.email} != '') OR (${contacts.address} IS NOT NULL AND ${contacts.address} != '') THEN 1 ELSE 2 END`,
-      sql`CASE WHEN ${contacts.status} = 'new' THEN 0 ELSE 1 END`,
-      desc(contacts.createdAt)
-    )
+    .orderBy(...orderClauses)
     .limit(limit)
     .offset(offset);
 }
@@ -218,6 +234,7 @@ export async function countContacts({
   leadDateTo,
   statusDateFrom,
   statusDateTo,
+  naCountFilter,
 }: {
   search?: string;
   leadType?: string;
@@ -230,6 +247,7 @@ export async function countContacts({
   leadDateTo?: string;
   statusDateFrom?: string;
   statusDateTo?: string;
+  naCountFilter?: string;
 } = {}) {
   const db = await getDb();
   if (!db) return 0;
@@ -306,6 +324,13 @@ export async function countContacts({
     const toEnd = new Date(statusDateTo);
     toEnd.setHours(23, 59, 59, 999);
     conditions.push(lte(contacts.updatedAt, toEnd));
+  }
+  // NA count filter
+  if (naCountFilter) {
+    if (naCountFilter === '1') conditions.push(eq(contacts.naCount, 1));
+    else if (naCountFilter === '2') conditions.push(eq(contacts.naCount, 2));
+    else if (naCountFilter === '3+') conditions.push(gte(contacts.naCount, 3));
+    else if (naCountFilter === 'any') conditions.push(gte(contacts.naCount, 1));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [row] = await db.select({ total: count() }).from(contacts).where(where);
