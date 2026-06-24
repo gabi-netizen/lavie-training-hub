@@ -254,6 +254,7 @@ function App() {
           <Switch>
             {/* Public shared call view — NO auth, NO app shell */}
             <Route path="/shared/call/:shareToken/:slug*" component={SharedCallView} />
+            <Route path="/shared/call/:shareToken" component={SharedCallView} />
             {/* Everything else goes through the authenticated app layout */}
             <Route>{() => <Router />}</Route>
           </Switch>
