@@ -340,7 +340,12 @@ export default function Customers({ onDial }: { onDial?: (phone: string, name: s
 
   const importMutation = trpc.contacts.import.useMutation({
     onSuccess: (result) => {
-      toast.success(`Import complete: ${result.imported} contacts imported, ${result.skipped} skipped.`);
+      const skipDetails = [];
+      if ((result as any).skippedPhone > 0) skipDetails.push(`${(result as any).skippedPhone} phone exists`);
+      if ((result as any).skippedEmail > 0) skipDetails.push(`${(result as any).skippedEmail} email exists`);
+      if ((result as any).skippedNoName > 0) skipDetails.push(`${(result as any).skippedNoName} no name`);
+      const skipMsg = skipDetails.length > 0 ? ` (${skipDetails.join(", ")})` : "";
+      toast.success(`Import complete: ${result.imported} new contacts imported, ${result.skipped} skipped${skipMsg}`);
       utils.contacts.list.invalidate();
       utils.contacts.count.invalidate();
       setImporting(false);

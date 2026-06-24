@@ -427,16 +427,18 @@ export interface CsvContactRow {
   address?: string;
 }
 
-export async function importContacts(rows: CsvContactRow[], department: string = "opening"): Promise<{ imported: number; skipped: number }> {
+export async function importContacts(rows: CsvContactRow[], department: string = "opening"): Promise<{ imported: number; skipped: number; skippedNoName: number; skippedPhone: number; skippedEmail: number }> {
   const db = await getDb();
-  if (!db) return { imported: 0, skipped: rows.length };
+  if (!db) return { imported: 0, skipped: rows.length, skippedNoName: 0, skippedPhone: 0, skippedEmail: 0 };
 
   let imported = 0;
-  let skipped = 0;
+  let skippedNoName = 0;
+  let skippedPhone = 0;
+  let skippedEmail = 0;
 
   for (const row of rows) {
     if (!row.name?.trim()) {
-      skipped++;
+      skippedNoName++;
       continue;
     }
 
@@ -475,7 +477,7 @@ export async function importContacts(rows: CsvContactRow[], department: string =
         .from(contacts)
         .where(eq(contacts.phone, normPhone))
         .limit(1);
-      if (existingByPhone) { skipped++; continue; }
+      if (existingByPhone) { skippedPhone++; continue; }
     }
     if (normEmail) {
       const [existingByEmail] = await db
@@ -483,7 +485,7 @@ export async function importContacts(rows: CsvContactRow[], department: string =
         .from(contacts)
         .where(eq(contacts.email, normEmail))
         .limit(1);
-      if (existingByEmail) { skipped++; continue; }
+      if (existingByEmail) { skippedEmail++; continue; }
     }
     // ─────────────────────────────────────────────────────────────────
 
@@ -506,7 +508,7 @@ export async function importContacts(rows: CsvContactRow[], department: string =
     imported++;
   }
 
-  return { imported, skipped };
+  return { imported, skipped: skippedNoName + skippedPhone + skippedEmail, skippedNoName, skippedPhone, skippedEmail };
 }
 
 // ─── Get Contacts Due for Callback ────────────────────────────────────────────
