@@ -642,6 +642,11 @@ export const billingRouter = router({
           } else {
             conditions.push(eq(clientSubscriptions.status, statusFilter));
           }
+          // When status=live with no planType selected (clicking the green LIVE box),
+          // exclude trials (amount <= 4.95) so only real subs + installments show
+          if (statusFilter === "live" && !input.planType) {
+            conditions.push(sql`CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) > 4.95`);
+          }
         }
 
         if (input.planType) {
