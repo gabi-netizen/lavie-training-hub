@@ -183,6 +183,18 @@ const NON_OPENING_AGENTS = new Set([
   "daniel",     // Daniel — removed from Opening dashboard
 ]);
 
+// Agent name aliases: merge duplicate names into a canonical name.
+// Key = lowercase alias, Value = canonical display name.
+// Any trial/data under the alias will be counted under the canonical name.
+const AGENT_NAME_ALIASES: Record<string, string> = {
+  "matthew": "Matt",
+};
+
+/** Resolve an agent name to its canonical form (or return as-is if no alias). */
+function resolveAgentAlias(name: string): string {
+  return AGENT_NAME_ALIASES[name.toLowerCase()] ?? name;
+}
+
 const HUBSTAFF_TO_TRIALS_MAP: Record<string, string> = {
   "Alan Churchman": "Alan",
   "Ana Alipat": "Ana",
@@ -394,10 +406,11 @@ export const openingDashboardRouter = router({
         .where(and(...todayConditions))
         .groupBy(openingTrials.agentName);
 
-      // Build a map of agent -> today's trial count
+      // Build a map of agent -> today's trial count (with alias resolution)
       const todayCountMap = new Map<string, number>();
       for (const row of todayRows) {
-        todayCountMap.set(row.agentName, Number(row.count));
+        const resolved = resolveAgentAlias(row.agentName);
+        todayCountMap.set(resolved, (todayCountMap.get(resolved) || 0) + Number(row.count));
       }
 
       // Build agent data — seed from agent_daily_hours first so that agents
@@ -458,10 +471,12 @@ export const openingDashboardRouter = router({
 
       // Overlay trial counts from trialRows
       for (const row of trialRows) {
+        // Resolve aliases (e.g. Matthew → Matt)
+        const resolvedName = resolveAgentAlias(row.agentName);
         // Skip non-opening agents
-        if (NON_OPENING_AGENTS.has(row.agentName.toLowerCase())) continue;
-        ensureAgent(row.agentName);
-        const agent = agentMap.get(row.agentName.toLowerCase())!;
+        if (NON_OPENING_AGENTS.has(resolvedName.toLowerCase())) continue;
+        ensureAgent(resolvedName);
+        const agent = agentMap.get(resolvedName.toLowerCase())!;
         const count = Number(row.count);
         agent.trials += count;
 
@@ -675,7 +690,7 @@ export const openingDashboardRouter = router({
         createdDate: String(r.createdDate),
         status: r.status,
         classification: r.classification,
-        agentName: r.agentName,
+        agentName: resolveAgentAlias(r.agentName),
       }));
 
       return { customers };
@@ -704,9 +719,17 @@ export const openingDashboardRouter = router({
       }
 
       // Build WHERE conditions
+      // Resolve aliases: if input is "Matt", also match "Matthew" in DB
+      const aliasNames = Object.entries(AGENT_NAME_ALIASES)
+        .filter(([, canonical]) => canonical.toLowerCase() === input.agentName.toLowerCase())
+        .map(([alias]) => alias);
+      // Include the input name itself + any raw aliases that map to it
+      const matchNames = [input.agentName, ...aliasNames];
       const conditions = [
         eq(openingTrials.month, input.month),
-        eq(openingTrials.agentName, input.agentName),
+        matchNames.length > 1
+          ? inArray(openingTrials.agentName, matchNames)
+          : eq(openingTrials.agentName, input.agentName),
       ];
 
       // "all_trials" means show all trials for this agent (no classification filter)
@@ -786,15 +809,16 @@ export const openingDashboardRouter = router({
         .from(openingTrials)
         .orderBy(openingTrials.agentName);
 
-      // Filter out non-opening agents, empty names, and normalise to title case
+      // Filter out non-opening agents, empty names, resolve aliases, and normalise
       const agents = rows
         .map((r) => r.agentName)
         .filter((name) => name && name.trim() !== '' && !NON_OPENING_AGENTS.has(name.toLowerCase()))
+        .map((name) => resolveAgentAlias(name)) // merge aliases (e.g. Matthew → Matt)
         .map((name) =>
           name.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
         );
 
-      // Deduplicate (in case title-case normalisation creates duplicates)
+      // Deduplicate (in case title-case normalisation or alias resolution creates duplicates)
       return { agents: Array.from(new Set(agents)) };
     }),
 
