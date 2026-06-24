@@ -1513,7 +1513,58 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
     }
     await updateCallAnalysisStatus(analysisId, savePayload);
 
-    // Step 4: Auto-save retention notes to ContactCard if applicable
+    // Step 4: WhatsApp Notification for Low Product Value Closed Deals
+    try {
+      const _pvScore = (report as any).saleQualityScore as number | undefined;
+      if (report.dealClosed && _pvScore !== undefined && _pvScore <= 68) {
+        // Ensure share token exists
+        const shareToken = await generateShareToken(analysisId);
+        const shareLink = `https://lavie-training-hub-production.up.railway.app/shared/call/${shareToken}`;
+        
+        // Use repName from record, fallback to "Agent"
+        const agentName = record?.repName || "Agent";
+        const score = _pvScore;
+        
+        const messageText = `⚠️ Low Product Value Alert\nAgent: ${agentName}\nScore: ${score}/100\nDeal: Closed\nReview: ${shareLink}`;
+        
+        const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+        const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+        if (!accountSid || !authToken) {
+          console.warn(`[CallAnalysis] WhatsApp alert skipped: TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not set`);
+        } else {
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+        
+        const bodyParams = new URLSearchParams();
+        bodyParams.append("From", "whatsapp:+447888868298");
+        bodyParams.append("To", "whatsapp:+972522222828");
+        bodyParams.append("Body", messageText);
+        
+        const twilioAuth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+        
+        console.log(`[CallAnalysis] Sending WhatsApp alert for low product value (${score}) on closed deal by ${agentName}`);
+        
+        const twilioRes = await fetch(twilioUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Basic ${twilioAuth}`,
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: bodyParams.toString()
+        });
+        
+        if (!twilioRes.ok) {
+          const errText = await twilioRes.text();
+          console.warn(`[CallAnalysis] WhatsApp alert failed: ${twilioRes.status} ${errText}`);
+        } else {
+          console.log(`[CallAnalysis] WhatsApp alert sent successfully`);
+        }
+        } // end if accountSid && authToken
+      }
+    } catch (waErr) {
+      console.warn(`[CallAnalysis] Failed to process WhatsApp notification:`, waErr);
+    }
+
+    // Step 5: Auto-save retention notes to ContactCard if applicable
     // Conditions: call has a contactId, it's a retention call type, and retentionNotes exist in the report
     const RETENTION_CALL_TYPES_FOR_NOTES = new Set([
       "live_sub", "cancel_live_sub", "cancel_live_sub_2plus",
