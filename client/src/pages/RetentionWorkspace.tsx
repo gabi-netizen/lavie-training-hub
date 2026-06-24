@@ -480,12 +480,12 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   const callbackLeads = useMemo(() => {
     // Lead-assignment callbacks
     let cbs: (Lead & { source?: string })[] = allLeads
-      .filter((l: Lead) => l.callbackAt && l.callbackAt > Date.now())
+      .filter((l: Lead) => l.callbackAt)
       .map((l) => ({ ...l, source: "lead" as const }));
 
     // Billing (client_subscriptions) callbacks — map to Lead-compatible shape
     const billingCbs: (Lead & { source?: string })[] = (billingCallbacksData?.callbacks ?? [])
-      .filter((cb) => cb.callbackAt && cb.callbackAt > Date.now())
+      .filter((cb) => cb.callbackAt)
       .map((cb) => ({
         subscriptionId: cb.subscriptionId,
         customerId: null,

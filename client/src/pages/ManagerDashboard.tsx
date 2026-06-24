@@ -539,12 +539,12 @@ export default function ManagerDashboard() {
   const callbackLeads = useMemo(() => {
     // Lead-assignment callbacks
     let cbs: any[] = allLeads
-      .filter((l: any) => l.callbackAt && l.callbackAt > Date.now())
+      .filter((l: any) => l.callbackAt)
       .map((l: any) => ({ ...l, source: "lead" }));
 
     // Billing (client_subscriptions) callbacks — map to lead-compatible shape
     const billingCbs: any[] = (allBillingCallbacksData?.callbacks ?? [])
-      .filter((cb: any) => cb.callbackAt && cb.callbackAt > Date.now())
+      .filter((cb: any) => cb.callbackAt)
       .map((cb: any) => ({
         subscriptionId: cb.subscriptionId,
         customerId: null,
