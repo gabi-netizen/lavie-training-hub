@@ -835,11 +835,12 @@ export default function BillingPage() {
                   <div key={entry.id} className={cn("flex gap-3 items-start py-3", idx > 0 && "border-t border-gray-100")}>
                     <div className={cn(
                       "w-2.5 h-2.5 rounded-full mt-1.5 shrink-0",
-                      entry.eventType.includes("succeeded") ? "bg-green-500" :
-                      entry.eventType.includes("failed") ? "bg-red-500" :
-                      entry.eventType.includes("created") ? "bg-blue-500" :
-                      entry.eventType.includes("recovered") ? "bg-emerald-500" :
-                      "bg-gray-400"
+                      entry.eventType.includes("succeeded") || entry.eventType.includes("paid") || entry.eventType.includes("recovered") ? "bg-green-500" :
+                      entry.eventType.includes("failed") || entry.eventType.includes("declined") ? "bg-red-500" :
+                      entry.eventType.includes("created") || entry.eventType.includes("schedule") ? "bg-blue-500" :
+                      entry.eventType.includes("paused") || entry.eventType.includes("cancelled") || entry.eventType.includes("canceled") ? "bg-gray-400" :
+                      entry.eventType.includes("warning") || entry.eventType.includes("expir") ? "bg-amber-500" :
+                      "bg-red-500"
                     )} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-gray-800">{formatEventType(entry.eventType)}</div>
