@@ -113,6 +113,8 @@ export default function TopNav() {
   const isAcademy = user?.team === "academy";
   const isRetention = user?.team === "retention";
   const isOpening = user?.team === "opening";
+  // Manager = no team assigned (not opening, not retention, not academy)
+  const isManager = !isOpening && !isRetention && !isAcademy;
   const callsItems = isAdmin ? CALLS_ITEMS_ADMIN : CALLS_ITEMS_AGENT;
   const aiCoachItems = isAdmin ? AI_COACH_ITEMS_ADMIN : AI_COACH_ITEMS_AGENT;
   const mobileItems = isAcademy
@@ -218,8 +220,8 @@ export default function TopNav() {
             </>
           ) : (
             <>
-              {/* 1. Dashboards dropdown — admin sees all, others see Call Dashboard only */}
-              {isAdmin ? (
+              {/* 1. Dashboards dropdown — managers (no team) see all, team members see Call Dashboard only */}
+              {isManager ? (
                 <div className="relative" ref={dashboardsRef}>
                   <button
                     onClick={() => { closeOthers("dashboards"); setDashboardsOpen(v => !v); }}
@@ -358,8 +360,8 @@ export default function TopNav() {
                 </div>
               )}
 
-              {/* 4. Support Tickets — admin only (standalone) */}
-              {isAdmin && (
+              {/* 4. Support Tickets — managers only (standalone) */}
+              {isManager && (
                 <Link href="/support-tickets">
                   <button className={cn(
                     "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
