@@ -78,17 +78,6 @@ export default function FloatingDialler() {
 
   return (
     <>
-      {/* Refresh button — fixed top-left, next to Maximus logo */}
-      <button
-        onClick={handleRefresh}
-        disabled={refreshing}
-        className="fixed top-2.5 left-[170px] z-[9999] flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition-all duration-150 disabled:opacity-60 shadow-md"
-        title="Refresh Click to Call connection"
-      >
-        <RefreshCw size={10} className={`text-white ${refreshing ? "animate-spin" : ""}`} />
-        {refreshing ? "…" : "Refresh"}
-      </button>
-
       {/* Floating dialler — bottom-right */}
       <div
         className="fixed bottom-20 right-4 z-[9999] md:bottom-6 md:right-6 flex flex-col items-end gap-1.5"
@@ -125,6 +114,18 @@ export default function FloatingDialler() {
             />
           </div>
         )}
+
+        {/* Refresh Click to Call button — small, above phone button */}
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          style={{ pointerEvents: "auto" }}
+          title="Refresh Click to Call connection"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-all duration-150 disabled:opacity-60 shadow-md"
+        >
+          <RefreshCw size={10} className={`text-white ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "…" : "Refresh"}
+        </button>
 
         {/* Floating toggle button */}
         <button
