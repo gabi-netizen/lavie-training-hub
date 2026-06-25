@@ -21,6 +21,29 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error) {
+    // Auto-reload on dynamic import failures (happens after deploy when chunk hashes change)
+    const isDynamicImportError =
+      error.message?.includes("Failed to fetch dynamically imported module") ||
+      error.message?.includes("Importing a module script failed") ||
+      error.message?.includes("error loading dynamically imported module") ||
+      error.message?.includes("Loading chunk") ||
+      error.message?.includes("Loading CSS chunk");
+
+    if (isDynamicImportError) {
+      // Prevent infinite reload loop — only reload once per 10 seconds
+      const reloadKey = "dynamic_import_reload";
+      const lastReload = sessionStorage.getItem(reloadKey);
+      const now = Date.now();
+
+      if (!lastReload || now - parseInt(lastReload) > 10000) {
+        sessionStorage.setItem(reloadKey, now.toString());
+        window.location.reload();
+        return;
+      }
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (

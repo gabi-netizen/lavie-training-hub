@@ -1586,7 +1586,7 @@ export default function ContactCard() {
                 )}
               >
                 <Clock size={16} />
-                History
+                Timeline
               </button>
               <button
                 onClick={() => setCenterTopTab("transactions")}
