@@ -13,6 +13,8 @@
  *  - invoice.paid
  *  - invoice.payment_failed
  *  - charge.dispute.created
+ *  - charge.refunded
+ *  - charge.succeeded
  *
  * Every event is logged to the stripe_audit_log table.
  * Contact status is updated in the DB when applicable.
@@ -510,6 +512,59 @@ async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
   }
 }
 
+async function handleChargeRefunded(event: Stripe.Event): Promise<void> {
+  const charge = event.data.object as Stripe.Charge;
+  const customerId = extractCustomerId(charge.customer as any);
+
+  // Try to extract subscription ID from payment_intent metadata or invoice
+  let subscriptionId: string | null = null;
+  if ((charge as any).invoice) {
+    const inv = (charge as any).invoice;
+    subscriptionId = typeof inv === "string" ? inv : inv?.id ?? null;
+  }
+
+  await insertAuditLog({
+    eventId: event.id,
+    eventType: event.type,
+    customerId,
+    subscriptionId,
+    amount: charge.amount_refunded,
+    currency: charge.currency,
+    status: "refunded",
+    metadata: {
+      chargeId: charge.id,
+      amountRefunded: charge.amount_refunded,
+      refundReason: (charge as any).refunds?.data?.[0]?.reason ?? "unknown",
+    },
+  });
+}
+
+async function handleChargeSucceeded(event: Stripe.Event): Promise<void> {
+  const charge = event.data.object as Stripe.Charge;
+  const customerId = extractCustomerId(charge.customer as any);
+
+  let subscriptionId: string | null = null;
+  if ((charge as any).invoice) {
+    const inv = (charge as any).invoice;
+    subscriptionId = typeof inv === "string" ? inv : inv?.id ?? null;
+  }
+
+  await insertAuditLog({
+    eventId: event.id,
+    eventType: event.type,
+    customerId,
+    subscriptionId,
+    amount: charge.amount,
+    currency: charge.currency,
+    status: "processed",
+    metadata: {
+      chargeId: charge.id,
+      paymentMethod: charge.payment_method,
+      receiptUrl: charge.receipt_url,
+    },
+  });
+}
+
 async function handleChargeDisputeCreated(event: Stripe.Event): Promise<void> {
   const dispute = event.data.object as Stripe.Dispute;
   const chargeId = typeof dispute.charge === "string" ? dispute.charge : (dispute.charge as any)?.id ?? null;
@@ -592,6 +647,12 @@ export async function handleStripeBillingWebhook(
         break;
       case "charge.dispute.created":
         await handleChargeDisputeCreated(event);
+        break;
+      case "charge.refunded":
+        await handleChargeRefunded(event);
+        break;
+      case "charge.succeeded":
+        await handleChargeSucceeded(event);
         break;
       default:
         // Unhandled event type — still log it for audit purposes
