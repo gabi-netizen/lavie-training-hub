@@ -242,11 +242,6 @@ export default function ContactCard() {
     { enabled: !!contactId }
   );
 
-  const { data: zohoData } = trpc.contacts.getZohoBillingData.useQuery(
-    { email: contact?.email ?? "" },
-    { enabled: !!contact?.email }
-  );
-
   // AI Retention Notes from call analyses
   const { data: aiNotesData } = trpc.contacts.getRetentionNotes.useQuery(
     { contactId, phone: contact?.phone ?? undefined },
@@ -254,21 +249,62 @@ export default function ContactCard() {
   );
 
   // Client subscriptions from My Clients table
-  const { data: clientSubs } = trpc.clientSubscriptions.getByContactId.useQuery(
+  const { data: clientSubs, isLoading: clientSubsLoading } = trpc.clientSubscriptions.getByContactId.useQuery(
     { contactId },
     { enabled: !!contactId }
   );
-  const { data: clientSubsByEmail } = trpc.clientSubscriptions.getByEmail.useQuery(
+  const { data: clientSubsByEmail, isLoading: clientSubsByEmailLoading } = trpc.clientSubscriptions.getByEmail.useQuery(
     { email: contact?.email ?? "" },
     { enabled: !!contact?.email && (!clientSubs || clientSubs.length === 0) }
   );
   const contactSubscriptions = (clientSubs && clientSubs.length > 0) ? clientSubs : (clientSubsByEmail ?? []);
+  const transactionsLoading = clientSubsLoading || clientSubsByEmailLoading;
 
-  // Transactions tab: fetch subscriptions by email via dedicated endpoint
-  const { data: clientTransactions, isLoading: transactionsLoading } = trpc.contacts.getClientTransactions.useQuery(
-    { email: contact?.email ?? "" },
-    { enabled: !!contact?.email }
-  );
+  // ─── Computed billing info from local DB subscriptions ─────────────────────
+  const billingInfo = useMemo(() => {
+    if (!contactSubscriptions || contactSubscriptions.length === 0) return null;
+    // Filter out callback_only entries
+    const realSubs = contactSubscriptions.filter((s: any) => s.status !== 'callback_only');
+    if (realSubs.length === 0) return null;
+    // Primary = first live, then first by id desc
+    const primary = realSubs.find((s: any) => s.status === 'live') || realSubs[0];
+    // LTV Plan = sum of totalAmount (or amount*billingCycles+setupFee)
+    let ltvPlan = 0;
+    for (const sub of realSubs) {
+      const amt = parseFloat(sub.totalAmount || "0");
+      if (amt > 0) { ltvPlan += amt; }
+      else {
+        const cycleAmt = parseFloat(sub.amount || "0");
+        const cycles = sub.billingCycles || 1;
+        const setup = parseFloat(sub.setupFee || "0");
+        ltvPlan += (cycleAmt * cycles) + setup;
+      }
+    }
+    // LTV Paid = for each sub: setupFee + amount * cyclesCompleted (if available), else totalAmount if cancelled
+    let ltvPaid = 0;
+    for (const sub of realSubs) {
+      const setup = parseFloat(sub.setupFee || "0");
+      const amt = parseFloat(sub.amount || "0");
+      const completed = sub.cyclesCompleted || sub.currentBillingCycle || 0;
+      if (completed > 0) {
+        ltvPaid += setup + (amt * completed);
+      } else if (sub.status === 'cancelled' || sub.status === 'expired') {
+        // Fully paid or cancelled — use totalAmount
+        ltvPaid += parseFloat(sub.totalAmount || "0") || (setup + amt * (sub.billingCycles || 1));
+      }
+    }
+    return {
+      ltvPlan,
+      ltvPaid,
+      cycle: primary.currentBillingCycle || primary.cyclesCompleted || null,
+      monthlyAmount: parseFloat(primary.amount || "0"),
+      status: primary.status,
+      planName: primary.planName || primary.subscriptionNumber || null,
+      nextBillingDate: primary.nextBillingOn,
+      cancellationDate: primary.cancelledDate,
+      allSubscriptions: realSubs,
+    };
+  }, [contactSubscriptions]);
 
   // Stripe payment methods for sidebar card display
   const { data: stripeCardData } = trpc.stripe.getCardByEmail.useQuery(
@@ -648,7 +684,7 @@ export default function ContactCard() {
   };
 
   const handleCallNow = () => {
-    if (!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone) {
+    if (!contact.phone && !currentRetentionLead?.phone) {
       toast.error("No phone number on file");
       return;
     }
@@ -956,10 +992,10 @@ export default function ContactCard() {
                 <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#4caf50" }} />
                 <span className="text-gray-600 font-medium">
                   {(() => {
-                    const statusText = zohoData?.subscriptionStatus === "live"
-                      ? `Active \u2014 ${zohoData.planName || "Live Sub"} Cycle ${zohoData.billingCycleCount || 1}`
-                      : zohoData?.subscriptionStatus === "cancelled" ? "Cancelled"
-                      : zohoData?.subscriptionStatus === "trial" ? "Trial"
+                    const statusText = billingInfo?.status === "live"
+                      ? `Active \u2014 ${billingInfo.planName || "Live Sub"} Cycle ${billingInfo.cycle || 1}`
+                      : billingInfo?.status === "cancelled" ? "Cancelled"
+                      : billingInfo?.status === "trial" ? "Trial"
                       : contact.status || "New";
                     return statusText;
                   })()}
@@ -1151,10 +1187,10 @@ export default function ContactCard() {
             <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => {
-                  if (!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
+                  if (!contact.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
                   setWaModalOpen(true);
                 }}
-                disabled={!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone}
+                disabled={!contact.phone && !currentRetentionLead?.phone}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-green-800 text-white text-xs font-bold transition-colors hover:bg-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -1175,10 +1211,10 @@ export default function ContactCard() {
               </button>
               <button
                 onClick={() => {
-                  if (!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
+                  if (!contact.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
                   setSmsModalOpen(true);
                 }}
-                disabled={!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone}
+                disabled={!contact.phone && !currentRetentionLead?.phone}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-blue-600 text-white text-xs font-bold transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <MessageSquare size={16} />
@@ -1203,14 +1239,14 @@ export default function ContactCard() {
                     <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                       <span>📱</span> Send WhatsApp Template
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone || zohoData?.phone || currentRetentionLead?.phone})</p>
+                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone || currentRetentionLead?.phone})</p>
                   </div>
                   <button onClick={() => setWaModalOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
                     <X size={16} className="text-gray-500" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  {!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone ? (
+                  {!contact.phone && !currentRetentionLead?.phone ? (
                     <p className="text-sm text-red-600">⚠ No phone number on file</p>
                   ) : waTemplatesLoading ? (
                     <p className="text-sm text-gray-500">Loading templates…</p>
@@ -1252,7 +1288,7 @@ export default function ContactCard() {
                     <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                       <span>💬</span> Send SMS
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone || zohoData?.phone || currentRetentionLead?.phone})</p>
+                    <p className="text-xs text-gray-500 mt-0.5">To: {contact.name} ({contact.phone || currentRetentionLead?.phone})</p>
                   </div>
                   <button onClick={() => { setSmsModalOpen(false); setSmsBody(""); }} className="p-2 rounded-lg hover:bg-gray-100">
                     <X size={16} className="text-gray-500" />
@@ -1384,7 +1420,7 @@ export default function ContactCard() {
             )}
 
             {/* Address */}
-            {(contact.address || zohoData?.shippingAddress || isFromRetention) && (
+            {(contact.address || isFromRetention) && (
               <div className="mb-4 pt-3 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Shipping Address</p>
                 {isFromRetention ? (
@@ -1392,14 +1428,14 @@ export default function ContactCard() {
                     <div className="flex-1">
                       <InlineEditableField
                         label="Address"
-                        value={contact.address ?? zohoData?.shippingAddress ?? ""}
+                        value={contact.address ?? ""}
                         onSave={handleSaveAddress}
                         icon={<Package size={14} />}
                       />
                     </div>
-                    {(contact.address || zohoData?.shippingAddress) && (
+                    {contact.address && (
                       <button
-                        onClick={() => { navigator.clipboard.writeText(contact.address || zohoData?.shippingAddress || ""); }}
+                        onClick={() => { navigator.clipboard.writeText(contact.address || ""); }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors shrink-0"
                         title="Copy address"
                       >
@@ -1409,10 +1445,10 @@ export default function ContactCard() {
                   </div>
                 ) : (
                   <div className="flex items-start gap-1">
-                    <p className="text-sm text-gray-700 leading-relaxed flex-1" style={{ wordBreak: 'break-word' }}>{contact.address || zohoData?.shippingAddress}</p>
-                    {(contact.address || zohoData?.shippingAddress) && (
+                    <p className="text-sm text-gray-700 leading-relaxed flex-1" style={{ wordBreak: 'break-word' }}>{contact.address}</p>
+                    {contact.address && (
                       <button
-                        onClick={() => { navigator.clipboard.writeText(contact.address || zohoData?.shippingAddress || ""); }}
+                        onClick={() => { navigator.clipboard.writeText(contact.address || ""); }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors shrink-0"
                         title="Copy address"
                       >
@@ -1912,14 +1948,14 @@ export default function ContactCard() {
                       <div className="w-7 h-7 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
                       <p className="text-sm text-gray-700">Loading transactions…</p>
                     </div>
-                  ) : !clientTransactions || clientTransactions.length === 0 ? (
+                  ) : !contactSubscriptions || contactSubscriptions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <CreditCard size={36} className="mb-3 opacity-40" />
                       <p className="text-sm font-medium text-gray-800">No transactions yet</p>
                       <p className="text-xs mt-1 text-gray-600">Subscription data will appear here once synced from Zoho Billing</p>
                     </div>
                   ) : ((() => {
-                    const currentTx = clientTransactions[transactionIdx] || clientTransactions[0];
+                    const currentTx = contactSubscriptions[transactionIdx] || contactSubscriptions[0];
                     if (!currentTx) return null;
                     const txStatus = (currentTx.status ?? "").toLowerCase();
                     const txStatusBadge = txStatus === "live" ? "bg-green-100 text-green-800 border-green-200" :
@@ -1947,11 +1983,11 @@ export default function ContactCard() {
                     const txFmtAmount = (v: string | number | null | undefined) => v != null && v !== "" ? `\u00a3${Number(v).toFixed(2)}` : "\u2014";
                     return (
                       <div>
-                        {clientTransactions.length > 1 && (
+                        {contactSubscriptions.length > 1 && (
                           <div className="flex items-center justify-between mb-3">
                             <button onClick={() => setTransactionIdx(Math.max(0, transactionIdx - 1))} disabled={transactionIdx === 0} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-500"><ChevronLeft size={16} /> Previous</button>
-                            <span className="px-4 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black">Transaction {transactionIdx + 1} of {clientTransactions.length}</span>
-                            <button onClick={() => setTransactionIdx(Math.min(clientTransactions.length - 1, transactionIdx + 1))} disabled={transactionIdx === clientTransactions.length - 1} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-500">Next <ChevronRight size={16} /></button>
+                            <span className="px-4 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black">Transaction {transactionIdx + 1} of {contactSubscriptions.length}</span>
+                            <button onClick={() => setTransactionIdx(Math.min(contactSubscriptions.length - 1, transactionIdx + 1))} disabled={transactionIdx === contactSubscriptions.length - 1} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-400 text-sm font-bold text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-amber-500">Next <ChevronRight size={16} /></button>
                           </div>
                         )}
                         <div className="rounded-xl border-2 border-gray-900 bg-white shadow-sm overflow-hidden">
@@ -2204,7 +2240,7 @@ export default function ContactCard() {
               {/* CloudTalk History */}
               {centerBottomTab === "cloudtalk" && (
                 <div>
-                  {!contact.phone && !zohoData?.phone && !currentRetentionLead?.phone ? (
+                  {!contact.phone && !currentRetentionLead?.phone ? (
                     <div className="flex flex-col items-center py-12 text-gray-600">
                       <PhoneOff size={28} className="mb-2 opacity-40" />
                       <p className="text-sm">No phone number on file</p>
@@ -2322,8 +2358,8 @@ export default function ContactCard() {
                 </svg>
               </div>
               <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">LTV Plan</p>
-              <p className={`font-bold mt-0.5 ${(zohoData?.ltvPlan || retentionTotalSpend) > 0 ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "20px" }}>
-                {zohoData?.ltvPlan ? `£${zohoData.ltvPlan.toFixed(2)}` : retentionTotalSpend > 0 ? `£${retentionTotalSpend.toFixed(2)}` : "—"}
+              <p className={`font-bold mt-0.5 ${(billingInfo?.ltvPlan || retentionTotalSpend) > 0 ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "20px" }}>
+                {billingInfo?.ltvPlan ? `£${billingInfo.ltvPlan.toFixed(2)}` : retentionTotalSpend > 0 ? `£${retentionTotalSpend.toFixed(2)}` : "—"}
               </p>
             </div>
 
@@ -2335,8 +2371,8 @@ export default function ContactCard() {
                 </svg>
               </div>
               <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">LTV Paid</p>
-              <p className={`font-bold mt-0.5 ${zohoData?.ltvPaid ? "text-green-700" : "text-gray-600"}`} style={{ fontSize: "20px" }}>
-                {zohoData?.ltvPaid ? `£${zohoData.ltvPaid.toFixed(2)}` : "—"}
+              <p className={`font-bold mt-0.5 ${billingInfo?.ltvPaid ? "text-green-700" : "text-gray-600"}`} style={{ fontSize: "20px" }}>
+                {billingInfo?.ltvPaid ? `£${billingInfo.ltvPaid.toFixed(2)}` : "—"}
               </p>
             </div>
           </div>
@@ -2346,49 +2382,49 @@ export default function ContactCard() {
             {/* Cycle */}
             <div className="bg-white rounded-2xl shadow-sm p-3.5 flex flex-col items-center text-center border border-gray-100">
               <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">Cycle</p>
-              <p className={`font-bold mt-0.5 ${(zohoData?.billingCycleCount || retentionMaxCycle) > 0 ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "22px" }}>
-                {zohoData?.billingCycleCount ? zohoData.billingCycleCount : retentionMaxCycle > 0 ? retentionMaxCycle : "—"}
+              <p className={`font-bold mt-0.5 ${(billingInfo?.cycle || retentionMaxCycle) > 0 ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "22px" }}>
+                {billingInfo?.cycle ? billingInfo.cycle : retentionMaxCycle > 0 ? retentionMaxCycle : "—"}
               </p>
             </div>
 
             {/* Monthly Amount */}
             <div className="bg-white rounded-2xl shadow-sm p-3.5 flex flex-col items-center text-center border border-gray-100">
               <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider">Monthly</p>
-              <p className={`font-bold mt-0.5 ${zohoData?.monthlyAmount ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "22px" }}>
-                {zohoData?.monthlyAmount ? `£${zohoData.monthlyAmount.toFixed(2)}` : "—"}
+              <p className={`font-bold mt-0.5 ${billingInfo?.monthlyAmount ? "text-gray-800" : "text-gray-600"}`} style={{ fontSize: "22px" }}>
+                {billingInfo?.monthlyAmount ? `£${billingInfo.monthlyAmount.toFixed(2)}` : "—"}
               </p>
             </div>
           </div>
 
           {/* ── Subscription Status + Next Billing ── */}
-          {zohoData?.found && (
+          {!!billingInfo && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
               <div className="flex flex-col gap-2.5">
-                {zohoData.subscriptionStatus && (
+                {billingInfo.status && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Status</span>
+                    <span className="text-xs text-gray-600">Status</span>
                     <span className={cn(
                       "text-xs font-semibold px-2.5 py-0.5 rounded-full",
-                      zohoData.subscriptionStatus === "live" ? "bg-green-100 text-green-700" :
-                      zohoData.subscriptionStatus === "cancelled" ? "bg-red-100 text-red-700" :
-                      zohoData.subscriptionStatus === "non_renewing" ? "bg-amber-100 text-amber-700" :
-                      zohoData.subscriptionStatus === "expired" ? "bg-gray-100 text-gray-700" :
+                      billingInfo.status === "live" ? "bg-green-100 text-green-700" :
+                      billingInfo.status === "cancelled" ? "bg-red-100 text-red-700" :
+                      billingInfo.status === "non_renewing" ? "bg-amber-100 text-amber-700" :
+                      billingInfo.status === "expired" ? "bg-gray-100 text-gray-700" :
                       "bg-blue-100 text-blue-700"
                     )}>
-                      {zohoData.subscriptionStatus.replace(/_/g, " ")}
+                      {billingInfo.status.replace(/_/g, " ")}
                     </span>
                   </div>
                 )}
-                {zohoData.nextBillingDate && (
+                {billingInfo.nextBillingDate && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Next Billing</span>
-                    <span className="text-xs font-medium text-gray-700">{formatDate(zohoData.nextBillingDate)}</span>
+                    <span className="text-xs text-gray-600">Next Billing</span>
+                    <span className="text-xs font-medium text-gray-800">{formatDate(billingInfo.nextBillingDate)}</span>
                   </div>
                 )}
-                {zohoData.cancellationDate && (
+                {billingInfo.cancellationDate && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Cancelled</span>
-                    <span className="text-xs font-medium text-red-600">{formatDate(zohoData.cancellationDate)}</span>
+                    <span className="text-xs text-gray-600">Cancelled</span>
+                    <span className="text-xs font-medium text-red-600">{formatDate(billingInfo.cancellationDate)}</span>
                   </div>
                 )}
               </div>
@@ -2451,28 +2487,20 @@ export default function ContactCard() {
               <Package size={18} style={{ color: "#1565c0" }} />
               <span className="text-sm font-bold" style={{ color: "#1565c0" }}>Products History</span>
             </div>
-            {(zohoData?.allSubscriptions?.length || zohoData?.planName || retentionPlans.length > 0 || contact.trialKit) ? (
+            {(billingInfo?.allSubscriptions?.length || retentionPlans.length > 0 || contact.trialKit) ? (
               <div className="flex flex-col gap-2.5">
-                {zohoData?.allSubscriptions && zohoData.allSubscriptions.length > 0 ? (
-                  zohoData.allSubscriptions.map((sub: any, idx: number) => (
+                {billingInfo?.allSubscriptions && billingInfo.allSubscriptions.length > 0 ? (
+                  billingInfo.allSubscriptions.map((sub: any, idx: number) => (
                     <div key={idx} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full inline-block" style={{ background: sub.status === "live" ? "#4caf50" : "#9e9e9e" }} />
-                        <span className="text-sm text-gray-800">{sub.name || sub.plan_name || sub.plan?.name || sub.product_name || "Unknown Plan"}</span>
+                        <span className="text-sm text-gray-800">{sub.planName || sub.subscriptionNumber || "Unknown Plan"}</span>
                       </div>
                       <span className={cn("text-xs font-semibold", sub.status === "live" ? "text-green-600" : "text-gray-600")}>
                         {sub.status === "live" ? "Active" : "Inactive"}
                       </span>
                     </div>
                   ))
-                ) : zohoData?.planName ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#4caf50" }} />
-                      <span className="text-sm text-gray-800">{zohoData.planName}</span>
-                    </div>
-                    <span className="text-xs font-semibold text-green-600">Zoho</span>
-                  </div>
                 ) : null}
                 {contact.trialKit && (
                   <div className="flex items-center justify-between">
