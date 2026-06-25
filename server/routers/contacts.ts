@@ -1286,6 +1286,8 @@ export const contactsRouter = router({
         eventDate: row.eventDate ?? null,
         cancelledAt: row.cancelledAt ?? null,
         monthlyAmount: row.monthlyAmount ?? 0,
+        callbackAt: row.callbackAt ?? null,
+        followUpAt: row.followUpAt ?? null,
         createdAt: row.createdAt ? row.createdAt.toISOString() : null,
         updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
       }));

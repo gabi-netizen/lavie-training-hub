@@ -479,7 +479,7 @@ export default function ContactCard() {
 
   const { data: cloudTalkHistory, isLoading: historyLoading } = trpc.contacts.callHistory.useQuery(
     { phone: contact?.phone ?? "", limit: 20 },
-    { enabled: (showCloudTalkHistory || centerBottomTab === "cloudtalk") && !!contact?.phone }
+    { enabled: !!contact?.phone }
   );
 
   const streamRecordingMutation = trpc.contacts.streamRecording.useMutation({
@@ -981,15 +981,49 @@ export default function ContactCard() {
                     </div>
                   );
                 }
+                // Smart Best Time: analyze CloudTalk history
+                const calls = cloudTalkHistory?.calls ?? [];
+                const answered = calls.filter((c: any) => c.status === "answered" && c.date);
+                const missed = calls.filter((c: any) => c.status === "missed" && c.date);
+                let suggestion = "";
+                let suggestionNote = "";
+                if (answered.length > 0) {
+                  const hours = answered.map((c: any) => new Date(c.date).getHours());
+                  const hourCounts: Record<number, number> = {};
+                  hours.forEach((h: number) => { hourCounts[h] = (hourCounts[h] || 0) + 1; });
+                  const bestHour = Object.entries(hourCounts).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+                  if (bestHour) {
+                    const hr = Number(bestHour[0]);
+                    suggestion = `${String(hr).padStart(2, "0")}:00 - ${String(hr + 1).padStart(2, "0")}:00`;
+                    suggestionNote = `Answered ${bestHour[1]}x at this time`;
+                  }
+                } else if (missed.length > 0) {
+                  const missedHours = missed.map((c: any) => new Date(c.date).getHours());
+                  const avgMissedHour = missedHours.reduce((a: number, b: number) => a + b, 0) / missedHours.length;
+                  if (avgMissedHour < 13) {
+                    suggestion = "15:00 - 18:00";
+                    suggestionNote = `Missed ${missed.length}x in morning — try afternoon`;
+                  } else {
+                    suggestion = "09:00 - 12:00";
+                    suggestionNote = `Missed ${missed.length}x in afternoon — try morning`;
+                  }
+                }
                 return (
                   <>
                     <div
-                      className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-3 uppercase tracking-wider"
+                      className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-2 uppercase tracking-wider"
                       style={{ background: "#f5a623", color: "#1a3a5c" }}
                     >
                       Best Time to Contact
                     </div>
-                    <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>Not set</p>
+                    {suggestion ? (
+                      <div className="rounded-lg p-2 mb-1" style={{ background: "rgba(34, 197, 94, 0.15)", border: "1px solid rgba(34, 197, 94, 0.4)" }}>
+                        <div className="text-white font-bold text-lg">{suggestion}</div>
+                        <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.7)" }}>{suggestionNote}</div>
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>No call data yet</p>
+                    )}
                   </>
                 );
               })()}

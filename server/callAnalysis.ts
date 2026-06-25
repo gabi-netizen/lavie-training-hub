@@ -1574,7 +1574,9 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
     // Step 4b: SMS Notification to Matthew on every deal closed by his team
     try {
       const _agentName = record?.repName || "";
-      const isMatthewAgent = _agentName.toLowerCase().includes("matthew") || _agentName.toLowerCase().includes("matt");
+      const _agentLower = _agentName.toLowerCase().trim();
+      // Only trigger for Matthew Holman — exclude James Huxley and other agents
+      const isMatthewAgent = (_agentLower.includes("matthew") || _agentLower === "matt") && !_agentLower.includes("james") && !_agentLower.includes("huxley");
       if (report.dealClosed && isMatthewAgent) {
         const shareToken = await generateShareToken(analysisId);
         const shareLink = `https://lavie-training-hub-production.up.railway.app/shared/call/${shareToken}`;
