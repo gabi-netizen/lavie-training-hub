@@ -20,6 +20,7 @@ import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
 import { ensureBrandsColumn } from "../ensureBrandsColumn";
+import { ensureCardColumns } from "../ensureCardColumns";
 import { ensureEmailTrackingTables } from "../ensureEmailTables";
 import { ensureStripeTables } from "../ensureStripeTables";
 import { ensureClientSubscriptionsTable } from "../ensureClientSubscriptions";
@@ -305,6 +306,12 @@ async function startServer() {
         console.error("[DB] Error ensuring brands column:", err)
       );
     }, 6000);
+    // Ensure Stripe card columns exist on contacts
+    setTimeout(() => {
+      ensureCardColumns().catch((err) =>
+        console.error("[DB] Error ensuring card columns:", err)
+      );
+    }, 6500);
     // Background: sync any contacts that missed CloudTalk sync during hibernation
     setTimeout(() => {
       syncUnsyncedContactsToCloudTalk().catch((err) =>

@@ -123,6 +123,54 @@ function extractCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCu
   return customer.id ?? null;
 }
 
+// ─── Card Info Update Helper ────────────────────────────────────────────────
+
+/**
+ * Updates the contact's card fields (cardLast4, cardBrand, cardExpMonth, cardExpYear)
+ * by looking up the Stripe customer's default payment method.
+ */
+async function updateContactCardInfo(stripeCustomerId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const stripe = getStripeClient();
+
+    // Get the customer's payment methods
+    const methods = await stripe.paymentMethods.list({
+      customer: stripeCustomerId,
+      type: "card",
+      limit: 1,
+    });
+    const pm = methods.data[0];
+    if (!pm?.card) return;
+
+    const cardLast4 = pm.card.last4 ?? null;
+    const cardBrand = pm.card.brand ?? null;
+    const cardExpMonth = pm.card.exp_month ?? null;
+    const cardExpYear = pm.card.exp_year ?? null;
+
+    // Find contact(s) via stripe_customers mapping
+    const mappings = await db
+      .select({ contactId: stripeCustomers.contactId })
+      .from(stripeCustomers)
+      .where(eq(stripeCustomers.stripeCustomerId, stripeCustomerId));
+
+    for (const mapping of mappings) {
+      await db
+        .update(contacts)
+        .set({ cardLast4, cardBrand, cardExpMonth, cardExpYear })
+        .where(eq(contacts.id, mapping.contactId));
+    }
+
+    if (mappings.length > 0) {
+      console.log(`[Stripe Webhook] Updated card info for ${mappings.length} contact(s): ${cardBrand} ****${cardLast4}`);
+    }
+  } catch (err) {
+    console.error(`[Stripe Webhook] Error updating card info for customer ${stripeCustomerId}:`, err);
+  }
+}
+
 // ─── Event Handlers ──────────────────────────────────────────────────────────
 
 async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> {
@@ -140,6 +188,8 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
 
   if (customerId) {
     await updateContactStatus(customerId, "done_deal");
+    // Update card info on successful payment
+    await updateContactCardInfo(customerId);
   }
 
   // ─── Auto-create Subscription Schedule for £4.95 trial payments ──────────
@@ -563,6 +613,11 @@ async function handleChargeSucceeded(event: Stripe.Event): Promise<void> {
       receiptUrl: charge.receipt_url,
     },
   });
+
+  // Update card info on successful charge
+  if (customerId) {
+    await updateContactCardInfo(customerId);
+  }
 }
 
 async function handleChargeDisputeCreated(event: Stripe.Event): Promise<void> {

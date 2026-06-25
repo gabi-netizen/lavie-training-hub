@@ -52,7 +52,7 @@ import {
   getCustomerPaymentMethods,
   getStripeClient as getBillingStripeClient,
 } from "../stripe/index";
-import { eq, or, and, sql, ne, isNull, isNotNull, inArray, notInArray, count as drizzleCount, gte, lte } from "drizzle-orm";
+import { eq, or, and, sql, ne, isNull, isNotNull, inArray, notInArray, count as drizzleCount, gte, lte, desc } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
 import { getZohoBillingDataByEmail } from "../zohoBilling";
 
@@ -1636,5 +1636,28 @@ export const contactsRouter = router({
         .filter(Boolean);
 
       return { notes };
+    }),
+
+  // ─── Get call history from DB (call_analyses table) ─────────────────────────
+  getCallHistoryFromDb: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return db
+        .select({
+          id: callAnalyses.id,
+          callDate: callAnalyses.callDate,
+          durationSeconds: callAnalyses.durationSeconds,
+          repName: callAnalyses.repName,
+          callType: callAnalyses.callType,
+          audioFileUrl: callAnalyses.audioFileUrl,
+          cloudtalkCallId: callAnalyses.cloudtalkCallId,
+          status: callAnalyses.status,
+          overallScore: callAnalyses.overallScore,
+        })
+        .from(callAnalyses)
+        .where(eq(callAnalyses.contactId, input.contactId))
+        .orderBy(desc(callAnalyses.callDate));
     }),
 });

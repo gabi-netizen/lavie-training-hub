@@ -228,9 +228,6 @@ export default function ContactCard() {
   const isFromRetention = searchParams.get("from") === "retention";
   const retentionSubId = searchParams.get("subId") ?? "";
 
-  // CloudTalk call history state
-  const [showCloudTalkHistory, setShowCloudTalkHistory] = useState(false);
-  const [audioData, setAudioData] = useState<Record<number, string>>({}); // callId -> base64
 
   const { data: contact, refetch, isLoading, isError } = trpc.contacts.get.useQuery(
     { id: contactId },
@@ -306,11 +303,7 @@ export default function ContactCard() {
     };
   }, [contactSubscriptions]);
 
-  // Stripe payment methods for sidebar card display
-  const { data: stripeCardData } = trpc.stripe.getCardByEmail.useQuery(
-    { email: contact?.email ?? "" },
-    { enabled: !!contact?.email }
-  );
+  // Stripe card info — now read directly from contact record (synced from Stripe)
 
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
   const agentParam = searchParams.get("agent");
@@ -537,21 +530,12 @@ export default function ContactCard() {
   const [centerBottomTab, setCenterBottomTab] = useState<"documents" | "activities" | "cloudtalk" | "privacy">("documents");
   const [transactionIdx, setTransactionIdx] = useState(0);
 
-  const { data: cloudTalkHistory, isLoading: historyLoading } = trpc.contacts.callHistory.useQuery(
-    { phone: contact?.phone ?? "", limit: 20 },
-    { enabled: !!contact?.phone }
+  const { data: callHistoryFromDb, isLoading: historyLoading } = trpc.contacts.getCallHistoryFromDb.useQuery(
+    { contactId: contact?.id ?? 0 },
+    { enabled: !!contact?.id }
   );
 
-  const streamRecordingMutation = trpc.contacts.streamRecording.useMutation({
-    onSuccess: (data, variables) => {
-      if (data.success && data.data) {
-        setAudioData((prev) => ({ ...prev, [variables.callId]: data.data! }));
-      } else {
-        toast.error("Recording not available");
-      }
-    },
-    onError: () => toast.error("Failed to load recording"),
-  });
+
 
   const clickToCallMutation = trpc.contacts.clickToCall.useMutation({
     onSuccess: (data) => {
@@ -1019,14 +1003,14 @@ export default function ContactCard() {
                     </div>
                   );
                 }
-                // Smart Best Time: analyze CloudTalk history
-                const calls = cloudTalkHistory?.calls ?? [];
-                const answered = calls.filter((c: any) => c.status === "answered" && c.date);
-                const missed = calls.filter((c: any) => c.status === "missed" && c.date);
+                // Smart Best Time: analyze call history from DB
+                const calls = callHistoryFromDb ?? [];
+                const answered = calls.filter((c: any) => (c.durationSeconds ?? 0) > 0 && c.callDate);
+                const missed = calls.filter((c: any) => (c.durationSeconds ?? 0) === 0 && c.callDate);
                 let suggestion = "";
                 let suggestionNote = "";
                 if (answered.length > 0) {
-                  const hours = answered.map((c: any) => new Date(c.date).getHours());
+                  const hours = answered.map((c: any) => new Date(c.callDate).getHours());
                   const hourCounts: Record<number, number> = {};
                   hours.forEach((h: number) => { hourCounts[h] = (hourCounts[h] || 0) + 1; });
                   const bestHour = Object.entries(hourCounts).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
@@ -1036,7 +1020,7 @@ export default function ContactCard() {
                     suggestionNote = `Answered ${bestHour[1]}x at this time`;
                   }
                 } else if (missed.length > 0) {
-                  const missedHours = missed.map((c: any) => new Date(c.date).getHours());
+                  const missedHours = missed.map((c: any) => new Date(c.callDate).getHours());
                   const avgMissedHour = missedHours.reduce((a: number, b: number) => a + b, 0) / missedHours.length;
                   if (avgMissedHour < 13) {
                     suggestion = "15:00 - 18:00";
@@ -1143,10 +1127,9 @@ export default function ContactCard() {
                   <span className="text-sm font-bold text-black">Card</span>
                   <span className="text-sm font-semibold text-gray-800">
                     {(() => {
-                      const pm = stripeCardData?.card;
-                      if (!pm) return "\u2014";
-                      const brand = pm.brand ? pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1) : "Card";
-                      return `${brand} \u2022\u2022\u2022\u2022${pm.last4} (${String(pm.expMonth).padStart(2, "0")}/${String(pm.expYear).slice(-2)})`;
+                      if (!contact.cardLast4) return "\u2014";
+                      const brand = contact.cardBrand ? contact.cardBrand.charAt(0).toUpperCase() + contact.cardBrand.slice(1) : "Card";
+                      return `${brand} \u2022\u2022\u2022\u2022${contact.cardLast4} (${String(contact.cardExpMonth ?? 0).padStart(2, "0")}/${String(contact.cardExpYear ?? 0).slice(-2)})`;
                     })()}
                   </span>
                 </div>
@@ -2240,34 +2223,28 @@ export default function ContactCard() {
               {/* CloudTalk History */}
               {centerBottomTab === "cloudtalk" && (
                 <div>
-                  {!contact.phone && !currentRetentionLead?.phone ? (
-                    <div className="flex flex-col items-center py-12 text-gray-600">
-                      <PhoneOff size={28} className="mb-2 opacity-40" />
-                      <p className="text-sm">No phone number on file</p>
-                    </div>
-                  ) : historyLoading ? (
-                    <div className="flex items-center gap-2 py-8 justify-center text-gray-500 text-sm">
+                  {historyLoading ? (
+                    <div className="flex items-center gap-2 py-8 justify-center text-gray-600 text-sm">
                       <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
                       Loading call history…
                     </div>
-                  ) : !cloudTalkHistory || cloudTalkHistory.calls.length === 0 ? (
+                  ) : !callHistoryFromDb || callHistoryFromDb.length === 0 ? (
                     <div className="flex flex-col items-center py-12 text-gray-600">
                       <PhoneOff size={28} className="mb-2 opacity-40" />
-                      <p className="text-sm">No CloudTalk calls found for this number</p>
+                      <p className="text-sm">No calls found for this contact</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2">
                       <p className="text-xs text-gray-600 mb-1">
-                        {cloudTalkHistory.totalCount} total calls
+                        {callHistoryFromDb.length} total calls
                       </p>
-                      {cloudTalkHistory.calls.map((call) => {
-                        const isAnswered = call.status === "answered";
-                        const durationSec = call.call_times?.talking_time ?? 0;
+                      {callHistoryFromDb.map((call) => {
+                        const isAnswered = (call.durationSeconds ?? 0) > 0;
+                        const durationSec = Math.round(call.durationSeconds ?? 0);
                         const mins = Math.floor(durationSec / 60);
                         const secs = durationSec % 60;
-                        const b64 = audioData[call.cdr_id];
                         return (
-                          <div key={call.cdr_id} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+                          <div key={call.id} className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-center gap-2">
                                 {isAnswered ? (
@@ -2284,46 +2261,45 @@ export default function ContactCard() {
                                       {isAnswered ? "Answered" : "Missed"}
                                     </span>
                                     {durationSec > 0 && (
-                                      <span className="text-xs text-gray-500">{mins}m {secs}s</span>
+                                      <span className="text-xs text-gray-600">{mins}m {secs}s</span>
                                     )}
-                                    {call.agent?.name && (
-                                      <span className="text-xs text-gray-500">· {call.agent.name}</span>
+                                    {call.repName && (
+                                      <span className="text-xs text-gray-600">· {call.repName}</span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-gray-600 mt-0.5">
-                                    {call.date ? new Date(call.date).toLocaleString("en-GB") : ""}
-                                  </p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <p className="text-xs text-gray-600">
+                                      {call.callDate ? new Date(call.callDate).toLocaleString("en-GB") : ""}
+                                    </p>
+                                    {call.callType && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
+                                        {call.callType.replace(/_/g, " ")}
+                                      </span>
+                                    )}
+                                    {call.overallScore != null && (
+                                      <span className={cn(
+                                        "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                                        call.overallScore >= 70 ? "bg-green-100 text-green-700" :
+                                        call.overallScore >= 40 ? "bg-yellow-100 text-yellow-700" :
+                                        "bg-red-100 text-red-700"
+                                      )}>
+                                        {Math.round(call.overallScore)}%
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                              {call.recorded && (
-                                <button
-                                  onClick={() => {
-                                    if (b64) {
-                                      setAudioData((prev) => { const n = {...prev}; delete n[call.cdr_id]; return n; });
-                                    } else {
-                                      streamRecordingMutation.mutate({ callId: call.cdr_id });
-                                    }
-                                  }}
-                                  disabled={streamRecordingMutation.isPending}
-                                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium shrink-0 disabled:opacity-50"
+                              {call.audioFileUrl && (
+                                <a
+                                  href={call.audioFileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium shrink-0"
                                 >
-                                  {streamRecordingMutation.isPending && !b64 ? (
-                                    <div className="w-3 h-3 border border-blue-400 border-t-blue-700 rounded-full animate-spin" />
-                                  ) : b64 ? (
-                                    <span>Hide</span>
-                                  ) : (
-                                    <span>▶ Play</span>
-                                  )}
-                                </button>
+                                  ▶ Play
+                                </a>
                               )}
                             </div>
-                            {b64 && (
-                              <audio
-                                controls
-                                className="w-full mt-2 h-8"
-                                src={`data:audio/wav;base64,${b64}`}
-                              />
-                            )}
                           </div>
                         );
                       })}

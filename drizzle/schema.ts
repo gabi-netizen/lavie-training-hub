@@ -198,6 +198,14 @@ export const contacts = mysqlTable("contacts", {
   naCount: int("naCount").default(0).notNull(),
   /** Timestamp of the last time this contact was marked as No Answer */
   lastNaAt: timestamp("lastNaAt"),
+  /** Stripe card last 4 digits */
+  cardLast4: varchar("cardLast4", { length: 4 }),
+  /** Stripe card brand (e.g. Visa, Mastercard) */
+  cardBrand: varchar("cardBrand", { length: 32 }),
+  /** Stripe card expiry month */
+  cardExpMonth: int("cardExpMonth"),
+  /** Stripe card expiry year */
+  cardExpYear: int("cardExpYear"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
