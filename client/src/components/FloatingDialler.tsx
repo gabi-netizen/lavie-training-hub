@@ -78,7 +78,7 @@ export default function FloatingDialler() {
 
   return (
     <div
-      className="fixed bottom-20 right-4 z-[9999] md:bottom-6 md:right-6 flex flex-col items-end gap-2"
+      className="fixed bottom-20 right-4 z-[9999] md:bottom-6 md:right-6 flex flex-col items-end gap-1.5"
       style={{ pointerEvents: "none" }}
     >
       {/* Expanded iframe panel */}
@@ -113,23 +113,23 @@ export default function FloatingDialler() {
         </div>
       )}
 
-      {/* Refresh Click to Call button */}
+      {/* Refresh Click to Call button — small, positioned above the phone button */}
       <button
         onClick={handleRefresh}
         disabled={refreshing}
         style={{ pointerEvents: "auto" }}
         title="Refresh Click to Call connection"
-        className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all duration-150 disabled:opacity-60 shadow-lg"
+        className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-all duration-150 disabled:opacity-60 shadow-md"
       >
-        <RefreshCw size={12} className={`text-white ${refreshing ? "animate-spin" : ""}`} />
-        {refreshing ? "Refreshing…" : "Refresh Click to Call"}
+        <RefreshCw size={10} className={`text-white ${refreshing ? "animate-spin" : ""}`} />
+        {refreshing ? "…" : "Refresh"}
       </button>
 
       {/* Floating toggle button */}
       <button
         onClick={() => setExpanded(v => !v)}
         className={`
-          w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200
+          w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-all duration-200
           ${expanded
             ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
             : hasIncoming
@@ -140,7 +140,7 @@ export default function FloatingDialler() {
         style={{ pointerEvents: "auto" }}
         title={expanded ? "Close dialler" : "Open dialler"}
       >
-        {expanded ? <X size={22} /> : <Phone size={22} />}
+        {expanded ? <X size={18} /> : <Phone size={18} />}
       </button>
     </div>
   );
