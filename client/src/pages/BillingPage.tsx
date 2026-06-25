@@ -183,11 +183,25 @@ function FailedPaymentsSection() {
   const { data } = trpc.billingDashboard.getFailedPayments.useQuery({});
   if (!data || data.totalCount === 0) return null;
 
+  const visibleRows = data.rows.slice(0, 4);
+
+  function formatRetryDate(dateStr: string | null, daysUntil: number | null): { line1: string; line2: string; color: string } {
+    if (daysUntil !== null && daysUntil <= 0) {
+      return { line1: "No retries left", line2: "Manual action required", color: "text-red-600" };
+    }
+    if (!dateStr) return { line1: "—", line2: "", color: "text-gray-800" };
+    const d = new Date(dateStr);
+    const formatted = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " 9:00 am";
+    if (daysUntil === 1) return { line1: "Tomorrow 9:00 am", line2: d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }), color: "text-gray-800" };
+    if (daysUntil !== null && daysUntil <= 5) return { line1: formatted, line2: `Final retry in ${daysUntil} days`, color: "text-orange-700" };
+    return { line1: formatted, line2: daysUntil !== null ? `In ${daysUntil} days` : "", color: "text-gray-800" };
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h2 className="text-base font-bold text-gray-800">Failed Payments — Smart Retry Schedule</h2>
+      <div className="flex items-center justify-between px-6 py-3">
+        <h2 className="text-lg font-bold text-gray-800 italic">Failed Payments — Smart Retry Schedule</h2>
         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-red-700 bg-red-50 border border-red-200">
           {data.totalCount} Requiring Action
         </span>
@@ -197,8 +211,8 @@ function FailedPaymentsSection() {
       <div className="overflow-x-auto">
         {/* Header row */}
         <div
-          className="grid items-center px-6 py-3 border-b border-gray-200 bg-gray-50"
-          style={{ gridTemplateColumns: "1.8fr 0.7fr 1fr 1fr 1.2fr 1fr" }}
+          className="grid items-center px-6 py-2 border-b border-gray-200"
+          style={{ gridTemplateColumns: "1.5fr 0.6fr 1fr 1fr 1.3fr 0.8fr" }}
         >
           <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
           <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</div>
@@ -209,72 +223,65 @@ function FailedPaymentsSection() {
         </div>
 
         {/* Body rows */}
-        {data.rows.map((row) => (
-          <div
-            key={row.subscriptionId}
-            className="grid items-center px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
-            style={{ gridTemplateColumns: "1.8fr 0.7fr 1fr 1fr 1.2fr 1fr" }}
-          >
-            {/* Customer */}
-            <div>
-              <div className="text-sm font-semibold text-gray-800">{row.customerName}</div>
-              <div className="text-xs text-gray-500">{row.email}</div>
-            </div>
-            {/* Amount */}
-            <div className="text-sm font-bold text-gray-800">{formatCurrency(row.amount)}</div>
-            {/* Failure Reason */}
-            <div>
-              <span className={cn(
-                "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold",
-                row.status === "dunning"
-                  ? "text-red-700 bg-red-50 border border-red-200"
-                  : "text-orange-700 bg-orange-50 border border-orange-200"
-              )}>
-                {row.failureReason}
-              </span>
-            </div>
-            {/* Retry Attempts */}
-            <div>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-orange-800 bg-orange-50 border border-orange-200">
-                Attempt 1 / 4
-              </span>
-              <div className="mt-1.5 h-1.5 bg-gray-200 rounded-full overflow-hidden" style={{ width: 80 }}>
-                <div className="h-full bg-orange-400 rounded-full" style={{ width: "25%" }} />
+        {visibleRows.map((row) => {
+          const retry = formatRetryDate(row.nextBillingOn, row.daysUntilRetry);
+          return (
+            <div
+              key={row.subscriptionId}
+              className="grid items-center px-6 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              style={{ gridTemplateColumns: "1.5fr 0.6fr 1fr 1fr 1.3fr 0.8fr" }}
+            >
+              {/* Customer */}
+              <div>
+                <div className="text-sm font-semibold text-gray-800">{row.customerName}</div>
+                <div className="text-xs text-gray-400">{row.email}</div>
+              </div>
+              {/* Amount */}
+              <div className="text-sm font-bold text-gray-800">{formatCurrency(row.amount)}</div>
+              {/* Failure Reason */}
+              <div>
+                <span className={cn(
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                  row.status === "dunning"
+                    ? "text-red-600"
+                    : "text-orange-600"
+                )}>
+                  {row.failureReason}
+                </span>
+              </div>
+              {/* Retry Attempts */}
+              <div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold text-green-800 border border-green-300 bg-green-50">
+                  Attempt 1 / 4
+                </span>
+                <div className="mt-1 h-1.5 bg-gray-200 rounded-full overflow-hidden" style={{ width: 70 }}>
+                  <div className={cn("h-full rounded-full", row.daysUntilRetry !== null && row.daysUntilRetry <= 0 ? "bg-red-500" : "bg-orange-400")} style={{ width: "25%" }} />
+                </div>
+              </div>
+              {/* Next Retry */}
+              <div>
+                <div className={cn("text-sm font-bold", retry.color)}>{retry.line1}</div>
+                <div className="text-xs text-gray-500">{retry.line2}</div>
+              </div>
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <button className="px-3 py-1 text-xs font-bold text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition">
+                  View
+                </button>
+                <button className="px-3 py-1 text-xs font-bold text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition">
+                  Cancel
+                </button>
               </div>
             </div>
-            {/* Next Retry */}
-            <div>
-              {row.daysUntilRetry !== null && row.daysUntilRetry <= 0 ? (
-                <>
-                  <div className="text-sm font-bold text-red-600">No retries left</div>
-                  <div className="text-xs text-gray-500">Manual action required</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-sm font-semibold text-gray-800">{row.nextBillingOn ? formatDate(row.nextBillingOn) : "—"}</div>
-                  <div className="text-xs text-gray-500">
-                    {row.daysUntilRetry !== null ? (row.daysUntilRetry === 1 ? "Tomorrow" : `In ${row.daysUntilRetry} days`) : ""}
-                  </div>
-                </>
-              )}
-            </div>
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
-                View
-              </button>
-              <button className="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
-                Cancel
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end px-6 py-3 border-t border-gray-100">
+      <div className="flex items-center justify-end px-6 py-2.5">
         <span className="text-xs text-gray-600">
-          Showing {data.rows.length} of {data.totalCount} failed payments.
+          Showing {visibleRows.length} of {data.totalCount} failed payments.{" "}
+          <button className="text-blue-600 font-semibold hover:underline">View all →</button>
         </span>
       </div>
     </div>
