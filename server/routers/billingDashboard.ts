@@ -35,7 +35,7 @@ export const billingDashboardRouter = router({
       const result = await db
         .select({
           scheduledCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('trial','future') THEN 1 ELSE 0 END)`,
-          activeSubsCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.planType} = 'subscription' THEN 1 ELSE 0 END)`,
+          activeSubsCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.planType} = 'subscription' AND CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) > 4.95 AND ${clientSubscriptions.planName} NOT LIKE '%stall%' AND ${clientSubscriptions.planName} NOT REGEXP '^[0-9]+ [Dd]ays' AND (${clientSubscriptions.campaignId} IS NULL OR ${clientSubscriptions.campaignId} NOT LIKE '%INSTALLM%') THEN 1 ELSE 0 END)`,
           activeInstallmentsCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.planType} = 'installment' THEN 1 ELSE 0 END)`,
           dueThisWeek: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.nextBillingOn} BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END)`,
           failedCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('dunning','unpaid') THEN 1 ELSE 0 END)`,
