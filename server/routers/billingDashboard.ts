@@ -823,4 +823,99 @@ export const billingDashboardRouter = router({
         expireNextMonth: Number(row?.expireNextMonth ?? 0),
       };
     }),
+
+  /**
+   * getCardExpiryCustomers — returns the list of customers whose cards are
+   * expiring this month or next month and who have at least one live subscription.
+   *
+   * Input:
+   *   period: "this_month" | "next_month"
+   *
+   * Returns an array of customer objects with card and subscription details.
+   */
+  getCardExpiryCustomers: adminProcedure
+    .input(
+      z.object({
+        period: z.enum(["this_month", "next_month"]),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const now = new Date();
+      const thisYear = now.getFullYear();
+      const thisMonth = now.getMonth() + 1;
+
+      const nextMonthDate = new Date(thisYear, now.getMonth() + 1, 1);
+      const nextYear = nextMonthDate.getFullYear();
+      const nextMonth = nextMonthDate.getMonth() + 1;
+
+      const targetYear = input.period === "this_month" ? thisYear : nextYear;
+      const targetMonth = input.period === "this_month" ? thisMonth : nextMonth;
+
+      // Fetch contacts whose card expires in the target period and have a live subscription
+      const contactRows = await db
+        .select({
+          name: contacts.name,
+          email: contacts.email,
+          cardLast4: contacts.cardLast4,
+          cardBrand: contacts.cardBrand,
+          cardExpMonth: contacts.cardExpMonth,
+          cardExpYear: contacts.cardExpYear,
+        })
+        .from(contacts)
+        .where(
+          and(
+            sql`${contacts.cardExpYear} = ${targetYear}`,
+            sql`${contacts.cardExpMonth} = ${targetMonth}`,
+            sql`${contacts.email} IS NOT NULL`,
+            sql`EXISTS (
+              SELECT 1 FROM client_subscriptions cs
+              WHERE LOWER(cs.email) = LOWER(${contacts.email})
+              AND cs.status = 'live'
+            )`,
+          )
+        );
+
+      // For each contact, fetch their live subscription details
+      const results = await Promise.all(
+        contactRows.map(async (contact) => {
+          const subs = await db
+            .select({
+              salesPerson: clientSubscriptions.salesPerson,
+              amount: clientSubscriptions.amount,
+              planName: clientSubscriptions.planName,
+            })
+            .from(clientSubscriptions)
+            .where(
+              and(
+                sql`LOWER(${clientSubscriptions.email}) = LOWER(${contact.email})`,
+                eq(clientSubscriptions.status, "live"),
+              )
+            )
+            .limit(1);
+
+          const sub = subs[0];
+          const planName = sub?.planName ?? "";
+          const planType = planName.toLowerCase().includes("installment")
+            ? "Installment"
+            : "Subscription";
+
+          return {
+            customerName: contact.name ?? "",
+            email: contact.email ?? "",
+            cardLast4: contact.cardLast4 ?? "",
+            cardBrand: contact.cardBrand ?? "",
+            cardExpMonth: contact.cardExpMonth ?? null,
+            cardExpYear: contact.cardExpYear ?? null,
+            agent: sub?.salesPerson ?? "",
+            amount: sub?.amount ? parseFloat(String(sub.amount)) : null,
+            planType,
+          };
+        })
+      );
+
+      return results;
+    }),
 });

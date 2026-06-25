@@ -344,6 +344,8 @@ export default function BillingPage() {
   // Modal state
   const [showNewSubModal, setShowNewSubModal] = useState(false);
   const [showNewInstalmentModal, setShowNewInstalmentModal] = useState(false);
+  const [showCardExpiryModal, setShowCardExpiryModal] = useState(false);
+  const [cardExpiryTab, setCardExpiryTab] = useState<"this_month" | "next_month">("this_month");
 
   // Queries
   const utils = trpc.useUtils();
@@ -366,6 +368,11 @@ export default function BillingPage() {
   const { data: activityData } = trpc.billingDashboard.getRecentActivity.useQuery({});
   const { data: quickStats } = trpc.billingDashboard.getQuickStats.useQuery({});
   const { data: cardExpiry } = trpc.billingDashboard.getCardExpiry.useQuery({});
+  const { data: cardExpiryCustomers, isLoading: cardExpiryCustomersLoading } =
+    trpc.billingDashboard.getCardExpiryCustomers.useQuery(
+      { period: cardExpiryTab },
+      { enabled: showCardExpiryModal }
+    );
 
   const handleRefresh = () => {
     utils.billingDashboard.invalidate();
@@ -540,7 +547,10 @@ export default function BillingPage() {
           </div>
 
           {/* Cards Expiring Soon */}
-          <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+          <div
+            className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100 cursor-pointer hover:shadow-md hover:border-amber-500 transition-all"
+            onClick={() => setShowCardExpiryModal(true)}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Cards Expiring Soon</span>
               <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -1098,6 +1108,136 @@ export default function BillingPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Cards Expiring Soon Modal */}
+      {showCardExpiryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-6 overflow-y-auto"
+          onClick={() => setShowCardExpiryModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 relative mt-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <button
+              onClick={() => setShowCardExpiryModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-800 font-bold transition"
+            >
+              <X size={16} />
+            </button>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <CreditCard size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-gray-800">Cards Expiring Soon</h3>
+                <p className="text-sm text-gray-600">Customers with a live subscription whose card is expiring</p>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setCardExpiryTab("this_month")}
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold rounded-lg transition",
+                  cardExpiryTab === "this_month"
+                    ? "bg-amber-500 text-white"
+                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                )}
+              >
+                This Month
+              </button>
+              <button
+                onClick={() => setCardExpiryTab("next_month")}
+                className={cn(
+                  "px-4 py-2 text-sm font-semibold rounded-lg transition",
+                  cardExpiryTab === "next_month"
+                    ? "bg-amber-500 text-white"
+                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                )}
+              >
+                Next Month
+              </button>
+            </div>
+
+            {/* Table */}
+            {cardExpiryCustomersLoading ? (
+              <div className="flex items-center justify-center py-12 text-gray-800 text-sm font-semibold">
+                Loading…
+              </div>
+            ) : !cardExpiryCustomers || cardExpiryCustomers.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-gray-800 text-sm">
+                No expiring cards found for this period.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-gray-100">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-800 uppercase tracking-wide">Name</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-800 uppercase tracking-wide">Email</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-800 uppercase tracking-wide">Agent</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-800 uppercase tracking-wide">Amount</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-800 uppercase tracking-wide">Type</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-800 uppercase tracking-wide">Card</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cardExpiryCustomers.map((customer, idx) => (
+                      <tr
+                        key={idx}
+                        className={cn(
+                          "border-b border-gray-50 hover:bg-amber-50 transition",
+                          idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        )}
+                      >
+                        <td className="px-4 py-3 font-semibold text-gray-800">{customer.customerName || "—"}</td>
+                        <td className="px-4 py-3 text-gray-800">{customer.email || "—"}</td>
+                        <td className="px-4 py-3 text-gray-800">{customer.agent || "—"}</td>
+                        <td className="px-4 py-3 text-gray-800 font-medium">
+                          {customer.amount != null ? `£${customer.amount.toFixed(2)}` : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+                              customer.planType === "Installment"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-green-100 text-green-800"
+                            )}
+                          >
+                            {customer.planType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-800">
+                          {customer.cardBrand && (
+                            <span className="font-semibold capitalize">{customer.cardBrand} </span>
+                          )}
+                          {customer.cardLast4 && (
+                            <span>••••{customer.cardLast4} </span>
+                          )}
+                          {customer.cardExpMonth != null && customer.cardExpYear != null && (
+                            <span className="text-xs text-gray-800">
+                              exp {String(customer.cardExpMonth).padStart(2, "0")}/{customer.cardExpYear}
+                            </span>
+                          )}
+                          {!customer.cardBrand && !customer.cardLast4 && "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-4 text-xs text-gray-800 font-medium">
+              {cardExpiryCustomers ? `${cardExpiryCustomers.length} customer${cardExpiryCustomers.length !== 1 ? "s" : ""}` : ""}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
