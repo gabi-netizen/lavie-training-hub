@@ -270,6 +270,12 @@ export default function ContactCard() {
     { enabled: !!contact?.email }
   );
 
+  // Stripe payment methods for sidebar card display
+  const { data: stripePaymentData } = trpc.stripe.getCustomerPaymentMethods.useQuery(
+    { contactId },
+    { enabled: !!contactId }
+  );
+
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
   const agentParam = searchParams.get("agent");
   const agentName = agentParam || "Rob";
@@ -322,6 +328,20 @@ export default function ContactCard() {
       setAgentNoteValue(currentRetentionLead.agentNote ?? "");
     }
   }, [currentRetentionLead?.agentNote]);
+
+  // Sync manual best time from localStorage when contactId changes
+  useEffect(() => {
+    if (contactId) {
+      const saved = localStorage.getItem(`bestTime_${contactId}`);
+      if (saved) {
+        setManualBestTime(saved);
+        setBestTimeInput(saved);
+      } else {
+        setManualBestTime("");
+        setBestTimeInput("");
+      }
+    }
+  }, [contactId]);
 
   const handleRetentionStatusChange = (newStatus: string) => {
     if (!currentRetentionLead) return;
@@ -471,6 +491,10 @@ export default function ContactCard() {
   // SMS compose state
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsMessage, setSmsMessage] = useState("");
+
+  // Manual Best Time to Contact (localStorage)
+  const [manualBestTime, setManualBestTime] = useState("");
+  const [bestTimeInput, setBestTimeInput] = useState("");
 
   // Tab state
   const [centerTopTab, setCenterTopTab] = useState<"history" | "transactions" | "shipments" | "notes">(isFromRetention ? "notes" : "history");
@@ -910,63 +934,41 @@ export default function ContactCard() {
         ══════════════════════════════════════════════════ */}
         <div className="shrink-0 flex flex-col gap-4" style={{ width: "300px" }}>
 
-          {/* ── Blue Gradient Card ── */}
-          <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: "linear-gradient(180deg, #1a5276 0%, #2980b9 100%)" }}>
+          {/* ── Contact Identity Card (White) ── */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
 
-            {/* Avatar + Name + ID */}
+            {/* Avatar + Name + Status */}
             <div className="flex flex-col items-center pt-8 pb-4 px-5">
-              <div className="relative mb-4">
+              <div className="relative mb-3">
                 <div
-                  className="w-24 h-24 rounded-full border-4 flex items-center justify-center text-3xl font-bold shadow-lg"
-                  style={{ background: "rgba(255,255,255,0.15)", color: "white", borderColor: "rgba(255,255,255,0.8)" }}
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold"
+                  style={{ background: "#e8f5e9", color: "#2e7d32" }}
                 >
                   {getInitials(contact.name)}
                 </div>
                 <span
-                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full"
-                  style={{ background: "#4caf50", borderWidth: "3px", borderStyle: "solid", borderColor: "white" }}
+                  className="absolute bottom-1 right-1 w-4 h-4 rounded-full"
+                  style={{ background: "#4caf50", borderWidth: "2px", borderStyle: "solid", borderColor: "white" }}
                 />
               </div>
-              <h2 className="text-white text-xl font-bold text-center leading-tight">{contact.name}</h2>
-              <p className="text-xs mt-1 text-center" style={{ color: "rgba(255,255,255,0.7)" }}>
-                Customer ID: #LVL-{paddedId}
-              </p>
-              <p className="text-xs mt-0.5 text-center" style={{ color: "rgba(255,255,255,0.7)" }}>
-                Customer since{" "}
-                <span style={{ color: "#f5a623", fontWeight: 600 }}>
-                  {zohoData?.trialStartDate ? formatMonthYear(zohoData.trialStartDate) : formatMonthYear(contact.createdAt)}
+              <h2 className="text-gray-800 text-xl font-bold text-center leading-tight">{contact.name}</h2>
+              <p className="text-sm mt-1 text-center flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#4caf50" }} />
+                <span className="text-gray-600 font-medium">
+                  {(() => {
+                    const statusText = zohoData?.subscriptionStatus === "live"
+                      ? `Active \u2014 ${zohoData.planName || "Live Sub"} Cycle ${zohoData.billingCycleCount || 1}`
+                      : zohoData?.subscriptionStatus === "cancelled" ? "Cancelled"
+                      : zohoData?.subscriptionStatus === "trial" ? "Trial"
+                      : contact.status || "New";
+                    return statusText;
+                  })()}
                 </span>
               </p>
-
-              {/* Action buttons */}
-              <div className="flex gap-2 mt-5 w-full">
-                <button
-                  onClick={handleCallNow}
-                  disabled={clickToCallMutation.isPending}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-white text-xs font-semibold py-2.5 px-3 rounded-lg shadow-md disabled:opacity-60 transition-colors"
-                  style={{ background: "#4caf50" }}
-                >
-                  <Phone size={14} />
-                  {clickToCallMutation.isPending
-                    ? "Calling…"
-                    : contact.phone || zohoData?.phone || "No phone"}
-                </button>
-                <button
-                  onClick={() => {
-                    if (!contact.email) { toast.error("No email address on file"); return; }
-                    setEmailOpen((v) => !v);
-                  }}
-                  className="flex items-center justify-center gap-1.5 text-white text-xs font-semibold py-2.5 px-4 rounded-lg shadow-md transition-colors"
-                  style={{ background: "#1565c0" }}
-                >
-                  <Mail size={14} />
-                  Email
-                </button>
-              </div>
             </div>
 
-            {/* Best Time to Contact */}
-            <div className="px-5 pb-4 pt-2">
+            {/* Best Time to Contact Section */}
+            <div className="px-5 pb-4">
               {(() => {
                 const cbRaw = contact.callbackAt || (currentRetentionLead?.callbackAt ? currentRetentionLead.callbackAt : null);
                 if (cbRaw) {
@@ -974,10 +976,10 @@ export default function ContactCard() {
                   const dateStr = cbDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
                   const timeStr = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
                   return (
-                    <div className="rounded-xl p-3" style={{ background: "rgba(245, 166, 35, 0.15)", border: "2px solid #f5a623" }}>
-                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#f5a623" }}>Callback Scheduled</div>
-                      <div className="text-white font-bold" style={{ fontSize: "28px", lineHeight: 1.2 }}>{timeStr}</div>
-                      <div className="text-white font-semibold text-sm mt-1">{dateStr}</div>
+                    <div className="rounded-xl p-3" style={{ background: "#fff8e1", border: "2px solid #f5a623" }}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#e65100" }}>Callback Scheduled</div>
+                      <div className="text-gray-800 font-bold" style={{ fontSize: "28px", lineHeight: 1.2 }}>{timeStr}</div>
+                      <div className="text-gray-600 font-semibold text-sm mt-1">{dateStr}</div>
                     </div>
                   );
                 }
@@ -1002,10 +1004,10 @@ export default function ContactCard() {
                   const avgMissedHour = missedHours.reduce((a: number, b: number) => a + b, 0) / missedHours.length;
                   if (avgMissedHour < 13) {
                     suggestion = "15:00 - 18:00";
-                    suggestionNote = `Missed ${missed.length}x in morning — try afternoon`;
+                    suggestionNote = `Missed ${missed.length}x in morning \u2014 try afternoon`;
                   } else {
                     suggestion = "09:00 - 12:00";
-                    suggestionNote = `Missed ${missed.length}x in afternoon — try morning`;
+                    suggestionNote = `Missed ${missed.length}x in afternoon \u2014 try morning`;
                   }
                 }
                 return (
@@ -1016,29 +1018,124 @@ export default function ContactCard() {
                     >
                       Best Time to Contact
                     </div>
-                    {suggestion ? (
-                      <div className="rounded-lg p-2 mb-1" style={{ background: "rgba(34, 197, 94, 0.15)", border: "1px solid rgba(34, 197, 94, 0.4)" }}>
-                        <div className="text-white font-bold text-lg">{suggestion}</div>
-                        <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.7)" }}>{suggestionNote}</div>
+
+                    {/* Manual override input */}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. 14:00-16:00"
+                        value={bestTimeInput}
+                        onChange={(e) => setBestTimeInput(e.target.value)}
+                        className="flex-1 text-sm border border-gray-200 rounded-md px-2 py-1 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      />
+                      <button
+                        onClick={() => {
+                          if (bestTimeInput.trim()) {
+                            localStorage.setItem(`bestTime_${contactId}`, bestTimeInput.trim());
+                            setManualBestTime(bestTimeInput.trim());
+                            toast.success("Best time saved");
+                          } else {
+                            localStorage.removeItem(`bestTime_${contactId}`);
+                            setManualBestTime("");
+                            toast.success("Best time cleared");
+                          }
+                        }}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+
+                    {/* Manual override display (if set) */}
+                    {manualBestTime && (
+                      <div className="rounded-lg p-2 mb-2" style={{ background: "#e8f5e9", border: "1px solid #4caf50" }}>
+                        <div className="text-gray-800 font-bold text-lg">{manualBestTime}</div>
+                        <div className="text-[10px] text-gray-600 mt-0.5">Agent override</div>
                       </div>
-                    ) : (
-                      <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>No call data yet</p>
                     )}
+
+                    {/* CloudTalk smart suggestion */}
+                    {suggestion ? (
+                      <div className="rounded-lg p-2" style={{ background: "#f0fdf4", border: "1px solid rgba(34, 197, 94, 0.4)" }}>
+                        <div className="text-gray-800 font-bold text-lg">{suggestion}</div>
+                        <div className="text-[10px] text-gray-600 mt-0.5">{suggestionNote}</div>
+                      </div>
+                    ) : !manualBestTime ? (
+                      <p className="text-sm font-medium text-gray-600">No call data yet</p>
+                    ) : null}
                   </>
                 );
               })()}
             </div>
 
+            {/* Customer Details Table */}
+            <div className="px-5 pb-4">
+              <div className="divide-y divide-gray-100">
+                {/* Email */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Email</span>
+                  <a href={`mailto:${contact.email}`} className="text-sm font-semibold text-blue-600 hover:underline text-right max-w-[180px] truncate">
+                    {contact.email || "\u2014"}
+                  </a>
+                </div>
+                {/* Phone */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Phone</span>
+                  <span className="text-sm font-semibold text-gray-800">{contact.phone || "\u2014"}</span>
+                </div>
+                {/* Call Status */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Call status</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {currentRetentionLead?.workStatus || contact.status || "\u2014"}
+                  </span>
+                </div>
+                {/* Owner */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Owner</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {currentRetentionLead?.assignedAgent || contact.agentName || "\u2014"}
+                  </span>
+                </div>
+                {/* Source */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Source</span>
+                  <span className="text-sm font-semibold text-gray-800">{contact.source || "\u2014"}</span>
+                </div>
+                {/* Card (Stripe) */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Card</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {(() => {
+                      const pm = stripePaymentData?.paymentMethods?.[0];
+                      if (!pm) return "\u2014";
+                      const brand = pm.brand ? pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1) : "Card";
+                      return `${brand} \u2022\u2022\u2022\u2022${pm.last4} (${String(pm.expMonth).padStart(2, "0")}/${String(pm.expYear).slice(-2)})`;
+                    })()}
+                  </span>
+                </div>
+                {/* Assigned */}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-sm text-gray-600">Assigned</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {currentRetentionLead?.createdAt
+                      ? new Date(currentRetentionLead.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                      : "\u2014"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Last contact */}
-            <div className="px-5 pb-5 flex items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
-              <Clock size={14} />
+            <div className="px-5 pb-5 flex items-center gap-1.5 text-xs text-gray-600 border-t border-gray-100 pt-3">
+              <Clock size={14} className="text-gray-400" />
               {lastNote ? (
                 <>
                   Last contact: {formatDate(lastNote.createdAt)}
                   {lastNote.agentName && (
                     <>
                       {" "}&bull;{" "}
-                      <span style={{ color: "#f5a623", fontWeight: 500 }}>{lastNote.agentName}</span>
+                      <span className="font-medium text-gray-800">{lastNote.agentName}</span>
                     </>
                   )}
                 </>
