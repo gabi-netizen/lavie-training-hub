@@ -1538,30 +1538,32 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
           console.warn(`[CallAnalysis] WhatsApp alert skipped: Twilio credentials not set`);
         } else {
         const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-        
-        const bodyParams = new URLSearchParams();
-        bodyParams.append("From", "whatsapp:+447888868298");
-        bodyParams.append("To", "whatsapp:+972522222828");
-        bodyParams.append("Body", messageText);
-        
         const twilioAuth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
+        const recipients = ["whatsapp:+972522222828", "whatsapp:+447934284636"];
         
-        console.log(`[CallAnalysis] Sending WhatsApp alert for low product value (${score}) on closed deal by ${agentName}`);
+        console.log(`[CallAnalysis] Sending WhatsApp alert for low product value (${score}) on closed deal by ${agentName} to ${recipients.length} recipients`);
         
-        const twilioRes = await fetch(twilioUrl, {
-          method: "POST",
-          headers: {
-            "Authorization": `Basic ${twilioAuth}`,
-            "Content-Type": "application/x-www-form-urlencoded"
-          },
-          body: bodyParams.toString()
-        });
-        
-        if (!twilioRes.ok) {
-          const errText = await twilioRes.text();
-          console.warn(`[CallAnalysis] WhatsApp alert failed: ${twilioRes.status} ${errText}`);
-        } else {
-          console.log(`[CallAnalysis] WhatsApp alert sent successfully`);
+        for (const recipient of recipients) {
+          const bodyParams = new URLSearchParams();
+          bodyParams.append("From", "whatsapp:+447888868298");
+          bodyParams.append("To", recipient);
+          bodyParams.append("Body", messageText);
+          
+          const twilioRes = await fetch(twilioUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Basic ${twilioAuth}`,
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: bodyParams.toString()
+          });
+          
+          if (!twilioRes.ok) {
+            const errText = await twilioRes.text();
+            console.warn(`[CallAnalysis] WhatsApp alert to ${recipient} failed: ${twilioRes.status} ${errText}`);
+          } else {
+            console.log(`[CallAnalysis] WhatsApp alert sent to ${recipient} successfully`);
+          }
         }
         } // end if accountSid && authToken
       }
