@@ -23,6 +23,7 @@ import {
   Rocket,
   ShieldHalf,
   Ticket,
+  CreditCard,
   Brain,
   Gauge,
   Swords,
@@ -333,6 +334,21 @@ export default function TopNav() {
                   )}>
                     <Ticket size={14} />
                     Support Tickets
+                  </button>
+                </Link>
+              )}
+
+              {/* 5b. Billing — admin only */}
+              {isAdmin && (
+                <Link href="/billing">
+                  <button className={cn(
+                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                    location === "/billing"
+                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
+                      : "text-white/70 hover:text-white hover:bg-white/5"
+                  )}>
+                    <CreditCard size={14} />
+                    Billing
                   </button>
                 </Link>
               )}

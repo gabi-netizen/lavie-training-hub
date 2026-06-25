@@ -26,6 +26,7 @@ import { lazy, Suspense, useEffect } from "react";
 
 const RetentionWorkspace = lazy(() => import("./pages/RetentionWorkspace"));
 const WhatsAppControl = lazy(() => import("@/pages/WhatsAppControl"));
+const BillingPage = lazy(() => import("./pages/BillingPage"));
 
 /** Wraps a component so only admins can access it. Non-admins are redirected to /training. */
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
@@ -184,6 +185,10 @@ function Router() {
           {() => <AdminRoute component={UsersPage} />}
         </Route>
 
+        {/* Billing Control — admin only */}
+        <Route path={"/billing"}>
+          {() => <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}><AdminRoute component={BillingPage} /></Suspense>}
+        </Route>
         {/* Opening Agents Dashboard — all authenticated users */}
         <Route path={"/opening-dashboard"} component={OpeningDashboard} />
 
