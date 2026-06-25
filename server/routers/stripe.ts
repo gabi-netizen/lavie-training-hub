@@ -258,6 +258,36 @@ export const stripeRouter = router({
     }),
 
   /**
+   * Get card info by email — searches Stripe directly by customer email.
+   * Fallback for contacts not in stripe_customers table.
+   */
+  getCardByEmail: protectedProcedure
+    .input(z.object({ email: z.string() }))
+    .query(async ({ input }) => {
+      if (!input.email) return { card: null };
+      try {
+        const stripe = getStripeClient();
+        const customers = await stripe.customers.list({ email: input.email, limit: 1 });
+        const cust = customers.data[0];
+        if (!cust) return { card: null };
+        const methods = await stripe.paymentMethods.list({ customer: cust.id, type: "card", limit: 1 });
+        const pm = methods.data[0];
+        if (!pm?.card) return { card: null };
+        return {
+          card: {
+            brand: pm.card.brand ?? "unknown",
+            last4: pm.card.last4 ?? "****",
+            expMonth: pm.card.exp_month ?? 0,
+            expYear: pm.card.exp_year ?? 0,
+          },
+        };
+      } catch (err) {
+        console.error("[Stripe] getCardByEmail error:", err);
+        return { card: null };
+      }
+    }),
+
+  /**
    * Updates the default payment method for a contact's Stripe customer.
    */
   updatePaymentMethod: protectedProcedure

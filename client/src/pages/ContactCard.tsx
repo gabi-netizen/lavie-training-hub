@@ -271,9 +271,9 @@ export default function ContactCard() {
   );
 
   // Stripe payment methods for sidebar card display
-  const { data: stripePaymentData } = trpc.stripe.getCustomerPaymentMethods.useQuery(
-    { contactId },
-    { enabled: !!contactId }
+  const { data: stripeCardData } = trpc.stripe.getCardByEmail.useQuery(
+    { email: contact?.email ?? "" },
+    { enabled: !!contact?.email }
   );
 
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
@@ -1100,14 +1100,14 @@ export default function ContactCard() {
                 {/* Source */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Source</span>
-                  <span className="text-sm font-semibold text-gray-800">{contact.source || "\u2014"}</span>
+                  <span className="text-sm font-semibold text-gray-800">{currentRetentionLead?.leadType || contact.source || "\u2014"}</span>
                 </div>
                 {/* Card (Stripe) */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Card</span>
                   <span className="text-sm font-semibold text-gray-800">
                     {(() => {
-                      const pm = stripePaymentData?.paymentMethods?.[0];
+                      const pm = stripeCardData?.card;
                       if (!pm) return "\u2014";
                       const brand = pm.brand ? pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1) : "Card";
                       return `${brand} \u2022\u2022\u2022\u2022${pm.last4} (${String(pm.expMonth).padStart(2, "0")}/${String(pm.expYear).slice(-2)})`;
