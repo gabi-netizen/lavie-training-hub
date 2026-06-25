@@ -178,6 +178,109 @@ function Modal({ open, onClose, title, subtitle, icon, children }: {
   );
 }
 
+// ─── Failed Payments Section ────────────────────────────────────────────────
+function FailedPaymentsSection() {
+  const { data } = trpc.billingDashboard.getFailedPayments.useQuery({});
+  if (!data || data.totalCount === 0) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 className="text-base font-bold text-gray-800">Failed Payments — Smart Retry Schedule</h2>
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-red-700 bg-red-50 border border-red-200">
+          {data.totalCount} Requiring Action
+        </span>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        {/* Header row */}
+        <div
+          className="grid items-center px-6 py-3 border-b border-gray-200 bg-gray-50"
+          style={{ gridTemplateColumns: "1.8fr 0.7fr 1fr 1fr 1.2fr 1fr" }}
+        >
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</div>
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</div>
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Failure Reason</div>
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Retry Attempts</div>
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Next Retry</div>
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</div>
+        </div>
+
+        {/* Body rows */}
+        {data.rows.map((row) => (
+          <div
+            key={row.subscriptionId}
+            className="grid items-center px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+            style={{ gridTemplateColumns: "1.8fr 0.7fr 1fr 1fr 1.2fr 1fr" }}
+          >
+            {/* Customer */}
+            <div>
+              <div className="text-sm font-semibold text-gray-800">{row.customerName}</div>
+              <div className="text-xs text-gray-500">{row.email}</div>
+            </div>
+            {/* Amount */}
+            <div className="text-sm font-bold text-gray-800">{formatCurrency(row.amount)}</div>
+            {/* Failure Reason */}
+            <div>
+              <span className={cn(
+                "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold",
+                row.status === "dunning"
+                  ? "text-red-700 bg-red-50 border border-red-200"
+                  : "text-orange-700 bg-orange-50 border border-orange-200"
+              )}>
+                {row.failureReason}
+              </span>
+            </div>
+            {/* Retry Attempts */}
+            <div>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-orange-800 bg-orange-50 border border-orange-200">
+                Attempt 1 / 4
+              </span>
+              <div className="mt-1.5 h-1.5 bg-gray-200 rounded-full overflow-hidden" style={{ width: 80 }}>
+                <div className="h-full bg-orange-400 rounded-full" style={{ width: "25%" }} />
+              </div>
+            </div>
+            {/* Next Retry */}
+            <div>
+              {row.daysUntilRetry !== null && row.daysUntilRetry <= 0 ? (
+                <>
+                  <div className="text-sm font-bold text-red-600">No retries left</div>
+                  <div className="text-xs text-gray-500">Manual action required</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-semibold text-gray-800">{row.nextBillingOn ? formatDate(row.nextBillingOn) : "—"}</div>
+                  <div className="text-xs text-gray-500">
+                    {row.daysUntilRetry !== null ? (row.daysUntilRetry === 1 ? "Tomorrow" : `In ${row.daysUntilRetry} days`) : ""}
+                  </div>
+                </>
+              )}
+            </div>
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <button className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                View
+              </button>
+              <button className="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-end px-6 py-3 border-t border-gray-100">
+        <span className="text-xs text-gray-600">
+          Showing {data.rows.length} of {data.totalCount} failed payments.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function BillingPage() {
   // Filters state
@@ -674,6 +777,9 @@ export default function BillingPage() {
             </div>
           </div>
         </div>
+
+        {/* ── FAILED PAYMENTS — Smart Retry Schedule ── */}
+        <FailedPaymentsSection />
 
         {/* ── BOTTOM ROW: Activity Feed + Quick Stats ── */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">

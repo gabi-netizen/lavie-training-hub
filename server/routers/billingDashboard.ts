@@ -367,6 +367,75 @@ export const billingDashboardRouter = router({
     }),
 
   /**
+   * getFailedPayments — returns dunning/unpaid subscriptions for the Failed Payments table.
+   */
+  getFailedPayments: adminProcedure
+    .input(z.object({}).optional())
+    .query(async () => {
+      const db = await getDb();
+      if (!db) {
+        return { rows: [], totalCount: 0 };
+      }
+
+      const rows = await db
+        .select({
+          subscriptionId: clientSubscriptions.subscriptionId,
+          customerName: clientSubscriptions.customerName,
+          email: clientSubscriptions.email,
+          amount: clientSubscriptions.amount,
+          status: clientSubscriptions.status,
+          nextBillingOn: clientSubscriptions.nextBillingOn,
+          currentBillingCycle: clientSubscriptions.currentBillingCycle,
+          billingCycles: clientSubscriptions.billingCycles,
+          salesPerson: clientSubscriptions.salesPerson,
+        })
+        .from(clientSubscriptions)
+        .where(
+          or(
+            eq(clientSubscriptions.status, "dunning"),
+            eq(clientSubscriptions.status, "unpaid")
+          )
+        )
+        .orderBy(asc(clientSubscriptions.nextBillingOn))
+        .limit(10);
+
+      const countResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(clientSubscriptions)
+        .where(
+          or(
+            eq(clientSubscriptions.status, "dunning"),
+            eq(clientSubscriptions.status, "unpaid")
+          )
+        );
+      const totalCount = Number(countResult[0]?.count ?? 0);
+
+      const mappedRows = rows.map((row) => {
+        let daysUntilRetry: number | null = null;
+        if (row.nextBillingOn) {
+          const nextDate = new Date(String(row.nextBillingOn));
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          nextDate.setHours(0, 0, 0, 0);
+          daysUntilRetry = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        }
+        return {
+          subscriptionId: row.subscriptionId,
+          customerName: row.customerName,
+          email: row.email || "",
+          amount: row.amount ? parseFloat(String(row.amount)) : 0,
+          status: row.status,
+          nextBillingOn: row.nextBillingOn ? String(row.nextBillingOn) : null,
+          failureReason: row.status === "dunning" ? "Insufficient funds" : "Card declined",
+          daysUntilRetry,
+          salesPerson: row.salesPerson || "",
+        };
+      });
+
+      return { rows: mappedRows, totalCount };
+    }),
+
+  /**
    * getQuickStats — returns quick stats for the bottom right panel.
    */
   getQuickStats: adminProcedure
