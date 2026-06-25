@@ -365,6 +365,7 @@ export default function BillingPage() {
 
   const { data: activityData } = trpc.billingDashboard.getRecentActivity.useQuery({});
   const { data: quickStats } = trpc.billingDashboard.getQuickStats.useQuery({});
+  const { data: cardExpiry } = trpc.billingDashboard.getCardExpiry.useQuery({});
 
   const handleRefresh = () => {
     utils.billingDashboard.invalidate();
@@ -548,17 +549,21 @@ export default function BillingPage() {
             </div>
             <div className="flex gap-4 mt-2">
               <div>
-                <div className="text-2xl font-extrabold text-amber-700">—</div>
-                <div className="text-xs text-gray-600">Expire this month</div>
+                <div className="text-2xl font-extrabold text-orange-700">
+                  {cardExpiry ? cardExpiry.expireThisMonth : "…"}
+                </div>
+                <div className="text-xs text-gray-800 font-medium mt-0.5">Expire this month</div>
               </div>
               <div className="border-l border-gray-200 pl-4">
-                <div className="text-2xl font-extrabold text-gray-800">—</div>
-                <div className="text-xs text-gray-600">Expire next month</div>
+                <div className="text-2xl font-extrabold text-gray-800">
+                  {cardExpiry ? cardExpiry.expireNextMonth : "…"}
+                </div>
+                <div className="text-xs text-gray-800 font-medium mt-0.5">Expire next month</div>
               </div>
             </div>
             <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-              <div className="text-xs font-semibold text-amber-800">Coming soon</div>
-              <div className="text-xs text-amber-700 mt-0.5">Card expiry tracking will be available when Stripe card data is synced</div>
+              <div className="text-xs font-semibold text-amber-800">Active subscriptions only</div>
+              <div className="text-xs text-gray-800 mt-0.5">Contacts with a live subscription whose card expires soon</div>
             </div>
           </div>
 

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions, stripeAuditLog, billingNotes, shipments } from "../../drizzle/schema";
+import { clientSubscriptions, stripeAuditLog, billingNotes, shipments, contacts } from "../../drizzle/schema";
 import { eq, like, or, and, desc, asc, sql, inArray, type SQL } from "drizzle-orm";
 import { syncMintsoftShipments } from "../scripts/syncMintsoftShipments";
 
@@ -737,5 +737,71 @@ export const billingDashboardRouter = router({
     .mutation(async () => {
       const result = await syncMintsoftShipments();
       return result;
+    }),
+
+  /**
+   * getCardExpiry — returns counts of contacts with expiring cards who have an
+   * active subscription (status='live' in client_subscriptions).
+   *
+   * Returns:
+   *   expireThisMonth: contacts whose card expires this calendar month AND have a live sub
+   *   expireNextMonth: same but for next calendar month
+   */
+  getCardExpiry: adminProcedure
+    .input(z.object({}).optional())
+    .query(async () => {
+      const db = await getDb();
+      if (!db) {
+        return { expireThisMonth: 0, expireNextMonth: 0 };
+      }
+
+      // Current month / year
+      const now = new Date();
+      const thisYear = now.getFullYear();
+      const thisMonth = now.getMonth() + 1; // 1-based
+
+      // Next month / year (handle December → January wrap)
+      const nextMonthDate = new Date(thisYear, now.getMonth() + 1, 1);
+      const nextYear = nextMonthDate.getFullYear();
+      const nextMonth = nextMonthDate.getMonth() + 1;
+
+      // Count contacts that:
+      //   1. Have cardExpYear / cardExpMonth matching the target period
+      //   2. Have at least one live subscription (joined via email, case-insensitive)
+      const result = await db
+        .select({
+          expireThisMonth: sql<number>`SUM(CASE WHEN
+            ${contacts.cardExpYear} = ${thisYear}
+            AND ${contacts.cardExpMonth} = ${thisMonth}
+            AND EXISTS (
+              SELECT 1 FROM client_subscriptions cs
+              WHERE LOWER(cs.email) = LOWER(${contacts.email})
+              AND cs.status = 'live'
+            )
+          THEN 1 ELSE 0 END)`,
+          expireNextMonth: sql<number>`SUM(CASE WHEN
+            ${contacts.cardExpYear} = ${nextYear}
+            AND ${contacts.cardExpMonth} = ${nextMonth}
+            AND EXISTS (
+              SELECT 1 FROM client_subscriptions cs
+              WHERE LOWER(cs.email) = LOWER(${contacts.email})
+              AND cs.status = 'live'
+            )
+          THEN 1 ELSE 0 END)`,
+        })
+        .from(contacts)
+        .where(
+          and(
+            sql`${contacts.cardExpYear} IS NOT NULL`,
+            sql`${contacts.cardExpMonth} IS NOT NULL`,
+            sql`${contacts.email} IS NOT NULL`,
+          )
+        );
+
+      const row = result[0];
+      return {
+        expireThisMonth: Number(row?.expireThisMonth ?? 0),
+        expireNextMonth: Number(row?.expireNextMonth ?? 0),
+      };
     }),
 });
