@@ -602,9 +602,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     [allLeads]
   );
 
-  // Follow-up leads (same logic as callbacks but using followUpAt)
+  // Follow-up leads — show all leads with a followUpAt set (past due + upcoming)
   const followUpLeads = useMemo(() => {
-    let fups = allLeads.filter((l: Lead) => l.followUpAt && l.followUpAt > Date.now());
+    let fups = allLeads.filter((l: Lead) => l.followUpAt && l.followUpAt > 0);
     // Sort by soonest first
     fups.sort((a, b) => (a.followUpAt ?? 0) - (b.followUpAt ?? 0));
     return fups;
@@ -627,6 +627,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     assignLeadMutation.mutate({
       subscriptionId,
       agentNote: note,
+    }, {
+      onSuccess: () => {
+        toast.success("Note saved");
+      },
     });
   };
 
