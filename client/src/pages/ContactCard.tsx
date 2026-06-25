@@ -1012,12 +1012,26 @@ export default function ContactCard() {
                 }
                 return (
                   <>
-                    <div
-                      className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-2 uppercase tracking-wider"
-                      style={{ background: "#f5a623", color: "#1a3a5c" }}
-                    >
-                      Best Time to Contact
+                    {/* Badge + suggestion inline */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <div
+                        className="inline-block rounded-full text-[10px] font-bold px-3 py-1 uppercase tracking-wider"
+                        style={{ background: "#f5a623", color: "#1a3a5c" }}
+                      >
+                        Best Time to Contact
+                      </div>
+                      {manualBestTime ? (
+                        <span className="text-black font-bold text-sm">{manualBestTime}</span>
+                      ) : suggestion ? (
+                        <span className="text-black font-bold text-sm">{suggestion}</span>
+                      ) : null}
                     </div>
+                    {/* Suggestion note */}
+                    {manualBestTime ? (
+                      <div className="text-[11px] text-black font-semibold mb-2">Agent override</div>
+                    ) : suggestion ? (
+                      <div className="text-[11px] text-black font-semibold mb-2">{suggestionNote}</div>
+                    ) : null}
 
                     {/* Manual override input */}
                     <div className="flex items-center gap-1.5 mb-2">
@@ -1046,23 +1060,10 @@ export default function ContactCard() {
                       </button>
                     </div>
 
-                    {/* Manual override display (if set) */}
-                    {manualBestTime && (
-                      <div className="rounded-lg p-2 mb-2" style={{ background: "#e8f5e9", border: "1px solid #4caf50" }}>
-                        <div className="text-gray-800 font-bold text-lg">{manualBestTime}</div>
-                        <div className="text-[10px] text-gray-600 mt-0.5">Agent override</div>
-                      </div>
+                    {/* No call data fallback */}
+                    {!suggestion && !manualBestTime && (
+                      <p className="text-sm font-bold text-black">No call data yet</p>
                     )}
-
-                    {/* CloudTalk smart suggestion */}
-                    {suggestion ? (
-                      <div className="rounded-lg p-2" style={{ background: "#f0fdf4", border: "1px solid rgba(34, 197, 94, 0.4)" }}>
-                        <div className="text-gray-800 font-bold text-lg">{suggestion}</div>
-                        <div className="text-[10px] text-gray-600 mt-0.5">{suggestionNote}</div>
-                      </div>
-                    ) : !manualBestTime ? (
-                      <p className="text-sm font-medium text-gray-600">No call data yet</p>
-                    ) : null}
                   </>
                 );
               })()}
@@ -1073,38 +1074,38 @@ export default function ContactCard() {
               <div className="divide-y divide-gray-100">
                 {/* Email */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Email</span>
+                  <span className="text-sm font-bold text-black">Email</span>
                   <a href={`mailto:${contact.email}`} className="text-sm font-semibold text-blue-600 hover:underline text-right max-w-[180px] truncate">
                     {contact.email || "\u2014"}
                   </a>
                 </div>
                 {/* Phone */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Phone</span>
+                  <span className="text-sm font-bold text-black">Phone</span>
                   <span className="text-sm font-semibold text-gray-800">{contact.phone || "\u2014"}</span>
                 </div>
                 {/* Call Status */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Call status</span>
+                  <span className="text-sm font-bold text-black">Call status</span>
                   <span className="text-sm font-semibold text-gray-800">
                     {currentRetentionLead?.workStatus || contact.status || "\u2014"}
                   </span>
                 </div>
                 {/* Owner */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Owner</span>
+                  <span className="text-sm font-bold text-black">Owner</span>
                   <span className="text-sm font-semibold text-gray-800">
                     {currentRetentionLead?.assignedAgent || contact.agentName || "\u2014"}
                   </span>
                 </div>
                 {/* Source */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Source</span>
+                  <span className="text-sm font-bold text-black">Source</span>
                   <span className="text-sm font-semibold text-gray-800">{contact.source || "\u2014"}</span>
                 </div>
                 {/* Card (Stripe) */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Card</span>
+                  <span className="text-sm font-bold text-black">Card</span>
                   <span className="text-sm font-semibold text-gray-800">
                     {(() => {
                       const pm = stripePaymentData?.paymentMethods?.[0];
@@ -1116,7 +1117,7 @@ export default function ContactCard() {
                 </div>
                 {/* Assigned */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm text-gray-600">Assigned</span>
+                  <span className="text-sm font-bold text-black">Assigned</span>
                   <span className="text-sm font-semibold text-gray-800">
                     {currentRetentionLead?.createdAt
                       ? new Date(currentRetentionLead.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
