@@ -1548,7 +1548,6 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                                     assignLeadMutation.mutate({
                                       subscriptionId: lead.subscriptionId,
                                       followUpAt: null,
-                                      workStatus: "new",
                                     });
                                   }
                                 }}
