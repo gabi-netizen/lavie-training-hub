@@ -699,10 +699,13 @@ export default function ContactCard() {
   // Helper: pad ID
   const paddedId = String(contact.id ?? contactId).padStart(5, "0");
 
-  // Helper: format date nicely
+  // Read timezone preference from workspace (same localStorage key)
+  const userTimezone = localStorage.getItem(`tz_${agentName}`) || "Europe/London";
+
+  // Helper: format date nicely (timezone-aware)
   const formatDate = (d: string | Date) => {
     const date = new Date(d);
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: userTimezone });
   };
 
   // Helper: format month/year
@@ -714,9 +717,9 @@ export default function ContactCard() {
   // Last contact info
   const lastNote = contact.callNotes.length > 0 ? contact.callNotes[0] : null;
 
-  // Callback time display
+  // Callback time display (timezone-aware)
   const callbackDisplay = contact.callbackAt
-    ? new Date(contact.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })
+    ? new Date(contact.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: userTimezone })
     : null;
 
   // ─── Retention data computed values ─────────────────────────────────────────
@@ -994,8 +997,8 @@ export default function ContactCard() {
                 const cbRaw = contact.callbackAt || (currentRetentionLead?.callbackAt ? currentRetentionLead.callbackAt : null);
                 if (cbRaw) {
                   const cbDate = new Date(typeof cbRaw === 'number' ? cbRaw : cbRaw);
-                  const dateStr = cbDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-                  const timeStr = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+                  const dateStr = cbDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: userTimezone });
+                  const timeStr = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: userTimezone });
                   return (
                     <div className="rounded-xl p-3" style={{ background: "#fff8e1", border: "2px solid #f5a623" }}>
                       <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#e65100" }}>Callback Scheduled</div>
@@ -2989,13 +2992,25 @@ export default function ContactCard() {
               <button
                 onClick={() => {
                   if (!isValid || !retentionSubId) return;
-                  const dt = new Date(callbackDateTime);
+                  // Convert wall-clock in userTimezone to UTC ms
+                  const asUtc = new Date(`${selectedDate}T${selectedTime}:00Z`);
+                  const tzParts = new Intl.DateTimeFormat("en-US", {
+                    timeZone: userTimezone,
+                    hour: "2-digit", minute: "2-digit", hour12: false,
+                  }).formatToParts(asUtc);
+                  const tzH = parseInt(tzParts.find(p => p.type === "hour")!.value);
+                  const tzM = parseInt(tzParts.find(p => p.type === "minute")!.value);
+                  let offsetMin = (tzH * 60 + tzM) - (asUtc.getUTCHours() * 60 + asUtc.getUTCMinutes());
+                  if (offsetMin > 720) offsetMin -= 1440;
+                  if (offsetMin < -720) offsetMin += 1440;
+                  const utcMs = asUtc.getTime() - offsetMin * 60000;
+
                   logCallAttemptMutation.mutate({
                     subscriptionId: retentionSubId,
                     agentName: user?.name || "Rob",
                     result: "callback",
-                    callbackAt: dt.getTime(),
-                    note: `Callback scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`,
+                    callbackAt: utcMs,
+                    note: `Callback scheduled: ${selectedDate} ${selectedTime}`,
                   });
                   setCallbackModalOpen(false);
                 }}
