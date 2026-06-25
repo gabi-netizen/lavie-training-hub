@@ -42,6 +42,7 @@ import {
   Trash2,
   Calculator,
   Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -2012,13 +2013,108 @@ export default function ContactCard() {
               )}
 
               {/* Shipments tab */}
-              {centerTopTab === "shipments" && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-600">
-                  <Archive size={36} className="mb-3 opacity-40" />
-                  <p className="text-sm font-medium">Shipments</p>
-                  <p className="text-xs mt-1">Coming soon — shipment tracking will appear here</p>
-                </div>
-              )}
+              {centerTopTab === "shipments" && (() => {
+                const shipmentsQuery = trpc.billingDashboard.getShipmentHistory.useQuery(
+                  { email: contact?.email ?? "" },
+                  { enabled: !!contact?.email }
+                );
+                const shipmentsData = shipmentsQuery.data;
+                const shipmentsLoading = shipmentsQuery.isLoading;
+
+                const shipmentStatusBadge = (status: string) => {
+                  switch (status) {
+                    case "Delivered": return "bg-green-100 text-green-800 border-green-200";
+                    case "Dispatched": return "bg-blue-100 text-blue-800 border-blue-200";
+                    case "New": return "bg-gray-100 text-gray-800 border-gray-200";
+                    case "Packed": return "bg-indigo-100 text-indigo-800 border-indigo-200";
+                    case "On Hold": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+                    case "Returned": return "bg-red-100 text-red-800 border-red-200";
+                    case "Part Shipped": return "bg-orange-100 text-orange-800 border-orange-200";
+                    default: return "bg-gray-100 text-gray-800 border-gray-200";
+                  }
+                };
+
+                const fmtDate = (d: string | null | undefined) =>
+                  d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "\u2014";
+
+                if (shipmentsLoading) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+                      <div className="w-7 h-7 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-3" />
+                      <p className="text-sm text-gray-700">Loading shipments\u2026</p>
+                    </div>
+                  );
+                }
+
+                if (!shipmentsData || shipmentsData.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-600">
+                      <Archive size={36} className="mb-3 opacity-40" />
+                      <p className="text-sm font-medium text-gray-800">No shipments found</p>
+                      <p className="text-xs mt-1 text-gray-600">Mintsoft order data will appear here once synced</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {shipmentsData.length} Shipment{shipmentsData.length !== 1 ? "s" : ""}
+                    </p>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-3 py-2 text-left font-bold text-gray-700">Order Date</th>
+                            <th className="px-3 py-2 text-left font-bold text-gray-700">Status</th>
+                            <th className="px-3 py-2 text-left font-bold text-gray-700">Courier</th>
+                            <th className="px-3 py-2 text-left font-bold text-gray-700">Tracking</th>
+                            <th className="px-3 py-2 text-left font-bold text-gray-700">Items</th>
+                            <th className="px-3 py-2 text-left font-bold text-gray-700">Delivery Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {shipmentsData.map((shipment, idx) => (
+                            <tr key={shipment.orderNumber ?? idx} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="px-3 py-2.5 text-gray-800 font-medium">
+                                <div>{fmtDate(shipment.orderDate)}</div>
+                                <div className="text-[10px] text-gray-500 font-mono">{shipment.orderNumber}</div>
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", shipmentStatusBadge(shipment.status))}>
+                                  {shipment.status}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-700">{shipment.courierService || "\u2014"}</td>
+                              <td className="px-3 py-2.5">
+                                {shipment.trackingUrl ? (
+                                  <a href={shipment.trackingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium">
+                                    {shipment.trackingNumber || "Track"}
+                                    <ExternalLink size={10} />
+                                  </a>
+                                ) : shipment.trackingNumber ? (
+                                  <span className="text-gray-700">{shipment.trackingNumber}</span>
+                                ) : (
+                                  <span className="text-gray-400">\u2014</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-700">
+                                <span className="font-semibold">{shipment.totalItems}</span>
+                                {shipment.items && shipment.items.length > 0 && (
+                                  <span className="ml-1 text-[10px] text-gray-500">
+                                    ({shipment.items.map((i: any) => i.sku).join(", ")})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-700">{fmtDate(shipment.deliveryDate)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Notes tab */}
               {centerTopTab === "notes" && (

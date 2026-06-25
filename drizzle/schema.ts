@@ -1,4 +1,4 @@
-import { boolean, date, decimal, float, int, json, mediumtext, mysqlEnum, mysqlTable, serial, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, float, index, int, json, mediumtext, mysqlEnum, mysqlTable, serial, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1100,3 +1100,45 @@ export const customers = mysqlTable("customers", {
 
 export type Customer = typeof customers.$inferSelect;
 export type InsertCustomer = typeof customers.$inferInsert;
+
+// ─── Shipments (Mintsoft Orders) ──────────────────────────────────────────────
+/**
+ * Shipments table — cached Mintsoft order data for fast lookup.
+ * Synced periodically via the syncMintsoftShipments script.
+ */
+export const shipments = mysqlTable("shipments", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Mintsoft Order Number (unique identifier) */
+  orderNumber: varchar("orderNumber", { length: 128 }).notNull().unique(),
+  /** Mintsoft internal Order ID */
+  orderId: int("orderId").notNull(),
+  /** Customer email — indexed for fast lookup */
+  customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
+  /** Order creation date */
+  orderDate: varchar("orderDate", { length: 64 }).notNull(),
+  /** Date the order was dispatched (null if not yet dispatched) */
+  despatchDate: varchar("despatchDate", { length: 64 }),
+  /** Date the customer received the package (null if not yet delivered) */
+  deliveryDate: varchar("deliveryDate", { length: 64 }),
+  /** Order status: New, Packed, Dispatched, Delivered, Returned, On Hold, Part Shipped */
+  status: varchar("status", { length: 32 }).notNull(),
+  /** Courier/carrier name */
+  courier: varchar("courier", { length: 128 }),
+  /** Tracking number */
+  trackingNumber: varchar("trackingNumber", { length: 256 }),
+  /** Tracking URL */
+  trackingUrl: varchar("trackingUrl", { length: 512 }),
+  /** Number of items in the order */
+  numberOfItems: int("numberOfItems").notNull(),
+  /** Total order value */
+  orderValue: decimal("orderValue", { precision: 10, scale: 2 }).notNull(),
+  /** JSON array of items: [{sku, quantity, price}] */
+  items: json("items"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("shipments_customer_email_idx").on(table.customerEmail),
+]);
+
+export type Shipment = typeof shipments.$inferSelect;
+export type InsertShipment = typeof shipments.$inferInsert;
