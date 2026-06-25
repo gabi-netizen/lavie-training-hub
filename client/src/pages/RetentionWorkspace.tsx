@@ -180,6 +180,20 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   const [msgLeadPhone, setMsgLeadPhone] = useState("");
   const [msgLeadName, setMsgLeadName] = useState("");
     const [smsBody, setSmsBody] = useState("");
+  // Timezone preference (localStorage per agent)
+  const [userTimezone, setUserTimezone] = useState<string>(() => {
+    return localStorage.getItem(`tz_${agentNameProp || "Rob"}`) || "Europe/London";
+  });
+  const handleTimezoneChange = (tz: string) => {
+    setUserTimezone(tz);
+    localStorage.setItem(`tz_${agentNameProp || "Rob"}`, tz);
+  };
+  const formatInTz = (timestamp: number | string | null | undefined) => {
+    if (!timestamp) return "—";
+    const ms = typeof timestamp === "number" ? timestamp : new Date(timestamp).getTime();
+    const d = new Date(ms);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: userTimezone }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: userTimezone });
+  };
   // Filter state
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [leadTypeFilter, setLeadTypeFilter] = useState<string>("all");
@@ -791,6 +805,18 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
           <span className="font-medium">{callbacksTodayCount} callbacks today</span>
           <span className="text-gray-400">|</span>
           <span className="font-medium text-green-700">{doneDealCount} done deals</span>
+          <span className="text-gray-400">|</span>
+          <select
+            value={userTimezone}
+            onChange={(e) => handleTimezoneChange(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1 text-xs font-medium bg-white"
+            title="Display timezone"
+          >
+            <option value="Europe/London">🇬🇧 UK</option>
+            <option value="Asia/Jerusalem">🇮🇱 Israel</option>
+            <option value="America/New_York">🇺🇸 New York</option>
+            <option value="Europe/Berlin">🇩🇪 Europe</option>
+          </select>
         </div>
       </div>
 
@@ -1269,7 +1295,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                                   {isToday && <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Today</span>}
                                   {isTomorrow && <span className="inline-block bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">Tomorrow</span>}
                                   {isThisWeek && <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 uppercase">This Week</span>}
-                                  {new Date(lead.callbackAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                                  {formatInTz(lead.callbackAt)}
                                 </>
                               : "—"}
                           </td>
@@ -1278,7 +1304,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                         {activeTab === "followups" && (
                           <td className="py-3 px-3 text-sm text-gray-800 whitespace-nowrap">
                             {lead.followUpAt
-                              ? new Date(lead.followUpAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + ", " + new Date(lead.followUpAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                              ? formatInTz(lead.followUpAt)
                               : "—"}
                           </td>
                         )}
