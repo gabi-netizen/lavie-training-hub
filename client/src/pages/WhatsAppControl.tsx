@@ -190,6 +190,10 @@ export default function WhatsAppControl() {
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showBulkTemplateModal, setShowBulkTemplateModal] = useState(false);
+  const [showRetentionModal, setShowRetentionModal] = useState(false);
+  const [retentionLeadType, setRetentionLeadType] = useState("Pre-Cycle-Cancelled");
+  const [retentionAgent, setRetentionAgent] = useState("Rob");
+  const [retentionNote, setRetentionNote] = useState("");
   const [assignSearch, setAssignSearch] = useState("");
   const [replyChannel, setReplyChannel] = useState<"whatsapp" | "sms" | null>(null);
 
@@ -338,6 +342,15 @@ export default function WhatsAppControl() {
     onError: (err) => toast.error(`Failed: ${err.message}`),
   });
 
+  const sendToRetentionMutation = trpc.whatsapp.sendToRetention.useMutation({
+    onSuccess: () => {
+      toast.success("Sent to Retention");
+      setShowRetentionModal(false);
+      setRetentionNote("");
+      refetchMessages();
+    },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
+  });
   // ─── Reply channel defaults to WhatsApp (agent manually switches to SMS if needed) ───────────────────
   // Auto-detect logic removed: agents should consciously choose the reply channel
 
@@ -1101,6 +1114,14 @@ export default function WhatsAppControl() {
                     )}
                   </div>
                 )}
+                {/* Send to Retention */}
+                <button
+                  onClick={() => setShowRetentionModal(true)}
+                  className="w-full text-[11px] px-2 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-500 flex items-center justify-center gap-1"
+                >
+                  <Users size={12} />
+                  Send to Retention
+                </button>
               </div>
             </div>
 
@@ -1118,6 +1139,91 @@ export default function WhatsAppControl() {
       </div>
 
       {/* ═══ MODALS ═══ */}
+
+      {/* Send to Retention Modal */}
+      {showRetentionModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowRetentionModal(false)}>
+          <div className="bg-white border border-gray-300 rounded-lg w-96 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <span className="text-sm font-bold text-black">Send to Retention</span>
+              <button onClick={() => setShowRetentionModal(false)} className="text-black hover:text-red-500">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* Lead Type */}
+              <div>
+                <label className="text-xs font-bold text-black block mb-1">Lead Type</label>
+                <select
+                  value={retentionLeadType}
+                  onChange={(e) => setRetentionLeadType(e.target.value)}
+                  className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 text-black focus:outline-none focus:ring-1 focus:ring-orange-400"
+                >
+                  <option value="Pre-Cycle-Cancelled">Pre-Cycle-Cancelled</option>
+                  <option value="Cancel Live Sub (Cycle 1)">Cancel Live Sub (Cycle 1)</option>
+                  <option value="Cancel Live Sub (Cycle 2+)">Cancel Live Sub (Cycle 2+)</option>
+                  <option value="Cat to Rob">Cat to Rob</option>
+                  <option value="Gabi to Rob">Gabi to Rob</option>
+                  <option value="Pre-Cycle-Decline">Pre-Cycle-Decline</option>
+                  <option value="Hot Lead">Hot Lead</option>
+                  <option value="Decline Live Sub">Decline Live Sub</option>
+                </select>
+              </div>
+              {/* Agent */}
+              <div>
+                <label className="text-xs font-bold text-black block mb-1">Assign to</label>
+                <select
+                  value={retentionAgent}
+                  onChange={(e) => setRetentionAgent(e.target.value)}
+                  className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 text-black focus:outline-none focus:ring-1 focus:ring-orange-400"
+                >
+                  <option value="Rob">Rob</option>
+                  <option value="Guy">Guy</option>
+                  <option value="James">James</option>
+                </select>
+              </div>
+              {/* Note */}
+              <div>
+                <label className="text-xs font-bold text-black block mb-1">Note (optional)</label>
+                <textarea
+                  value={retentionNote}
+                  onChange={(e) => setRetentionNote(e.target.value)}
+                  placeholder="Add a note for the retention agent..."
+                  rows={2}
+                  className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 text-black placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-400 resize-none"
+                />
+              </div>
+              {/* Source info */}
+              <div className="text-[10px] text-gray-600">
+                Source: {selectedConversation?.fromNumber || "Unknown"} • {selectedConversation?.contact?.name || "Unknown"}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200">
+              <button
+                onClick={() => setShowRetentionModal(false)}
+                className="text-xs px-3 py-1.5 border border-gray-300 rounded text-black hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  sendToRetentionMutation.mutate({
+                    contactId: selectedContactId ?? null,
+                    phoneNumber: selectedConversation?.fromNumber || selectedPhoneNumber,
+                    leadType: retentionLeadType,
+                    assignedAgent: retentionAgent,
+                    note: retentionNote || undefined,
+                  });
+                }}
+                disabled={sendToRetentionMutation.isPending}
+                className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-500 disabled:opacity-50"
+              >
+                {sendToRetentionMutation.isPending ? "Sending..." : "Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Assign Modal */}
       {showAssignModal && (

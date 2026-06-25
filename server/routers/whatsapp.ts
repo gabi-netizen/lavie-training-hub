@@ -1698,4 +1698,88 @@ export const whatsappRouter = router({
         })),
       };
     }),
+
+  /**
+   * Send conversation to Retention — creates a lead in lead_assignments
+   * and inserts a system message marking the transfer.
+   */
+  sendToRetention: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number().nullable(),
+        phoneNumber: z.string().optional(),
+        leadType: z.string(),
+        assignedAgent: z.string(),
+        note: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get contact info from contactId
+      let customerName = "Unknown";
+      let email: string | null = null;
+      let phone: string | null = input.phoneNumber || null;
+
+      if (input.contactId) {
+        const [contact] = await db
+          .select({ name: contacts.name, email: contacts.email, phone: contacts.phone })
+          .from(contacts)
+          .where(eq(contacts.id, input.contactId))
+          .limit(1);
+        if (contact) {
+          customerName = contact.name || "Unknown";
+          email = contact.email || null;
+          phone = contact.phone || phone;
+        }
+      }
+
+      // Determine source channel from latest inbound message
+      let sourceChannel = "WhatsApp";
+      if (input.contactId) {
+        const [latestMsg] = await db
+          .select({ channel: whatsappMessages.channel })
+          .from(whatsappMessages)
+          .where(and(
+            eq(whatsappMessages.contactId, input.contactId),
+            eq(whatsappMessages.direction, "inbound")
+          ))
+          .orderBy(desc(whatsappMessages.createdAt))
+          .limit(1);
+        if (latestMsg?.channel === "sms") sourceChannel = "SMS";
+      }
+
+      // Create lead in lead_assignments
+      const subscriptionId = `wa_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      await db.insert(leadAssignments).values({
+        subscriptionId,
+        customerName,
+        email,
+        phone,
+        leadType: input.leadType,
+        leadCategory: "subscription",
+        assignedAgent: input.assignedAgent,
+        assignedAt: Date.now(),
+        workStatus: "assigned",
+        managerNote: input.note ? input.note.slice(0, 500) : `Transferred from ${sourceChannel}`,
+        eventDate: new Date().toISOString().split("T")[0],
+        urgencyScore: 60,
+      });
+
+      // Insert a system message marking the transfer
+      const fromNum = phone || input.phoneNumber || "unknown";
+      await db.insert(whatsappMessages).values({
+        contactId: input.contactId,
+        direction: "outbound",
+        body: `\u2705 Transferred to Retention \u2192 ${input.assignedAgent} (${input.leadType})`,
+        fromNumber: "+447888868298",
+        toNumber: fromNum,
+        status: "delivered",
+        isRead: true,
+        channel: sourceChannel === "SMS" ? "sms" : "whatsapp",
+      });
+
+      return { success: true, subscriptionId, sourceChannel };
+    }),
 });
