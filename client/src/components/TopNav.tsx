@@ -100,11 +100,13 @@ export default function TopNav() {
   const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const [openingOpen, setOpeningOpen] = useState(false);
   const [retentionOpen, setRetentionOpen] = useState(false);
+  const [dashboardsOpen, setDashboardsOpen] = useState(false);
 
   const callsRef = useRef<HTMLDivElement>(null);
   const aiCoachRef = useRef<HTMLDivElement>(null);
   const openingRef = useRef<HTMLDivElement>(null);
   const retentionRef = useRef<HTMLDivElement>(null);
+  const dashboardsRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.role === "admin";
@@ -127,6 +129,7 @@ export default function TopNav() {
       if (aiCoachRef.current && !aiCoachRef.current.contains(e.target as Node)) setAiCoachOpen(false);
       if (openingRef.current && !openingRef.current.contains(e.target as Node)) setOpeningOpen(false);
       if (retentionRef.current && !retentionRef.current.contains(e.target as Node)) setRetentionOpen(false);
+      if (dashboardsRef.current && !dashboardsRef.current.contains(e.target as Node)) setDashboardsOpen(false);
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
@@ -139,17 +142,19 @@ export default function TopNav() {
     if (current !== "aiCoach") setAiCoachOpen(false);
     if (current !== "opening") setOpeningOpen(false);
     if (current !== "retention") setRetentionOpen(false);
+    if (current !== "dashboards") setDashboardsOpen(false);
     if (current !== "menu") setMenuOpen(false);
   };
 
   // Active states
   const dashboardActive = location === "/call-center-dashboard" || location === "/";
+  const commandCentreActive = location === "/command-centre";
+  const supportTicketsActive = location === "/support-tickets";
+  const dashboardsDropdownActive = dashboardActive || commandCentreActive || location === "/billing" || location === "/opening-dashboard";
   const callsActive = ["/dialler", "/contacts", "/phone-numbers", "/users"].some(p => location === p);
   const aiCoachActive = location === "/ai-coach" || location.startsWith("/ai-coach");
   const openingActive = ["/workspace", "/opening-dashboard", "/training"].some(p => location === p);
   const retentionActive = location.startsWith("/retention-workspace") || location.includes("customers");
-  const commandCentreActive = location === "/command-centre";
-  const supportTicketsActive = location === "/support-tickets";
 
   const initials = user?.name
     ? user.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
@@ -213,19 +218,63 @@ export default function TopNav() {
             </>
           ) : (
             <>
-              {/* 1. Call Center Dashboard — visible to ALL */}
-              <Link href="/call-center-dashboard">
-                <button className={cn(
-                  "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
-                  dashboardActive
-                    ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
-                )}>
-                  <Gauge size={14} />
-                  <span className="hidden lg:inline">Call Dashboard</span>
-                  <span className="lg:hidden">Dashboard</span>
-                </button>
-              </Link>
+              {/* 1. Dashboards dropdown — admin sees all, others see Call Dashboard only */}
+              {isAdmin ? (
+                <div className="relative" ref={dashboardsRef}>
+                  <button
+                    onClick={() => { closeOthers("dashboards"); setDashboardsOpen(v => !v); }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
+                      dashboardsDropdownActive
+                        ? "text-cyan-300 shadow-inner shadow-cyan-500/10 border-cyan-500/30"
+                        : "text-white"
+                    )}
+                  >
+                    <Gauge size={14} />
+                    Dashboards
+                    <ChevronDown size={14} className={cn("transition-transform duration-200 text-white", dashboardsOpen && "rotate-180")} />
+                  </button>
+
+                  <div className={cn(
+                    "absolute left-0 top-full mt-2 w-52 rounded-xl border border-white/10 shadow-xl bg-slate-800/95 backdrop-blur-lg py-1.5 z-50 transition-all duration-200 origin-top",
+                    dashboardsOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                  )}>
+                    {[
+                      { path: "/call-center-dashboard", label: "Call Dashboard", icon: Gauge },
+                      { path: "/command-centre", label: "Command Centre", icon: Settings },
+                      { path: "/opening-dashboard", label: "Opening Dashboard", icon: Rocket },
+                      { path: "/billing", label: "Billing", icon: CreditCard },
+                    ].map(({ path, label, icon: Icon }) => {
+                      const active = location === path;
+                      return (
+                        <Link key={path} href={path} onClick={() => setDashboardsOpen(false)}>
+                          <div className={cn(
+                            "flex items-center gap-2.5 px-4 py-2.5 text-sm cursor-pointer transition-all duration-150 mx-1.5 rounded-lg",
+                            active
+                              ? "text-cyan-300 bg-cyan-500/10 font-bold"
+                              : "text-white font-bold hover:text-cyan-300 hover:bg-white/10"
+                          )}>
+                            <Icon size={14} className={active ? "text-cyan-400" : "opacity-60"} />
+                            {label}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <Link href="/call-center-dashboard">
+                  <button className={cn(
+                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                    dashboardActive
+                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
+                      : "text-white/70 hover:text-white hover:bg-white/5"
+                  )}>
+                    <Gauge size={14} />
+                    Dashboard
+                  </button>
+                </Link>
+              )}
 
               {/* 2. Opening dropdown — Opening team + admins */}
               {showOpening && (
@@ -309,22 +358,7 @@ export default function TopNav() {
                 </div>
               )}
 
-              {/* 4. Command Centre — admin only */}
-              {isAdmin && (
-                <Link href="/command-centre">
-                  <button className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
-                    commandCentreActive
-                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
-                  )}>
-                    <Settings size={14} />
-                    Command Centre
-                  </button>
-                </Link>
-              )}
-
-              {/* 5. Support Tickets — admin only */}
+              {/* 4. Support Tickets — admin only (standalone) */}
               {isAdmin && (
                 <Link href="/support-tickets">
                   <button className={cn(
@@ -335,21 +369,6 @@ export default function TopNav() {
                   )}>
                     <Ticket size={14} />
                     Support
-                  </button>
-                </Link>
-              )}
-
-              {/* 5b. Billing — admin only */}
-              {isAdmin && (
-                <Link href="/billing">
-                  <button className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
-                    location === "/billing"
-                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
-                  )}>
-                    <CreditCard size={14} />
-                    Billing
                   </button>
                 </Link>
               )}
