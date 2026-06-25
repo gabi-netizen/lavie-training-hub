@@ -1692,10 +1692,10 @@ export default function ContactCard() {
 
             {/* Tab content */}
             <div className="p-6">
-              {/* History tab */}
+              {/* Timeline tab */}
               {centerTopTab === "history" && (
                 <div className="flex flex-col">
-                  {contact.callNotes.length === 0 && retentionLeads.length === 0 && !contact.importedNotes ? (
+                  {contact.callNotes.length === 0 && retentionLeads.length === 0 && !contact.importedNotes && (!callHistoryFromDb || callHistoryFromDb.length === 0) ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <PhoneOff size={36} className="mb-3 opacity-50" />
                       <p className="text-sm font-medium">No call notes yet</p>
@@ -1828,6 +1828,62 @@ export default function ContactCard() {
                         </div>
                       );
                     })}
+
+                    {/* Call Attempts & Short Calls from DB */}
+                    {callHistoryFromDb && callHistoryFromDb.length > 0 && (() => {
+                      const attempts = callHistoryFromDb.filter((c: any) => (c.durationSeconds ?? 0) < 60);
+                      const shortCalls = callHistoryFromDb.filter((c: any) => (c.durationSeconds ?? 0) >= 60 && (c.durationSeconds ?? 0) < 300);
+                      if (attempts.length === 0 && shortCalls.length === 0) return null;
+                      return (
+                        <>
+                          {(contact.callNotes.length > 0) && (
+                            <div className="border-t border-gray-200 my-4 pt-4" />
+                          )}
+                          {attempts.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <span className="text-red-400">{"\u2022"}</span> Call Attempts ({attempts.length})
+                              </p>
+                              <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+                                <div className="grid grid-cols-[1fr_70px_100px] px-3 py-1.5 bg-gray-100 border-b border-gray-200">
+                                  <span className="text-[10px] font-bold text-gray-700 uppercase">Date & Time</span>
+                                  <span className="text-[10px] font-bold text-gray-700 uppercase">Duration</span>
+                                  <span className="text-[10px] font-bold text-gray-700 uppercase">Agent</span>
+                                </div>
+                                {attempts.map((call: any) => (
+                                  <div key={`tl-attempt-${call.id}`} className="grid grid-cols-[1fr_70px_100px] px-3 py-1.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-100">
+                                    <span className="text-xs text-gray-800 font-medium">{call.callDate ? new Date(call.callDate).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+                                    <span className="text-xs text-gray-800">{Math.round(call.durationSeconds ?? 0)}s</span>
+                                    <span className="text-xs text-gray-800">{call.repName || "\u2014"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {shortCalls.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <span className="text-amber-500">{"\u2022"}</span> Short Calls ({shortCalls.length})
+                              </p>
+                              <div className="rounded-xl border border-amber-200 bg-amber-50/30 overflow-hidden">
+                                <div className="grid grid-cols-[1fr_70px_100px] px-3 py-1.5 bg-amber-100/50 border-b border-amber-200">
+                                  <span className="text-[10px] font-bold text-gray-700 uppercase">Date & Time</span>
+                                  <span className="text-[10px] font-bold text-gray-700 uppercase">Duration</span>
+                                  <span className="text-[10px] font-bold text-gray-700 uppercase">Agent</span>
+                                </div>
+                                {shortCalls.map((call: any) => (
+                                  <div key={`tl-short-${call.id}`} className="grid grid-cols-[1fr_70px_100px] px-3 py-1.5 border-b border-amber-100 last:border-b-0 hover:bg-amber-50">
+                                    <span className="text-xs text-gray-800 font-medium">{call.callDate ? new Date(call.callDate).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+                                    <span className="text-xs text-gray-800">{Math.floor((call.durationSeconds ?? 0) / 60)}m {Math.round((call.durationSeconds ?? 0) % 60)}s</span>
+                                    <span className="text-xs text-gray-800">{call.repName || "\u2014"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     {/* Imported Notes from Zoho */}
                     {contact.importedNotes && (
@@ -2130,11 +2186,53 @@ export default function ContactCard() {
               {/* Notes tab */}
               {centerTopTab === "notes" && (
                 <div className="space-y-4">
-                  {/* AI Retention Notes from Call Analyses — split by duration */}
+                  {/* Agent Notes section — manual notes from agents */}
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-3">Agent Notes</p>
+                    {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7")).length === 0 ? (
+                      <p className="text-xs text-gray-600 italic">No agent notes yet. Click "+ Add Entry" above to add one.</p>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7")).map((note) => (
+                          <div key={`agent-note-${note.id}`} className="rounded-xl border border-gray-200 p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-gray-800">{note.agentName || "Agent"}</span>
+                              <span className="text-[10px] text-gray-600">{formatDate(note.createdAt)}</span>
+                            </div>
+                            {editingNoteId === note.id ? (
+                              <div>
+                                <textarea
+                                  value={editingNoteText}
+                                  onChange={(e) => setEditingNoteText(e.target.value)}
+                                  className="w-full text-xs text-gray-800 border border-blue-300 rounded p-2 resize-y min-h-[60px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                  autoFocus
+                                  onKeyDown={(e) => { if (e.key === "Escape") { setEditingNoteId(null); setEditingNoteText(""); } }}
+                                />
+                                <div className="flex gap-2 mt-1">
+                                  <button onClick={() => updateNoteMutation.mutate({ noteId: note.id, note: editingNoteText })} className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Save</button>
+                                  <button onClick={() => { setEditingNoteId(null); setEditingNoteText(""); }} className="text-xs text-black px-3 py-1 rounded hover:bg-gray-100">Cancel</button>
+                                  <button onClick={() => { if (confirm("Delete this note?")) { deleteNoteMutation.mutate({ noteId: note.id }); setEditingNoteId(null); setEditingNoteText(""); } }} className="text-xs text-red-600 px-3 py-1 rounded hover:bg-red-50">Delete</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="group/note flex items-start gap-1">
+                                <p className="text-xs text-gray-800 leading-relaxed flex-1">{note.note}</p>
+                                <button onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.note); }} className="text-black hover:text-blue-600 shrink-0 mt-0.5" title="Edit note"><Pencil size={12} /></button>
+                                <button onClick={() => { if (confirm("Delete this note?")) deleteNoteMutation.mutate({ noteId: note.id }); }} className="text-black hover:text-red-600 shrink-0 mt-0.5" title="Delete note"><Trash2 size={12} /></button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-200 pt-4" />
+
+                  {/* AI Call Notes section — only 5+ min analyzed calls */}
                   {aiNotesData?.notes && aiNotesData.notes.length > 0 && (() => {
                     const allNotes = aiNotesData.notes as any[];
-                    const callAttempts = allNotes.filter((n: any) => (n.durationSeconds || 0) < 60);
-                    const shortCalls = allNotes.filter((n: any) => (n.durationSeconds || 0) >= 60 && (n.durationSeconds || 0) < 300);
                     const aiAnalyzed = allNotes.filter((n: any) => (n.durationSeconds || 0) >= 300);
 
                     const formatDateTime = (dateStr: string | null) => {
@@ -2143,54 +2241,9 @@ export default function ContactCard() {
                       return `${d.toLocaleDateString("en-GB")} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
                     };
 
+                    if (aiAnalyzed.length === 0) return null;
                     return (
                       <div className="space-y-5">
-                        {/* Call Attempts (< 60s) */}
-                        {callAttempts.length > 0 && (
-                          <div>
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2">
-                              <span>{"\uD83D\uDCDE"}</span> Call Attempts ({callAttempts.length})
-                            </p>
-                            <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
-                              <div className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 bg-gray-100 border-b border-gray-200">
-                                <span className="text-[10px] font-bold text-gray-700 uppercase">Date & Time</span>
-                                <span className="text-[10px] font-bold text-gray-700 uppercase">Duration</span>
-                                <span className="text-[10px] font-bold text-gray-700 uppercase">Agent</span>
-                              </div>
-                              {callAttempts.map((note: any) => (
-                                <div key={`attempt-${note.id}`} className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-100">
-                                  <span className="text-xs text-gray-800 font-medium">{formatDateTime(note.callDate)}</span>
-                                  <span className="text-xs text-gray-800">{Math.round(note.durationSeconds || 0)}s</span>
-                                  <span className="text-xs text-gray-800">{note.repName || "—"}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Short Calls (1-5 min) */}
-                        {shortCalls.length > 0 && (
-                          <div>
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2">
-                              <span>{"\uD83D\uDCF1"}</span> Short Calls ({shortCalls.length})
-                            </p>
-                            <div className="rounded-xl border border-amber-200 bg-amber-50/30 overflow-hidden">
-                              <div className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 bg-amber-100/50 border-b border-amber-200">
-                                <span className="text-[10px] font-bold text-gray-700 uppercase">Date & Time</span>
-                                <span className="text-[10px] font-bold text-gray-700 uppercase">Duration</span>
-                                <span className="text-[10px] font-bold text-gray-700 uppercase">Agent</span>
-                              </div>
-                              {shortCalls.map((note: any) => (
-                                <div key={`short-${note.id}`} className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 border-b border-amber-100 last:border-b-0 hover:bg-amber-50">
-                                  <span className="text-xs text-gray-800 font-medium">{formatDateTime(note.callDate)}</span>
-                                  <span className="text-xs text-gray-800">{Math.floor((note.durationSeconds || 0) / 60)}m {Math.round((note.durationSeconds || 0) % 60)}s</span>
-                                  <span className="text-xs text-gray-800">{note.repName || "—"}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
                         {/* AI Analyzed Calls (5+ min) */}
                         {aiAnalyzed.length > 0 && (
                           <div className="space-y-3">
