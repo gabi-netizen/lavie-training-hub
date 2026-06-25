@@ -98,26 +98,26 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ─── Days Until Badge ───────────────────────────────────────────────────────
+// ─── Days Until (plain colored text, no badge) ──────────────────────────────
 function DaysUntilBadge({ days }: { days: number | null }) {
-  if (days === null) return <span className="text-gray-600 text-xs">—</span>;
-  let colorClass = "text-green-800 bg-green-100 border-green-300";
+  if (days === null) return <span className="text-gray-400 text-sm font-bold">—</span>;
+  let colorClass = "text-green-600";
   let label = `${days}d`;
   if (days < 0) {
-    colorClass = "text-red-800 bg-red-100 border-red-300";
-    label = `${Math.abs(days)}d overdue`;
+    colorClass = "text-red-600";
+    label = "Overdue";
   } else if (days === 0) {
-    colorClass = "text-red-800 bg-red-100 border-red-300";
+    colorClass = "text-red-600";
     label = "Today";
   } else if (days <= 3) {
-    colorClass = "text-red-800 bg-red-100 border-red-300";
+    colorClass = "text-red-600";
     label = `${days}d`;
   } else if (days <= 7) {
-    colorClass = "text-orange-800 bg-orange-100 border-orange-300";
+    colorClass = "text-orange-500";
     label = `${days}d`;
   }
   return (
-    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border", colorClass)}>
+    <span className={cn("text-sm font-bold", colorClass)}>
       {label}
     </span>
   );
@@ -125,18 +125,21 @@ function DaysUntilBadge({ days }: { days: number | null }) {
 
 // ─── Progress Bar ───────────────────────────────────────────────────────────
 function ProgressBar({ current, total }: { current: number | null; total: number | null }) {
-  if (!total || total <= 0) return <span className="text-xs text-gray-600">—</span>;
+  if (!total || total <= 0) return <span className="text-sm font-bold text-gray-400">—</span>;
   const completed = current ?? 0;
   const pct = Math.round((completed / total) * 100);
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden" style={{ minWidth: 40 }}>
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-semibold text-gray-800 whitespace-nowrap">
+        {completed}/{total} payments{" "}
+        <span className="text-gray-500">{pct}%</span>
+      </span>
+      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden" style={{ minWidth: 60 }}>
         <div
           className={cn("h-full rounded-full", pct >= 80 ? "bg-green-500" : "bg-indigo-500")}
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
       </div>
-      <span className="text-[11px] font-semibold text-gray-800 whitespace-nowrap">{completed}/{total} <span className="text-gray-600">{pct}%</span></span>
     </div>
   );
 }
@@ -541,30 +544,32 @@ export default function BillingPage() {
           <div className="overflow-x-auto">
             {/* Header */}
             <div
-              className="grid items-center gap-1 px-4 py-2.5 border-b border-gray-200 bg-gray-50 min-w-[1280px]"
-              style={{ gridTemplateColumns: "160px 180px 90px 80px 100px 80px 80px 130px 140px" }}
+              className="grid items-center gap-1 px-4 py-3 border-b border-gray-200 bg-gray-50 min-w-[1190px]"
+              style={{ gridTemplateColumns: "180px 200px 90px 90px 120px 100px 100px 150px 160px" }}
             >
-              <button onClick={() => handleSort("customerName")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
+              <button onClick={() => handleSort("customerName")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
                 Customer <SortIcon field="customerName" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("email")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
+              <button onClick={() => handleSort("email")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
                 Email <SortIcon field="email" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("salesPerson")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
+              <button onClick={() => handleSort("salesPerson")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
                 Agent <SortIcon field="salesPerson" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("amount")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
+              <button onClick={() => handleSort("amount")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
                 Amount <SortIcon field="amount" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("nextBillingOn")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
+              <button onClick={() => handleSort("nextBillingOn")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
                 Next Charge <SortIcon field="nextBillingOn" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("status")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
+              <button onClick={() => handleSort("status")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
                 Status <SortIcon field="status" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Days Until</div>
-              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Progress</div>
-              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Actions</div>
+              <button onClick={() => handleSort("currentBillingCycle")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition px-3">
+                Days Until <SortIcon field="currentBillingCycle" currentSort={sortBy} currentDir={sortDir} />
+              </button>
+              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-3">Progress</div>
+              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide px-3">Actions</div>
             </div>
 
             {/* Body */}
@@ -582,41 +587,41 @@ export default function BillingPage() {
                 {rows.map((row) => (
                   <div
                     key={row.subscriptionId}
-                    className="grid items-center gap-1 px-4 py-2.5 hover:bg-gray-50 transition-colors min-w-[1280px]"
-                    style={{ gridTemplateColumns: "160px 180px 90px 80px 100px 80px 80px 130px 140px" }}
+                    className="grid items-start gap-1 px-4 py-3 hover:bg-gray-50 transition-colors min-w-[1190px]"
+                    style={{ gridTemplateColumns: "180px 200px 90px 90px 120px 100px 100px 150px 160px" }}
                   >
                     {/* Customer */}
-                    <div className="truncate">
+                    <div className="truncate pt-0.5 px-3">
                       <span className="text-sm font-semibold text-gray-800">{row.customerName}</span>
                     </div>
                     {/* Email */}
-                    <div className="truncate text-xs text-gray-600">{row.email}</div>
+                    <div className="truncate text-xs text-gray-600 pt-0.5 px-3">{row.email}</div>
                     {/* Agent */}
-                    <div className="truncate text-xs text-gray-800">{row.salesPerson}</div>
+                    <div className="truncate text-xs font-semibold text-gray-800 pt-0.5 px-3">{row.salesPerson}</div>
                     {/* Amount */}
-                    <div className="text-sm font-semibold text-gray-800">{formatCurrency(row.amount)}</div>
+                    <div className="text-sm font-semibold text-gray-800 pt-0.5 px-3">{formatCurrency(row.amount)}</div>
                     {/* Next Charge */}
-                    <div className="text-xs text-gray-800">{formatDate(row.nextBillingOn)}</div>
+                    <div className="text-xs text-gray-800 pt-0.5 px-3">{formatDate(row.nextBillingOn)}</div>
                     {/* Status */}
-                    <div><StatusBadge status={row.status} /></div>
+                    <div className="pt-0.5 px-3"><StatusBadge status={row.status} /></div>
                     {/* Days Until */}
-                    <div><DaysUntilBadge days={row.daysUntilCharge} /></div>
+                    <div className="pt-0.5 px-3"><DaysUntilBadge days={row.daysUntilCharge} /></div>
                     {/* Progress */}
-                    <div>
+                    <div className="px-3">
                       <ProgressBar current={row.currentBillingCycle} total={row.billingCycles} />
                     </div>
                     {/* Actions */}
-                    <div className="flex items-center gap-1">
-                      <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition">
-                        <Eye size={11} />
+                    <div className="flex items-center gap-1.5 px-3">
+                      <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition">
+                        <Eye size={12} />
                         View
                       </button>
-                      <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition">
-                        <Pause size={11} />
+                      <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition">
+                        <Pause size={12} />
                         Pause
                       </button>
-                      <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition">
-                        <XCircle size={11} />
+                      <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 transition">
+                        <XCircle size={12} />
                         Cancel
                       </button>
                     </div>
