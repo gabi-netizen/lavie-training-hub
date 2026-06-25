@@ -10,6 +10,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { clientSubscriptions, stripeAuditLog, billingNotes } from "../../drizzle/schema";
 import { eq, like, or, and, desc, asc, sql, inArray, type SQL } from "drizzle-orm";
+import { getMintsoftOrders } from "../mintsoft";
 
 export const billingDashboardRouter = router({
   /**
@@ -693,5 +694,41 @@ export const billingDashboardRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * getShipmentHistory — fetches Mintsoft shipment history for a customer by email.
+   */
+  getShipmentHistory: protectedProcedure
+    .input(z.object({ email: z.string() }))
+    .query(async ({ input }) => {
+      const STATUS_MAP: Record<number, string> = {
+        4: "Dispatched",
+        9: "On Hold",
+        14: "New",
+        15: "Packed",
+        17: "Part Shipped",
+      };
+
+      const orders = await getMintsoftOrders(input.email);
+
+      return orders.map((order) => ({
+        orderNumber: order.OrderNumber ?? String(order.ID),
+        orderDate: order.OrderDate ?? null,
+        despatchDate: order.DespatchDate ?? null,
+        status: STATUS_MAP[order.OrderStatusId] ?? "Unknown",
+        courierService: order.CourierServiceName ?? order.CourierName ?? "",
+        trackingNumber: order.TrackingNumber ?? null,
+        trackingUrl: order.TrackingUrl ?? null,
+        totalItems: order.NumberOfItems ?? 0,
+        orderValue: order.OrderValue ?? 0,
+        items: Array.isArray(order.Items)
+          ? order.Items.map((item) => ({
+              sku: item.SKU ?? "",
+              quantity: item.Quantity ?? 0,
+              price: item.Price ?? 0,
+            }))
+          : [],
+      }));
     }),
 });

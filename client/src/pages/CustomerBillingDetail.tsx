@@ -140,6 +140,17 @@ export default function CustomerBillingDetail() {
     { enabled: !!id }
   );
 
+  // Shipment history — enabled only when we have the customer's email
+  const customerEmail = data?.primary?.email ?? "";
+  const {
+    data: shipmentData,
+    isLoading: shipmentsLoading,
+    error: shipmentsError,
+  } = trpc.billingDashboard.getShipmentHistory.useQuery(
+    { email: customerEmail },
+    { enabled: !!customerEmail }
+  );
+
   const handleAddNote = () => {
     if (!noteText.trim()) return;
     addNoteMutation.mutate({
@@ -498,16 +509,95 @@ export default function CustomerBillingDetail() {
               )}
             </div>
 
-            {/* ── Shipment History Section (placeholder) ── */}
+            {/* ── Shipment History Section ── */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Shipment History</h3>
-                <span className="text-xs font-semibold text-gray-400">via Mintsoft</span>
+                <span className="text-xs font-semibold text-gray-500">via Mintsoft</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Package size={16} className="text-gray-400" />
-                No shipment data available
-              </div>
+
+              {shipmentsLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-800">
+                  <RefreshCw className="animate-spin text-indigo-600" size={14} />
+                  Loading shipments…
+                </div>
+              )}
+
+              {!shipmentsLoading && shipmentsError && (
+                <div className="flex items-center gap-2 text-sm text-red-700">
+                  <AlertTriangle size={14} />
+                  Failed to load shipments: {shipmentsError.message}
+                </div>
+              )}
+
+              {!shipmentsLoading && !shipmentsError && (!shipmentData || shipmentData.length === 0) && (
+                <div className="flex items-center gap-2 text-sm text-gray-800">
+                  <Package size={16} className="text-gray-400" />
+                  No shipment records found.
+                </div>
+              )}
+
+              {!shipmentsLoading && !shipmentsError && shipmentData && shipmentData.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2 pr-4">Order #</th>
+                        <th className="text-left text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2 pr-4">Date</th>
+                        <th className="text-left text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2 pr-4">Status</th>
+                        <th className="text-left text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2 pr-4">Courier</th>
+                        <th className="text-left text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2 pr-4">Tracking</th>
+                        <th className="text-right text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2 pr-4">Items</th>
+                        <th className="text-right text-[11px] font-semibold text-gray-800 uppercase tracking-wide pb-2">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {shipmentData.map((shipment) => {
+                        const statusStyles: Record<string, string> = {
+                          Dispatched: "bg-green-100 text-green-800 border border-green-300",
+                          Packed: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+                          New: "bg-gray-100 text-gray-700 border border-gray-300",
+                          "On Hold": "bg-red-100 text-red-800 border border-red-300",
+                          "Part Shipped": "bg-blue-100 text-blue-800 border border-blue-300",
+                          Unknown: "bg-gray-100 text-gray-700 border border-gray-300",
+                        };
+                        const badgeCls = statusStyles[shipment.status] ?? "bg-gray-100 text-gray-700 border border-gray-300";
+
+                        return (
+                          <tr key={shipment.orderNumber} className="hover:bg-gray-50 transition">
+                            <td className="py-2.5 pr-4 font-semibold text-gray-800">{shipment.orderNumber}</td>
+                            <td className="py-2.5 pr-4 text-gray-800">{formatDate(shipment.orderDate)}</td>
+                            <td className="py-2.5 pr-4">
+                              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold", badgeCls)}>
+                                {shipment.status}
+                              </span>
+                            </td>
+                            <td className="py-2.5 pr-4 text-gray-800">{shipment.courierService || "—"}</td>
+                            <td className="py-2.5 pr-4">
+                              {shipment.trackingUrl ? (
+                                <a
+                                  href={shipment.trackingUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-700 font-semibold hover:underline"
+                                >
+                                  {shipment.trackingNumber || "Track"}
+                                </a>
+                              ) : shipment.trackingNumber ? (
+                                <span className="text-gray-800">{shipment.trackingNumber}</span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 pr-4 text-right text-gray-800">{shipment.totalItems}</td>
+                            <td className="py-2.5 text-right font-semibold text-gray-800">{formatCurrency(shipment.orderValue)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* ── Agent Notes Section (full width) ── */}
