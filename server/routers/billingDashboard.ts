@@ -9,7 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { clientSubscriptions, stripeAuditLog } from "../../drizzle/schema";
-import { eq, like, or, and, desc, asc, sql, type SQL } from "drizzle-orm";
+import { eq, like, or, and, desc, asc, sql, inArray, type SQL } from "drizzle-orm";
 
 export const billingDashboardRouter = router({
   /**
@@ -272,6 +272,7 @@ export const billingDashboardRouter = router({
       // Get paginated results
       const rows = await db
         .select({
+          id: clientSubscriptions.id,
           subscriptionId: clientSubscriptions.subscriptionId,
           customerName: clientSubscriptions.customerName,
           email: clientSubscriptions.email,
@@ -310,6 +311,7 @@ export const billingDashboardRouter = router({
           daysUntilCharge = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         }
         return {
+          id: row.id,
           subscriptionId: row.subscriptionId,
           customerName: row.customerName,
           email: row.email || "",
@@ -533,6 +535,110 @@ export const billingDashboardRouter = router({
         nextBatchAmount,
         avgDaysBetweenCharge,
         installmentPlans,
+      };
+    }),
+
+  /**
+   * getCustomerDetail — returns full subscription detail for a customer + all their other subscriptions + payment history.
+   * Input: { id: number } — the client_subscriptions row id.
+   */
+  getCustomerDetail: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      // Fetch the primary subscription row by id
+      const [primary] = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(eq(clientSubscriptions.id, input.id))
+        .limit(1);
+
+      if (!primary) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Subscription not found" });
+      }
+
+      // Fetch all subscriptions for the same customer (by customerName or email)
+      const conditions: SQL[] = [];
+      if (primary.customerName) {
+        conditions.push(eq(clientSubscriptions.customerName, primary.customerName));
+      }
+      if (primary.email) {
+        conditions.push(eq(clientSubscriptions.email, primary.email));
+      }
+
+      const allSubscriptions = await db
+        .select()
+        .from(clientSubscriptions)
+        .where(conditions.length > 0 ? or(...conditions) : eq(clientSubscriptions.id, input.id))
+        .orderBy(desc(clientSubscriptions.activatedOn));
+
+      // Collect all subscriptionIds for payment history lookup
+      const subscriptionIds = allSubscriptions
+        .map((s) => s.subscriptionId)
+        .filter((id): id is string => !!id);
+
+      // Fetch payment history from stripe_audit_log
+      let payments: any[] = [];
+      if (subscriptionIds.length > 0) {
+        payments = await db
+          .select()
+          .from(stripeAuditLog)
+          .where(inArray(stripeAuditLog.subscriptionId, subscriptionIds))
+          .orderBy(desc(stripeAuditLog.createdAt))
+          .limit(100);
+      }
+
+      // Map data for the frontend
+      const mapSubscription = (s: typeof primary) => ({
+        id: s.id,
+        subscriptionId: s.subscriptionId,
+        planName: s.planName,
+        planType: s.planType,
+        customerName: s.customerName,
+        email: s.email,
+        phone: s.phone,
+        amount: s.amount ? parseFloat(String(s.amount)) : 0,
+        setupFee: s.setupFee ? parseFloat(String(s.setupFee)) : 0,
+        recurringAmount: s.recurringAmount ? parseFloat(String(s.recurringAmount)) : 0,
+        totalAmount: s.totalAmount ? parseFloat(String(s.totalAmount)) : 0,
+        billingCycles: s.billingCycles,
+        currentBillingCycle: s.currentBillingCycle,
+        cyclesCompleted: s.cyclesCompleted,
+        nextBillingOn: s.nextBillingOn ? String(s.nextBillingOn) : null,
+        lastBilledOn: s.lastBilledOn ? String(s.lastBilledOn) : null,
+        subscriptionNumber: s.subscriptionNumber,
+        status: s.status,
+        campaignId: s.campaignId,
+        activatedOn: s.activatedOn ? String(s.activatedOn) : null,
+        createdOn: s.createdOn ? String(s.createdOn) : null,
+        cancelledDate: s.cancelledDate ? String(s.cancelledDate) : null,
+        salesPerson: s.salesPerson,
+        products: s.products,
+        contactId: s.contactId,
+        callbackAt: s.callbackAt ? s.callbackAt.toISOString() : null,
+        callbackNote: s.callbackNote,
+        retentionAgent: s.retentionAgent,
+      });
+
+      return {
+        primary: mapSubscription(primary),
+        allSubscriptions: allSubscriptions.map(mapSubscription),
+        payments: payments.map((p) => ({
+          id: p.id,
+          eventId: p.eventId,
+          eventType: p.eventType,
+          customerId: p.customerId,
+          subscriptionId: p.subscriptionId,
+          amount: p.amount,
+          currency: p.currency,
+          status: p.status,
+          metadata: p.metadata,
+          createdAt: p.createdAt ? p.createdAt.toISOString() : null,
+        })),
       };
     }),
 });

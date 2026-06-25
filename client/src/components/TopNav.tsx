@@ -28,6 +28,7 @@ import {
   Gauge,
   Swords,
   User,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -221,7 +222,7 @@ export default function TopNav() {
                     : "text-white/70 hover:text-white hover:bg-white/5"
                 )}>
                   <Gauge size={14} />
-                  <span className="hidden lg:inline">Call Center Dashboard</span>
+                  <span className="hidden lg:inline">Call Dashboard</span>
                   <span className="lg:hidden">Dashboard</span>
                 </button>
               </Link>
@@ -333,7 +334,7 @@ export default function TopNav() {
                       : "text-white/70 hover:text-white hover:bg-white/5"
                   )}>
                     <Ticket size={14} />
-                    Support Tickets
+                    Support
                   </button>
                 </Link>
               )}

@@ -77,71 +77,73 @@ export default function FloatingDialler() {
   if (!user) return null;
 
   return (
-    <div
-      className="fixed bottom-20 right-4 z-[9999] md:bottom-6 md:right-6 flex flex-col items-end gap-1.5"
-      style={{ pointerEvents: "none" }}
-    >
-      {/* Expanded iframe panel */}
-      {expanded && (
-        <div
-          className="rounded-2xl shadow-2xl border border-gray-200 overflow-hidden bg-white"
-          style={{ width: 340, height: 560, pointerEvents: "auto" }}
-        >
-          {/* Header bar */}
-          <div className="flex items-center justify-between px-3 py-2 bg-indigo-600 text-white">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Phone size={14} />
-              CloudTalk
-            </div>
-            <button
-              onClick={() => setExpanded(false)}
-              className="hover:bg-indigo-700 rounded p-0.5 transition-colors"
-              title="Minimise"
-            >
-              <Minus size={14} />
-            </button>
-          </div>
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            src="https://phone.cloudtalk.io?partner=lavielabs"
-            allow="microphone; camera; autoplay"
-            className="w-full"
-            style={{ height: 516, border: "none" }}
-            title="CloudTalk Phone"
-          />
-        </div>
-      )}
-
-      {/* Refresh Click to Call button — small, positioned above the phone button */}
+    <>
+      {/* Refresh button — fixed top-left, next to Maximus logo */}
       <button
         onClick={handleRefresh}
         disabled={refreshing}
-        style={{ pointerEvents: "auto" }}
+        className="fixed top-2.5 left-[170px] z-[9999] flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition-all duration-150 disabled:opacity-60 shadow-md"
         title="Refresh Click to Call connection"
-        className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-all duration-150 disabled:opacity-60 shadow-md"
       >
         <RefreshCw size={10} className={`text-white ${refreshing ? "animate-spin" : ""}`} />
         {refreshing ? "…" : "Refresh"}
       </button>
 
-      {/* Floating toggle button */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className={`
-          w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-all duration-200
-          ${expanded
-            ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            : hasIncoming
-              ? "bg-green-500 text-white hover:bg-green-600 animate-pulse"
-              : "bg-indigo-600 text-white hover:bg-indigo-700"
-          }
-        `}
-        style={{ pointerEvents: "auto" }}
-        title={expanded ? "Close dialler" : "Open dialler"}
+      {/* Floating dialler — bottom-right */}
+      <div
+        className="fixed bottom-20 right-4 z-[9999] md:bottom-6 md:right-6 flex flex-col items-end gap-1.5"
+        style={{ pointerEvents: "none" }}
       >
-        {expanded ? <X size={18} /> : <Phone size={18} />}
-      </button>
-    </div>
+        {/* Expanded iframe panel */}
+        {expanded && (
+          <div
+            className="rounded-2xl shadow-2xl border border-gray-200 overflow-hidden bg-white"
+            style={{ width: 340, height: 560, pointerEvents: "auto" }}
+          >
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-3 py-2 bg-indigo-600 text-white">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Phone size={14} />
+                CloudTalk
+              </div>
+              <button
+                onClick={() => setExpanded(false)}
+                className="hover:bg-indigo-700 rounded p-0.5 transition-colors"
+                title="Minimise"
+              >
+                <Minus size={14} />
+              </button>
+            </div>
+            <iframe
+              key={iframeKey}
+              ref={iframeRef}
+              src="https://phone.cloudtalk.io?partner=lavielabs"
+              allow="microphone; camera; autoplay"
+              className="w-full"
+              style={{ height: 516, border: "none" }}
+              title="CloudTalk Phone"
+            />
+          </div>
+        )}
+
+        {/* Floating toggle button */}
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className={`
+            w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-all duration-200
+            ${expanded
+              ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              : hasIncoming
+                ? "bg-green-500 text-white hover:bg-green-600 animate-pulse"
+                : "bg-indigo-600 text-white hover:bg-indigo-700"
+            }
+          `}
+          style={{ pointerEvents: "auto" }}
+          title={expanded ? "Close dialler" : "Open dialler"}
+        >
+          {expanded ? <X size={18} /> : <Phone size={18} />}
+        </button>
+      </div>
+    </>
   );
 }

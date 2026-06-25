@@ -9,6 +9,7 @@
  * 5. Bottom section: Recent Activity + Quick Stats
  */
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import {
   RefreshCw,
@@ -36,6 +37,12 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Navigation hook for View button
+function useNavigate() {
+  const [, setLocation] = useLocation();
+  return setLocation;
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type SortDir = "asc" | "desc";
@@ -322,6 +329,7 @@ function FailedPaymentsSection() {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function BillingPage() {
+  const navigate = useNavigate();
   // Filters state
   const [statusFilter, setStatusFilter] = useState("all");
   const [planTypeFilter, setPlanTypeFilter] = useState("all");
@@ -752,7 +760,7 @@ export default function BillingPage() {
                     </div>
                     {/* Actions */}
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                      <button onClick={() => navigate(`/billing/customer/${row.id}`)} className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
                         View
                       </button>
                       <button className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition">
