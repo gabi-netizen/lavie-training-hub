@@ -542,7 +542,7 @@ export default function BillingPage() {
             {/* Header */}
             <div
               className="grid items-center px-5 py-3 border-b border-gray-200 bg-gray-50 min-w-[1100px]"
-              style={{ gridTemplateColumns: "1.5fr 2fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.2fr 1.3fr" }}
+              style={{ gridTemplateColumns: "1.5fr 1.7fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.2fr 1.3fr" }}
             >
               <button onClick={() => handleSort("customerName")} className="flex items-center text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-blue-700 transition">
                 Customer <SortIcon field="customerName" currentSort={sortBy} currentDir={sortDir} />
@@ -585,7 +585,7 @@ export default function BillingPage() {
                   <div
                     key={row.subscriptionId}
                     className="grid items-center px-5 py-4 hover:bg-gray-50 transition-colors min-w-[1100px] border-b border-gray-100"
-                    style={{ gridTemplateColumns: "1.5fr 2fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.2fr 1.3fr" }}
+                    style={{ gridTemplateColumns: "1.5fr 1.7fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.2fr 1.3fr" }}
                   >
                     {/* Customer */}
                     <div className="truncate">
