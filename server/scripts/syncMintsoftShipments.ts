@@ -130,7 +130,8 @@ export async function syncMintsoftShipments(): Promise<{
 }
 
 // ─── Standalone execution ─────────────────────────────────────────────────────
-if (require.main === module || process.argv[1]?.includes("syncMintsoftShipments")) {
+const isMainModule = process.argv[1]?.includes("syncMintsoftShipments");
+if (isMainModule) {
   syncMintsoftShipments()
     .then((result) => {
       console.log("Sync complete:", result);
