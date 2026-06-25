@@ -630,6 +630,7 @@ export default function BillingPage() {
                 <option value="all">All Types</option>
                 <option value="subscription">Subscription</option>
                 <option value="installment">Installment</option>
+                <option value="one_payment">One-Time Payment</option>
               </select>
 
               {/* Agent */}
