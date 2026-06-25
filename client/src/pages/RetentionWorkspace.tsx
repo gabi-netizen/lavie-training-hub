@@ -1539,6 +1539,25 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                               <ChevronRight className="h-4 w-4" />
                             </button>
 
+                            {/* Cancel Follow Up (follow ups tab only) */}
+                            {activeTab === "followups" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Cancel follow-up for ${lead.customerName || "this lead"}?`)) {
+                                    assignLeadMutation.mutate({
+                                      subscriptionId: lead.subscriptionId,
+                                      followUpAt: null,
+                                      workStatus: "new",
+                                    });
+                                  }
+                                }}
+                                className="p-1.5 rounded hover:bg-red-50 transition-colors text-red-600"
+                                title="Cancel Follow Up"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            )}
                             {/* Dismiss callback (billing source only) */}
                             {activeTab === "callbacks" && (lead as any).source === "billing" && (
                               <button
