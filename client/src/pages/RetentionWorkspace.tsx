@@ -2010,6 +2010,13 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                       followUpAt: callbackModal.type === "follow_up" ? dt.getTime() : undefined,
                       note: noteText,
                     });
+                    // Also save the note as agentNote on the lead so it shows in the table
+                    if (callbackNote) {
+                      assignLeadMutation.mutate({
+                        subscriptionId: callbackModal.subscriptionId,
+                        agentNote: callbackNote,
+                      });
+                    }
                     setCallbackModal(null);
                     setCallbackNote("");
                   }}
