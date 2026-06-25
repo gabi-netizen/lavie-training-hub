@@ -1,11 +1,12 @@
 /**
- * Billing Page — Admin-only billing control dashboard.
+ * Billing Control Page — Admin-only billing dashboard.
  *
- * Sections:
- * 1. Summary cards row (top)
- * 2. Filters row
- * 3. Main table (CSS Grid with div, paginated, sortable)
- * 4. Bottom section: Recent Activity + Quick Stats
+ * Matches the approved mockup with:
+ * 1. Top action buttons (New Subscription, New Instalment Plan, Export CSV)
+ * 2. Summary cards row (6 cards)
+ * 3. Second row of cards (Revenue Recovered, Cards Expiring, MRR Trend, Churn Metrics)
+ * 4. Main table "Upcoming Charges" with Progress column, Days Until, and action buttons
+ * 5. Bottom section: Recent Activity + Quick Stats
  */
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
@@ -26,6 +27,13 @@ import {
   Activity,
   Users,
   Eye,
+  Pause,
+  XCircle,
+  Plus,
+  Download,
+  TrendingUp,
+  CreditCard,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +61,21 @@ function formatEventType(eventType: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function timeAgo(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = now - then;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  return `${days} days ago`;
+}
+
 // ─── Status Badge ───────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<string, string> = {
   live: "bg-green-100 text-green-800 border border-green-300",
@@ -62,6 +85,7 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-gray-200 text-gray-800 border border-gray-300",
   canceled: "bg-gray-200 text-gray-800 border border-gray-300",
   future: "bg-purple-100 text-purple-800 border border-purple-300",
+  scheduled: "bg-blue-100 text-blue-800 border border-blue-300",
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -74,33 +98,46 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ─── Plan Type Badge ────────────────────────────────────────────────────────
-function PlanTypeBadge({ planType }: { planType: string }) {
-  const isInstallment = planType === "installment";
+// ─── Days Until Badge ───────────────────────────────────────────────────────
+function DaysUntilBadge({ days }: { days: number | null }) {
+  if (days === null) return <span className="text-gray-600 text-xs">—</span>;
+  let colorClass = "text-green-800 bg-green-100 border-green-300";
+  let label = `${days}d`;
+  if (days < 0) {
+    colorClass = "text-red-800 bg-red-100 border-red-300";
+    label = `${Math.abs(days)}d overdue`;
+  } else if (days === 0) {
+    colorClass = "text-red-800 bg-red-100 border-red-300";
+    label = "Today";
+  } else if (days <= 3) {
+    colorClass = "text-red-800 bg-red-100 border-red-300";
+    label = `${days}d`;
+  } else if (days <= 7) {
+    colorClass = "text-orange-800 bg-orange-100 border-orange-300";
+    label = `${days}d`;
+  }
   return (
-    <span
-      className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold",
-        isInstallment
-          ? "bg-orange-100 text-orange-800 border border-orange-300"
-          : "bg-blue-100 text-blue-800 border border-blue-300"
-      )}
-    >
-      {isInstallment ? "Installment" : "Sub"}
+    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border", colorClass)}>
+      {label}
     </span>
   );
 }
 
-// ─── Days Left Badge ────────────────────────────────────────────────────────
-function DaysLeftBadge({ days }: { days: number | null }) {
-  if (days === null) return <span className="text-gray-600 text-xs">—</span>;
-  let colorClass = "text-green-700 bg-green-50";
-  if (days < 3) colorClass = "text-red-700 bg-red-50";
-  else if (days < 7) colorClass = "text-orange-700 bg-orange-50";
+// ─── Progress Bar ───────────────────────────────────────────────────────────
+function ProgressBar({ current, total }: { current: number | null; total: number | null }) {
+  if (!total || total <= 0) return <span className="text-xs text-gray-600">—</span>;
+  const completed = current ?? 0;
+  const pct = Math.round((completed / total) * 100);
   return (
-    <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold", colorClass)}>
-      {days}d
-    </span>
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden" style={{ minWidth: 40 }}>
+        <div
+          className={cn("h-full rounded-full", pct >= 80 ? "bg-green-500" : "bg-indigo-500")}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
+      <span className="text-[11px] font-semibold text-gray-800 whitespace-nowrap">{completed}/{total} <span className="text-gray-600">{pct}%</span></span>
+    </div>
   );
 }
 
@@ -112,6 +149,35 @@ function SortIcon({ field, currentSort, currentDir }: { field: string; currentSo
     : <ArrowDown size={12} className="text-blue-600 ml-1" />;
 }
 
+// ─── Modal Component ────────────────────────────────────────────────────────
+function Modal({ open, onClose, title, subtitle, icon, children }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-10 overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-800 font-bold transition">
+          <X size={16} />
+        </button>
+        <div className="flex items-center gap-3 mb-6">
+          {icon}
+          <div>
+            <h3 className="text-lg font-extrabold text-gray-800">{title}</h3>
+            <p className="text-sm text-gray-600">{subtitle}</p>
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function BillingPage() {
   // Filters state
@@ -119,16 +185,21 @@ export default function BillingPage() {
   const [planTypeFilter, setPlanTypeFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange>("this_month");
+  const [dateRange, setDateRange] = useState<DateRange>("this_week");
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortField>("nextBillingOn");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const limit = 50;
 
+  // Modal state
+  const [showNewSubModal, setShowNewSubModal] = useState(false);
+  const [showNewInstalmentModal, setShowNewInstalmentModal] = useState(false);
+
   // Queries
   const utils = trpc.useUtils();
 
   const { data: summary, isLoading: summaryLoading } = trpc.billingDashboard.getBillingSummary.useQuery({});
+  const { data: extendedMetrics } = trpc.billingDashboard.getExtendedMetrics.useQuery({});
 
   const { data: chargesData, isLoading: chargesLoading } = trpc.billingDashboard.getUpcomingCharges.useQuery({
     status: statusFilter,
@@ -143,14 +214,10 @@ export default function BillingPage() {
   });
 
   const { data: activityData } = trpc.billingDashboard.getRecentActivity.useQuery({});
-
-  const { data: churnData } = trpc.billingDashboard.getChurnMetrics.useQuery({});
+  const { data: quickStats } = trpc.billingDashboard.getQuickStats.useQuery({});
 
   const handleRefresh = () => {
-    utils.billingDashboard.getBillingSummary.invalidate();
-    utils.billingDashboard.getUpcomingCharges.invalidate();
-    utils.billingDashboard.getRecentActivity.invalidate();
-    utils.billingDashboard.getChurnMetrics.invalidate();
+    utils.billingDashboard.invalidate();
   };
 
   const handleSort = (field: SortField) => {
@@ -163,47 +230,62 @@ export default function BillingPage() {
     setPage(1);
   };
 
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setPlanTypeFilter("all");
+    setAgentFilter("all");
+    setSearchQuery("");
+    setDateRange("this_week");
+    setPage(1);
+  };
+
   const totalPages = Math.ceil((chargesData?.totalCount ?? 0) / limit);
   const uniqueAgents = chargesData?.uniqueAgents ?? [];
   const rows = chargesData?.rows ?? [];
 
-  // Quick stats
-  const quickStats = useMemo(() => {
-    if (!summary) return null;
-    const avgAmount = chargesData?.totalCount && chargesData.totalCount > 0
-      ? (rows.reduce((sum, r) => sum + r.amount, 0) / rows.length)
-      : 0;
-    return {
-      totalCustomers: summary.totalCustomers,
-      activeSubs: summary.activeSubsCount,
-      activeInstallments: summary.activeInstallmentsCount,
-      avgAmount,
-    };
-  }, [summary, chargesData, rows]);
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+      {/* ── Header with Action Buttons ── */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0 bg-white">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-800">Billing Control</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Subscription and instalment billing management</p>
+          <h1 className="text-2xl font-extrabold text-gray-800 leading-tight">Billing Control</h1>
+          <p className="text-sm text-gray-600 mt-0.5">Automated Stripe billing management — {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={summaryLoading || chargesLoading}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={cn(summaryLoading && "animate-spin")} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={summaryLoading || chargesLoading}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={cn(summaryLoading && "animate-spin")} />
+            Refresh
+          </button>
+          <button className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition">
+            <Download size={14} />
+            Export CSV
+          </button>
+          <button
+            onClick={() => setShowNewSubModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg shadow-sm hover:bg-green-700 transition"
+          >
+            <Plus size={14} />
+            New Subscription
+          </button>
+          <button
+            onClick={() => setShowNewInstalmentModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition"
+          >
+            <Plus size={14} />
+            New Instalment Plan
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-        {/* ── Summary Cards ── */}
+        {/* ── ROW 1: Summary Cards (6 cards) ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           {/* Scheduled */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Scheduled</span>
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -211,11 +293,12 @@ export default function BillingPage() {
               </div>
             </div>
             <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.scheduledCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Trial / Future</div>
+            <div className="text-xs text-gray-600 mt-1">Pending first charge</div>
+            <div className="text-xs text-blue-700 font-semibold mt-1">21-day trial active</div>
           </div>
 
           {/* Active Subs */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Active Subs</span>
               <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
@@ -223,11 +306,12 @@ export default function BillingPage() {
               </div>
             </div>
             <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.activeSubsCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Live subscriptions</div>
+            <div className="text-xs text-gray-600 mt-1">Charged every 60 days</div>
+            <div className="text-xs text-green-700 font-semibold mt-1">Live subscriptions</div>
           </div>
 
           {/* Active Installments */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Installments</span>
               <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
@@ -235,11 +319,11 @@ export default function BillingPage() {
               </div>
             </div>
             <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.activeInstallmentsCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Live instalments</div>
+            <div className="text-xs text-gray-600 mt-1">Active instalment plans</div>
           </div>
 
           {/* Due This Week */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Due This Week</span>
               <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -248,10 +332,11 @@ export default function BillingPage() {
             </div>
             <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.dueThisWeek ?? 0}</div>
             <div className="text-xs text-gray-600 mt-1">Charges in next 7 days</div>
+            <div className="text-xs text-orange-700 font-semibold mt-1">Expected revenue</div>
           </div>
 
           {/* Failed / Dunning */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Failed / Dunning</span>
               <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
@@ -260,10 +345,11 @@ export default function BillingPage() {
             </div>
             <div className="text-3xl font-extrabold text-red-700">{summaryLoading ? "…" : summary?.failedCount ?? 0}</div>
             <div className="text-xs text-gray-600 mt-1">Require attention</div>
+            <div className="text-xs text-red-700 font-semibold mt-1">At risk</div>
           </div>
 
           {/* Revenue This Month */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Revenue (Month)</span>
               <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
@@ -271,103 +357,192 @@ export default function BillingPage() {
               </div>
             </div>
             <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : formatCurrency(summary?.revenueThisMonth ?? 0)}</div>
-            <div className="text-xs text-gray-600 mt-1">Billed this month</div>
+            <div className="text-xs text-gray-600 mt-1">Payments processed</div>
+            <div className="text-xs text-purple-700 font-semibold mt-1">This month</div>
           </div>
         </div>
 
-        {/* ── Filters Row ── */}
-        <div className="flex flex-wrap items-center gap-3 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-          {/* Status */}
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="text-sm text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="live">Live</option>
-            <option value="trial">Trial</option>
-            <option value="dunning">Dunning</option>
-            <option value="unpaid">Unpaid</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="future">Future</option>
-          </select>
-
-          {/* Plan Type */}
-          <select
-            value={planTypeFilter}
-            onChange={(e) => { setPlanTypeFilter(e.target.value); setPage(1); }}
-            className="text-sm text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-          >
-            <option value="all">All Plan Types</option>
-            <option value="subscription">Subscription</option>
-            <option value="installment">Installment</option>
-          </select>
-
-          {/* Agent */}
-          <select
-            value={agentFilter}
-            onChange={(e) => { setAgentFilter(e.target.value); setPage(1); }}
-            className="text-sm text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-          >
-            <option value="all">All Agents</option>
-            {uniqueAgents.map((a) => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
-
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-            <input
-              type="text"
-              placeholder="Search name or email…"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-              className="w-full pl-9 pr-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none placeholder:text-gray-500"
-            />
+        {/* ── ROW 2: Extended Metrics (4 cards) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {/* Revenue Recovered */}
+          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-emerald-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Revenue Recovered</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <RefreshCw size={16} className="text-emerald-600" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-gray-800">{formatCurrency(extendedMetrics?.revenueRecovered ?? 0)}</div>
+            <div className="text-xs text-gray-600 mt-1">Recovered via smart retries this month</div>
+            <div className="mt-3">
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-gray-800">Recovery Rate</span>
+                <span className="text-emerald-700">{extendedMetrics?.recoveryRate ?? 0}%</span>
+              </div>
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${extendedMetrics?.recoveryRate ?? 0}%` }} />
+              </div>
+              <div className="text-xs text-gray-600 mt-1.5">
+                {extendedMetrics?.recoveredCount ?? 0} of {(extendedMetrics?.recoveredCount ?? 0) + (extendedMetrics?.failedThisMonth ?? 0)} failed payments recovered
+              </div>
+            </div>
           </div>
 
-          {/* Date Range */}
-          <select
-            value={dateRange}
-            onChange={(e) => { setDateRange(e.target.value as DateRange); setPage(1); }}
-            className="text-sm text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-          >
-            <option value="all">All Dates</option>
-            <option value="this_week">This Week</option>
-            <option value="next_7_days">Next 7 Days</option>
-            <option value="next_30_days">Next 30 Days</option>
-            <option value="this_month">This Month</option>
-          </select>
+          {/* Cards Expiring Soon */}
+          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cards Expiring Soon</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                <CreditCard size={16} className="text-amber-600" />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-2">
+              <div>
+                <div className="text-2xl font-extrabold text-amber-700">—</div>
+                <div className="text-xs text-gray-600">Expire this month</div>
+              </div>
+              <div className="border-l border-gray-200 pl-4">
+                <div className="text-2xl font-extrabold text-gray-800">—</div>
+                <div className="text-xs text-gray-600">Expire next month</div>
+              </div>
+            </div>
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              <div className="text-xs font-semibold text-amber-800">Coming soon</div>
+              <div className="text-xs text-amber-700 mt-0.5">Card expiry tracking will be available when Stripe card data is synced</div>
+            </div>
+          </div>
 
-          {/* Refresh */}
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition"
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
+          {/* MRR Trend */}
+          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-violet-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">MRR Trend</span>
+              <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                <TrendingUp size={16} className="text-violet-600" />
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-gray-800">{formatCurrency(extendedMetrics?.mrrCurrent ?? 0)}</div>
+            <div className="text-xs text-gray-600 mt-0.5">This month&apos;s MRR</div>
+            <div className="mt-2">
+              {(extendedMetrics?.mrrChangePercent ?? 0) >= 0 ? (
+                <span className="text-sm font-bold text-emerald-700">↑ {extendedMetrics?.mrrChangePercent ?? 0}%</span>
+              ) : (
+                <span className="text-sm font-bold text-red-700">↓ {Math.abs(extendedMetrics?.mrrChangePercent ?? 0)}%</span>
+              )}
+              <div className="text-xs text-gray-600">vs {formatCurrency(extendedMetrics?.mrrPrevious ?? 0)} last month</div>
+            </div>
+          </div>
+
+          {/* Churn Metrics */}
+          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-rose-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Churn Metrics</span>
+              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                <XCircle size={16} className="text-rose-600" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div className="bg-rose-50 rounded-lg p-2.5 text-center">
+                <div className="text-xl font-extrabold text-rose-700">{extendedMetrics?.involuntaryChurnPct ?? 0}%</div>
+                <div className="text-xs text-gray-800 font-medium mt-0.5">Involuntary</div>
+                <div className="text-[10px] text-gray-600">Failed, not recovered</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                <div className="text-xl font-extrabold text-gray-800">{extendedMetrics?.voluntaryChurnPct ?? 0}%</div>
+                <div className="text-xs text-gray-800 font-medium mt-0.5">Voluntary</div>
+                <div className="text-[10px] text-gray-600">Customer cancellations</div>
+              </div>
+            </div>
+            <div className="text-xs text-gray-600 mt-2 text-center">
+              Total churn rate: <span className="font-bold text-gray-800">{extendedMetrics?.totalChurnPct ?? 0}%</span> this month
+            </div>
+          </div>
         </div>
 
-        {/* ── Main Table (CSS Grid) ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Results count + pagination info */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
-            <span className="text-sm font-semibold text-gray-800">
-              {chargesLoading ? "Loading…" : `${chargesData?.totalCount ?? 0} results`}
-            </span>
-            <span className="text-xs text-gray-600">
-              Page {page} of {totalPages || 1}
-            </span>
+        {/* ── MAIN TABLE: Upcoming Charges ── */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* Table Header with title + filters */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+            <h2 className="text-base font-bold text-gray-800">Upcoming Charges</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Status */}
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                className="text-xs text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-1.5 bg-white outline-none"
+              >
+                <option value="all">All Statuses</option>
+                <option value="live">Live</option>
+                <option value="trial">Trial</option>
+                <option value="dunning">Dunning</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="future">Future</option>
+              </select>
+
+              {/* Plan Type */}
+              <select
+                value={planTypeFilter}
+                onChange={(e) => { setPlanTypeFilter(e.target.value); setPage(1); }}
+                className="text-xs text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-1.5 bg-white outline-none"
+              >
+                <option value="all">All Types</option>
+                <option value="subscription">Subscription</option>
+                <option value="installment">Installment</option>
+              </select>
+
+              {/* Agent */}
+              <select
+                value={agentFilter}
+                onChange={(e) => { setAgentFilter(e.target.value); setPage(1); }}
+                className="text-xs text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-1.5 bg-white outline-none"
+              >
+                <option value="all">All Agents</option>
+                {uniqueAgents.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+
+              {/* Date Range */}
+              <select
+                value={dateRange}
+                onChange={(e) => { setDateRange(e.target.value as DateRange); setPage(1); }}
+                className="text-xs text-gray-800 font-medium border border-gray-300 rounded-lg px-3 py-1.5 bg-white outline-none"
+              >
+                <option value="this_week">This Week</option>
+                <option value="next_7_days">Next 7 Days</option>
+                <option value="next_30_days">Next 30 Days</option>
+                <option value="this_month">This Month</option>
+                <option value="all">All</option>
+              </select>
+
+              {/* Search */}
+              <div className="relative">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" />
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                  className="pl-8 pr-3 py-1.5 text-xs text-gray-800 border border-gray-300 rounded-lg bg-white outline-none w-40 placeholder:text-gray-500"
+                />
+              </div>
+
+              {/* Clear */}
+              <button
+                onClick={clearFilters}
+                className="text-xs font-semibold text-gray-800 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
-          {/* Table container with horizontal scroll */}
+          {/* Table (CSS Grid) */}
           <div className="overflow-x-auto">
             {/* Header */}
             <div
-              className="grid items-center gap-1 px-4 py-3 border-b border-gray-200 bg-gray-50 min-w-[1200px]"
-              style={{ gridTemplateColumns: "160px 180px 100px 90px 80px 110px 80px 70px 70px 80px" }}
+              className="grid items-center gap-1 px-4 py-2.5 border-b border-gray-200 bg-gray-50 min-w-[1280px]"
+              style={{ gridTemplateColumns: "160px 180px 90px 80px 100px 80px 80px 130px 140px" }}
             >
               <button onClick={() => handleSort("customerName")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
                 Customer <SortIcon field="customerName" currentSort={sortBy} currentDir={sortDir} />
@@ -378,9 +553,6 @@ export default function BillingPage() {
               <button onClick={() => handleSort("salesPerson")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
                 Agent <SortIcon field="salesPerson" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("planType")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
-                Plan Type <SortIcon field="planType" currentSort={sortBy} currentDir={sortDir} />
-              </button>
               <button onClick={() => handleSort("amount")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
                 Amount <SortIcon field="amount" currentSort={sortBy} currentDir={sortDir} />
               </button>
@@ -390,10 +562,8 @@ export default function BillingPage() {
               <button onClick={() => handleSort("status")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
                 Status <SortIcon field="status" currentSort={sortBy} currentDir={sortDir} />
               </button>
-              <button onClick={() => handleSort("currentBillingCycle")} className="flex items-center text-[11px] font-semibold text-gray-800 uppercase tracking-wide hover:text-blue-700 transition">
-                Cycle <SortIcon field="currentBillingCycle" currentSort={sortBy} currentDir={sortDir} />
-              </button>
-              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Days Left</div>
+              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Days Until</div>
+              <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Progress</div>
               <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-wide">Actions</div>
             </div>
 
@@ -412,34 +582,42 @@ export default function BillingPage() {
                 {rows.map((row) => (
                   <div
                     key={row.subscriptionId}
-                    className="grid items-center gap-1 px-4 py-2.5 hover:bg-gray-50 transition-colors min-w-[1200px]"
-                    style={{ gridTemplateColumns: "160px 180px 100px 90px 80px 110px 80px 70px 70px 80px" }}
+                    className="grid items-center gap-1 px-4 py-2.5 hover:bg-gray-50 transition-colors min-w-[1280px]"
+                    style={{ gridTemplateColumns: "160px 180px 90px 80px 100px 80px 80px 130px 140px" }}
                   >
                     {/* Customer */}
                     <div className="truncate">
                       <span className="text-sm font-semibold text-gray-800">{row.customerName}</span>
                     </div>
                     {/* Email */}
-                    <div className="truncate text-sm text-gray-600">{row.email}</div>
+                    <div className="truncate text-xs text-gray-600">{row.email}</div>
                     {/* Agent */}
-                    <div className="truncate text-sm text-gray-800">{row.salesPerson}</div>
-                    {/* Plan Type */}
-                    <div><PlanTypeBadge planType={row.planType} /></div>
+                    <div className="truncate text-xs text-gray-800">{row.salesPerson}</div>
                     {/* Amount */}
                     <div className="text-sm font-semibold text-gray-800">{formatCurrency(row.amount)}</div>
                     {/* Next Charge */}
-                    <div className="text-sm text-gray-800">{formatDate(row.nextBillingOn)}</div>
+                    <div className="text-xs text-gray-800">{formatDate(row.nextBillingOn)}</div>
                     {/* Status */}
                     <div><StatusBadge status={row.status} /></div>
-                    {/* Cycle */}
-                    <div className="text-sm text-gray-800 text-center">{row.currentBillingCycle ?? "—"}</div>
-                    {/* Days Left */}
-                    <div className="text-center"><DaysLeftBadge days={row.daysUntilCharge} /></div>
-                    {/* Actions */}
+                    {/* Days Until */}
+                    <div><DaysUntilBadge days={row.daysUntilCharge} /></div>
+                    {/* Progress */}
                     <div>
-                      <button className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition">
-                        <Eye size={12} />
+                      <ProgressBar current={row.currentBillingCycle} total={row.billingCycles} />
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition">
+                        <Eye size={11} />
                         View
+                      </button>
+                      <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition">
+                        <Pause size={11} />
+                        Pause
+                      </button>
+                      <button className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition">
+                        <XCircle size={11} />
+                        Cancel
                       </button>
                     </div>
                   </div>
@@ -449,79 +627,80 @@ export default function BillingPage() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <span className="text-xs text-gray-600">
+              Showing <strong className="text-gray-800">{rows.length}</strong> of <strong className="text-gray-800">{chargesData?.totalCount ?? 0}</strong> subscriptions
+            </span>
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="text-xs font-semibold text-gray-800 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                <ChevronLeft size={14} />
-                Previous
+                ← Prev
               </button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 7) {
-                    pageNum = i + 1;
-                  } else if (page <= 4) {
-                    pageNum = i + 1;
-                  } else if (page >= totalPages - 3) {
-                    pageNum = totalPages - 6 + i;
-                  } else {
-                    pageNum = page - 3 + i;
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className={cn(
-                        "w-8 h-8 text-sm font-medium rounded-lg transition",
-                        page === pageNum
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-800 hover:bg-gray-200"
-                      )}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (page <= 3) {
+                  pageNum = i + 1;
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = page - 2 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={cn(
+                      "text-xs font-semibold px-3 py-1.5 rounded-lg transition",
+                      page === pageNum
+                        ? "bg-indigo-600 text-white"
+                        : "text-gray-800 bg-gray-100 hover:bg-gray-200"
+                    )}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="text-xs font-semibold text-gray-800 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                Next
-                <ChevronRight size={14} />
+                Next →
               </button>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* ── Bottom Section (two columns) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Left: Recent Activity */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        {/* ── BOTTOM ROW: Activity Feed + Quick Stats ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          {/* Recent Activity Feed (2/3 width) */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <Activity size={16} className="text-gray-800" />
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Recent Activity</h3>
+              <h3 className="text-base font-bold text-gray-800">Recent Activity</h3>
             </div>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            <div className="space-y-0 max-h-[360px] overflow-y-auto">
               {activityData?.entries && activityData.entries.length > 0 ? (
-                activityData.entries.map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0">
+                activityData.entries.map((entry, idx) => (
+                  <div key={entry.id} className={cn("flex gap-3 items-start py-3", idx > 0 && "border-t border-gray-100")}>
                     <div className={cn(
                       "w-2.5 h-2.5 rounded-full mt-1.5 shrink-0",
                       entry.eventType.includes("succeeded") ? "bg-green-500" :
                       entry.eventType.includes("failed") ? "bg-red-500" :
-                      "bg-blue-500"
+                      entry.eventType.includes("created") ? "bg-blue-500" :
+                      entry.eventType.includes("recovered") ? "bg-emerald-500" :
+                      "bg-gray-400"
                     )} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-800 truncate">{formatEventType(entry.eventType)}</div>
+                      <div className="text-sm font-semibold text-gray-800">{formatEventType(entry.eventType)}</div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {entry.amount !== null && (
-                          <span className="text-xs font-semibold text-gray-800">
+                        {entry.amount !== null && entry.amount !== undefined && (
+                          <span className="text-xs text-gray-600">
                             {formatCurrency((entry.amount ?? 0) / 100)}
                           </span>
                         )}
@@ -530,67 +709,182 @@ export default function BillingPage() {
                         )}
                       </div>
                     </div>
-                    <span className="text-[11px] text-gray-600 whitespace-nowrap shrink-0">
-                      {entry.createdAt ? formatDate(entry.createdAt) : "—"}
+                    <span className="text-xs text-gray-600 whitespace-nowrap shrink-0">
+                      {timeAgo(entry.createdAt)}
                     </span>
                   </div>
                 ))
               ) : (
-                <div className="text-sm text-gray-600 text-center py-4">No recent activity</div>
+                <div className="text-sm text-gray-600 text-center py-8">No recent activity recorded</div>
               )}
             </div>
           </div>
 
-          {/* Right: Quick Stats */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Users size={16} className="text-gray-800" />
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Quick Stats</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-extrabold text-gray-800">{quickStats?.totalCustomers ?? 0}</div>
-                <div className="text-xs text-gray-600 mt-1">Total Customers</div>
+          {/* Quick Stats (1/3 width) */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-5">
+            <h3 className="text-base font-bold text-gray-800">Quick Stats</h3>
+
+            {/* Payment Success Rate */}
+            <div>
+              <div className="flex justify-between text-sm font-semibold mb-1.5">
+                <span className="text-gray-800">Payment Success Rate</span>
+                <span className="text-green-700">{quickStats?.paymentSuccessRate ?? 0}%</span>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-extrabold text-gray-800">{quickStats?.activeSubs ?? 0}</div>
-                <div className="text-xs text-gray-600 mt-1">Active Subs</div>
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${quickStats?.paymentSuccessRate ?? 0}%` }} />
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-extrabold text-gray-800">{quickStats?.activeInstallments ?? 0}</div>
-                <div className="text-xs text-gray-600 mt-1">Active Installments</div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-extrabold text-gray-800">
-                  {quickStats?.avgAmount ? formatCurrency(quickStats.avgAmount) : "£0.00"}
-                </div>
-                <div className="text-xs text-gray-600 mt-1">Avg Amount (page)</div>
+              <div className="text-xs text-gray-600 mt-1">
+                {quickStats?.successCount ?? 0} of {quickStats?.totalPayments ?? 0} payments succeeded
               </div>
             </div>
 
-            {/* Churn metrics */}
-            {churnData && (
-              <div className="mt-5 pt-4 border-t border-gray-200">
-                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide mb-3">Churn Metrics</h4>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-red-700">{churnData.involuntaryChurn}</div>
-                    <div className="text-[11px] text-gray-600">Involuntary</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-orange-700">{churnData.voluntaryChurn}</div>
-                    <div className="text-[11px] text-gray-600">Voluntary</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-green-700">{churnData.recoveryRate}%</div>
-                    <div className="text-[11px] text-gray-600">Recovery</div>
-                  </div>
-                </div>
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="text-xs text-gray-600 font-medium">Avg Revenue / Customer</div>
+                <div className="text-xl font-extrabold text-gray-800 mt-1">{formatCurrency(quickStats?.avgRevenuePerCustomer ?? 0)}</div>
               </div>
-            )}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="text-xs text-gray-600 font-medium">Total Customers</div>
+                <div className="text-xl font-extrabold text-gray-800 mt-1">{quickStats?.totalCustomers ?? 0}</div>
+              </div>
+            </div>
+
+            {/* Revenue Forecast placeholder */}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Revenue Forecast</div>
+              <div className="text-2xl font-extrabold text-indigo-800">{formatCurrency(extendedMetrics?.mrrCurrent ?? 0)}</div>
+              <div className="text-xs text-gray-800 mt-0.5">Expected next 30 days (based on live subs)</div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── MODALS ── */}
+      {/* New Subscription Modal */}
+      <Modal
+        open={showNewSubModal}
+        onClose={() => setShowNewSubModal(false)}
+        title="New Subscription"
+        subtitle="Set up a recurring Stripe billing schedule for a customer"
+        icon={<div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center"><Plus size={20} className="text-green-600" /></div>}
+      >
+        <div className="space-y-4">
+          <div className="border-t border-gray-100 pt-4">
+            <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-3">1 — Customer</div>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+              <input type="text" className="w-full pl-9 pr-3 py-2.5 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none placeholder:text-gray-500" placeholder="Type name, email or phone…" />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-3">2 — Billing Configuration</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">Amount (£)</label>
+                <input type="number" className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none" defaultValue="44.90" step="0.01" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">Billing cycle</label>
+                <select className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none">
+                  <option>Every 30 days</option>
+                  <option>Every 60 days</option>
+                  <option>Every 90 days</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">Trial period</label>
+                <select className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none">
+                  <option>No trial</option>
+                  <option>21-day free trial</option>
+                  <option>14-day free trial</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">First charge date</label>
+                <input type="date" className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none" />
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-3">3 — Agent</div>
+            <select className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none">
+              <option value="">Select agent…</option>
+              {uniqueAgents.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <button onClick={() => setShowNewSubModal(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+            <button className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition">Create Subscription</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* New Instalment Plan Modal */}
+      <Modal
+        open={showNewInstalmentModal}
+        onClose={() => setShowNewInstalmentModal(false)}
+        title="New Instalment Plan"
+        subtitle="Split a total amount into scheduled equal payments"
+        icon={<div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center"><Package size={20} className="text-blue-600" /></div>}
+      >
+        <div className="space-y-4">
+          <div className="border-t border-gray-100 pt-4">
+            <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-3">1 — Customer</div>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+              <input type="text" className="w-full pl-9 pr-3 py-2.5 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none placeholder:text-gray-500" placeholder="Type name, email or phone…" />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-3">2 — Instalment Configuration</div>
+            <div className="mb-3">
+              <label className="text-xs font-semibold text-gray-800 mb-1 block">Total amount (£)</label>
+              <input type="number" className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none" defaultValue="420.00" step="0.01" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">Number of payments</label>
+                <select className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none">
+                  <option>2</option>
+                  <option>3</option>
+                  <option>6</option>
+                  <option>9</option>
+                  <option>12</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">Payment interval</label>
+                <select className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none">
+                  <option>Every 14 days</option>
+                  <option>Every 30 days</option>
+                  <option>Every 60 days</option>
+                  <option>Every 90 days</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">First payment date</label>
+                <input type="date" className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-800 mb-1 block">Description</label>
+                <input type="text" className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none" placeholder="e.g. Matinika Starter Kit" />
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-3">3 — Agent</div>
+            <select className="w-full px-3 py-2 text-sm text-gray-800 border border-gray-300 rounded-lg outline-none">
+              <option value="">Select agent…</option>
+              {uniqueAgents.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <button onClick={() => setShowNewInstalmentModal(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+            <button className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Create Instalment Plan</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

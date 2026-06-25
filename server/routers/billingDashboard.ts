@@ -13,7 +13,7 @@ import { eq, like, or, and, desc, asc, sql, type SQL } from "drizzle-orm";
 
 export const billingDashboardRouter = router({
   /**
-   * getBillingSummary — returns counts and totals for the summary cards.
+   * getBillingSummary — returns counts and totals for the top summary cards row.
    */
   getBillingSummary: adminProcedure
     .input(z.object({}).optional())
@@ -56,8 +56,113 @@ export const billingDashboardRouter = router({
     }),
 
   /**
+   * getExtendedMetrics — returns data for the second row of cards:
+   * Revenue Recovered, MRR Trend, Churn Metrics.
+   */
+  getExtendedMetrics: adminProcedure
+    .input(z.object({}).optional())
+    .query(async () => {
+      const db = await getDb();
+      if (!db) {
+        return {
+          revenueRecovered: 0,
+          recoveredCount: 0,
+          failedThisMonth: 0,
+          recoveryRate: 0,
+          mrrCurrent: 0,
+          mrrPrevious: 0,
+          mrrChangePercent: 0,
+          involuntaryChurnCount: 0,
+          voluntaryChurnCount: 0,
+          totalActiveStartOfMonth: 0,
+          involuntaryChurnPct: 0,
+          voluntaryChurnPct: 0,
+          totalChurnPct: 0,
+        };
+      }
+
+      // Revenue Recovered: subscriptions that are currently 'live' but were 'dunning'/'unpaid' at some point this month
+      // Approximation: live subs that have lastBilledOn this month (recovered payments)
+      // For now we count live subs that were previously in dunning — we approximate by counting
+      // live subs with lastBilledOn in current month that have amount > 0
+      const recoveredResult = await db
+        .select({
+          revenueRecovered: sql<number>`COALESCE(SUM(CASE WHEN ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.lastBilledOn} >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) ELSE 0 END), 0)`,
+          recoveredCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.lastBilledOn} >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN 1 ELSE 0 END)`,
+          failedThisMonth: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('dunning','unpaid') THEN 1 ELSE 0 END)`,
+        })
+        .from(clientSubscriptions);
+
+      const recovered = recoveredResult[0];
+      const failedCount = Number(recovered?.failedThisMonth ?? 0);
+      const recoveredCount = Number(recovered?.recoveredCount ?? 0);
+      const recoveryRate = failedCount + recoveredCount > 0
+        ? Math.round((recoveredCount / (failedCount + recoveredCount)) * 100)
+        : 0;
+
+      // MRR: sum of amount for all live subscriptions (current month vs last month)
+      const mrrResult = await db
+        .select({
+          mrrCurrent: sql<number>`COALESCE(SUM(CASE WHEN ${clientSubscriptions.status} = 'live' THEN CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) ELSE 0 END), 0)`,
+        })
+        .from(clientSubscriptions);
+
+      // MRR previous month: approximate by counting subs that were active last month
+      // (subs with activatedOn before start of current month and not cancelled before start of current month)
+      const mrrPrevResult = await db
+        .select({
+          mrrPrevious: sql<number>`COALESCE(SUM(CASE WHEN ${clientSubscriptions.status} IN ('live','dunning','unpaid') AND ${clientSubscriptions.activatedOn} < DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) ELSE 0 END), 0)`,
+        })
+        .from(clientSubscriptions);
+
+      const mrrCurrent = Number(mrrResult[0]?.mrrCurrent ?? 0);
+      const mrrPrevious = Number(mrrPrevResult[0]?.mrrPrevious ?? 0);
+      const mrrChangePercent = mrrPrevious > 0
+        ? Math.round(((mrrCurrent - mrrPrevious) / mrrPrevious) * 1000) / 10
+        : 0;
+
+      // Churn Metrics: cancelled this month / total active
+      const churnResult = await db
+        .select({
+          cancelledThisMonth: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('cancelled','canceled') AND ${clientSubscriptions.cancelledDate} >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN 1 ELSE 0 END)`,
+          dunningCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('dunning','unpaid') THEN 1 ELSE 0 END)`,
+          totalActive: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('live','dunning','unpaid') THEN 1 ELSE 0 END)`,
+        })
+        .from(clientSubscriptions);
+
+      const churn = churnResult[0];
+      const involuntaryChurnCount = Number(churn?.dunningCount ?? 0);
+      const voluntaryChurnCount = Number(churn?.cancelledThisMonth ?? 0);
+      const totalActive = Number(churn?.totalActive ?? 0);
+      const involuntaryChurnPct = totalActive > 0
+        ? Math.round((involuntaryChurnCount / totalActive) * 1000) / 10
+        : 0;
+      const voluntaryChurnPct = totalActive > 0
+        ? Math.round((voluntaryChurnCount / totalActive) * 1000) / 10
+        : 0;
+      const totalChurnPct = Math.round((involuntaryChurnPct + voluntaryChurnPct) * 10) / 10;
+
+      return {
+        revenueRecovered: Number(recovered?.revenueRecovered ?? 0),
+        recoveredCount,
+        failedThisMonth: failedCount,
+        recoveryRate,
+        mrrCurrent,
+        mrrPrevious,
+        mrrChangePercent,
+        involuntaryChurnCount,
+        voluntaryChurnCount,
+        totalActiveStartOfMonth: totalActive,
+        involuntaryChurnPct,
+        voluntaryChurnPct,
+        totalChurnPct,
+      };
+    }),
+
+  /**
    * getUpcomingCharges — paginated list sorted by nextBillingOn ASC.
    * Supports filters: status, agent (salesPerson), dateRange, search (name/email).
+   * Includes progress (currentBillingCycle / billingCycles) for installments.
    */
   getUpcomingCharges: adminProcedure
     .input(
@@ -176,6 +281,7 @@ export const billingDashboardRouter = router({
           status: clientSubscriptions.status,
           planType: clientSubscriptions.planType,
           currentBillingCycle: clientSubscriptions.currentBillingCycle,
+          billingCycles: clientSubscriptions.billingCycles,
           contactId: clientSubscriptions.contactId,
         })
         .from(clientSubscriptions)
@@ -193,7 +299,7 @@ export const billingDashboardRouter = router({
         .filter((a): a is string => !!a && a.trim() !== "")
         .sort();
 
-      // Map rows with calculated daysUntilCharge
+      // Map rows with calculated daysUntilCharge and progress
       const mappedRows = rows.map((row) => {
         let daysUntilCharge: number | null = null;
         if (row.nextBillingOn) {
@@ -213,6 +319,7 @@ export const billingDashboardRouter = router({
           status: row.status,
           planType: row.planType,
           currentBillingCycle: row.currentBillingCycle,
+          billingCycles: row.billingCycles,
           daysUntilCharge,
           contactId: row.contactId ?? null,
         };
@@ -260,28 +367,42 @@ export const billingDashboardRouter = router({
     }),
 
   /**
-   * getChurnMetrics — returns churn-related counts.
+   * getQuickStats — returns quick stats for the bottom right panel.
    */
-  getChurnMetrics: adminProcedure
+  getQuickStats: adminProcedure
     .input(z.object({}).optional())
     .query(async () => {
       const db = await getDb();
       if (!db) {
-        return { involuntaryChurn: 0, voluntaryChurn: 0, recoveryRate: 0 };
+        return {
+          totalCustomers: 0,
+          avgRevenuePerCustomer: 0,
+          paymentSuccessRate: 0,
+          successCount: 0,
+          totalPayments: 0,
+        };
       }
 
       const result = await db
         .select({
-          involuntaryChurn: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('dunning','unpaid') THEN 1 ELSE 0 END)`,
-          voluntaryChurn: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('cancelled','canceled') THEN 1 ELSE 0 END)`,
+          totalCustomers: sql<number>`COUNT(DISTINCT ${clientSubscriptions.customerName})`,
+          avgAmount: sql<number>`COALESCE(AVG(CASE WHEN ${clientSubscriptions.status} = 'live' THEN CAST(${clientSubscriptions.amount} AS DECIMAL(10,2)) ELSE NULL END), 0)`,
+          liveCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} = 'live' THEN 1 ELSE 0 END)`,
+          totalCount: sql<number>`SUM(CASE WHEN ${clientSubscriptions.status} IN ('live','dunning','unpaid') THEN 1 ELSE 0 END)`,
         })
         .from(clientSubscriptions);
 
       const row = result[0];
+      const liveCount = Number(row?.liveCount ?? 0);
+      const totalCount = Number(row?.totalCount ?? 0);
+      const successRate = totalCount > 0 ? Math.round((liveCount / totalCount) * 100) : 0;
+
       return {
-        involuntaryChurn: Number(row?.involuntaryChurn ?? 0),
-        voluntaryChurn: Number(row?.voluntaryChurn ?? 0),
-        recoveryRate: 0, // placeholder — will be real when we have retry data
+        totalCustomers: Number(row?.totalCustomers ?? 0),
+        avgRevenuePerCustomer: Math.round(Number(row?.avgAmount ?? 0) * 100) / 100,
+        paymentSuccessRate: successRate,
+        successCount: liveCount,
+        totalPayments: totalCount,
       };
     }),
 });
