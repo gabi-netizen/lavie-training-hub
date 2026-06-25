@@ -449,6 +449,11 @@ export const billingDashboardRouter = router({
           paymentSuccessRate: 0,
           successCount: 0,
           totalPayments: 0,
+          nextBatchDate: null as string | null,
+          nextBatchCustomers: 0,
+          nextBatchAmount: 0,
+          avgDaysBetweenCharge: 0,
+          installmentPlans: [] as { name: string; current: number; total: number }[],
         };
       }
 
@@ -466,12 +471,68 @@ export const billingDashboardRouter = router({
       const totalCount = Number(row?.totalCount ?? 0);
       const successRate = totalCount > 0 ? Math.round((liveCount / totalCount) * 100) : 0;
 
+      // Next Batch Charge
+      const nextBatchResult = await db
+        .select({
+          nextDate: sql<string>`MIN(${clientSubscriptions.nextBillingOn})`,
+        })
+        .from(clientSubscriptions)
+        .where(sql`${clientSubscriptions.status} IN ('live','scheduled') AND ${clientSubscriptions.nextBillingOn} >= CURDATE()`);
+
+      const nextDate = nextBatchResult[0]?.nextDate ?? null;
+      let nextBatchCustomers = 0;
+      let nextBatchAmount = 0;
+
+      if (nextDate) {
+        const batchResult = await db
+          .select({
+            count: sql<number>`COUNT(*)`,
+            total: sql<number>`COALESCE(SUM(CAST(${clientSubscriptions.amount} AS DECIMAL(10,2))), 0)`,
+          })
+          .from(clientSubscriptions)
+          .where(sql`${clientSubscriptions.nextBillingOn} = ${nextDate} AND ${clientSubscriptions.status} IN ('live','scheduled')`);
+        nextBatchCustomers = Number(batchResult[0]?.count ?? 0);
+        nextBatchAmount = Math.round(Number(batchResult[0]?.total ?? 0) * 100) / 100;
+      }
+
+      // Avg Days Between Charge
+      const avgDaysResult = await db
+        .select({
+          avgDays: sql<number>`COALESCE(AVG(DATEDIFF(${clientSubscriptions.nextBillingOn}, CURDATE())), 0)`,
+        })
+        .from(clientSubscriptions)
+        .where(sql`${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.nextBillingOn} >= CURDATE()`);
+      const avgDaysBetweenCharge = Math.round(Number(avgDaysResult[0]?.avgDays ?? 0) * 10) / 10;
+
+      // Installment Plans (in progress)
+      const installmentResult = await db
+        .select({
+          customerName: clientSubscriptions.customerName,
+          currentBillingCycle: clientSubscriptions.currentBillingCycle,
+          billingCycles: clientSubscriptions.billingCycles,
+        })
+        .from(clientSubscriptions)
+        .where(sql`${clientSubscriptions.planType} = 'installment' AND ${clientSubscriptions.status} = 'live' AND ${clientSubscriptions.billingCycles} > 0 AND ${clientSubscriptions.currentBillingCycle} < ${clientSubscriptions.billingCycles}`)
+        .orderBy(sql`${clientSubscriptions.nextBillingOn} ASC`)
+        .limit(4);
+
+      const installmentPlans = installmentResult.map((r) => ({
+        name: r.customerName ?? "Unknown",
+        current: Number(r.currentBillingCycle ?? 0),
+        total: Number(r.billingCycles ?? 0),
+      }));
+
       return {
         totalCustomers: Number(row?.totalCustomers ?? 0),
         avgRevenuePerCustomer: Math.round(Number(row?.avgAmount ?? 0) * 100) / 100,
         paymentSuccessRate: successRate,
         successCount: liveCount,
         totalPayments: totalCount,
+        nextBatchDate: nextDate,
+        nextBatchCustomers,
+        nextBatchAmount,
+        avgDaysBetweenCharge,
+        installmentPlans,
       };
     }),
 });

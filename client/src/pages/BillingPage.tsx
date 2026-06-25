@@ -899,12 +899,56 @@ export default function BillingPage() {
               </div>
             </div>
 
+            {/* Next Batch Charge + Avg Days Between Charge */}
+            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <div className="text-xs text-gray-600 font-medium">Next Batch Charge</div>
+                <div className="text-lg font-extrabold text-green-700 mt-0.5">
+                  {quickStats?.nextBatchDate ? (() => {
+                    const d = new Date(quickStats.nextBatchDate + "T00:00:00");
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                    if (d.getTime() === today.getTime()) return "Today";
+                    if (d.getTime() === tomorrow.getTime()) return "Tomorrow";
+                    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                  })() : "—"}
+                </div>
+                <div className="text-xs text-gray-600 mt-0.5">{quickStats?.nextBatchCustomers ?? 0} customers · {formatCurrency(quickStats?.nextBatchAmount ?? 0)}</div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <div className="text-xs text-gray-600 font-medium">Avg Days Between Charge</div>
+                <div className="text-lg font-extrabold text-green-700 mt-0.5">{quickStats?.avgDaysBetweenCharge ?? 0}</div>
+                <div className="text-xs text-gray-600 mt-0.5">days</div>
+              </div>
+            </div>
+
             {/* Revenue Forecast */}
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
               <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Revenue Forecast</div>
               <div className="text-2xl font-extrabold text-indigo-800">{formatCurrency(extendedMetrics?.mrrCurrent ?? 0)}</div>
               <div className="text-xs text-gray-800 mt-1">Expected next 30 days (based on live subs)</div>
             </div>
+
+            {/* Installment Plans */}
+            {(quickStats?.installmentPlans?.length ?? 0) > 0 && (
+              <div className="border-t border-gray-100 pt-4">
+                <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Installment Plans</div>
+                <div className="flex flex-col gap-2.5">
+                  {quickStats?.installmentPlans?.map((plan, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="text-xs text-gray-800 font-medium w-28 truncate">{plan.name?.split(" ").slice(0, 3).join(" ")}</div>
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${plan.current / plan.total >= 0.8 ? "bg-green-500" : "bg-indigo-500"}`}
+                          style={{ width: `${(plan.current / plan.total) * 100}%` }}
+                        />
+                      </div>
+                      <div className="text-xs font-semibold text-gray-700 w-8 text-right">{plan.current}/{plan.total}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
