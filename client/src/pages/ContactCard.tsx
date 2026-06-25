@@ -1012,26 +1012,12 @@ export default function ContactCard() {
                 }
                 return (
                   <>
-                    {/* Badge + suggestion inline */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <div
-                        className="inline-block rounded-full text-[10px] font-bold px-3 py-1 uppercase tracking-wider"
-                        style={{ background: "#f5a623", color: "#1a3a5c" }}
-                      >
-                        Best Time to Contact
-                      </div>
-                      {manualBestTime ? (
-                        <span className="text-black font-bold text-sm">{manualBestTime}</span>
-                      ) : suggestion ? (
-                        <span className="text-black font-bold text-sm">{suggestion}</span>
-                      ) : null}
+                    <div
+                      className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-2 uppercase tracking-wider"
+                      style={{ background: "#f5a623", color: "#1a3a5c" }}
+                    >
+                      Best Time to Contact
                     </div>
-                    {/* Suggestion note */}
-                    {manualBestTime ? (
-                      <div className="text-[11px] text-black font-semibold mb-2">Agent override</div>
-                    ) : suggestion ? (
-                      <div className="text-[11px] text-black font-semibold mb-2">{suggestionNote}</div>
-                    ) : null}
 
                     {/* Manual override input */}
                     <div className="flex items-center gap-1.5 mb-2">
@@ -1060,10 +1046,23 @@ export default function ContactCard() {
                       </button>
                     </div>
 
-                    {/* No call data fallback */}
-                    {!suggestion && !manualBestTime && (
-                      <p className="text-sm font-bold text-black">No call data yet</p>
+                    {/* Manual override display (if set) */}
+                    {manualBestTime && (
+                      <div className="rounded-lg p-2 mb-2" style={{ background: "#e8f5e9", border: "1px solid #4caf50" }}>
+                        <div className="text-black font-bold text-lg">{manualBestTime}</div>
+                        <div className="text-[10px] text-black font-semibold mt-0.5">Agent override</div>
+                      </div>
                     )}
+
+                    {/* CloudTalk smart suggestion */}
+                    {suggestion ? (
+                      <div className="rounded-lg p-2" style={{ background: "#f0fdf4", border: "1px solid rgba(34, 197, 94, 0.4)" }}>
+                        <div className="text-black font-bold text-lg">{suggestion}</div>
+                        <div className="text-[10px] text-black font-semibold mt-0.5">{suggestionNote}</div>
+                      </div>
+                    ) : !manualBestTime ? (
+                      <p className="text-sm font-bold text-black">No call data yet</p>
+                    ) : null}
                   </>
                 );
               })()}
