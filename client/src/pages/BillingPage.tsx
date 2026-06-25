@@ -180,10 +180,13 @@ function Modal({ open, onClose, title, subtitle, icon, children }: {
 
 // ─── Failed Payments Section ────────────────────────────────────────────────
 function FailedPaymentsSection() {
+  const [failedPage, setFailedPage] = useState(1);
+  const failedPerPage = 4;
   const { data } = trpc.billingDashboard.getFailedPayments.useQuery({});
   if (!data || data.totalCount === 0) return null;
 
-  const visibleRows = data.rows.slice(0, 4);
+  const totalFailedPages = Math.ceil(data.rows.length / failedPerPage);
+  const visibleRows = data.rows.slice((failedPage - 1) * failedPerPage, failedPage * failedPerPage);
 
   function formatRetryDate(dateStr: string | null, daysUntil: number | null): { line1: string; line2: string; color: string } {
     if (daysUntil !== null && daysUntil <= 0) {
@@ -277,12 +280,41 @@ function FailedPaymentsSection() {
         })}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-end px-6 py-2.5">
+      {/* Footer with pagination */}
+      <div className="flex items-center justify-between px-6 py-2.5 border-t border-gray-100">
         <span className="text-xs text-gray-600">
-          Showing {visibleRows.length} of {data.totalCount} failed payments.{" "}
-          <button className="text-blue-600 font-semibold hover:underline">View all →</button>
+          Showing {visibleRows.length} of {data.totalCount} failed payments.
         </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setFailedPage((p) => Math.max(1, p - 1))}
+            disabled={failedPage <= 1}
+            className="text-xs font-semibold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            ← Prev
+          </button>
+          {Array.from({ length: totalFailedPages }, (_, i) => (
+            <button
+              key={i + 1}
+              onClick={() => setFailedPage(i + 1)}
+              className={cn(
+                "text-xs font-semibold px-2.5 py-1 rounded-lg transition",
+                failedPage === i + 1
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-800 bg-gray-100 hover:bg-gray-200"
+              )}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => setFailedPage((p) => Math.min(totalFailedPages, p + 1))}
+            disabled={failedPage >= totalFailedPages}
+            className="text-xs font-semibold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            Next →
+          </button>
+        </div>
       </div>
     </div>
   );

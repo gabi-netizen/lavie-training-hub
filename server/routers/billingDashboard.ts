@@ -397,7 +397,7 @@ export const billingDashboardRouter = router({
           )
         )
         .orderBy(asc(clientSubscriptions.nextBillingOn))
-        .limit(10);
+        .limit(50);
 
       const countResult = await db
         .select({ count: sql<number>`COUNT(*)` })
