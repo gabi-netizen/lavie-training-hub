@@ -967,26 +967,32 @@ export default function ContactCard() {
 
             {/* Best Time to Contact */}
             <div className="px-5 pb-4 pt-2">
-              <div
-                className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-3 uppercase tracking-wider"
-                style={{ background: "#f5a623", color: "#1a3a5c" }}
-              >
-                Best Time to Contact
-              </div>
-              {contact.callbackAt ? (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-white font-bold" style={{ fontSize: "36px", lineHeight: 1 }}>
-                      {new Date(contact.callbackAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                    </span>
-                  </div>
-                  <p className="text-xs mt-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-                    Scheduled callback
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>Not set</p>
-              )}
+              {(() => {
+                const cbRaw = contact.callbackAt || (currentRetentionLead?.callbackAt ? currentRetentionLead.callbackAt : null);
+                if (cbRaw) {
+                  const cbDate = new Date(typeof cbRaw === 'number' ? cbRaw : cbRaw);
+                  const dateStr = cbDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+                  const timeStr = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+                  return (
+                    <div className="rounded-xl p-3" style={{ background: "rgba(245, 166, 35, 0.15)", border: "2px solid #f5a623" }}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#f5a623" }}>Callback Scheduled</div>
+                      <div className="text-white font-bold" style={{ fontSize: "28px", lineHeight: 1.2 }}>{timeStr}</div>
+                      <div className="text-white font-semibold text-sm mt-1">{dateStr}</div>
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <div
+                      className="inline-block rounded-full text-[10px] font-bold px-3 py-1 mb-3 uppercase tracking-wider"
+                      style={{ background: "#f5a623", color: "#1a3a5c" }}
+                    >
+                      Best Time to Contact
+                    </div>
+                    <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>Not set</p>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Last contact */}
