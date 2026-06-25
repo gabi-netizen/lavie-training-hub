@@ -2130,80 +2130,144 @@ export default function ContactCard() {
               {/* Notes tab */}
               {centerTopTab === "notes" && (
                 <div className="space-y-4">
-                  {/* AI Retention Notes from Call Analyses */}
-                  {aiNotesData?.notes && aiNotesData.notes.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                        <span>{"\uD83E\uDD16"}</span> AI Call Notes ({aiNotesData.notes.length} calls)
-                      </p>
-                      {(aiNotesData.notes as any[]).map((note: any) => (
-                        <div key={`ai-note-${note.id}`} className="rounded-xl border border-blue-100 bg-blue-50/30 p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-blue-700">
-                                {note.callType?.replace(/_/g, " ").toUpperCase() || "CALL"}
-                              </span>
-                              {note.overallScore != null && (
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${Number(note.overallScore) >= 7 ? "bg-green-100 text-green-800" : Number(note.overallScore) >= 4 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
-                                  Score: {Number(note.overallScore).toFixed(1)}/10
-                                </span>
-                              )}
+                  {/* AI Retention Notes from Call Analyses — split by duration */}
+                  {aiNotesData?.notes && aiNotesData.notes.length > 0 && (() => {
+                    const allNotes = aiNotesData.notes as any[];
+                    const callAttempts = allNotes.filter((n: any) => (n.durationSeconds || 0) < 60);
+                    const shortCalls = allNotes.filter((n: any) => (n.durationSeconds || 0) >= 60 && (n.durationSeconds || 0) < 300);
+                    const aiAnalyzed = allNotes.filter((n: any) => (n.durationSeconds || 0) >= 300);
+
+                    const formatDateTime = (dateStr: string | null) => {
+                      if (!dateStr) return "";
+                      const d = new Date(dateStr);
+                      return `${d.toLocaleDateString("en-GB")} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+                    };
+
+                    return (
+                      <div className="space-y-5">
+                        {/* Call Attempts (< 60s) */}
+                        {callAttempts.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2">
+                              <span>{"\uD83D\uDCDE"}</span> Call Attempts ({callAttempts.length})
+                            </p>
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+                              <div className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 bg-gray-100 border-b border-gray-200">
+                                <span className="text-[10px] font-bold text-gray-700 uppercase">Date & Time</span>
+                                <span className="text-[10px] font-bold text-gray-700 uppercase">Duration</span>
+                                <span className="text-[10px] font-bold text-gray-700 uppercase">Agent</span>
+                              </div>
+                              {callAttempts.map((note: any) => (
+                                <div key={`attempt-${note.id}`} className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-100">
+                                  <span className="text-xs text-gray-800 font-medium">{formatDateTime(note.callDate)}</span>
+                                  <span className="text-xs text-gray-800">{Math.round(note.durationSeconds || 0)}s</span>
+                                  <span className="text-xs text-gray-800">{note.repName || "—"}</span>
+                                </div>
+                              ))}
                             </div>
-                            <span className="text-[10px] text-gray-800 font-medium">
-                              {note.callDate ? new Date(note.callDate).toLocaleDateString("en-GB") : ""}
-                              {note.repName ? ` \u2022 ${note.repName}` : ""}
-                              {note.durationSeconds ? ` \u2022 ${Math.floor(note.durationSeconds / 60)}m` : ""}
-                            </span>
                           </div>
-                          {note.retentionNotes && (
-                            <div className="space-y-1.5 mt-2">
-                              {note.retentionNotes.rapport && (
-                                <div className="border-l-4 border-teal-400 pl-3 py-1">
-                                  <p className="text-[10px] font-bold text-teal-700 uppercase">Rapport</p>
-                                  <p className="text-sm text-gray-800">{note.retentionNotes.rapport}</p>
+                        )}
+
+                        {/* Short Calls (1-5 min) */}
+                        {shortCalls.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2">
+                              <span>{"\uD83D\uDCF1"}</span> Short Calls ({shortCalls.length})
+                            </p>
+                            <div className="rounded-xl border border-amber-200 bg-amber-50/30 overflow-hidden">
+                              <div className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 bg-amber-100/50 border-b border-amber-200">
+                                <span className="text-[10px] font-bold text-gray-700 uppercase">Date & Time</span>
+                                <span className="text-[10px] font-bold text-gray-700 uppercase">Duration</span>
+                                <span className="text-[10px] font-bold text-gray-700 uppercase">Agent</span>
+                              </div>
+                              {shortCalls.map((note: any) => (
+                                <div key={`short-${note.id}`} className="grid grid-cols-[1fr_80px_100px] px-3 py-1.5 border-b border-amber-100 last:border-b-0 hover:bg-amber-50">
+                                  <span className="text-xs text-gray-800 font-medium">{formatDateTime(note.callDate)}</span>
+                                  <span className="text-xs text-gray-800">{Math.floor((note.durationSeconds || 0) / 60)}m {Math.round((note.durationSeconds || 0) % 60)}s</span>
+                                  <span className="text-xs text-gray-800">{note.repName || "—"}</span>
                                 </div>
-                              )}
-                              {note.retentionNotes.currentRoutine && (
-                                <div className="border-l-4 border-indigo-400 pl-3 py-1">
-                                  <p className="text-[10px] font-bold text-indigo-700 uppercase">Current Routine</p>
-                                  <p className="text-sm text-gray-800">{note.retentionNotes.currentRoutine}</p>
-                                </div>
-                              )}
-                              {note.retentionNotes.productsToSend && (
-                                <div className="border-l-4 border-purple-400 pl-3 py-1">
-                                  <p className="text-[10px] font-bold text-purple-700 uppercase">Products to Send</p>
-                                  <p className="text-sm text-gray-800 whitespace-pre-line">{note.retentionNotes.productsToSend}</p>
-                                </div>
-                              )}
-                              {note.retentionNotes.customerSituation && (
-                                 <div className="mb-3">
-                                   <p className="text-[10px] font-bold text-orange-600 uppercase">Customer Situation</p>
-                                   <p className="text-sm text-gray-800">{note.retentionNotes.customerSituation}</p>
-                                 </div>
-                               )}
-                              {note.retentionNotes.keyCommitments && (
-                                 <div className="mb-3">
-                                   <p className="text-[10px] font-bold text-orange-600 uppercase">Key Commitments</p>
-                                   <p className="text-sm text-gray-800">{note.retentionNotes.keyCommitments}</p>
-                                 </div>
-                               )}
-                              {note.retentionNotes.nextActions && (
-                                <div className="border-l-4 border-orange-400 pl-3 py-1">
-                                  <p className="text-[10px] font-bold text-orange-700 uppercase">Next Actions</p>
-                                  <p className="text-sm text-gray-800">{note.retentionNotes.nextActions}</p>
-                                </div>
-                              )}
+                              ))}
                             </div>
-                          )}
-                          <div className="mt-2 pt-2 border-t border-blue-100 flex justify-end">
-                            <a href={`/ai-coach?analysisId=${note.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">
-                              View Full Analysis →
-                            </a>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
+
+                        {/* AI Analyzed Calls (5+ min) */}
+                        {aiAnalyzed.length > 0 && (
+                          <div className="space-y-3">
+                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                              <span>{"\uD83E\uDD16"}</span> AI Call Notes ({aiAnalyzed.length} calls)
+                            </p>
+                            {aiAnalyzed.map((note: any) => (
+                              <div key={`ai-note-${note.id}`} className="rounded-xl border border-blue-100 bg-blue-50/30 p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-blue-700">
+                                      {note.callType?.replace(/_/g, " ").toUpperCase() || "CALL"}
+                                    </span>
+                                    {note.overallScore != null && (
+                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${Number(note.overallScore) >= 7 ? "bg-green-100 text-green-800" : Number(note.overallScore) >= 4 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
+                                        Score: {Number(note.overallScore).toFixed(1)}/10
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-gray-800 font-medium">
+                                    {formatDateTime(note.callDate)}
+                                    {note.repName ? ` \u2022 ${note.repName}` : ""}
+                                    {note.durationSeconds ? ` \u2022 ${Math.floor(note.durationSeconds / 60)}m` : ""}
+                                  </span>
+                                </div>
+                                {note.retentionNotes && (
+                                  <div className="space-y-1.5 mt-2">
+                                    {note.retentionNotes.rapport && (
+                                      <div className="border-l-4 border-teal-400 pl-3 py-1">
+                                        <p className="text-[10px] font-bold text-teal-700 uppercase">Rapport</p>
+                                        <p className="text-sm text-gray-800">{note.retentionNotes.rapport}</p>
+                                      </div>
+                                    )}
+                                    {note.retentionNotes.currentRoutine && (
+                                      <div className="border-l-4 border-indigo-400 pl-3 py-1">
+                                        <p className="text-[10px] font-bold text-indigo-700 uppercase">Current Routine</p>
+                                        <p className="text-sm text-gray-800">{note.retentionNotes.currentRoutine}</p>
+                                      </div>
+                                    )}
+                                    {note.retentionNotes.productsToSend && (
+                                      <div className="border-l-4 border-purple-400 pl-3 py-1">
+                                        <p className="text-[10px] font-bold text-purple-700 uppercase">Products to Send</p>
+                                        <p className="text-sm text-gray-800 whitespace-pre-line">{note.retentionNotes.productsToSend}</p>
+                                      </div>
+                                    )}
+                                    {note.retentionNotes.customerSituation && (
+                                       <div className="mb-3">
+                                         <p className="text-[10px] font-bold text-orange-600 uppercase">Customer Situation</p>
+                                         <p className="text-sm text-gray-800">{note.retentionNotes.customerSituation}</p>
+                                       </div>
+                                     )}
+                                    {note.retentionNotes.keyCommitments && (
+                                       <div className="mb-3">
+                                         <p className="text-[10px] font-bold text-orange-600 uppercase">Key Commitments</p>
+                                         <p className="text-sm text-gray-800">{note.retentionNotes.keyCommitments}</p>
+                                       </div>
+                                     )}
+                                    {note.retentionNotes.nextActions && (
+                                      <div className="border-l-4 border-orange-400 pl-3 py-1">
+                                        <p className="text-[10px] font-bold text-orange-700 uppercase">Next Actions</p>
+                                        <p className="text-sm text-gray-800">{note.retentionNotes.nextActions}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="mt-2 pt-2 border-t border-blue-100 flex justify-end">
+                                  <a href={`/ai-coach?analysisId=${note.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">
+                                    View Full Analysis \u2192
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Existing Retention Lead Notes */}
                   {retentionLeads.length === 0 && (!aiNotesData?.notes || aiNotesData.notes.length === 0) ? (
