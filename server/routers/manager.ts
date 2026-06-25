@@ -652,9 +652,24 @@ export const managerRouter = router({
           .set(updateData)
           .where(eq(leadAssignments.subscriptionId, input.subscriptionId));
       } else {
+        // Look up customer data from client_subscriptions so we don't create empty leads
+        let customerName: string | null = null;
+        let phone: string | null = null;
+        let email: string | null = null;
+        try {
+          const csRow = await db.select().from(clientSubscriptions).where(eq(clientSubscriptions.subscriptionId, input.subscriptionId)).limit(1);
+          if (csRow[0]) {
+            customerName = csRow[0].customerName || null;
+            phone = csRow[0].phone || null;
+            email = csRow[0].email || null;
+          }
+        } catch (e) { /* ignore lookup failure */ }
         await db.insert(leadAssignments).values({
           subscriptionId: input.subscriptionId,
           assignedAgent: input.agentName,
+          customerName,
+          phone,
+          email,
           ...updateData,
         });
       }
