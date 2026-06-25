@@ -862,6 +862,10 @@ export default function BillingPage() {
                 <div className="text-sm text-gray-600 text-center py-8">No recent activity recorded</div>
               )}
             </div>
+            {/* View full activity log link */}
+            <div className="text-center pt-3 border-t border-gray-100 mt-2">
+              <button className="text-sm text-blue-600 font-semibold hover:underline">View full activity log →</button>
+            </div>
           </div>
 
           {/* Quick Stats (1/3 width) */}
@@ -883,22 +887,22 @@ export default function BillingPage() {
             </div>
 
             {/* Stats grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3">
+            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
+              <div>
                 <div className="text-xs text-gray-600 font-medium">Avg Revenue / Customer</div>
                 <div className="text-xl font-extrabold text-gray-800 mt-1">{formatCurrency(quickStats?.avgRevenuePerCustomer ?? 0)}</div>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
+              <div>
                 <div className="text-xs text-gray-600 font-medium">Total Customers</div>
                 <div className="text-xl font-extrabold text-gray-800 mt-1">{quickStats?.totalCustomers ?? 0}</div>
               </div>
             </div>
 
-            {/* Revenue Forecast placeholder */}
+            {/* Revenue Forecast */}
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
               <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Revenue Forecast</div>
               <div className="text-2xl font-extrabold text-indigo-800">{formatCurrency(extendedMetrics?.mrrCurrent ?? 0)}</div>
-              <div className="text-xs text-gray-800 mt-0.5">Expected next 30 days (based on live subs)</div>
+              <div className="text-xs text-gray-800 mt-1">Expected next 30 days (based on live subs)</div>
             </div>
           </div>
         </div>
