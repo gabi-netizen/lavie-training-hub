@@ -199,7 +199,7 @@ export async function createSubscriptionSchedule(
     {
       customer: params.customerId,
       start_date: params.startDate ?? ("now" as unknown as number),
-      end_behavior: "cancel",
+      end_behavior: "release",
       phases: stripePhases,
       metadata: params.metadata ?? {},
     } as any,
