@@ -354,7 +354,11 @@ export const managerRouter = router({
         leads = leads.filter((l) => l.leadType === input.leadTypeFilter);
       }
       if (input.agentFilter) {
-        leads = leads.filter((l) => l.assignedAgent === input.agentFilter);
+        const af = input.agentFilter.toLowerCase();
+        leads = leads.filter((l) => {
+          const agent = (l.assignedAgent ?? "").toLowerCase();
+          return agent === af || agent.includes(af) || af.includes(agent);
+        });
       }
       if (input.workStatusFilter) {
         leads = leads.filter((l) => l.workStatus === input.workStatusFilter);
@@ -1084,7 +1088,11 @@ export const managerRouter = router({
 
       // First try lead_assignments
       const rows = await db.select().from(leadAssignments).orderBy(desc(leadAssignments.id));
-      let filtered = rows.filter((r) => r.assignedAgent === input.agentFilter);
+      const af2 = input.agentFilter.toLowerCase();
+      let filtered = rows.filter((r) => {
+        const agent = (r.assignedAgent ?? "").toLowerCase();
+        return agent === af2 || agent.includes(af2) || af2.includes(agent);
+      });
 
       if (filtered.length > 0) {
         // Sort by assignmentId ascending (same as RetentionWorkspace frontend)
