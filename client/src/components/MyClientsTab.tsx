@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
+import { Phone, MessageCircle, Mail, MessageSquare, Calendar, Clock, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
@@ -13,6 +13,7 @@ interface MyClientsTabProps {
   onSms?: (contactId: number, phone: string, name: string) => void;
   onEmail?: (contactId: number, name: string, email: string) => void;
   onCallback?: (subscriptionId: string, contactName: string) => void;
+  onFollowUp?: (subscriptionId: string, contactName: string) => void;
   onOpenCard?: (contactId: number, subscriptionId: string) => void;
 }
 
@@ -81,7 +82,7 @@ function formatCurrency(amount: number | null | undefined): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onOpenCard }: MyClientsTabProps) {
+export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onFollowUp, onOpenCard }: MyClientsTabProps) {
   const [dateRangePreset, setDateRangePreset] = useState("all"); // all, today, yesterday, last7, thisMonth, lastMonth, custom
   const [customDateFrom, setCustomDateFrom] = useState("");
   const [customDateTo, setCustomDateTo] = useState("");
@@ -216,6 +217,11 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
   const handleCalendar = (sub: MyClientSubscription) => {
     if (onCallback) {
       onCallback(sub.subscriptionId, sub.customerName);
+    }
+  };
+  const handleFollowUp = (sub: MyClientSubscription) => {
+    if (onFollowUp) {
+      onFollowUp(sub.subscriptionId, sub.customerName);
     }
   };
 
@@ -583,6 +589,14 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                     >
                       <Calendar className="w-4 h-4" />
                     </button>
+                    {/* Clock — schedule follow up */}
+                    <button
+                      onClick={() => handleFollowUp(sub)}
+                      className="p-1.5 rounded hover:bg-sky-50 transition-colors text-sky-600"
+                      title="Schedule Follow Up"
+                    >
+                      <Clock className="w-4 h-4" />
+                    </button>
 
                     {/* ChevronRight — open card or expand */}
                     <button
@@ -771,6 +785,12 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
                       >
                         <Calendar className="w-3.5 h-3.5" /> Callback
+                      </button>
+                      <button
+                        onClick={() => handleFollowUp(sub)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors"
+                      >
+                        <Clock className="w-3.5 h-3.5" /> Follow Up
                       </button>
                     </div>
                   </div>

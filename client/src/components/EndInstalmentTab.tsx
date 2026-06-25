@@ -13,6 +13,7 @@ interface EndInstalmentTabProps {
   onSms?: (contactId: number, phone: string, name: string) => void;
   onEmail?: (contactId: number, name: string, email: string) => void;
   onCallback?: (subscriptionId: string, contactName: string) => void;
+  onFollowUp?: (subscriptionId: string, contactName: string) => void;
   onOpenCard?: (contactId: number, subscriptionId: string) => void;
 }
 
@@ -78,7 +79,7 @@ function calcOutstanding(sub: MyClientSubscription): number | null {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onOpenCard }: EndInstalmentTabProps) {
+export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onFollowUp, onOpenCard }: EndInstalmentTabProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);

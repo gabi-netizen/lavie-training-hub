@@ -13,6 +13,7 @@ interface CancelTabProps {
   onSms?: (contactId: number, phone: string, name: string) => void;
   onEmail?: (contactId: number, name: string, email: string) => void;
   onCallback?: (subscriptionId: string, contactName: string) => void;
+  onFollowUp?: (subscriptionId: string, contactName: string) => void;
   onOpenCard?: (contactId: number, subscriptionId: string) => void;
 }
 
@@ -81,7 +82,7 @@ function calcRemaining(sub: MyClientSubscription): number | null {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export function CancelTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onOpenCard }: CancelTabProps) {
+export function CancelTab({ agentName, onWhatsApp, onSms, onEmail, onCallback, onFollowUp, onOpenCard }: CancelTabProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);

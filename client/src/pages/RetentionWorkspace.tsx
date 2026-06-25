@@ -992,6 +992,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             setCallbackModal({ subscriptionId, contactName, type: "callback" });
             setCallbackDateTime("");
           }}
+          onFollowUp={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName, type: "follow_up" });
+            setCallbackDateTime("");
+          }}
           onOpenCard={(contactId, subscriptionId) => {
             window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}`;
           }}
@@ -1021,6 +1025,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
           }}
           onCallback={(subscriptionId, contactName) => {
             setCallbackModal({ subscriptionId, contactName, type: "callback" });
+            setCallbackDateTime("");
+          }}
+          onFollowUp={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName, type: "follow_up" });
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
@@ -1054,6 +1062,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             setCallbackModal({ subscriptionId, contactName, type: "callback" });
             setCallbackDateTime("");
           }}
+          onFollowUp={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName, type: "follow_up" });
+            setCallbackDateTime("");
+          }}
           onOpenCard={(contactId, subscriptionId) => {
             window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}`;
           }}
@@ -1083,6 +1095,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
           }}
           onCallback={(subscriptionId, contactName) => {
             setCallbackModal({ subscriptionId, contactName, type: "callback" });
+            setCallbackDateTime("");
+          }}
+          onFollowUp={(subscriptionId, contactName) => {
+            setCallbackModal({ subscriptionId, contactName, type: "follow_up" });
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {

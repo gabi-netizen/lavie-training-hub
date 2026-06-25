@@ -593,6 +593,7 @@ export default function ContactCard() {
   const [smsModalOpen, setSmsModalOpen] = useState(false);
   const [smsBody, setSmsBody] = useState("");
   const [callbackModalOpen, setCallbackModalOpen] = useState(false);
+  const [callbackModalType, setCallbackModalType] = useState<"callback" | "follow_up">("callback");
   const [callbackDateTime, setCallbackDateTime] = useState("");
   const { data: whatsappTemplates, isLoading: waTemplatesLoading } = trpc.whatsapp.templates.useQuery(
     undefined,
@@ -1208,11 +1209,18 @@ export default function ContactCard() {
                 SMS
               </button>
               <button
-                onClick={() => { setCallbackModalOpen(true); setCallbackDateTime(""); }}
+                onClick={() => { setCallbackModalType("callback"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
                 className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-indigo-600 text-white text-xs font-bold transition-colors hover:bg-indigo-700"
               >
                 <Calendar size={16} />
                 Callback
+              </button>
+              <button
+                onClick={() => { setCallbackModalType("follow_up"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-none bg-sky-600 text-white text-xs font-bold transition-colors hover:bg-sky-700"
+              >
+                <Clock size={16} />
+                Follow Up
               </button>
             </div>
           </div>
@@ -2945,10 +2953,10 @@ export default function ContactCard() {
           <div className="bg-white rounded-xl shadow-2xl p-7 min-w-[380px] max-w-[460px] flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-indigo-600" />
-              <span className="font-bold text-lg text-gray-800">Schedule Callback</span>
+              <span className="font-bold text-lg text-gray-800">{callbackModalType === "follow_up" ? "Schedule Follow Up" : "Schedule Callback"}</span>
             </div>
             <p className="text-sm text-gray-600">
-              Scheduling callback for <strong>{contact.name}</strong>
+              Scheduling {callbackModalType === "follow_up" ? "follow up" : "callback"} for <strong>{contact.name}</strong>
             </p>
 
             <div className="flex flex-col gap-1.5">
@@ -3008,16 +3016,17 @@ export default function ContactCard() {
                   logCallAttemptMutation.mutate({
                     subscriptionId: retentionSubId,
                     agentName: user?.name || "Rob",
-                    result: "callback",
-                    callbackAt: utcMs,
-                    note: `Callback scheduled: ${selectedDate} ${selectedTime}`,
+                    result: callbackModalType,
+                    callbackAt: callbackModalType === "callback" ? utcMs : undefined,
+                    followUpAt: callbackModalType === "follow_up" ? utcMs : undefined,
+                    note: `${callbackModalType === "follow_up" ? "Follow up" : "Callback"} scheduled: ${selectedDate} ${selectedTime}`,
                   });
                   setCallbackModalOpen(false);
                 }}
                 disabled={!isValid}
                 className={`px-5 py-2 rounded-lg border-none font-bold text-sm text-white ${
                   isValid ? "bg-indigo-600 hover:bg-indigo-700 cursor-pointer" : "bg-indigo-300 cursor-not-allowed"
-                }`}>Confirm Callback</button>
+                }`}>{callbackModalType === "follow_up" ? "Confirm Follow Up" : "Confirm Callback"}</button>
             </div>
           </div>
         </div>
