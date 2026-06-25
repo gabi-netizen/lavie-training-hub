@@ -957,7 +957,7 @@ export default function ContactCard() {
         {/* ══════════════════════════════════════════════════
             LEFT SIDEBAR (~300px)
         ══════════════════════════════════════════════════ */}
-        <div className="shrink-0 flex flex-col gap-4" style={{ width: "300px" }}>
+        <div className="shrink-0 flex flex-col gap-4" style={{ width: "360px" }}>
 
           {/* ── Contact Identity Card (White) ── */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -1103,17 +1103,47 @@ export default function ContactCard() {
                     {contact.email || "\u2014"}
                   </a>
                 </div>
-                {/* Phone */}
+                {/* Phone — Click to Call */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Phone</span>
-                  <span className="text-sm font-semibold text-gray-800">{contact.phone || "\u2014"}</span>
+                  {contact.phone ? (
+                    <button
+                      onClick={() => clickToCallMutation.mutate({ contactId })}
+                      disabled={clickToCallMutation.isPending}
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1 transition"
+                      title="Click to call"
+                    >
+                      <Phone size={12} className="text-blue-500" />
+                      {contact.phone}
+                    </button>
+                  ) : (
+                    <span className="text-sm font-semibold text-gray-800">\u2014</span>
+                  )}
                 </div>
-                {/* Call Status */}
+                {/* Lead Status — dropdown for agents */}
                 <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm font-bold text-black">Call status</span>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {currentRetentionLead?.workStatus || contact.status || "\u2014"}
-                  </span>
+                  <span className="text-sm font-bold text-black">Lead Status</span>
+                  <select
+                    value={currentRetentionLead?.workStatus || contact.status || "new"}
+                    onChange={(e) => {
+                      if (currentRetentionLead) {
+                        assignLeadMutation.mutate({ subscriptionId: currentRetentionLead.subscriptionId, workStatus: e.target.value });
+                        toast.success(`Lead status → ${e.target.value.replace(/_/g, " ")}`);
+                      } else {
+                        updateMutation.mutate({ id: contactId, status: e.target.value as any });
+                        toast.success(`Status → ${e.target.value.replace(/_/g, " ")}`);
+                      }
+                    }}
+                    className="text-xs font-semibold border border-gray-200 rounded-lg px-2 py-1 text-gray-800 bg-white hover:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  >
+                    <option value="new">New</option>
+                    <option value="working">Working</option>
+                    <option value="callback">Callback</option>
+                    <option value="follow_up">Follow Up</option>
+                    <option value="no_answer">No Answer</option>
+                    <option value="done_deal">Done Deal</option>
+                    <option value="closed">Closed</option>
+                  </select>
                 </div>
                 {/* Owner */}
                 <div className="flex justify-between items-center py-2.5">
