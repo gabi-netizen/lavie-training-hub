@@ -1767,18 +1767,6 @@ export const whatsappRouter = router({
         urgencyScore: 60,
       });
 
-      // Insert a system message marking the transfer
-      const fromNum = phone || input.phoneNumber || "unknown";
-      await db.insert(whatsappMessages).values({
-        contactId: input.contactId,
-        direction: "outbound",
-        body: `\u2705 Transferred to Retention \u2192 ${input.assignedAgent} (${input.leadType})`,
-        fromNumber: "+447888868298",
-        toNumber: fromNum,
-        status: "delivered",
-        isRead: true,
-        channel: sourceChannel === "SMS" ? "sms" : "whatsapp",
-      });
 
       return { success: true, subscriptionId, sourceChannel };
     }),
