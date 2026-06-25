@@ -1664,7 +1664,7 @@ export default function ContactCard() {
               {/* History tab */}
               {centerTopTab === "history" && (
                 <div className="flex flex-col">
-                  {contact.callNotes.length === 0 && retentionLeads.length === 0 ? (
+                  {contact.callNotes.length === 0 && retentionLeads.length === 0 && !contact.importedNotes ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-600">
                       <PhoneOff size={36} className="mb-3 opacity-50" />
                       <p className="text-sm font-medium">No call notes yet</p>
@@ -1798,6 +1798,33 @@ export default function ContactCard() {
                       );
                     })}
 
+                    {/* Imported Notes from Zoho */}
+                    {contact.importedNotes && (
+                      <>
+                        {(contact.callNotes.length > 0 || retentionLeads.length > 0) && (
+                          <div className="border-t border-gray-200 my-4 pt-4">
+                            <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-3">Zoho History</p>
+                          </div>
+                        )}
+                        {contact.importedNotes.split('---').filter((n: string) => n.trim()).map((note: string, idx: number) => {
+                          const trimmed = note.trim();
+                          const isLast = idx === contact.importedNotes!.split('---').filter((n: string) => n.trim()).length - 1 && retentionLeads.length === 0;
+                          return (
+                            <div key={`imported-${idx}`} className="flex gap-3">
+                              <div className="flex flex-col items-center" style={{ width: "20px" }}>
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 bg-purple-400" />
+                                {!isLast && (
+                                  <div className="w-0.5 bg-gray-200 mt-1 flex-1" style={{ minHeight: "24px" }} />
+                                )}
+                              </div>
+                              <div className={`flex-1 ${!isLast ? 'pb-4' : ''}`}>
+                                <p className="text-xs text-gray-800 leading-relaxed">{trimmed}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
                     {/* Retention lead entries */}
                     {retentionLeads.length > 0 && (
                       <>
