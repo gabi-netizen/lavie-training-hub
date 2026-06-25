@@ -427,94 +427,94 @@ export default function BillingPage() {
         {/* ── ROW 1: Summary Cards (6 cards) ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           {/* Scheduled */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Scheduled</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Calendar size={16} className="text-blue-600" />
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Scheduled</span>
+              <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Calendar size={14} className="text-blue-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.scheduledCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Pending first charge</div>
-            <div className="text-xs text-blue-700 font-semibold mt-1">21-day trial active</div>
+            <div className="text-2xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.scheduledCount ?? 0}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5">Pending first charge</div>
+            <div className="text-[11px] text-blue-700 font-semibold mt-0.5">21-day trial active</div>
           </div>
 
           {/* Active Subs */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Active Subs</span>
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <CheckCircle size={16} className="text-green-600" />
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Active Subs</span>
+              <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center">
+                <CheckCircle size={14} className="text-green-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.activeSubsCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Charged every 60 days</div>
-            <div className="text-xs text-green-700 font-semibold mt-1">Live subscriptions</div>
+            <div className="text-2xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.activeSubsCount ?? 0}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5">Charged every 60 days</div>
+            <div className="text-[11px] text-green-700 font-semibold mt-0.5">Live subscriptions</div>
           </div>
 
           {/* Active Installments */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Installments</span>
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <Package size={16} className="text-green-600" />
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Installments</span>
+              <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center">
+                <Package size={14} className="text-green-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.activeInstallmentsCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Active instalment plans</div>
+            <div className="text-2xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.activeInstallmentsCount ?? 0}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5">Active instalment plans</div>
           </div>
 
           {/* Due This Week */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Due This Week</span>
-              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Clock size={16} className="text-orange-600" />
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Due This Week</span>
+              <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Clock size={14} className="text-orange-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.dueThisWeek ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Charges in next 7 days</div>
-            <div className="text-xs text-orange-700 font-semibold mt-1">Expected revenue</div>
+            <div className="text-2xl font-extrabold text-gray-800">{summaryLoading ? "…" : summary?.dueThisWeek ?? 0}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5">Charges in next 7 days</div>
+            <div className="text-[11px] text-orange-700 font-semibold mt-0.5">Expected revenue</div>
           </div>
 
           {/* Failed / Dunning */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Failed / Dunning</span>
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <AlertTriangle size={16} className="text-red-600" />
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Failed / Dunning</span>
+              <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center">
+                <AlertTriangle size={14} className="text-red-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-red-700">{summaryLoading ? "…" : summary?.failedCount ?? 0}</div>
-            <div className="text-xs text-gray-600 mt-1">Require attention</div>
-            <div className="text-xs text-red-700 font-semibold mt-1">At risk</div>
+            <div className="text-2xl font-extrabold text-red-700">{summaryLoading ? "…" : summary?.failedCount ?? 0}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5">Require attention</div>
+            <div className="text-[11px] text-red-700 font-semibold mt-0.5">At risk</div>
           </div>
 
           {/* Revenue This Month */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Revenue (Month)</span>
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <DollarSign size={16} className="text-purple-600" />
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Revenue (Month)</span>
+              <div className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center">
+                <DollarSign size={14} className="text-purple-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{summaryLoading ? "…" : formatCurrency(summary?.revenueThisMonth ?? 0)}</div>
-            <div className="text-xs text-gray-600 mt-1">Payments processed</div>
-            <div className="text-xs text-purple-700 font-semibold mt-1">This month</div>
+            <div className="text-2xl font-extrabold text-gray-800">{summaryLoading ? "…" : formatCurrency(summary?.revenueThisMonth ?? 0)}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5">Payments processed</div>
+            <div className="text-[11px] text-purple-700 font-semibold mt-0.5">This month</div>
           </div>
         </div>
 
         {/* ── ROW 2: Extended Metrics (4 cards) ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Revenue Recovered */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-emerald-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Revenue Recovered</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <RefreshCw size={16} className="text-emerald-600" />
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Revenue Recovered</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <RefreshCw size={14} className="text-emerald-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{formatCurrency(extendedMetrics?.revenueRecovered ?? 0)}</div>
+            <div className="text-2xl font-extrabold text-gray-800">{formatCurrency(extendedMetrics?.revenueRecovered ?? 0)}</div>
             <div className="text-xs text-gray-600 mt-1">Recovered via smart retries this month</div>
             <div className="mt-3">
               <div className="flex justify-between text-xs font-semibold mb-1">
@@ -531,11 +531,11 @@ export default function BillingPage() {
           </div>
 
           {/* Cards Expiring Soon */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cards Expiring Soon</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <CreditCard size={16} className="text-amber-600" />
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Cards Expiring Soon</span>
+              <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                <CreditCard size={14} className="text-amber-600" />
               </div>
             </div>
             <div className="flex gap-4 mt-2">
@@ -555,14 +555,14 @@ export default function BillingPage() {
           </div>
 
           {/* MRR Trend */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-violet-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-violet-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">MRR Trend</span>
-              <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-                <TrendingUp size={16} className="text-violet-600" />
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">MRR Trend</span>
+              <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                <TrendingUp size={14} className="text-violet-600" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-gray-800">{formatCurrency(extendedMetrics?.mrrCurrent ?? 0)}</div>
+            <div className="text-2xl font-extrabold text-gray-800">{formatCurrency(extendedMetrics?.mrrCurrent ?? 0)}</div>
             <div className="text-xs text-gray-600 mt-0.5">This month&apos;s MRR</div>
             <div className="mt-2">
               {(extendedMetrics?.mrrChangePercent ?? 0) >= 0 ? (
@@ -575,11 +575,11 @@ export default function BillingPage() {
           </div>
 
           {/* Churn Metrics */}
-          <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-rose-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-rose-400 border-t border-r border-b border-t-gray-100 border-r-gray-100 border-b-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Churn Metrics</span>
-              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
-                <XCircle size={16} className="text-rose-600" />
+              <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Churn Metrics</span>
+              <div className="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center">
+                <XCircle size={14} className="text-rose-600" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-2">
