@@ -190,7 +190,7 @@ export default function TopNav() {
         </Link>
 
         {/* Nav Items */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-2">
 
           {/* Academy users: show only Workspace and Training */}
           {isAcademy ? (
@@ -360,14 +360,14 @@ export default function TopNav() {
                 </div>
               )}
 
-              {/* 4. Support Tickets — managers only (standalone) */}
+              {/* 4. Support Tickets — managers only (standalone, same pill style) */}
               {isManager && (
                 <Link href="/support-tickets">
                   <button className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm transition-all duration-200 font-medium",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium bg-white/10 border border-white/20 hover:bg-white/20",
                     supportTicketsActive
-                      ? "text-cyan-300 bg-white/10 shadow-inner shadow-cyan-500/10"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
+                      ? "text-cyan-300 shadow-inner shadow-cyan-500/10 border-cyan-500/30"
+                      : "text-white"
                   )}>
                     <Ticket size={14} />
                     Support
