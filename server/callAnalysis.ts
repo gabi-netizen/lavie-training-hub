@@ -1571,6 +1571,53 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
       console.warn(`[CallAnalysis] Failed to process WhatsApp notification:`, waErr);
     }
 
+    // Step 4b: SMS Notification to Matthew on every deal closed by his team
+    try {
+      const _agentName = record?.repName || "";
+      const isMatthewAgent = _agentName.toLowerCase().includes("matthew") || _agentName.toLowerCase().includes("matt");
+      if (report.dealClosed && isMatthewAgent) {
+        const shareToken = await generateShareToken(analysisId);
+        const shareLink = `https://lavie-training-hub-production.up.railway.app/shared/call/${shareToken}`;
+        const callScore = (report as any).callScore ?? (report as any).saleQualityScore ?? "N/A";
+        const customerName = record?.customerName || "Unknown";
+        const smsText = `Deal Closed!\nAgent: ${_agentName}\nCustomer: ${customerName}\nScore: ${callScore}\nAI Review: ${shareLink}`;
+        
+        const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+        const apiKeySid = process.env.TWILIO_API_KEY_SID || "";
+        const apiKeySecret = process.env.TWILIO_API_KEY_SECRET || "";
+        const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+        const authUser = apiKeySid || accountSid;
+        const authPass = apiKeySid ? apiKeySecret : authToken;
+        
+        if (accountSid && authUser && authPass) {
+          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+          const twilioAuth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
+          const bodyParams = new URLSearchParams();
+          bodyParams.append("From", "+447888868298");
+          bodyParams.append("To", "+447808011899");
+          bodyParams.append("Body", smsText);
+          
+          console.log(`[CallAnalysis] Sending SMS to Matthew for deal closed by ${_agentName}`);
+          const smsRes = await fetch(twilioUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Basic ${twilioAuth}`,
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: bodyParams.toString()
+          });
+          if (!smsRes.ok) {
+            const errText = await smsRes.text();
+            console.warn(`[CallAnalysis] SMS to Matthew failed: ${smsRes.status} ${errText}`);
+          } else {
+            console.log(`[CallAnalysis] SMS sent to Matthew successfully`);
+          }
+        }
+      }
+    } catch (smsErr) {
+      console.warn(`[CallAnalysis] Failed to send SMS to Matthew:`, smsErr);
+    }
+
     // Step 5: Auto-save retention notes to ContactCard if applicable
     // Conditions: call has a contactId, it's a retention call type, and retentionNotes exist in the report
     const RETENTION_CALL_TYPES_FOR_NOTES = new Set([
