@@ -6,6 +6,8 @@
  */
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -115,10 +117,38 @@ export default function CustomerBillingDetail() {
   const [match, params] = useRoute("/billing/customer/:id");
   const id = params?.id ? parseInt(params.id, 10) : 0;
 
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const [noteText, setNoteText] = useState("");
+
+  // Notes query
+  const { data: notesData } = trpc.billingDashboard.getBillingNotes.useQuery(
+    { subscriptionId: id },
+    { enabled: !!id }
+  );
+
+  // Add note mutation
+  const addNoteMutation = trpc.billingDashboard.addBillingNote.useMutation({
+    onSuccess: () => {
+      setNoteText("");
+      utils.billingDashboard.getBillingNotes.invalidate({ subscriptionId: id });
+    },
+  });
+
   const { data, isLoading, error } = trpc.billingDashboard.getCustomerDetail.useQuery(
     { id },
     { enabled: !!id }
   );
+
+  const handleAddNote = () => {
+    if (!noteText.trim()) return;
+    addNoteMutation.mutate({
+      subscriptionId: id,
+      customerName: data?.primary?.customerName ?? undefined,
+      agentName: user?.name ?? "Unknown",
+      note: noteText.trim(),
+    });
+  };
 
   if (isLoading) {
     return (
@@ -484,8 +514,10 @@ export default function CustomerBillingDetail() {
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Agent Notes</h3>
+                <span className="text-xs text-gray-500">{notesData?.notes?.length ?? 0} notes</span>
               </div>
 
+              {/* Existing callback note from subscription */}
               {primary.callbackNote && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 mb-1">
@@ -501,14 +533,37 @@ export default function CustomerBillingDetail() {
                 </div>
               )}
 
+              {/* Saved notes from billing_notes table */}
+              {notesData?.notes && notesData.notes.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {notesData.notes.map((n) => (
+                    <div key={n.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <MessageSquare size={13} className="text-indigo-600" />
+                        <span className="text-xs font-semibold text-indigo-700">{n.agentName}</span>
+                        <span className="text-xs text-gray-500">• {formatDate(n.createdAt)}</span>
+                      </div>
+                      <p className="text-sm text-gray-800">{n.note}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new note form */}
               <div className="space-y-3">
                 <textarea
                   placeholder="Add a note…"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
                   rows={3}
                 />
-                <button className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
-                  Add Note
+                <button
+                  onClick={handleAddNote}
+                  disabled={!noteText.trim() || addNoteMutation.isPending}
+                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addNoteMutation.isPending ? "Saving…" : "Add Note"}
                 </button>
               </div>
             </div>

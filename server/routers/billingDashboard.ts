@@ -6,9 +6,9 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions, stripeAuditLog } from "../../drizzle/schema";
+import { clientSubscriptions, stripeAuditLog, billingNotes } from "../../drizzle/schema";
 import { eq, like, or, and, desc, asc, sql, inArray, type SQL } from "drizzle-orm";
 
 export const billingDashboardRouter = router({
@@ -640,5 +640,58 @@ export const billingDashboardRouter = router({
           createdAt: p.createdAt ? p.createdAt.toISOString() : null,
         })),
       };
+    }),
+
+  /**
+   * getBillingNotes — returns all notes for a given subscription (by client_subscriptions.id).
+   */
+  getBillingNotes: protectedProcedure
+    .input(z.object({ subscriptionId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { notes: [] };
+
+      const notes = await db
+        .select()
+        .from(billingNotes)
+        .where(eq(billingNotes.subscriptionId, input.subscriptionId))
+        .orderBy(desc(billingNotes.createdAt));
+
+      return {
+        notes: notes.map((n) => ({
+          id: n.id,
+          subscriptionId: n.subscriptionId,
+          customerName: n.customerName,
+          agentName: n.agentName,
+          note: n.note,
+          createdAt: n.createdAt ? n.createdAt.toISOString() : null,
+        })),
+      };
+    }),
+
+  /**
+   * addBillingNote — inserts a new note for a subscription.
+   */
+  addBillingNote: protectedProcedure
+    .input(z.object({
+      subscriptionId: z.number(),
+      customerName: z.string().optional(),
+      agentName: z.string(),
+      note: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      }
+
+      await db.insert(billingNotes).values({
+        subscriptionId: input.subscriptionId,
+        customerName: input.customerName ?? null,
+        agentName: input.agentName,
+        note: input.note,
+      });
+
+      return { success: true };
     }),
 });

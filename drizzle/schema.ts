@@ -1044,6 +1044,18 @@ export const clientSubscriptions = mysqlTable("client_subscriptions", {
 export type ClientSubscription = typeof clientSubscriptions.$inferSelect;
 export type InsertClientSubscription = typeof clientSubscriptions.$inferInsert;
 
+// ─── Billing Notes ──────────────────────────────────────────────────────────
+export const billingNotes = mysqlTable("billing_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: int("subscriptionId").notNull(),
+  customerName: varchar("customerName", { length: 256 }),
+  agentName: varchar("agentName", { length: 128 }).notNull(),
+  note: text("note").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type BillingNote = typeof billingNotes.$inferSelect;
+export type InsertBillingNote = typeof billingNotes.$inferInsert;
+
 // ─── Butler Usage Log ────────────────────────────────────────────────────────
 export const butlerUsageLog = mysqlTable("butler_usage_log", {
   id: int("id").autoincrement().primaryKey(),
