@@ -1,4 +1,4 @@
-import { boolean, date, decimal, float, index, int, json, mediumtext, mysqlEnum, mysqlTable, serial, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
+import { bigint, boolean, date, decimal, float, index, int, json, mediumtext, mysqlEnum, mysqlTable, serial, text, timestamp, unique, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -469,11 +469,11 @@ export const leadAssignments = mysqlTable("lead_assignments", {
   /** Agent name assigned to this lead */
   assignedAgent: varchar("assignedAgent", { length: 128 }),
   /** Timestamp (ms) when the lead was assigned */
-  assignedAt: float("assignedAt"),
+  assignedAt: bigint("assignedAt", { mode: "number" }),
   /** Work status: new, assigned, in_progress, retained, done_deal, etc. */
   workStatus: varchar("workStatus", { length: 32 }).default("new"),
   /** Timestamp (ms) when the work status was last changed */
-  statusChangedAt: float("statusChangedAt"),
+  statusChangedAt: bigint("statusChangedAt", { mode: "number" }),
   /** Manager note */
   managerNote: text("managerNote"),
   /** Agent note */
@@ -483,15 +483,15 @@ export const leadAssignments = mysqlTable("lead_assignments", {
   /** Number of consecutive no-answer attempts */
   noAnswerCount: int("noAnswerCount").default(0),
   /** Timestamp (ms) of the last call */
-  lastCallAt: float("lastCallAt"),
+  lastCallAt: bigint("lastCallAt", { mode: "number" }),
   /** Result of the last call */
   lastCallResult: varchar("lastCallResult", { length: 32 }),
   /** Scheduled callback timestamp (ms) */
-  callbackAt: float("callbackAt"),
+  callbackAt: bigint("callbackAt", { mode: "number" }),
   /** Timestamp (ms) when callback reminder notification was sent */
-  callbackNotifiedAt: float("callbackNotifiedAt"),
+  callbackNotifiedAt: bigint("callbackNotifiedAt", { mode: "number" }),
   /** Follow-up timestamp (ms) */
-  followUpAt: float("followUpAt"),
+  followUpAt: bigint("followUpAt", { mode: "number" }),
   /** Follow-up note */
   followUpNote: text("followUpNote"),
   /** Last transaction date from Zoho */
@@ -524,9 +524,9 @@ export const callAttempts = mysqlTable("call_attempts", {
   /** Optional note about the call */
   note: text("note"),
   /** Scheduled callback timestamp (ms) */
-  callbackAt: float("callbackAt"),
+  callbackAt: bigint("callbackAt", { mode: "number" }),
   /** Follow-up timestamp (ms) */
-  followUpAt: float("followUpAt"),
+  followUpAt: bigint("followUpAt", { mode: "number" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

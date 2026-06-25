@@ -2023,17 +2023,32 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                 <button
                   onClick={() => {
                     if (!isValid || !callbackModal) return;
-                    const dt = new Date(callbackDateTime);
+                    // Convert user-selected date+time (wall-clock in userTimezone) to UTC ms.
+                    // 1) Treat date+time as if UTC to get a reference point.
+                    const asUtc = new Date(`${selectedDate}T${selectedTime}:00Z`);
+                    // 2) Find the UTC offset of userTimezone at that moment.
+                    const tzParts = new Intl.DateTimeFormat("en-US", {
+                      timeZone: userTimezone,
+                      hour: "2-digit", minute: "2-digit", hour12: false,
+                    }).formatToParts(asUtc);
+                    const tzH = parseInt(tzParts.find(p => p.type === "hour")!.value);
+                    const tzM = parseInt(tzParts.find(p => p.type === "minute")!.value);
+                    let offsetMin = (tzH * 60 + tzM) - (asUtc.getUTCHours() * 60 + asUtc.getUTCMinutes());
+                    if (offsetMin > 720) offsetMin -= 1440;
+                    if (offsetMin < -720) offsetMin += 1440;
+                    // 3) Subtract offset to convert wall-clock → UTC.
+                    const utcMs = asUtc.getTime() - offsetMin * 60000;
+
                     const typeLabel = callbackModal.type === "follow_up" ? "Follow up" : "Callback";
                     const noteText = callbackNote
-                      ? `${typeLabel} scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime} — Note: ${callbackNote}`
-                      : `${typeLabel} scheduled: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${selectedTime}`;
+                      ? `${typeLabel} scheduled: ${selectedDate} ${selectedTime} — Note: ${callbackNote}`
+                      : `${typeLabel} scheduled: ${selectedDate} ${selectedTime}`;
                     logCallAttemptMutation.mutate({
                       subscriptionId: callbackModal.subscriptionId,
                       agentName: agentName,
                       result: callbackModal.type === "follow_up" ? "follow_up" : "callback",
-                      callbackAt: callbackModal.type === "callback" ? dt.getTime() : undefined,
-                      followUpAt: callbackModal.type === "follow_up" ? dt.getTime() : undefined,
+                      callbackAt: callbackModal.type === "callback" ? utcMs : undefined,
+                      followUpAt: callbackModal.type === "follow_up" ? utcMs : undefined,
                       note: noteText,
                     });
                     // Also save the note as agentNote on the lead so it shows in the table
