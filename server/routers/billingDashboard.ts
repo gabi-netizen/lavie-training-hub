@@ -625,9 +625,28 @@ export const billingDashboardRouter = router({
         retentionAgent: s.retentionAgent,
       });
 
+      // Fetch card data from contacts table by email
+      let cardData: { brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null } = { brand: null, last4: null, expMonth: null, expYear: null };
+      if (primary.email) {
+        const [contact] = await db
+          .select({
+            cardBrand: contacts.cardBrand,
+            cardLast4: contacts.cardLast4,
+            cardExpMonth: contacts.cardExpMonth,
+            cardExpYear: contacts.cardExpYear,
+          })
+          .from(contacts)
+          .where(eq(contacts.email, primary.email))
+          .limit(1);
+        if (contact) {
+          cardData = { brand: contact.cardBrand, last4: contact.cardLast4, expMonth: contact.cardExpMonth, expYear: contact.cardExpYear };
+        }
+      }
+
       return {
         primary: mapSubscription(primary),
         allSubscriptions: allSubscriptions.map(mapSubscription),
+        cardData,
         payments: payments.map((p) => ({
           id: p.id,
           eventId: p.eventId,

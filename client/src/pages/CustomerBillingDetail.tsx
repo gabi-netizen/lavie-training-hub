@@ -185,7 +185,7 @@ export default function CustomerBillingDetail() {
     );
   }
 
-  const { primary, allSubscriptions, payments } = data;
+  const { primary, allSubscriptions, payments, cardData } = data as any;
   const subscription = allSubscriptions.find((s) => s.planType === "subscription");
   const installment = allSubscriptions.find((s) => s.planType === "installment");
 
@@ -331,8 +331,16 @@ export default function CustomerBillingDetail() {
                   </div>
                   <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
                     <div className="text-[11px] font-semibold text-green-700 uppercase tracking-wide mb-1">Payment Method</div>
-                    <div className="text-sm font-bold text-gray-800">VISA •••• XXXX</div>
-                    <div className="text-xs text-gray-500">Placeholder</div>
+                    <div className="text-sm font-bold text-gray-800">
+                      {cardData?.last4
+                        ? `${(cardData.brand || "Card").charAt(0).toUpperCase() + (cardData.brand || "card").slice(1)} •••• ${cardData.last4}`
+                        : "—"}
+                    </div>
+                    <div className="text-xs text-gray-800">
+                      {cardData?.expMonth && cardData?.expYear
+                        ? `Expires ${String(cardData.expMonth).padStart(2, "0")}/${String(cardData.expYear).slice(-2)}`
+                        : ""}
+                    </div>
                   </div>
                 </div>
 
