@@ -997,7 +997,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
-            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}`;
+            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}&tab=clients`;
           }}
         />
       )}
@@ -1032,7 +1032,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
-            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}`;
+            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}&tab=decline`;
           }}
         />
       )}
@@ -1067,7 +1067,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
-            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}`;
+            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}&tab=cancel`;
           }}
         />
       )}
@@ -1102,7 +1102,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
             setCallbackDateTime("");
           }}
           onOpenCard={(contactId, subscriptionId) => {
-            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}`;
+            window.location.href = `/contacts/${contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(subscriptionId)}&tab=endInstalment`;
           }}
         />
       )}
@@ -1275,7 +1275,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                             onClick={(e) => {
                               e.stopPropagation();
                               if (lead.contactId) {
-                                window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                                window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&subId=${encodeURIComponent(lead.subscriptionId)}&tab=queue`;
                               }
                             }}
                             className="text-sm font-semibold text-blue-600 cursor-pointer hover:underline text-left"
@@ -1473,7 +1473,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                               onClick={(e) => {
                                 if (!lead.phone && lead.contactId) {
                                   e.preventDefault();
-                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}&tab=queue`;
                                 }
                               }}
                               className="p-1.5 rounded hover:bg-green-50 transition-colors text-green-600"
@@ -1493,7 +1493,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                                     setWaModalOpen(true);
                                   }
                                 } else if (lead.contactId) {
-                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}&tab=queue`;
                                 }
                               }}
                               className={`p-1.5 rounded hover:bg-green-50 transition-colors ${
@@ -1515,7 +1515,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                                     setSmsModalOpen(true);
                                   }
                                 } else if (lead.contactId) {
-                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}&tab=queue`;
                                 }
                               }}
                               className={`p-1.5 rounded hover:bg-blue-50 transition-colors ${
@@ -1572,7 +1572,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                             <button
                               onClick={() => {
                                 if (lead.contactId) {
-                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}`;
+                                  window.location.href = `/contacts/${lead.contactId}?from=retention&agent=${encodeURIComponent(agentName)}&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}&tab=queue`;
                                 }
                               }}
                               className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-600"

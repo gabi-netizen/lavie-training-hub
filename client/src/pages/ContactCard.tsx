@@ -309,8 +309,9 @@ export default function ContactCard() {
   // ─── Adjacent leads for prev/next navigation ─────────────────────────────────
   const agentParam = searchParams.get("agent");
   const agentName = agentParam || "Rob";
+  const tabParam = searchParams.get("tab") || "queue";
   const { data: adjacentData } = trpc.manager.getAdjacentLeads.useQuery(
-    { agentFilter: agentName, currentContactId: contactId },
+    { agentFilter: agentName, currentContactId: contactId, tab: tabParam as "queue" | "clients" | "decline" | "cancel" | "endInstalment" },
     { enabled: isFromRetention && !!contactId }
   );
 
@@ -322,7 +323,7 @@ export default function ContactCard() {
   const navigateToLead = (lead: { contactId: number | null; subscriptionId: string }, idx: number) => {
     if (lead.contactId) {
       const agentQ = agentParam ? `&agent=${encodeURIComponent(agentParam)}` : "";
-      window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}${agentQ}`;
+      window.location.href = `/contacts/${lead.contactId}?from=retention&leadIdx=${idx + 1}&subId=${encodeURIComponent(lead.subscriptionId)}${agentQ}&tab=${tabParam}`;
     }
   };
 

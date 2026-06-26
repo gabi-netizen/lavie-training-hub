@@ -1080,56 +1080,73 @@ export const managerRouter = router({
       z.object({
         agentFilter: z.string(),
         currentContactId: z.number(),
+        tab: z.enum(["queue", "clients", "decline", "cancel", "endInstalment"]).default("queue"),
       })
     )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return { leads: [], currentIndex: -1, total: 0 };
 
-      // First try lead_assignments
-      const rows = await db.select().from(leadAssignments).orderBy(desc(leadAssignments.id));
-      const af2 = input.agentFilter.toLowerCase();
-      let filtered = rows.filter((r) => {
-        const agent = (r.assignedAgent ?? "").toLowerCase();
-        return agent === af2 || agent.includes(af2) || af2.includes(agent);
-      });
+      const af = input.agentFilter.toLowerCase();
 
-      if (filtered.length > 0) {
-        // Sort by assignmentId ascending (same as RetentionWorkspace frontend)
-        filtered.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
-        const leads = filtered.map((row) => ({
+      if (input.tab === "clients") {
+        // Use client_subscriptions table, filter by salesPerson, status=live
+        const csRows = await db
+          .select()
+          .from(clientSubscriptions)
+          .where(eq(clientSubscriptions.status, "live"))
+          .orderBy(clientSubscriptions.id);
+        const csFiltered = csRows.filter((r) => {
+          const sp = (r.salesPerson ?? "").toLowerCase();
+          return sp === af || sp.includes(af) || af.includes(sp);
+        });
+        const leads = csFiltered.map((row) => ({
           assignmentId: row.id,
           contactId: row.contactId ?? null,
           subscriptionId: row.subscriptionId,
           customerName: row.customerName ?? "Unknown",
-          workStatus: row.workStatus ?? "new",
+          workStatus: "live" as string,
         }));
         const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);
         return { leads, currentIndex, total: leads.length };
       }
 
-      // Fallback: use client_subscriptions (My Clients tab data source)
-      const csRows = await db
-        .select()
-        .from(clientSubscriptions)
-        .where(eq(clientSubscriptions.status, "live"))
-        .orderBy(clientSubscriptions.id);
-      const af3 = input.agentFilter.toLowerCase();
-      const csFiltered = csRows.filter((r) => {
-        const sp = (r.salesPerson ?? "").toLowerCase();
-        return sp === af3 || sp.includes(af3) || af3.includes(sp);
+      // All other tabs use lead_assignments
+      const rows = await db.select().from(leadAssignments).orderBy(leadAssignments.id);
+      let filtered = rows.filter((r) => {
+        const agent = (r.assignedAgent ?? "").toLowerCase();
+        return agent === af || agent.includes(af) || af.includes(agent);
       });
 
-      const leads = csFiltered.map((row) => ({
+      // Apply leadType filter based on tab
+      if (input.tab === "decline") {
+        filtered = filtered.filter((r) => {
+          const lt = r.leadType ?? "";
+          return lt === "Pre-Cycle-Decline" || lt === "Decline Live Sub";
+        });
+      } else if (input.tab === "cancel") {
+        filtered = filtered.filter((r) => {
+          const lt = r.leadType ?? "";
+          return lt === "Pre-Cycle-Cancelled" || lt === "Cancel Live Sub (Cycle 1)" || lt === "Cancel Live Sub (Cycle 2+)";
+        });
+      } else if (input.tab === "endInstalment") {
+        filtered = filtered.filter((r) => {
+          const lt = r.leadType ?? "";
+          return lt === "End of Instalment";
+        });
+      }
+      // tab === "queue" => no leadType filter
+
+      // Sort by id ascending
+      filtered.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+      const leads = filtered.map((row) => ({
         assignmentId: row.id,
         contactId: row.contactId ?? null,
         subscriptionId: row.subscriptionId,
         customerName: row.customerName ?? "Unknown",
-        workStatus: "live" as string,
+        workStatus: row.workStatus ?? "new",
       }));
-
       const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);
-
       return { leads, currentIndex, total: leads.length };
     }),
 
