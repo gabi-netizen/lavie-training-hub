@@ -759,7 +759,7 @@ export default function ContactCard() {
             <button
               onClick={() => prevLead && navigateToLead(prevLead, currentLeadIndex - 1)}
               disabled={!prevLead}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-slate-800 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${prevLead ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
             >
               <ChevronLeft size={14} />
               Prev
@@ -774,7 +774,7 @@ export default function ContactCard() {
             <button
               onClick={() => nextLead && navigateToLead(nextLead, currentLeadIndex + 1)}
               disabled={!nextLead}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-slate-800 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${nextLead ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
             >
               Next
               <ChevronRight size={14} />
@@ -1208,7 +1208,7 @@ export default function ContactCard() {
                     <button
                       onClick={() => prevLead && navigateToLead(prevLead, currentLeadIndex - 1)}
                       disabled={!prevLead}
-                      className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold transition ${prevLead ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
                     >
                       <ChevronLeft size={16} />
                       Prev
@@ -1219,7 +1219,7 @@ export default function ContactCard() {
                     <button
                       onClick={() => nextLead && navigateToLead(nextLead, currentLeadIndex + 1)}
                       disabled={!nextLead}
-                      className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold transition ${nextLead ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
                     >
                       Next
                       <ChevronRight size={16} />
