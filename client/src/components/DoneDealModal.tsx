@@ -7,15 +7,76 @@ import { X, Package, Gift, CreditCard, Calculator, Truck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Product Catalog (from Mintsoft SKU list) ────────────────────────────────
 
-const PRODUCTS = [
-  "Matinika",
-  "Oulala",
-  "Brightening Gel",
-  "Retinol",
-  "Skin Immortality",
-] as const;
+interface ProductVariant {
+  label: string;
+  sku: string;
+}
+
+interface ProductDef {
+  name: string;
+  variants: ProductVariant[];
+}
+
+const PRODUCT_CATALOG: ProductDef[] = [
+  {
+    name: "Matinika",
+    variants: [
+      { label: "60ml (Full Size)", sku: "MAT60" },
+      { label: "20ml (Starter)", sku: "MAT20" },
+    ],
+  },
+  {
+    name: "Oulala",
+    variants: [
+      { label: "30ml Black Bottle", sku: "BBS30" },
+      { label: "30ml Silver Bottle", sku: "S30" },
+      { label: "10ml (Starter)", sku: "S10" },
+    ],
+  },
+  {
+    name: "Ashkara Eye Serum",
+    variants: [
+      { label: "15ml", sku: "DLM15" },
+      { label: "5ml (Starter)", sku: "LM5" },
+    ],
+  },
+  {
+    name: "Brightening Gel",
+    variants: [
+      { label: "30ml", sku: "GEL30" },
+      { label: "5ml (Starter)", sku: "GEL05" },
+    ],
+  },
+  {
+    name: "Skin Immortality",
+    variants: [
+      { label: "50ml NEW BOX", sku: "JSIM50" },
+      { label: "50ml", sku: "SIM50" },
+      { label: "20ml (Starter)", sku: "SIM20" },
+    ],
+  },
+  {
+    name: "Facial Cleanser",
+    variants: [
+      { label: "125ml", sku: "FC125" },
+    ],
+  },
+  {
+    name: "Sun Defense SPF25",
+    variants: [
+      { label: "SPF25", sku: "SPF25" },
+    ],
+  },
+  {
+    name: "Bosem Exfoliating",
+    variants: [
+      { label: "60ml", sku: "VE50" },
+      { label: "15ml", sku: "VE15" },
+    ],
+  },
+];
 
 const PRICE_OPTIONS = [
   5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 52, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 115, 120, 130, 140, 150,
@@ -25,14 +86,14 @@ const DEPOSIT_OPTIONS = [
   0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 109, 120, 130, 140, 150, 200, 250, 300,
 ];
 
-const FREE_PRODUCT_OPTIONS = ["None", ...PRODUCTS];
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ProductSelection {
   name: string;
+  variant: string; // label
+  sku: string;
   quantity: number;
-  pricePerUnit: number;
+  pricePerUnit: number | "free";
 }
 
 interface DoneDealModalProps {
@@ -56,7 +117,7 @@ export default function DoneDealModal({
   agentName,
   onSuccess,
 }: DoneDealModalProps) {
-  // Product selections
+  // Product selections — keyed by "name|sku" to allow same product different sizes
   const [selectedProducts, setSelectedProducts] = useState<Record<string, ProductSelection>>({});
   const [freeProduct, setFreeProduct] = useState("None");
   const [deposit, setDeposit] = useState(0);
@@ -76,29 +137,60 @@ export default function DoneDealModal({
   });
 
   // Toggle product selection
-  const toggleProduct = (productName: string) => {
+  const toggleProduct = (product: ProductDef) => {
+    const defaultVariant = product.variants[0];
+    const key = `${product.name}|${defaultVariant.sku}`;
     setSelectedProducts((prev) => {
-      if (prev[productName]) {
+      // If any variant of this product is selected, remove all
+      const existingKeys = Object.keys(prev).filter((k) => k.startsWith(`${product.name}|`));
+      if (existingKeys.length > 0) {
         const next = { ...prev };
-        delete next[productName];
+        existingKeys.forEach((k) => delete next[k]);
         return next;
       }
-      return { ...prev, [productName]: { name: productName, quantity: 1, pricePerUnit: 50 } };
+      return {
+        ...prev,
+        [key]: {
+          name: product.name,
+          variant: defaultVariant.label,
+          sku: defaultVariant.sku,
+          quantity: 1,
+          pricePerUnit: 50,
+        },
+      };
+    });
+  };
+
+  // Change variant for a product
+  const changeVariant = (oldKey: string, product: ProductDef, newSku: string) => {
+    const newVariant = product.variants.find((v) => v.sku === newSku);
+    if (!newVariant) return;
+    const newKey = `${product.name}|${newSku}`;
+    setSelectedProducts((prev) => {
+      const old = prev[oldKey];
+      const next = { ...prev };
+      delete next[oldKey];
+      next[newKey] = {
+        ...old,
+        variant: newVariant.label,
+        sku: newVariant.sku,
+      };
+      return next;
     });
   };
 
   // Update product details
-  const updateProduct = (productName: string, field: "quantity" | "pricePerUnit", value: number) => {
+  const updateProduct = (key: string, field: "quantity" | "pricePerUnit", value: number | "free") => {
     setSelectedProducts((prev) => ({
       ...prev,
-      [productName]: { ...prev[productName], [field]: value },
+      [key]: { ...prev[key], [field]: value },
     }));
   };
 
   // Calculated fields
   const total = useMemo(() => {
     return Object.values(selectedProducts).reduce(
-      (sum, p) => sum + p.quantity * p.pricePerUnit,
+      (sum, p) => sum + p.quantity * (p.pricePerUnit === "free" ? 0 : p.pricePerUnit),
       0
     );
   }, [selectedProducts]);
@@ -135,7 +227,11 @@ export default function DoneDealModal({
       customerName,
       agentName,
       dealDetails: {
-        products,
+        products: products.map((p) => ({
+          name: `${p.name} — ${p.variant} (${p.sku})`,
+          quantity: p.quantity,
+          pricePerUnit: p.pricePerUnit === "free" ? 0 : p.pricePerUnit,
+        })),
         freeProduct,
         deposit,
         installments,
@@ -179,11 +275,11 @@ export default function DoneDealModal({
 
             {/* Product Chips */}
             <div className="flex flex-wrap gap-2 mb-3">
-              {PRODUCTS.map((product) => {
-                const isSelected = !!selectedProducts[product];
+              {PRODUCT_CATALOG.map((product) => {
+                const isSelected = Object.keys(selectedProducts).some((k) => k.startsWith(`${product.name}|`));
                 return (
                   <button
-                    key={product}
+                    key={product.name}
                     onClick={() => toggleProduct(product)}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                       isSelected
@@ -191,58 +287,88 @@ export default function DoneDealModal({
                         : "bg-gray-100 text-gray-900 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
                     }`}
                   >
-                    {product}
+                    {product.name}
                   </button>
                 );
               })}
             </div>
 
             {/* Expanded product details */}
-            {Object.entries(selectedProducts).map(([name, product]) => (
-              <div
-                key={name}
-                className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-2"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-gray-900">{name}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-900 block mb-1">Quantity</label>
-                    <select
-                      value={product.quantity}
-                      onChange={(e) => updateProduct(name, "quantity", parseInt(e.target.value))}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {[1, 2, 3, 4, 5, 6].map((q) => (
-                        <option key={q} value={q}>
-                          {q}
-                        </option>
-                      ))}
-                    </select>
+            {Object.entries(selectedProducts).map(([key, product]) => {
+              const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
+              if (!catalogProduct) return null;
+              return (
+                <div
+                  key={key}
+                  className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-2"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-gray-900">{product.name}</span>
+                    <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                      SKU: {product.sku}
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-900 block mb-1">Price per unit</label>
-                    <select
-                      value={product.pricePerUnit}
-                      onChange={(e) => updateProduct(name, "pricePerUnit", parseInt(e.target.value))}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {PRICE_OPTIONS.map((p) => (
-                        <option key={p} value={p}>
-                          £{p}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Size/Variant */}
+                    {catalogProduct.variants.length > 1 && (
+                      <div className="col-span-2">
+                        <label className="text-xs font-semibold text-gray-900 block mb-1">Size</label>
+                        <select
+                          value={product.sku}
+                          onChange={(e) => changeVariant(key, catalogProduct, e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {catalogProduct.variants.map((v) => (
+                            <option key={v.sku} value={v.sku}>
+                              {v.label} ({v.sku})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {/* Quantity */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-900 block mb-1">Quantity</label>
+                      <select
+                        value={product.quantity}
+                        onChange={(e) => updateProduct(key, "quantity", parseInt(e.target.value))}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
+                          <option key={q} value={q}>
+                            {q}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Price per unit */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-900 block mb-1">Price per unit</label>
+                      <select
+                        value={product.pricePerUnit}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateProduct(key, "pricePerUnit", val === "free" ? "free" as any : parseInt(val));
+                        }}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {PRICE_OPTIONS.map((p) => (
+                          <option key={p} value={p}>
+                            £{p}
+                          </option>
+                        ))}
+                        <option value="free">Free</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-right">
+                    <span className="text-sm font-bold text-gray-900">
+                      Subtotal: {product.pricePerUnit === "free" ? "Free" : `£${product.quantity * product.pricePerUnit}`}
+                    </span>
                   </div>
                 </div>
-                <div className="mt-2 text-right">
-                  <span className="text-sm font-bold text-gray-900">
-                    Subtotal: £{product.quantity * product.pricePerUnit}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Free Product */}
@@ -256,9 +382,10 @@ export default function DoneDealModal({
               onChange={(e) => setFreeProduct(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {FREE_PRODUCT_OPTIONS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+              <option value="None">None</option>
+              {PRODUCT_CATALOG.map((p) => (
+                <option key={p.name} value={p.name}>
+                  {p.name}
                 </option>
               ))}
             </select>
