@@ -3098,4 +3098,153 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
 
       return { returned: input.subscriptionIds.length };
     }),
+
+  /**
+   * Mark a lead as Done Deal — records deal details and sends email to support.
+   */
+  markDoneDeal: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        subscriptionId: z.string(),
+        customerName: z.string(),
+        agentName: z.string(),
+        dealDetails: z.object({
+          products: z.array(
+            z.object({
+              name: z.string(),
+              quantity: z.number(),
+              pricePerUnit: z.number(),
+            })
+          ),
+          freeProduct: z.string(),
+          deposit: z.number(),
+          installments: z.number(),
+          total: z.number(),
+          monthlyPayment: z.number(),
+        }),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const { contactId, subscriptionId, customerName, agentName, dealDetails } = input;
+
+      // Build email body
+      const productLines = dealDetails.products
+        .map((p) => `• ${p.name} — Qty: ${p.quantity} × £${p.pricePerUnit} = £${p.quantity * p.pricePerUnit}`)
+        .join("\n");
+
+      const dateStr = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const textBody = [
+        `Done Deal Summary`,
+        `═══════════════════════════════════`,
+        ``,
+        `Customer: ${customerName}`,
+        `Agent: ${agentName}`,
+        `Date: ${dateStr}`,
+        ``,
+        `Products Sold:`,
+        productLines,
+        ``,
+        `Free Product: ${dealDetails.freeProduct}`,
+        `Deposit: £${dealDetails.deposit}`,
+        `Total: £${dealDetails.total}`,
+        `Installments: ${dealDetails.installments}`,
+        `Monthly Payment: £${dealDetails.monthlyPayment.toFixed(2)}`,
+      ].join("\n");
+
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #16a34a; border-bottom: 2px solid #16a34a; padding-bottom: 8px;">Done Deal Summary</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 6px 0; font-weight: bold;">Customer:</td><td>${customerName}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Agent:</td><td>${agentName}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Date:</td><td>${dateStr}</td></tr>
+          </table>
+          <h3 style="margin-top: 20px;">Products Sold</h3>
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+            <thead>
+              <tr style="background: #f9fafb;">
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb;">Product</th>
+                <th style="padding: 8px; text-align: center; border-bottom: 1px solid #e5e7eb;">Qty</th>
+                <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb;">Price/Unit</th>
+                <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dealDetails.products.map((p) => `
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid #f3f4f6;">${p.name}</td>
+                  <td style="padding: 8px; text-align: center; border-bottom: 1px solid #f3f4f6;">${p.quantity}</td>
+                  <td style="padding: 8px; text-align: right; border-bottom: 1px solid #f3f4f6;">£${p.pricePerUnit}</td>
+                  <td style="padding: 8px; text-align: right; border-bottom: 1px solid #f3f4f6;">£${p.quantity * p.pricePerUnit}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 6px 0; font-weight: bold;">Free Product:</td><td>${dealDetails.freeProduct}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Deposit:</td><td>£${dealDetails.deposit}</td></tr>
+            <tr style="font-size: 18px;"><td style="padding: 8px 0; font-weight: bold; color: #16a34a;">Total:</td><td style="font-weight: bold; color: #16a34a;">£${dealDetails.total}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Installments:</td><td>${dealDetails.installments}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Monthly Payment:</td><td>£${dealDetails.monthlyPayment.toFixed(2)}</td></tr>
+          </table>
+        </div>
+      `;
+
+      // Send email via Postmark directly (to support@lavielabs.com)
+      const POSTMARK_API_KEY = "f8d7dddf-68c1-4621-8881-13923bb57b7f";
+      try {
+        const response = await fetch("https://api.postmarkapp.com/email", {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-Postmark-Server-Token": POSTMARK_API_KEY,
+          },
+          body: JSON.stringify({
+            From: "trial@lavielabs.com",
+            To: "support@lavielabs.com",
+            Subject: `Done Deal — ${customerName} — ${agentName}`,
+            TextBody: textBody,
+            HtmlBody: htmlBody,
+            MessageStream: "outbound",
+          }),
+        });
+
+        if (!response.ok) {
+          const detail = await response.text().catch(() => "");
+          console.error(`[markDoneDeal] Postmark failed (${response.status}): ${detail}`);
+        }
+      } catch (err) {
+        console.error("[markDoneDeal] Email send error:", err);
+      }
+
+      // Update lead_assignments workStatus to done_deal
+      await db
+        .update(leadAssignments)
+        .set({
+          workStatus: "done_deal",
+          statusChangedAt: Date.now(),
+        })
+        .where(eq(leadAssignments.subscriptionId, subscriptionId));
+
+      // Also update contact status if contactId provided
+      if (contactId) {
+        try {
+          await updateContact(contactId, { status: "done_deal" as any });
+        } catch (e) {
+          console.error("[markDoneDeal] Failed to update contact status:", e);
+        }
+      }
+
+      return { success: true };
+    }),
 });

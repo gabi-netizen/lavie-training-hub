@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import DoneDealModal from "@/components/DoneDealModal";
 
 // ─── Colour maps ───────────────────────────────────────────────────────────────
 const LEAD_TYPE_COLOURS: Record<string, string> = {
@@ -352,6 +353,7 @@ export default function ContactCard() {
   const [showRetentionCustomInput, setShowRetentionCustomInput] = useState(false);
   const [agentNoteValue, setAgentNoteValue] = useState("");
   const [autoAdvance, setAutoAdvance] = useState(true);
+  const [doneDealModalOpen, setDoneDealModalOpen] = useState(false);
 
   // Sync agent note value from data
   useEffect(() => {
@@ -787,7 +789,7 @@ export default function ContactCard() {
               Auto-advance
             </label>
             <button
-              onClick={() => handleQuickAction("done_deal")}
+              onClick={() => setDoneDealModalOpen(true)}
               disabled={!currentRetentionLead || assignLeadMutation.isPending}
               className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 shadow-sm"
               style={{ background: "#16a34a" }}
@@ -3187,6 +3189,25 @@ export default function ContactCard() {
         </div>
       );
     })()}
+
+    {/* Done Deal Modal */}
+    <DoneDealModal
+      open={doneDealModalOpen}
+      onClose={() => setDoneDealModalOpen(false)}
+      contactId={contactId}
+      subscriptionId={currentRetentionLead?.subscriptionId ?? ""}
+      customerName={contact.name ?? "Unknown"}
+      agentName={user?.name ?? "Agent"}
+      onSuccess={() => {
+        refetch();
+        // Auto-advance to next lead
+        if (autoAdvance && nextLead) {
+          setTimeout(() => {
+            navigateToLead(nextLead, currentLeadIndex + 1);
+          }, 600);
+        }
+      }}
+    />
     </>
   );
 }
