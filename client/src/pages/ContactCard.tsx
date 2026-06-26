@@ -2748,33 +2748,68 @@ export default function ContactCard() {
                 <span className="text-sm font-black text-black">Plans</span>
                 <span className="ml-auto text-xs font-bold text-black">{contactSubscriptions.length}</span>
               </div>
-              <div className="flex flex-col gap-2.5">
-                {contactSubscriptions.map((sub) => (
-                  <div key={sub.subscriptionId} className="border border-gray-100 rounded-lg p-2.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-gray-800">{sub.planName || sub.subscriptionNumber}</span>
-                      <span className={cn(
-                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                        sub.status === "live" ? "bg-green-100 text-green-700" :
-                        sub.status === "dunning" ? "bg-orange-100 text-orange-700" :
-                        sub.status === "cancelled" ? "bg-red-100 text-red-700" :
-                        sub.status === "expired" ? "bg-gray-100 text-gray-700" :
-                        "bg-blue-100 text-blue-700"
-                      )}>
-                        {sub.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[11px] text-black">
-                      <span>£{parseFloat(sub.amount || "0").toFixed(2)}/cycle</span>
-                      {sub.billingCycles && (
-                        <span>{sub.cyclesCompleted ?? 0}/{sub.billingCycles} paid</span>
+              <div className="flex flex-col gap-3">
+                {contactSubscriptions.map((sub) => {
+                  const recurring = parseFloat(sub.recurringAmount || sub.amount || "0");
+                  const setup = parseFloat(sub.setupFee || "0");
+                  const cycles = sub.billingCycles || 0;
+                  const completed = sub.cyclesCompleted ?? 0;
+                  const totalValue = sub.totalAmount ? parseFloat(String(sub.totalAmount)) : (setup + recurring * cycles);
+                  const paidSoFar = setup + recurring * completed;
+                  const remaining = Math.max(0, totalValue - paidSoFar);
+                  const progressPct = cycles > 0 ? Math.round((completed / cycles) * 100) : 0;
+                  const remainingCycles = cycles > 0 ? cycles - completed : 0;
+                  let finalPaymentDate = "";
+                  if (sub.nextBillingOn && remainingCycles > 0) {
+                    const next = new Date(sub.nextBillingOn);
+                    next.setDate(next.getDate() + (remainingCycles - 1) * 60);
+                    finalPaymentDate = next.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+                  }
+                  return (
+                    <div key={sub.subscriptionId} className="border border-gray-100 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-gray-800">{sub.planName || sub.subscriptionNumber}</span>
+                        <span className={cn(
+                          "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                          sub.status === "live" ? "bg-green-100 text-green-700" :
+                          sub.status === "dunning" ? "bg-orange-100 text-orange-700" :
+                          sub.status === "cancelled" ? "bg-red-100 text-red-700" :
+                          sub.status === "expired" ? "bg-gray-100 text-gray-700" :
+                          "bg-blue-100 text-blue-700"
+                        )}>
+                          {sub.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-black mb-1.5">
+                        <span>£{recurring.toFixed(2)}/cycle</span>
+                        {cycles > 0 && <span>{completed}/{cycles} paid</span>}
+                        {sub.nextBillingOn && sub.status === "live" && (
+                          <span>Next: {new Date(sub.nextBillingOn).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+                        )}
+                      </div>
+                      {cycles > 0 && (
+                        <div className="mb-1.5">
+                          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                          </div>
+                        </div>
                       )}
-                      {sub.nextBillingOn && (
-                        <span>Next: {new Date(sub.nextBillingOn).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+                      <div className="flex items-center gap-3 text-[10px] text-gray-700">
+                        <span>Paid: <b className="text-black">£{paidSoFar.toFixed(2)}</b></span>
+                        {remaining > 0 && <span>Left: <b className="text-red-600">£{remaining.toFixed(2)}</b></span>}
+                        {totalValue > 0 && <span>Total: £{totalValue.toFixed(2)}</span>}
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-gray-600 mt-1">
+                        {sub.activatedOn && <span>Started: {new Date(sub.activatedOn).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>}
+                        {sub.lastBilledOn && <span>Last paid: {new Date(sub.lastBilledOn).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>}
+                        {finalPaymentDate && sub.status === "live" && <span>Final: {finalPaymentDate}</span>}
+                      </div>
+                      {sub.cancelledDate && (
+                        <div className="text-[10px] text-red-600 mt-1">Cancelled: {new Date(sub.cancelledDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -2790,50 +2825,7 @@ export default function ContactCard() {
             <p className="text-xs text-gray-600">No data yet</p>
           </div>
 
-          {/* ── Products History ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Package size={18} style={{ color: "#1565c0" }} />
-              <span className="text-sm font-bold" style={{ color: "#1565c0" }}>Products History</span>
-            </div>
-            {(billingInfo?.allSubscriptions?.length || retentionPlans.length > 0 || contact.trialKit) ? (
-              <div className="flex flex-col gap-2.5">
-                {billingInfo?.allSubscriptions && billingInfo.allSubscriptions.length > 0 ? (
-                  billingInfo.allSubscriptions.map((sub: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: sub.status === "live" ? "#4caf50" : "#9e9e9e" }} />
-                        <span className="text-sm text-gray-800">{sub.planName || sub.subscriptionNumber || "Unknown Plan"}</span>
-                      </div>
-                      <span className={cn("text-xs font-semibold", sub.status === "live" ? "text-green-600" : "text-gray-600")}>
-                        {sub.status === "live" ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                  ))
-                ) : null}
-                {contact.trialKit && (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#1565c0" }} />
-                      <span className="text-sm text-gray-800">{contact.trialKit}</span>
-                    </div>
-                    <span className="text-xs font-semibold" style={{ color: "#1565c0" }}>Current</span>
-                  </div>
-                )}
-                {retentionPlans.map((plan) => (
-                  <div key={plan} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full inline-block bg-gray-400" />
-                      <span className="text-sm text-gray-700">{plan}</span>
-                    </div>
-                    <span className="text-[10px] text-gray-600">Retention</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-600">No products recorded</p>
-            )}
-          </div>
+
 
           {/* ── Cancellation History ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
