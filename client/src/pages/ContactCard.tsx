@@ -1123,6 +1123,30 @@ export default function ContactCard() {
                     <span className="text-sm font-semibold text-gray-800">\u2014</span>
                   )}
                 </div>
+                {/* NA button — hangup + mark no_answer + advance to next */}
+                {isFromRetention && (
+                  <div className="py-2.5">
+                    <button
+                      onClick={() => {
+                        // 1. Hangup via CloudTalk iframe
+                        const iframe = document.querySelector<HTMLIFrameElement>('iframe[src*="phone.cloudtalk.io"]');
+                        if (iframe?.contentWindow) {
+                          iframe.contentWindow.postMessage(JSON.stringify({ event: "hangup", properties: {} }), "https://phone.cloudtalk.io");
+                        }
+                        // 2. Mark as no_answer
+                        if (currentRetentionLead) {
+                          assignLeadMutation.mutate({ subscriptionId: currentRetentionLead.subscriptionId, workStatus: "no_answer" });
+                        }
+                        toast("No Answer — moving to next", { icon: "📵" });
+                        // 3. Advance to next lead
+                        if (nextLead) setTimeout(() => navigateToLead(nextLead, currentLeadIndex + 1), 400);
+                      }}
+                      className="w-full px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition shadow-sm"
+                    >
+                      NA / End / Next
+                    </button>
+                  </div>
+                )}
                 {/* Lead Status — dropdown for agents */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Lead Status</span>
