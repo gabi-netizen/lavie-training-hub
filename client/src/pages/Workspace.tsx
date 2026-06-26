@@ -508,14 +508,9 @@ function ContactCard({
   const [autoSelectCreditCardTemplate, setAutoSelectCreditCardTemplate] = useState(false);
   const [paymentValidationOpen, setPaymentValidationOpen] = useState(false);
   const [paymentValidationMessages, setPaymentValidationMessages] = useState<string[]>([]);
-  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
-  const [duplicateWarningDate, setDuplicateWarningDate] = useState("");
-  const [pendingPaymentAction, setPendingPaymentAction] = useState<(() => void) | null>(null);
   const [confirmTxOpen, setConfirmTxOpen] = useState(false);
   const [confirmedPaymentAction, setConfirmedPaymentAction] = useState<(() => void) | null>(null);
   const emailDropRef = useRef<HTMLDivElement>(null);
-
-  const checkDuplicateMutation = trpc.contacts.checkDuplicatePayment.useMutation();
 
   const validatePaymentRequirements = useCallback(async (onConfirm: () => void) => {
     // 1. Check for missing required fields (blocking)
@@ -527,24 +522,10 @@ function ContactCard({
       return;
     }
 
-    // 2. Check for duplicate payments (warning — non-blocking)
-    try {
-      const result = await checkDuplicateMutation.mutateAsync({ contactId: contact.id });
-      if (result.isDuplicate) {
-        setDuplicateWarningDate(result.existingPaymentDate ? new Date(result.existingPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "the past");
-        setPendingPaymentAction(() => onConfirm);
-        setDuplicateWarningOpen(true);
-        return;
-      }
-    } catch (err) {
-      console.error("Failed to check for duplicate payment:", err);
-      // Proceed anyway on error
-    }
-
-    // 3. Show transaction confirmation dialog
+    // 2. Show transaction confirmation dialog
     setConfirmedPaymentAction(() => onConfirm);
     setConfirmTxOpen(true);
-  }, [contact, checkDuplicateMutation]);
+  }, [contact]);
 
   // Close email dropdown when clicking outside
   useEffect(() => {
@@ -1485,49 +1466,6 @@ function ContactCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Duplicate payment detected</AlertDialogTitle>
-            <AlertDialogDescription>
-              This customer has already paid £4.95 on {duplicateWarningDate}. A duplicate order will NOT be created in Mintsoft.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <button
-              onClick={() => {
-                setDuplicateWarningOpen(false);
-                setPendingPaymentAction(null);
-              }}
-              style={{ 
-                padding: "8px 16px",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: 500,
-                background: "#f3f4f6", 
-                color: "#374151", 
-                border: "1px solid #d1d5db",
-                cursor: "pointer"
-              }}
-            >
-              Cancel
-            </button>
-            <AlertDialogAction
-              onClick={() => {
-                // After duplicate warning, show the confirmation dialog
-                if (pendingPaymentAction) {
-                  setConfirmedPaymentAction(() => pendingPaymentAction);
-                  setConfirmTxOpen(true);
-                }
-                setDuplicateWarningOpen(false);
-                setPendingPaymentAction(null);
-              }}
-            >
-              Proceed Anyway
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* ─── Transaction Confirmation Dialog ───────────────────────────────── */}
       <AlertDialog open={confirmTxOpen} onOpenChange={setConfirmTxOpen}>
