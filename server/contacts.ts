@@ -392,7 +392,7 @@ export async function getContact(id: number) {
     }
   } catch (_e) { /* ignore if table doesn't exist */ }
 
-  return { ...contact, callNotes: notes, latestCallAnalysis };
+  return { ...contact, callNotes: notes, openingNotes: contact.callNotes, latestCallAnalysis };
 }
 
 // ─── Update Contact ────────────────────────────────────────────────────────────

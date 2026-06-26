@@ -1568,11 +1568,11 @@ export default function ContactCard() {
             </div>
 
             {/* Opening Agent Notes */}
-            {(contact as any).callNotes?.length > 0 && (
+            {(contact as any).openingNotes && (contact as any).openingNotes.trim() && (
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-2">Opening Agent Notes</p>
-                <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-xs text-gray-700 leading-relaxed">
-                  {(contact as any).callNotes[0]?.note || ""}
+                <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-xs text-gray-700 leading-relaxed whitespace-pre-line">
+                  {(contact as any).openingNotes}
                 </div>
               </div>
             )}
@@ -2285,6 +2285,16 @@ export default function ContactCard() {
               {/* Notes tab */}
               {centerTopTab === "notes" && (
                 <div className="space-y-4">
+                  {/* Opening Agent Notes (from Workspace text field) */}
+                  {(contact as any).openingNotes && (contact as any).openingNotes.trim() && (
+                    <div className="mb-4 pb-4 border-b border-gray-200">
+                      <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-2">Opening Agent Notes</p>
+                      <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+                        {(contact as any).openingNotes}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Agent Notes section — manual notes from agents */}
                   <div>
                     <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-3">Agent Notes</p>

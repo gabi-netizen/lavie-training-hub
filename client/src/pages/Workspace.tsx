@@ -40,15 +40,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 
 // ==========================================
 // TYPES
@@ -506,23 +498,18 @@ function ContactCard({
   const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [autoSelectFormTemplate, setAutoSelectFormTemplate] = useState(false);
   const [autoSelectCreditCardTemplate, setAutoSelectCreditCardTemplate] = useState(false);
-  const [paymentValidationOpen, setPaymentValidationOpen] = useState(false);
-  const [paymentValidationMessages, setPaymentValidationMessages] = useState<string[]>([]);
   const [confirmTxOpen, setConfirmTxOpen] = useState(false);
   const [confirmedPaymentAction, setConfirmedPaymentAction] = useState<(() => void) | null>(null);
   const emailDropRef = useRef<HTMLDivElement>(null);
 
   const validatePaymentRequirements = useCallback(async (onConfirm: () => void) => {
-    // 1. Check for missing required fields (blocking)
     const missingMessages = getMissingPaymentRequirements(contact);
     if (missingMessages.length > 0) {
-      setPaymentValidationMessages(missingMessages);
-      setPaymentValidationOpen(true);
+      missingMessages.forEach(msg => toast.error(msg));
       setDetailsOpen(true);
       return;
     }
-
-    // 2. Show transaction confirmation dialog
+    // Show transaction confirmation dialog
     setConfirmedPaymentAction(() => onConfirm);
     setConfirmTxOpen(true);
   }, [contact]);
@@ -1439,98 +1426,76 @@ function ContactCard({
         </div>
       )}
 
-      <AlertDialog open={paymentValidationOpen} onOpenChange={setPaymentValidationOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Missing payment information</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {paymentValidationMessages.map((message) => (
-                  <p key={message}>{message}</p>
-                ))}
-                <p>Please update the contact details and try again.</p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>OK</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-
       {/* ─── Transaction Confirmation Dialog ───────────────────────────────── */}
-      <AlertDialog open={confirmTxOpen} onOpenChange={setConfirmTxOpen}>
-        <AlertDialogContent style={{ maxWidth: 440 }}>
-          <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>
-              Confirm Transaction Details
-            </AlertDialogTitle>
-          </AlertDialogHeader>
+      {confirmTxOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", maxWidth: 440, width: "90%", boxShadow: "0 8px 30px rgba(0,0,0,0.25)" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: "0 0 16px" }}>Confirm Transaction Details</h2>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "4px 0 8px" }}>
-            <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Customer Name</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", textAlign: "right" }}>{contact.name || "—"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Full Address</span>
-                <span style={{ fontSize: 13, color: "#374151", textAlign: "right", maxWidth: 240 }}>{contact.address || "—"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Trial Kit</span>
-                <span style={{ fontSize: 13, color: "#374151", textAlign: "right" }}>{contact.trialKit || "—"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #e5e7eb", paddingTop: 10, marginTop: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Amount</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: "#15803d" }}>£4.95</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "4px 0 16px" }}>
+              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Customer Name</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", textAlign: "right" }}>{contact.name || "—"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Full Address</span>
+                  <span style={{ fontSize: 13, color: "#374151", textAlign: "right", maxWidth: 240 }}>{contact.address || "—"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Trial Kit</span>
+                  <span style={{ fontSize: 13, color: "#374151", textAlign: "right" }}>{contact.trialKit || "—"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #e5e7eb", paddingTop: 10, marginTop: 2 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Amount</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#15803d" }}>£4.95</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <AlertDialogFooter style={{ gap: 8 }}>
-            <button
-              onClick={() => {
-                setConfirmTxOpen(false);
-                setConfirmedPaymentAction(null);
-                setDetailsOpen(true);
-              }}
-              style={{
-                padding: "9px 18px",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: 600,
-                background: "#f3f4f6",
-                color: "#374151",
-                border: "1px solid #d1d5db",
-                cursor: "pointer",
-              }}
-            >
-              Edit
-            </button>
-            <AlertDialogAction
-              onClick={() => {
-                if (confirmedPaymentAction) confirmedPaymentAction();
-                setConfirmTxOpen(false);
-                setConfirmedPaymentAction(null);
-              }}
-              style={{
-                background: "#16a34a",
-                color: "white",
-                fontWeight: 700,
-                padding: "9px 18px",
-                borderRadius: "8px",
-                fontSize: "14px",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              Confirm &amp; Pay
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => {
+                  setConfirmTxOpen(false);
+                  setConfirmedPaymentAction(null);
+                  setDetailsOpen(true);
+                }}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "1px solid #d1d5db",
+                  cursor: "pointer",
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  if (confirmedPaymentAction) confirmedPaymentAction();
+                  setConfirmTxOpen(false);
+                  setConfirmedPaymentAction(null);
+                }}
+                style={{
+                  background: "#16a34a",
+                  color: "white",
+                  fontWeight: 700,
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Confirm &amp; Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
