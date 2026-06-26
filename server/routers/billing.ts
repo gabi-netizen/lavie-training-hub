@@ -11,6 +11,11 @@ import { getDb } from "../db";
 import { clientSubscriptions, leadAssignments, contacts, stripeAuditLog, shipments, stripeCustomers } from "../../drizzle/schema";
 import { eq, like, or, and, sql, desc, getTableColumns, isNull, isNotNull } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
+import Stripe from "stripe";
+import { getStripeClient } from "../stripe/index";
+
+// ─── Stripe Billing Client (for manual charges) ─────────────────────────────
+const stripeBilling = new Stripe(process.env.STRIPE_BILLING_SECRET_KEY || "");
 
 // ─── Zoho Billing API Credentials ────────────────────────────────────────────
 const ZOHO_TOKEN_URL = "https://accounts.zoho.com/oauth/v2/token";
@@ -1376,5 +1381,205 @@ export const billingRouter = router({
       );
 
       return { count, transactions };
+    }),
+
+  // ─── Create PaymentIntent for Stripe Elements (returns client_secret) ──────
+  createManualPaymentIntent: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        agentName: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { contactId, agentName } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Look up contact
+      const [contact] = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          email: contacts.email,
+          phone: contacts.phone,
+          address: contacts.address,
+        })
+        .from(contacts)
+        .where(eq(contacts.id, contactId))
+        .limit(1);
+
+      if (!contact) throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+
+      // Parse address into Stripe format
+      let stripeAddress: { line1?: string; city?: string; postal_code?: string; country?: string } | undefined;
+      if (contact.address) {
+        const parts = contact.address.split(",").map((p: string) => p.trim());
+        if (parts.length >= 3) {
+          stripeAddress = { line1: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], postal_code: parts[parts.length - 1], country: "GB" };
+        } else if (parts.length === 2) {
+          stripeAddress = { line1: parts[0], postal_code: parts[1], country: "GB" };
+        } else {
+          const ukPostcodeRegex = /([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$/i;
+          const match = contact.address.trim().match(ukPostcodeRegex);
+          if (match) {
+            const postcode = match[1].trim();
+            const line1 = contact.address.slice(0, contact.address.length - match[0].length).trim();
+            stripeAddress = { line1: line1 || contact.address, postal_code: postcode, country: "GB" };
+          } else {
+            stripeAddress = { line1: contact.address, country: "GB" };
+          }
+        }
+      }
+
+      // Create or find Stripe Customer
+      const customer = await stripeBilling.customers.create({
+        name: contact.name,
+        email: contact.email || undefined,
+        phone: contact.phone || undefined,
+        ...(stripeAddress ? { address: stripeAddress } : {}),
+        metadata: { contactId: String(contactId), agentName },
+      });
+
+      // Create PaymentIntent for £4.95 (495 pence)
+      const paymentIntent = await stripeBilling.paymentIntents.create({
+        amount: 495,
+        currency: "gbp",
+        customer: customer.id,
+        metadata: { contactId: String(contactId), agentName },
+        payment_method_types: ["card"],
+      });
+
+      return {
+        clientSecret: paymentIntent.client_secret!,
+        customerId: customer.id,
+        paymentIntentId: paymentIntent.id,
+      };
+    }),
+
+  // ─── Create Manual Charge (card already tokenised via Elements) ────────────
+  createManualCharge: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        paymentMethodId: z.string().min(1),
+        agentName: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { contactId, paymentMethodId, agentName } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Look up contact
+      const [contact] = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          email: contacts.email,
+          phone: contacts.phone,
+          address: contacts.address,
+          trialKit: contacts.trialKit,
+          agentEmail: contacts.agentEmail,
+        })
+        .from(contacts)
+        .where(eq(contacts.id, contactId))
+        .limit(1);
+
+      if (!contact) throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+
+      // Parse address into Stripe format
+      let stripeAddress: { line1?: string; city?: string; postal_code?: string; country?: string } | undefined;
+      if (contact.address) {
+        const parts = contact.address.split(",").map((p: string) => p.trim());
+        if (parts.length >= 3) {
+          stripeAddress = { line1: parts.slice(0, -2).join(", "), city: parts[parts.length - 2], postal_code: parts[parts.length - 1], country: "GB" };
+        } else if (parts.length === 2) {
+          stripeAddress = { line1: parts[0], postal_code: parts[1], country: "GB" };
+        } else {
+          const ukPostcodeRegex = /([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$/i;
+          const match = contact.address.trim().match(ukPostcodeRegex);
+          if (match) {
+            const postcode = match[1].trim();
+            const line1 = contact.address.slice(0, contact.address.length - match[0].length).trim();
+            stripeAddress = { line1: line1 || contact.address, postal_code: postcode, country: "GB" };
+          } else {
+            stripeAddress = { line1: contact.address, country: "GB" };
+          }
+        }
+      }
+
+      // Create or find Stripe Customer
+      const customer = await stripeBilling.customers.create({
+        name: contact.name,
+        email: contact.email || undefined,
+        phone: contact.phone || undefined,
+        ...(stripeAddress ? { address: stripeAddress } : {}),
+        metadata: { contactId: String(contactId), agentName },
+      });
+
+      // Attach PaymentMethod to Customer
+      await stripeBilling.paymentMethods.attach(paymentMethodId, {
+        customer: customer.id,
+      });
+
+      // Set as default payment method
+      await stripeBilling.customers.update(customer.id, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+
+      // Create PaymentIntent for £4.95 (495 pence)
+      const paymentIntent = await stripeBilling.paymentIntents.create({
+        amount: 495,
+        currency: "gbp",
+        customer: customer.id,
+        payment_method: paymentMethodId,
+        metadata: { contactId: String(contactId), agentName },
+        confirm: true,
+        off_session: true,
+      });
+
+      if (paymentIntent.status !== "succeeded") {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Payment failed with status: ${paymentIntent.status}`,
+        });
+      }
+
+      // Save to stripe_customers table
+      const agentEmail = contact.agentEmail || "unknown@lavielabs.com";
+      const existingMapping = await db
+        .select()
+        .from(stripeCustomers)
+        .where(eq(stripeCustomers.contactId, contactId))
+        .limit(1);
+
+      if (existingMapping.length > 0) {
+        await db
+          .update(stripeCustomers)
+          .set({
+            stripeCustomerId: customer.id,
+            paymentMethodId,
+            agentName,
+            agentEmail,
+          })
+          .where(eq(stripeCustomers.contactId, contactId));
+      } else {
+        await db.insert(stripeCustomers).values({
+          contactId,
+          stripeCustomerId: customer.id,
+          paymentMethodId,
+          agentName,
+          agentEmail,
+        });
+      }
+
+      // Update contact with stripeCustomerId
+      await db
+        .update(contacts)
+        .set({ stripeCustomerId: customer.id })
+        .where(eq(contacts.id, contactId));
+
+      return { success: true, paymentIntentId: paymentIntent.id, customerId: customer.id };
     }),
 });

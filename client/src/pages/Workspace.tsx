@@ -24,6 +24,7 @@ import {
   MessageCircle, BookOpen, Package, Loader2, FileText
 } from "lucide-react";
 import { WhatsAppChatPanel } from "@/components/WhatsAppChatPanel";
+import { CardEntryModal } from "@/components/CardEntryModal";
 import { PersonalButlerTab } from "@/components/PersonalButlerTab";
 import { MaximusGreeting } from "@/components/MaximusGreeting";
 import { WorkspaceEmailPanel } from "@/components/WorkspaceEmailPanel";
@@ -3048,6 +3049,9 @@ export default function Workspace() {
   const [listFilter, setListFilter] = useState<string>("active");
 
   const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails" | "fullscript" | "butler">("pitch");
+  // ── Card Entry Modal state (for manual charge when no payment found) ──
+  const [cardEntryModal, setCardEntryModal] = useState<{ contactId: number; contactName: string } | null>(null);
+
   // ── Sold validation popup state ──
   const [soldValidationModal, setSoldValidationModal] = useState<{ contactId: number; missing: string[] } | null>(null);
   const [soldModalTrialKit, setSoldModalTrialKit] = useState("");
@@ -3291,6 +3295,21 @@ export default function Workspace() {
       refetch();
     },
     onError: (err: any) => {
+      // If no payment found, open CardEntryModal instead of showing error toast
+      if (err.data?.code === "PRECONDITION_FAILED" || err.message?.includes("No payment")) {
+        // Find the contact that was being sold
+        const failedContactId = (err as any)?.shape?.data?.contactId;
+        // Try to find the contact from the list
+        const soldContact = (contacts as any[]).find(
+          (c) => localDoneItems[c.id] === "Sold" && !c.stripeCustomerId
+        ) || (contacts as any[]).find((c) => c.id === activeId);
+        if (soldContact) {
+          setCardEntryModal({ contactId: soldContact.id, contactName: soldContact.name });
+        } else {
+          toast.error("No payment found. Please use the card entry form to charge the customer.");
+        }
+        return;
+      }
       toast.error(err.message || "Failed to confirm deal");
     },
   });
@@ -4563,6 +4582,22 @@ export default function Workspace() {
       )}
 
       {/* ── Sold Validation Popup ── */}
+      {/* ── Card Entry Modal (opens when confirmSold fails with no payment) ── */}
+      {cardEntryModal && (
+        <CardEntryModal
+          open={true}
+          onClose={() => setCardEntryModal(null)}
+          contactId={cardEntryModal.contactId}
+          contactName={cardEntryModal.contactName}
+          agentName={user?.name || ""}
+          onSuccess={() => {
+            setCardEntryModal(null);
+            toast.success("Payment charged successfully! Webhook will handle order + subscription.");
+            refetch();
+          }}
+        />
+      )}
+
       {soldValidationModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", maxWidth: 440, width: "90%", boxShadow: "0 8px 30px rgba(0,0,0,0.25)" }}>

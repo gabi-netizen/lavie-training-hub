@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus, X, Package } from "lucide-react";
+import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus, X, Package, CreditCard, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
 import { BulkTemplateModal } from "@/components/BulkTemplateModal";
+import { CardEntryModal } from "@/components/CardEntryModal";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,19 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [showMaxBillingModal, setShowMaxBillingModal] = useState(false);
+
+  // Manual Charge sub-modal state
+  const [showManualChargeModal, setShowManualChargeModal] = useState(false);
+  const [manualChargeSearch, setManualChargeSearch] = useState("");
+  const [manualChargeAgent, setManualChargeAgent] = useState("");
+  const [manualChargeContact, setManualChargeContact] = useState<{ id: number; name: string } | null>(null);
+  const [showCardEntry, setShowCardEntry] = useState(false);
+
+  // Search contacts for manual charge
+  const { data: manualChargeContacts } = trpc.contacts.list.useQuery(
+    { search: manualChargeSearch, limit: 10, offset: 0 },
+    { enabled: showManualChargeModal && manualChargeSearch.length >= 2 }
+  );
 
   // Max Billing stats
   const { data: maxBillingData } = trpc.billing.getMaxBillingStats.useQuery(
@@ -1249,6 +1263,13 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 </div>
               </div>
               <button
+                onClick={() => setShowManualChargeModal(true)}
+                className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5"
+              >
+                <CreditCard size={12} />
+                Manual Charge
+              </button>
+              <button
                 onClick={() => setShowMaxBillingModal(false)}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition"
               >
@@ -1357,6 +1378,139 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
             </div>
           </div>
         </div>
+      )}
+      {/* ─── Manual Charge Sub-Modal ──────────────────────────────────────────────────────── */}
+      {showManualChargeModal && !showCardEntry && (
+        <div
+          className="fixed inset-0 z-[99998] flex items-center justify-center bg-black/50"
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowManualChargeModal(false); setManualChargeContact(null); setManualChargeAgent(""); setManualChargeSearch(""); } }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <CreditCard size={18} className="text-blue-700" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Manual Charge</h2>
+                  <p className="text-xs text-gray-500">Select a contact and enter card details</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowManualChargeModal(false); setManualChargeContact(null); setManualChargeAgent(""); setManualChargeSearch(""); }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 flex flex-col gap-4">
+              {/* Search Contact */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Search Contact</label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={manualChargeSearch}
+                    onChange={(e) => { setManualChargeSearch(e.target.value); setManualChargeContact(null); }}
+                    placeholder="Search by name or email..."
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                {/* Results dropdown */}
+                {manualChargeSearch.length >= 2 && !manualChargeContact && (
+                  <div className="mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
+                    {(manualChargeContacts as any)?.contacts?.length > 0 ? (
+                      (manualChargeContacts as any).contacts.map((c: any) => (
+                        <button
+                          key={c.id}
+                          onClick={() => { setManualChargeContact({ id: c.id, name: c.name }); setManualChargeSearch(c.name); }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-800 hover:bg-blue-50 transition flex items-center justify-between"
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-xs text-gray-500">{c.email || c.phone || ""}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-xs text-gray-500">No contacts found</div>
+                    )}
+                  </div>
+                )}
+                {manualChargeContact && (
+                  <div className="mt-1 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-xs font-medium text-green-800 flex items-center justify-between">
+                    <span>Selected: {manualChargeContact.name}</span>
+                    <button onClick={() => { setManualChargeContact(null); setManualChargeSearch(""); }} className="text-green-600 hover:text-green-800">
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Agent Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Agent Name</label>
+                <input
+                  type="text"
+                  value={manualChargeAgent}
+                  onChange={(e) => setManualChargeAgent(e.target.value)}
+                  placeholder="Enter agent name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  onClick={() => { setShowManualChargeModal(false); setManualChargeContact(null); setManualChargeAgent(""); setManualChargeSearch(""); }}
+                  className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!manualChargeContact) { toast.error("Please select a contact"); return; }
+                    if (!manualChargeAgent.trim()) { toast.error("Please enter agent name"); return; }
+                    setShowCardEntry(true);
+                  }}
+                  disabled={!manualChargeContact || !manualChargeAgent.trim()}
+                  className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <CreditCard size={14} />
+                  Enter Card Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Card Entry Modal for Manual Charge */}
+      {showCardEntry && manualChargeContact && (
+        <CardEntryModal
+          open={true}
+          onClose={() => {
+            setShowCardEntry(false);
+            setShowManualChargeModal(false);
+            setManualChargeContact(null);
+            setManualChargeAgent("");
+            setManualChargeSearch("");
+          }}
+          contactId={manualChargeContact.id}
+          contactName={manualChargeContact.name}
+          agentName={manualChargeAgent}
+          onSuccess={() => {
+            setShowCardEntry(false);
+            setShowManualChargeModal(false);
+            setManualChargeContact(null);
+            setManualChargeAgent("");
+            setManualChargeSearch("");
+            toast.success("Manual charge successful! Webhook will handle order + subscription.");
+            refetch();
+          }}
+        />
       )}
     </div>
   );
