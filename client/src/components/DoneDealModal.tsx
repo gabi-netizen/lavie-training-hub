@@ -3,7 +3,7 @@
  * All inputs are dropdowns/chips (no manual text input).
  */
 import { useState, useMemo } from "react";
-import { X, Package, Gift, CreditCard, Calculator } from "lucide-react";
+import { X, Package, Gift, CreditCard, Calculator, Truck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -61,6 +61,8 @@ export default function DoneDealModal({
   const [freeProduct, setFreeProduct] = useState("None");
   const [deposit, setDeposit] = useState(0);
   const [installments, setInstallments] = useState(1);
+  const [shippingOption, setShippingOption] = useState<"today" | "tomorrow" | "custom">("today");
+  const [customShipDate, setCustomShipDate] = useState("");
 
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: () => {
@@ -114,6 +116,19 @@ export default function DoneDealModal({
       return;
     }
 
+    // Calculate shipping date
+    let shipDate: string;
+    const today = new Date();
+    if (shippingOption === "today") {
+      shipDate = today.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    } else if (shippingOption === "tomorrow") {
+      const tmr = new Date(today);
+      tmr.setDate(tmr.getDate() + 1);
+      shipDate = tmr.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    } else {
+      shipDate = customShipDate ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "TBD";
+    }
+
     markDoneDealMutation.mutate({
       contactId,
       subscriptionId,
@@ -126,6 +141,7 @@ export default function DoneDealModal({
         installments,
         total,
         monthlyPayment: Math.max(0, monthlyPayment),
+        shippingDate: shipDate,
       },
     });
   };
@@ -284,6 +300,37 @@ export default function DoneDealModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Shipping Date */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Truck size={16} className="text-gray-900" />
+              <span className="text-sm font-semibold text-gray-900">Ship Products</span>
+            </div>
+            <div className="flex gap-2 mb-2">
+              {(["today", "tomorrow", "custom"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setShippingOption(opt)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    shippingOption === opt
+                      ? "bg-blue-600 text-white border-2 border-blue-700"
+                      : "bg-gray-100 text-gray-900 border-2 border-gray-200 hover:border-blue-300"
+                  }`}
+                >
+                  {opt === "today" ? "Today" : opt === "tomorrow" ? "Tomorrow" : "Custom"}
+                </button>
+              ))}
+            </div>
+            {shippingOption === "custom" && (
+              <input
+                type="date"
+                value={customShipDate}
+                onChange={(e) => setCustomShipDate(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
           </div>
 
           {/* Calculated Fields */}

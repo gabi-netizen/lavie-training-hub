@@ -3122,6 +3122,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           installments: z.number(),
           total: z.number(),
           monthlyPayment: z.number(),
+          shippingDate: z.string().optional(),
         }),
       })
     )
@@ -3158,6 +3159,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         `Total: £${dealDetails.total}`,
         `Installments: ${dealDetails.installments}`,
         `Monthly Payment: £${dealDetails.monthlyPayment.toFixed(2)}`,
+        `Ship Date: ${dealDetails.shippingDate || "Not specified"}`,
       ].join("\n");
 
       const htmlBody = `
@@ -3195,6 +3197,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             <tr style="font-size: 18px;"><td style="padding: 8px 0; font-weight: bold; color: #16a34a;">Total:</td><td style="font-weight: bold; color: #16a34a;">£${dealDetails.total}</td></tr>
             <tr><td style="padding: 6px 0; font-weight: bold;">Installments:</td><td>${dealDetails.installments}</td></tr>
             <tr><td style="padding: 6px 0; font-weight: bold;">Monthly Payment:</td><td>£${dealDetails.monthlyPayment.toFixed(2)}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Ship Date:</td><td style="font-weight: bold; color: #2563eb;">${dealDetails.shippingDate || "Not specified"}</td></tr>
           </table>
         </div>
       `;
