@@ -6,7 +6,7 @@ import { getContact } from "../contacts";
 import { normalisePhone } from "../contacts";
 import { getDb } from "../db";
 import { whatsappMessages, contacts, users, whatsappConversationAssignments, whatsappConversations, leadAssignments } from "../../drizzle/schema";
-import { eq, and, desc, sql, count, isNull, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, count, isNull, ne, inArray, notInArray } from "drizzle-orm";
 
 /**
  * Auto-assign a WhatsApp conversation to an agent.
@@ -1750,6 +1750,19 @@ export const whatsappRouter = router({
         if (latestMsg?.channel === "sms") sourceChannel = "SMS";
       }
 
+      // Check for duplicate: existing open lead with the same email
+      let isDuplicate = false;
+      if (email) {
+        const dupCheck = await db.select({ id: leadAssignments.id })
+          .from(leadAssignments)
+          .where(and(
+            eq(leadAssignments.email, email),
+            notInArray(leadAssignments.workStatus, ['done_deal', 'retained_sub', 'cancelled_sub', 'closed'])
+          ))
+          .limit(1);
+        if (dupCheck.length > 0) isDuplicate = true;
+      }
+
       // Create lead in lead_assignments
       const subscriptionId = `wa_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       await db.insert(leadAssignments).values({
@@ -1765,6 +1778,7 @@ export const whatsappRouter = router({
         managerNote: input.note ? input.note.slice(0, 500) : `Transferred from ${sourceChannel}`,
         eventDate: new Date().toISOString().split("T")[0],
         urgencyScore: 60,
+        isDuplicate,
       });
 
 

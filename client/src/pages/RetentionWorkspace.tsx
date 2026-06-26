@@ -1297,7 +1297,14 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
                         {/* Status */}
                         <td className="py-3 px-3">
-                          <StatusBadge lead={lead} />
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <StatusBadge lead={lead} />
+                            {lead.isDuplicate && (
+                              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-orange-100 text-orange-800 border-orange-200">
+                                Duplicate
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Callback Due (only in callbacks tab) */}

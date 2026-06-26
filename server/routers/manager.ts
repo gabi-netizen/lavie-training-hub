@@ -11,7 +11,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes } from "../../drizzle/schema";
 import { addCallNote, updateContact, normalisePhone } from "../contacts";
-import { eq, like, or, and, desc, sql, isNull, gte, lte, inArray } from "drizzle-orm";
+import { eq, like, or, and, desc, sql, isNull, gte, lte, inArray, notInArray } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
 import OpenAI from "openai";
 
@@ -305,6 +305,7 @@ export const managerRouter = router({
           lastTransactionDate: row.lastTransactionDate ?? null,
           lastShipmentDate: row.lastShipmentDate ?? null,
           contactId: row.contactId ?? null,
+          isDuplicate: row.isDuplicate ?? false,
           createdAt: row.createdAt ? row.createdAt.toISOString() : null,
         };
       });
@@ -801,6 +802,20 @@ export const managerRouter = router({
       const subscriptionId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       // Accept either managerNote or customerNote (n8n may send either field name)
       const rawNote = input.customerNote ?? input.managerNote;
+
+      // Check for duplicate: existing open lead with the same email
+      let isDuplicate = false;
+      if (input.email) {
+        const existing = await db.select({ id: leadAssignments.id })
+          .from(leadAssignments)
+          .where(and(
+            eq(leadAssignments.email, input.email),
+            notInArray(leadAssignments.workStatus, ['done_deal', 'retained_sub', 'cancelled_sub', 'closed'])
+          ))
+          .limit(1);
+        if (existing.length > 0) isDuplicate = true;
+      }
+
       await db.insert(leadAssignments).values({
         subscriptionId,
         customerName: input.customerName,
@@ -817,6 +832,7 @@ export const managerRouter = router({
         workStatus: input.assignedAgent ? "assigned" : "new",
         managerNote: rawNote ? stripHtml(rawNote) : null,
         eventDate: new Date().toISOString().split("T")[0],
+        isDuplicate,
       });
 
       return { success: true, subscriptionId };
@@ -907,7 +923,7 @@ export const managerRouter = router({
         const subscriptionId = `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
         try {
-          // Check for duplicate by email or phone (upsert logic)
+          // Check for existing lead by email or phone (upsert logic)
           let existingId: number | null = null;
           if (lead.email) {
             const existing = await db
@@ -946,6 +962,19 @@ export const managerRouter = router({
               .where(eq(leadAssignments.id, existingId));
             updated++;
           } else {
+            // Check for duplicate: another open lead with the same email that is NOT the one we just matched
+            let isDuplicate = false;
+            if (lead.email) {
+              const dupCheck = await db.select({ id: leadAssignments.id })
+                .from(leadAssignments)
+                .where(and(
+                  eq(leadAssignments.email, lead.email),
+                  notInArray(leadAssignments.workStatus, ['done_deal', 'retained_sub', 'cancelled_sub', 'closed'])
+                ))
+                .limit(1);
+              if (dupCheck.length > 0) isDuplicate = true;
+            }
+
             // Insert new lead
             await db.insert(leadAssignments).values({
               subscriptionId,
@@ -967,6 +996,7 @@ export const managerRouter = router({
               callbackAt: lead.callbackAt || null,
               managerNote: lead.customerNote ? stripHtml(lead.customerNote) : null,
               agentNote: lead.address || null,
+              isDuplicate,
             });
             inserted++;
           }

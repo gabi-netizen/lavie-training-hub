@@ -502,6 +502,8 @@ export const leadAssignments = mysqlTable("lead_assignments", {
   cancelledAt: varchar("cancelledAt", { length: 32 }),
   /** Contact ID linked to this lead (from CRM contacts table) */
   contactId: int("contactId"),
+  /** Whether this lead is a duplicate of an existing open lead (same email) */
+  isDuplicate: boolean("isDuplicate").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
