@@ -3048,6 +3048,10 @@ export default function Workspace() {
   const [listFilter, setListFilter] = useState<string>("active");
 
   const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails" | "fullscript" | "butler">("pitch");
+  // ── Sold validation popup state ──
+  const [soldValidationModal, setSoldValidationModal] = useState<{ contactId: number; missing: string[] } | null>(null);
+  const [soldModalTrialKit, setSoldModalTrialKit] = useState("");
+  const [soldModalAddress, setSoldModalAddress] = useState("");
   const managerMode = activeTab === "manager";
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(() => {
     const saved = localStorage.getItem('ws_selectedAgentId');
@@ -3323,17 +3327,32 @@ export default function Workspace() {
       const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
       const nextContact = contacts[currentIndex + 1];
       if (nextContact) setActiveId(nextContact.id);
-    } else if (action === "sold" || action === "no" || action === "skip" || action === "done") {
-      // If next is pressed, silently end any active/ringing call
+    } else if (action === "sold") {
+      // ── VALIDATION: Sold requires trialKit + address ──
+      const soldContact = (contacts as any[]).find((c) => c.id === contactId);
+      const missing = getMissingPaymentRequirements(soldContact || {});
+      if (missing.length > 0) {
+        // Show popup with missing fields so agent can fill them in
+        setSoldModalTrialKit(soldContact?.trialKit || "");
+        setSoldModalAddress(soldContact?.address || "");
+        setSoldValidationModal({ contactId, missing });
+        return;
+      }
+      setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: "Sold" }));
+      updateContact.mutate({ id: contactId, status: "done_deal" as any, callbackAt: null, previousStatus: soldContact?.status || "working" });
+      const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
+      const nextContact = contacts[currentIndex + 1];
+      if (nextContact) setActiveId(nextContact.id);
+    } else if (action === "no" || action === "skip" || action === "done") {
+      // If skip is pressed, silently end any active/ringing call
       if (action === "skip") {
         const iframe = document.querySelector<HTMLIFrameElement>('iframe[src*="phone.cloudtalk.io"]');
         if (iframe?.contentWindow) {
           iframe.contentWindow.postMessage(JSON.stringify({ event: "hangup", properties: {} }), "https://phone.cloudtalk.io");
         }
       }
-      const displayLabel = action === "sold" ? "Sold" : action === "no" ? "No" : action === "done" ? "Done" : "N/A";
+      const displayLabel = action === "no" ? "No" : action === "done" ? "Done" : "N/A";
       setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: displayLabel }));
-      // Persist status to DB and clear any scheduled callback
       const newStatus = ACTION_TO_STATUS[action];
       if (newStatus) {
         const currentContact = (contacts as any[]).find((c) => c.id === contactId);
@@ -4433,6 +4452,80 @@ export default function Workspace() {
           </div>
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
             <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>For any other question click the purple <strong>Maximus</strong> button or the orange <strong>Protocol</strong> button at the top of your page.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sold Validation Popup ── */}
+      {soldValidationModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", maxWidth: 440, width: "90%", boxShadow: "0 8px 30px rgba(0,0,0,0.25)" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: "#dc2626", margin: "0 0 6px" }}>⚠️ Missing Information</h2>
+            <p style={{ fontSize: 13, color: "#374151", margin: "0 0 16px" }}>Please complete the following before marking as Sold:</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+              {/* Trial Kit */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: soldModalTrialKit ? "#374151" : "#dc2626", display: "block", marginBottom: 4 }}>
+                  Trial Kit {!soldModalTrialKit && "⚠️ Required"}
+                </label>
+                <select
+                  value={soldModalTrialKit}
+                  onChange={(e) => setSoldModalTrialKit(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: soldModalTrialKit ? "1.5px solid #d1d5db" : "1.5px solid #dc2626", fontSize: 13, color: "#1f2937", background: "#fff" }}
+                >
+                  <option value="">Select Trial Kit</option>
+                  {TRIAL_KIT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: soldModalAddress?.trim() ? "#374151" : "#dc2626", display: "block", marginBottom: 4 }}>
+                  Customer Address {!soldModalAddress?.trim() && "⚠️ Required"}
+                </label>
+                <input
+                  type="text"
+                  value={soldModalAddress}
+                  onChange={(e) => setSoldModalAddress(e.target.value)}
+                  placeholder="Enter full address with postcode"
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: soldModalAddress?.trim() ? "1.5px solid #d1d5db" : "1.5px solid #dc2626", fontSize: 13, color: "#1f2937" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setSoldValidationModal(null)}
+                style={{ padding: "9px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Validate again
+                  if (!soldModalTrialKit?.trim() || !soldModalAddress?.trim()) {
+                    toast.error("Please fill in all required fields");
+                    return;
+                  }
+                  const cId = soldValidationModal.contactId;
+                  const soldContact = (contacts as any[]).find((c) => c.id === cId);
+                  // Save the fields to DB
+                  updateContact.mutate({ id: cId, trialKit: soldModalTrialKit, address: soldModalAddress });
+                  // Mark as sold
+                  setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [cId]: "Sold" }));
+                  updateContact.mutate({ id: cId, status: "done_deal" as any, callbackAt: null, previousStatus: soldContact?.status || "working" });
+                  setSoldValidationModal(null);
+                  // Move to next
+                  const currentIndex = contacts.findIndex((c: any) => c.id === cId);
+                  const nextContact = contacts[currentIndex + 1];
+                  if (nextContact) setActiveId(nextContact.id);
+                }}
+                style={{ background: "#16a34a", color: "white", fontWeight: 700, padding: "9px 18px", borderRadius: 8, fontSize: 14, border: "none", cursor: "pointer" }}
+              >
+                Confirm Sold ✓
+              </button>
+            </div>
           </div>
         </div>
       )}
