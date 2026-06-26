@@ -1177,7 +1177,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.status}</td>
                           <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.salesPerson}</td>
                         </tr>
-                      ))
+                      ))}
                   {modalData.length === 0 && (
                     <tr>
                       <td
