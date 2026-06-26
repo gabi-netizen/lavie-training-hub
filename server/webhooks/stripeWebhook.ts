@@ -881,3 +881,6 @@ export default async function handler(req: Request, res: Response) {
     res.status(500).json({ error: "Webhook handler failed" });
   }
 }
+
+// Named export alias for index.ts import
+export { handler as handleStripeBillingWebhook };

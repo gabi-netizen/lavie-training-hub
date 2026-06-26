@@ -1198,7 +1198,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                 onDelete={!user?.team ? () => {
                   if (confirm(`Delete ${bulkSelectedCount} lead${bulkSelectedCount > 1 ? "s" : ""}? This cannot be undone.`)) {
                     const selectedLeads = (leadsData?.leads ?? []).filter((l: any) => bulkSelectedIds.has(l.subscriptionId));
-                    const ids = selectedLeads.map((l: any) => l.id).filter(Boolean);
+                    const ids = selectedLeads.map((l: any) => l.assignmentId).filter(Boolean);
                     if (ids.length > 0) {
                       bulkDeleteLeadsMutation.mutate({ ids });
                     }
