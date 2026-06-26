@@ -2296,14 +2296,15 @@ export default function ContactCard() {
                     </div>
                   )}
 
-                  {/* Agent Notes section — manual notes from agents */}
+                  {/* Agent Notes section — manual notes from agents (hidden when empty) */}
+                  {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7") && !n.note.startsWith("\uD83D\uDCCB")).length > 0 && (
                   <div>
                     <p className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-3">Agent Notes</p>
-                    {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7")).length === 0 ? (
+                    {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7") && !n.note.startsWith("\uD83D\uDCCB")).length === 0 ? (
                       <p className="text-xs text-gray-600 italic">No agent notes yet. Click "+ Add Entry" above to add one.</p>
                     ) : (
                       <div className="flex flex-col gap-3">
-                        {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7")).map((note) => (
+                        {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7") && !n.note.startsWith("\uD83D\uDCCB")).map((note) => (
                           <div key={`agent-note-${note.id}`} className="rounded-xl border border-gray-200 p-3">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-semibold text-gray-800">{note.agentName || "Agent"}</span>
@@ -2336,9 +2337,11 @@ export default function ContactCard() {
                       </div>
                     )}
                   </div>
-
-                  {/* Divider */}
-                  <div className="border-t border-gray-200 pt-4" />
+                  )}
+                  {/* Divider — only show if agent notes exist */}
+                  {contact.callNotes.filter((n) => !n.note.startsWith("\uD83E\uDD16") && !n.note.startsWith("\uD83D\uDCE7") && !n.note.startsWith("\uD83D\uDCCB")).length > 0 && (
+                    <div className="border-t border-gray-200 pt-4" />
+                  )}
 
                   {/* AI Call Notes section — only 5+ min analyzed calls */}
                   {aiNotesData?.notes && aiNotesData.notes.length > 0 && (() => {
