@@ -1197,7 +1197,7 @@ export default function ContactCard() {
                     <button
                       onClick={() => {
                         if (!contact.email) { toast.error("No email address on file"); return; }
-                        setEmailOpen((v) => !v);
+                        setTemplatePickerOpen(true);
                       }}
                       disabled={!contact.email}
                       className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-amber-400 hover:bg-amber-500 text-white transition disabled:opacity-40 disabled:cursor-not-allowed border-2 border-amber-500"
