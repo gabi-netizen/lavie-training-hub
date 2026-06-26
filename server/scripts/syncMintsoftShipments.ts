@@ -44,7 +44,11 @@ const STATUS_MAP: Record<number, string> = {
  * Converts a Mintsoft order into the shape expected by the shipments table.
  */
 function mapOrderToShipment(order: MintsoftOrder, email: string) {
-  const status = STATUS_MAP[order.OrderStatusId] ?? "Unknown";
+  // Determine shipment status: if dispatched, show that regardless of invoice status
+  let status = STATUS_MAP[order.OrderStatusId] ?? "Unknown";
+  if (order.DespatchDate) {
+    status = "Despatched";
+  }
   const items = Array.isArray(order.Items)
     ? order.Items.map((item) => ({
         sku: item.SKU ?? "",
