@@ -1210,7 +1210,7 @@ export default function ContactCard() {
                       Prev
                     </button>
                     <span className="text-sm font-bold text-slate-800">
-                      {currentLeadIndex >= 0 ? currentLeadIndex + 1 : "\u2014"} / {totalLeads}
+                      Lead {currentLeadIndex >= 0 ? currentLeadIndex + 1 : "\u2014"} of {totalLeads}
                     </span>
                     <button
                       onClick={() => nextLead && navigateToLead(nextLead, currentLeadIndex + 1)}
