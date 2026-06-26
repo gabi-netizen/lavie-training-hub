@@ -1261,10 +1261,11 @@ export const contactsRouter = router({
     .input(
       z.object({
         contactId: z.number(),
+        billingPlanId: z.number().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const { contactId } = input;
+      const { contactId, billingPlanId } = input;
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -1344,7 +1345,9 @@ export const contactsRouter = router({
         .limit(1);
       if (existingOrder.length > 0) {
         // Order already exists — just mark as sold without creating duplicate
-        await db.update(contactsSchema).set({ status: "done_deal" }).where(eq(contactsSchema.id, contactId));
+        const updateData: any = { status: "done_deal" };
+        if (billingPlanId) updateData.billingPlanId = billingPlanId;
+        await db.update(contactsSchema).set(updateData).where(eq(contactsSchema.id, contactId));
         return { success: true, alreadyShipped: true, message: "Deal confirmed (shipment already created)" };
       }
 
@@ -1379,8 +1382,10 @@ export const contactsRouter = router({
             triggeredBy: "sold_button",
           },
         });
-        // Mark as done_deal
-        await db.update(contactsSchema).set({ status: "done_deal" }).where(eq(contactsSchema.id, contactId));
+        // Mark as done_deal + assign billing plan
+        const updateData2: any = { status: "done_deal" };
+        if (billingPlanId) updateData2.billingPlanId = billingPlanId;
+        await db.update(contactsSchema).set(updateData2).where(eq(contactsSchema.id, contactId));
         return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
       } else {
         // Log failure

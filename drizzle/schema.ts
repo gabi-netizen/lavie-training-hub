@@ -206,6 +206,8 @@ export const contacts = mysqlTable("contacts", {
   cardExpMonth: int("cardExpMonth"),
   /** Stripe card expiry year */
   cardExpYear: int("cardExpYear"),
+  /** FK to billing_plans — which campaign/billing plan this contact is on */
+  billingPlanId: int("billingPlanId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -1146,3 +1148,21 @@ export const shipments = mysqlTable("shipments", {
 
 export type Shipment = typeof shipments.$inferSelect;
 export type InsertShipment = typeof shipments.$inferInsert;
+
+// ─── Billing Plans (Campaigns) ───────────────────────────────────────────────
+export const billingPlans = mysqlTable("billing_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Plan name e.g. "Trial Campaign" */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** Plan type */
+  type: mysqlEnum("type", ["subscription", "installment", "one_time"]).notNull(),
+  /** JSON array of phase objects */
+  phases: json("phases").notNull(),
+  /** Whether this plan is active (soft delete sets to false) */
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BillingPlan = typeof billingPlans.$inferSelect;
+export type InsertBillingPlan = typeof billingPlans.$inferInsert;

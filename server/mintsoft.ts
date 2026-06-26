@@ -305,3 +305,92 @@ export async function createMintsoftOrder(params: CreateMintsoftOrderParams): Pr
     orderNumber: orderNumber,
   };
 }
+
+// ─── Create Mintsoft Order from Billing Plan Phase ────────────────────────────
+
+export interface CreateMintsoftOrderFromPhaseParams {
+  contactId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  mintsoftItems: { SKU: string; Quantity: number }[];
+  orderValue?: number;
+}
+
+/**
+ * Creates a Mintsoft order using explicit items from a billing plan phase
+ * (instead of deriving items from a trialKit value).
+ */
+export async function createMintsoftOrderFromPhase(params: CreateMintsoftOrderFromPhaseParams): Promise<CreateMintsoftOrderResult> {
+  const { contactId, firstName, lastName, email, phone, address, mintsoftItems, orderValue } = params;
+
+  if (!mintsoftItems || mintsoftItems.length === 0) {
+    return {
+      success: false,
+      error: "No Mintsoft items defined for this phase",
+    };
+  }
+
+  // Parse the address
+  const parsed = parseUkAddress(address);
+
+  // Generate unique order number
+  const timestamp = Date.now();
+  const orderNumber = `LAVIE-SUB-${contactId}-${timestamp}`;
+
+  // Authenticate
+  const apiKey = await getMintsoftApiKey();
+
+  // Build the order payload
+  const orderPayload = {
+    OrderNumber: orderNumber,
+    FirstName: firstName,
+    LastName: lastName,
+    Email: email,
+    Phone: phone,
+    Address1: parsed.Address1,
+    Town: parsed.Town,
+    County: parsed.County,
+    PostCode: parsed.PostCode,
+    CountryId: 1, // UK
+    WarehouseId: 3, // HAY
+    CourierServiceId: 17, // Royal Mail Tracked 48 & Signed
+    CurrencyId: 1, // GBP
+    OrderValue: orderValue ?? 44.90,
+    OrderItems: mintsoftItems.map((item) => ({
+      SKU: item.SKU,
+      Quantity: item.Quantity,
+      UnitPrice: SKU_PRICES[item.SKU] ?? 0,
+    })),
+  };
+
+  const url = `https://api.mintsoft.co.uk/api/Order?APIKey=${encodeURIComponent(apiKey)}`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(orderPayload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return {
+      success: false,
+      error: `Mintsoft order creation failed: ${response.status} ${response.statusText} - ${errorText}`,
+    };
+  }
+
+  const data = await response.json();
+  const orderId = data?.ID ?? data?.id ?? null;
+
+  return {
+    success: true,
+    orderId: orderId,
+    orderNumber: orderNumber,
+  };
+}

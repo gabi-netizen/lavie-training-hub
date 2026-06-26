@@ -37,6 +37,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CampaignsTab from "@/components/CampaignsTab";
 
 // Navigation hook for View button
 function useNavigate() {
@@ -330,6 +331,9 @@ function FailedPaymentsSection() {
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function BillingPage() {
   const navigate = useNavigate();
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"dashboard" | "campaigns">("dashboard");
+
   // Filters state
   const [statusFilter, setStatusFilter] = useState("all");
   const [planTypeFilter, setPlanTypeFilter] = useState("all");
@@ -459,6 +463,37 @@ export default function BillingPage() {
         </div>
       </div>
 
+      {/* ── Tab Navigation ── */}
+      <div className="flex items-center gap-0 px-6 border-b border-gray-200 bg-white shrink-0">
+        <button
+          onClick={() => setActiveTab("dashboard")}
+          className={cn(
+            "px-5 py-3 text-sm font-semibold border-b-2 transition",
+            activeTab === "dashboard"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-800 hover:text-blue-600"
+          )}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab("campaigns")}
+          className={cn(
+            "px-5 py-3 text-sm font-semibold border-b-2 transition",
+            activeTab === "campaigns"
+              ? "border-blue-600 text-blue-700"
+              : "border-transparent text-gray-800 hover:text-blue-600"
+          )}
+        >
+          Campaigns
+        </button>
+      </div>
+
+      {activeTab === "campaigns" ? (
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <CampaignsTab />
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* ── ROW 1: Summary Cards (6 cards) ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -1044,6 +1079,7 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── MODALS ── */}
       {/* New Subscription Modal */}

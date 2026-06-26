@@ -23,9 +23,9 @@ import type { Request, Response } from "express";
 import Stripe from "stripe";
 import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
-import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions } from "../../drizzle/schema";
+import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions, billingPlans } from "../../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
-import { createMintsoftOrder } from "../mintsoft";
+import { createMintsoftOrder, createMintsoftOrderFromPhase } from "../mintsoft";
 
 // ─── Signature Verification & Event Construction ─────────────────────────────
 
@@ -411,67 +411,45 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
 
           if (result.success) {
             await db.insert(stripeAuditLog).values({
-              eventId: `mintsoft-created-${contactId}-${Date.now()}`,
+              eventId: `mintsoft-${contactId}-${Date.now()}`,
               eventType: "mintsoft_order_created",
               customerId,
               status: "processed",
               source: "max_billing",
               metadata: {
                 contactId,
-                mintsoftOrderId: result.orderId,
+                orderId: result.orderId,
                 orderNumber: result.orderNumber,
                 trialKit: contact.trialKit,
+                triggeredBy: "webhook_payment_intent.succeeded",
               },
             });
-            console.log(
-              `[Stripe Webhook] Mintsoft order created: ${result.orderNumber} (ID: ${result.orderId}) for contact ${contactId}`
-            );
+            console.log(`[Stripe Webhook] Mintsoft trial order created: ${result.orderNumber} for contact ${contactId}`);
           } else {
             await db.insert(stripeAuditLog).values({
               eventId: `mintsoft-failed-${contactId}-${Date.now()}`,
               eventType: "mintsoft_order_failed",
               customerId,
               status: "error",
+              source: "max_billing",
               metadata: {
                 contactId,
                 error: result.error,
                 trialKit: contact.trialKit,
+                triggeredBy: "webhook_payment_intent.succeeded",
               },
             });
-            console.error(
-              `[Stripe Webhook] Mintsoft order failed for contact ${contactId}: ${result.error}`
-            );
+            console.error(`[Stripe Webhook] Mintsoft trial order failed for contact ${contactId}: ${result.error}`);
           }
         }
       }
     } catch (mintsoftErr) {
-      // Mintsoft failure must NOT break the webhook response
-      console.error(
-        `[Stripe Webhook] Mintsoft order error for contact ${contactId}:`,
-        mintsoftErr
-      );
-      try {
-        const db = await getDb();
-        if (db) {
-          await db.insert(stripeAuditLog).values({
-            eventId: `mintsoft-error-${contactId}-${Date.now()}`,
-            eventType: "mintsoft_order_failed",
-            customerId,
-            status: "error",
-            metadata: {
-              contactId,
-              error: mintsoftErr instanceof Error ? mintsoftErr.message : "Unknown error",
-            },
-          });
-        }
-      } catch {
-        // Swallow — best effort audit
-      }
+      console.error(`[Stripe Webhook] Mintsoft trial order error for contact ${contactId}:`, mintsoftErr);
     }
   }
 }
 
-async function handlePaymentIntentFailed(event: Stripe.Event): Promise<void> {
+async function handlePaymentIntentPaymentFailed(event: Stripe.Event): Promise<void> {
   const pi = event.data.object as Stripe.PaymentIntent;
   const customerId = extractCustomerId(pi.customer as any);
   await insertAuditLog({
@@ -480,11 +458,8 @@ async function handlePaymentIntentFailed(event: Stripe.Event): Promise<void> {
     customerId,
     amount: pi.amount,
     currency: pi.currency,
-    status: "failed",
-    metadata: {
-      paymentIntentId: pi.id,
-      failureMessage: pi.last_payment_error?.message ?? "Unknown failure",
-    },
+    status: "error",
+    metadata: { paymentIntentId: pi.id, status: pi.status, lastError: pi.last_payment_error?.message },
   });
 }
 
@@ -609,20 +584,22 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
             .where(eq(clientSubscriptions.subscriptionId, subscriptionId))
             .limit(1);
 
+          let currentCycle = 1;
           if (existingSub) {
             // Update existing subscription
+            currentCycle = (existingSub.currentBillingCycle || 0) + 1;
             await db
               .update(clientSubscriptions)
               .set({
                 status: 'live',
                 lastBilledOn: todayStr as any,
-                currentBillingCycle: (existingSub.currentBillingCycle || 0) + 1,
+                currentBillingCycle: currentCycle,
                 nextBillingOn: nextBillingStr as any,
                 updatedAt: new Date()
               })
               .where(eq(clientSubscriptions.subscriptionId, subscriptionId));
             
-            console.log(`[Stripe Webhook] Updated existing client_subscription ${subscriptionId} to live for contact ${mapping.contactId}`);
+            console.log(`[Stripe Webhook] Updated existing client_subscription ${subscriptionId} to live (cycle ${currentCycle}) for contact ${mapping.contactId}`);
           } else {
             // Create new subscription
             await db.insert(clientSubscriptions).values({
@@ -648,69 +625,121 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
             console.log(`[Stripe Webhook] Created new client_subscription ${subscriptionId} for contact ${mapping.contactId}`);
           }
 
-          // ── Auto-create Mintsoft order for Matinika 60ML on subscription payment ──
+          // ─── Billing Plan Phase-based Mintsoft Order ──────────────────────
+          // Look up contact's billingPlanId and create Mintsoft order based on the appropriate phase
           try {
-            if (contact.address) {
-              // Check for duplicate Mintsoft subscription order
-              const existingSubOrder = await db
-                .select({ id: stripeAuditLog.id })
-                .from(stripeAuditLog)
-                .where(
-                  sql`${stripeAuditLog.eventType} = 'mintsoft_subscription_order' AND ${stripeAuditLog.eventId} = ${event.id}`
-                )
+            const [contactFull] = await db
+              .select({
+                billingPlanId: contacts.billingPlanId,
+                address: contacts.address,
+                name: contacts.name,
+                email: contacts.email,
+                phone: contacts.phone,
+              })
+              .from(contacts)
+              .where(eq(contacts.id, mapping.contactId))
+              .limit(1);
+
+            if (contactFull?.billingPlanId && contactFull.address) {
+              const [plan] = await db
+                .select()
+                .from(billingPlans)
+                .where(eq(billingPlans.id, contactFull.billingPlanId))
                 .limit(1);
-              if (existingSubOrder.length === 0) {
-                const nameParts = (contact.name || "").trim().split(/\s+/);
-                const firstName = nameParts[0] || "";
-                const lastName = nameParts.slice(1).join(" ") || "";
-                const mintsoftResult = await createMintsoftOrder({
-                  contactId: mapping.contactId,
-                  firstName,
-                  lastName,
-                  email: contact.email || "",
-                  phone: contact.phone || "",
-                  address: contact.address,
-                  trialKit: "Matinika 60ML", // Always Matinika on subscription
-                });
-                if (mintsoftResult.success) {
-                  await db.insert(stripeAuditLog).values({
-                    eventId: event.id,
-                    eventType: "mintsoft_subscription_order",
-                    customerId,
-                    subscriptionId,
-                    status: "processed",
-                    source: "max_billing",
-                    metadata: {
-                      contactId: mapping.contactId,
-                      orderId: mintsoftResult.orderId,
-                      orderNumber: mintsoftResult.orderNumber,
-                      product: "Matinika 60ML",
-                      triggeredBy: "subscription_invoice_paid",
-                    },
+
+              if (plan && Array.isArray(plan.phases)) {
+                const phases = plan.phases as Array<{
+                  phase: number;
+                  productName: string;
+                  sku: string;
+                  price: number;
+                  triggerType: string;
+                  triggerDays: number;
+                  mintsoftItems: { SKU: string; Quantity: number }[];
+                }>;
+
+                // Determine which phase to use based on billing cycle:
+                // Phase 1 = immediate (trial kit, handled elsewhere)
+                // Phase 2 = first subscription payment (cycle 1)
+                // Phase 3+ = recurring (cycle 2+)
+                let matchedPhase = null;
+
+                // First, look for a phase that matches this exact cycle
+                // Cycle 1 of subscription = Phase 2 (days_after_start)
+                // Cycle 2+ = Phase 3 (recurring)
+                if (currentCycle === 1) {
+                  // First subscription payment — find phase with triggerType "days_after_start"
+                  matchedPhase = phases.find(p => p.triggerType === "days_after_start");
+                }
+                if (!matchedPhase && currentCycle >= 2) {
+                  // Recurring payments — find phase with triggerType "recurring"
+                  matchedPhase = phases.find(p => p.subscription_type === "recurring" || p.triggerType === "recurring");
+                }
+                // Fallback: if no specific match, use the last non-immediate phase
+                if (!matchedPhase) {
+                  matchedPhase = phases.filter(p => p.triggerType !== "immediate").pop();
+                }
+
+                if (matchedPhase && matchedPhase.mintsoftItems && matchedPhase.mintsoftItems.length > 0) {
+                  const nameParts = (contactFull.name || "").trim().split(/\s+/);
+                  const firstName = nameParts[0] || "";
+                  const lastName = nameParts.slice(1).join(" ") || "";
+
+                  const orderResult = await createMintsoftOrderFromPhase({
+                    contactId: mapping.contactId,
+                    firstName,
+                    lastName,
+                    email: contactFull.email || "",
+                    phone: contactFull.phone || "",
+                    address: contactFull.address,
+                    mintsoftItems: matchedPhase.mintsoftItems,
+                    orderValue: matchedPhase.price,
                   });
-                  console.log(`[Stripe Webhook] Mintsoft subscription order created for contact ${mapping.contactId}: ${mintsoftResult.orderNumber}`);
+
+                  if (orderResult.success) {
+                    await db.insert(stripeAuditLog).values({
+                      eventId: `mintsoft-sub-${mapping.contactId}-cycle${currentCycle}-${Date.now()}`,
+                      eventType: "mintsoft_order_created",
+                      customerId,
+                      subscriptionId,
+                      status: "processed",
+                      source: "max_billing",
+                      metadata: {
+                        contactId: mapping.contactId,
+                        mintsoftOrderId: orderResult.orderId,
+                        orderNumber: orderResult.orderNumber,
+                        billingCycle: currentCycle,
+                        phase: matchedPhase.phase,
+                        productName: matchedPhase.productName,
+                        triggeredBy: "invoice_paid_webhook",
+                      },
+                    });
+                    console.log(`[Stripe Webhook] Mintsoft subscription order created: ${orderResult.orderNumber} for contact ${mapping.contactId} (cycle ${currentCycle}, phase ${matchedPhase.phase})`);
+                  } else {
+                    await db.insert(stripeAuditLog).values({
+                      eventId: `mintsoft-sub-failed-${mapping.contactId}-cycle${currentCycle}-${Date.now()}`,
+                      eventType: "mintsoft_order_failed",
+                      customerId,
+                      subscriptionId,
+                      status: "error",
+                      source: "max_billing",
+                      metadata: {
+                        contactId: mapping.contactId,
+                        error: orderResult.error,
+                        billingCycle: currentCycle,
+                        phase: matchedPhase.phase,
+                        triggeredBy: "invoice_paid_webhook",
+                      },
+                    });
+                    console.error(`[Stripe Webhook] Mintsoft subscription order failed for contact ${mapping.contactId} (cycle ${currentCycle}): ${orderResult.error}`);
+                  }
                 } else {
-                  await db.insert(stripeAuditLog).values({
-                    eventId: `mintsoft-sub-failed-${mapping.contactId}-${Date.now()}`,
-                    eventType: "mintsoft_subscription_order_failed",
-                    customerId,
-                    subscriptionId,
-                    status: "failed",
-                    source: "max_billing",
-                    metadata: {
-                      contactId: mapping.contactId,
-                      error: mintsoftResult.error,
-                      triggeredBy: "subscription_invoice_paid",
-                    },
-                  });
-                  console.error(`[Stripe Webhook] Mintsoft subscription order FAILED for contact ${mapping.contactId}: ${mintsoftResult.error}`);
+                  console.log(`[Stripe Webhook] No matching phase with Mintsoft items for contact ${mapping.contactId} (cycle ${currentCycle}, plan ${contactFull.billingPlanId})`);
                 }
               }
-            } else {
-              console.warn(`[Stripe Webhook] Mintsoft subscription order skipped for contact ${mapping.contactId}: no address`);
             }
-          } catch (mintsoftErr) {
-            console.error(`[Stripe Webhook] Mintsoft subscription order error for contact ${mapping.contactId}:`, mintsoftErr);
+          } catch (phaseErr) {
+            console.error(`[Stripe Webhook] Error processing billing plan phase for contact ${mapping.contactId}:`, phaseErr);
           }
         }
       }
@@ -723,15 +752,7 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
 async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
   const invoice = event.data.object as Stripe.Invoice;
   const customerId = extractCustomerId(invoice.customer as any);
-
-  let subscriptionId: string | null = null;
-  if (invoice.parent?.subscription_details?.subscription) {
-    const sub = invoice.parent.subscription_details.subscription;
-    subscriptionId = typeof sub === "string" ? sub : sub.id;
-  } else if ((invoice as any).subscription) {
-    const sub = (invoice as any).subscription;
-    subscriptionId = typeof sub === "string" ? sub : sub.id;
-  }
+  const subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
 
   await insertAuditLog({
     eventId: event.id,
@@ -740,160 +761,84 @@ async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
     subscriptionId,
     amount: invoice.amount_due,
     currency: invoice.currency,
-    status: "failed",
-    metadata: { invoiceId: invoice.id, attemptCount: invoice.attempt_count },
+    status: "error",
+    metadata: { invoiceId: invoice.id, invoiceStatus: invoice.status },
   });
+}
 
-  if (subscriptionId) {
-    try {
-      const db = await getDb();
-      if (!db) return;
-
-      const [existingSub] = await db
-        .select()
-        .from(clientSubscriptions)
-        .where(eq(clientSubscriptions.subscriptionId, subscriptionId))
-        .limit(1);
-
-      if (existingSub) {
-        await db
-          .update(clientSubscriptions)
-          .set({
-            status: 'dunning',
-            updatedAt: new Date()
-          })
-          .where(eq(clientSubscriptions.subscriptionId, subscriptionId));
-          
-        console.log(`[Stripe Webhook] Updated client_subscription ${subscriptionId} to dunning`);
-      }
-    } catch (err) {
-      console.error(`[Stripe Webhook] Error updating client_subscriptions on invoice.payment_failed for sub ${subscriptionId}:`, err);
-    }
-  }
+async function handleChargeDisputeCreated(event: Stripe.Event): Promise<void> {
+  const dispute = event.data.object as Stripe.Dispute;
+  const customerId = extractCustomerId(dispute.customer as any);
+  await insertAuditLog({
+    eventId: event.id,
+    eventType: event.type,
+    customerId,
+    amount: dispute.amount,
+    currency: dispute.currency,
+    status: "error",
+    metadata: { disputeId: dispute.id, reason: dispute.reason, status: dispute.status },
+  });
 }
 
 async function handleChargeRefunded(event: Stripe.Event): Promise<void> {
   const charge = event.data.object as Stripe.Charge;
   const customerId = extractCustomerId(charge.customer as any);
-
-  // Try to extract subscription ID from payment_intent metadata or invoice
-  let subscriptionId: string | null = null;
-  if ((charge as any).invoice) {
-    const inv = (charge as any).invoice;
-    subscriptionId = typeof inv === "string" ? inv : inv?.id ?? null;
-  }
-
   await insertAuditLog({
     eventId: event.id,
     eventType: event.type,
     customerId,
-    subscriptionId,
     amount: charge.amount_refunded,
     currency: charge.currency,
-    status: "refunded",
-    metadata: {
-      chargeId: charge.id,
-      amountRefunded: charge.amount_refunded,
-      refundReason: (charge as any).refunds?.data?.[0]?.reason ?? "unknown",
-    },
+    status: "processed",
+    metadata: { chargeId: charge.id, refundStatus: charge.status },
   });
 }
 
 async function handleChargeSucceeded(event: Stripe.Event): Promise<void> {
   const charge = event.data.object as Stripe.Charge;
   const customerId = extractCustomerId(charge.customer as any);
-
-  let subscriptionId: string | null = null;
-  if ((charge as any).invoice) {
-    const inv = (charge as any).invoice;
-    subscriptionId = typeof inv === "string" ? inv : inv?.id ?? null;
-  }
-
   await insertAuditLog({
     eventId: event.id,
     eventType: event.type,
     customerId,
-    subscriptionId,
     amount: charge.amount,
     currency: charge.currency,
     status: "processed",
-    metadata: {
-      chargeId: charge.id,
-      paymentMethod: charge.payment_method,
-      receiptUrl: charge.receipt_url,
-    },
-  });
-
-  // Update card info on successful charge
-  if (customerId) {
-    await updateContactCardInfo(customerId);
-  }
-}
-
-async function handleChargeDisputeCreated(event: Stripe.Event): Promise<void> {
-  const dispute = event.data.object as Stripe.Dispute;
-  const chargeId = typeof dispute.charge === "string" ? dispute.charge : (dispute.charge as any)?.id ?? null;
-  await insertAuditLog({
-    eventId: event.id,
-    eventType: event.type,
-    customerId: null,
-    amount: dispute.amount,
-    currency: dispute.currency,
-    status: "dispute",
-    metadata: { disputeId: dispute.id, chargeId, reason: dispute.reason },
+    metadata: { chargeId: charge.id, status: charge.status },
   });
 }
 
-// ─── Main Webhook Handler ────────────────────────────────────────────────────
-
-/**
- * Express handler for POST /api/webhooks/stripe-billing
- *
- * This route MUST receive raw body (Buffer) for signature verification.
- * Register it BEFORE express.json() middleware.
- */
-export async function handleStripeBillingWebhook(
-  req: Request,
-  res: Response
-): Promise<void> {
-  const signature = req.headers["stripe-signature"] as string | undefined;
-
-  if (!signature) {
-    res.status(400).json({ error: "Missing stripe-signature header" });
-    return;
+export default async function handler(req: Request, res: Response) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // ── Construct & verify event ───────────────────────────────────────────────
+  const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    return res.status(400).json({ error: "Missing stripe-signature header" });
+  }
+
   let event: Stripe.Event;
   try {
-    event = constructEvent(req.body as Buffer, signature);
+    event = constructEvent(req.body, sig as string);
   } catch (err) {
-    console.error("[Stripe Webhook] Signature verification failed:", err);
-    res.status(400).json({ error: "Invalid signature" });
-    return;
+    console.error(`[Stripe Webhook] Signature verification failed:`, err);
+    return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
 
-  // ── Idempotency: skip already-processed events ─────────────────────────────
-  try {
-    const alreadyProcessed = await isEventProcessed(event.id);
-    if (alreadyProcessed) {
-      console.log(`[Stripe Webhook] Skipping duplicate event: ${event.id}`);
-      res.json({ received: true, duplicate: true });
-      return;
-    }
-  } catch (err) {
-    // If we can't check idempotency (DB issue), log but continue processing
-    console.warn("[Stripe Webhook] Idempotency check failed, processing anyway:", err);
+  // Idempotency check
+  if (await isEventProcessed(event.id)) {
+    console.log(`[Stripe Webhook] Event ${event.id} already processed, skipping.`);
+    return res.status(200).json({ received: true, duplicate: true });
   }
 
-  // ── Dispatch to event-specific handler ─────────────────────────────────────
   try {
     switch (event.type) {
       case "payment_intent.succeeded":
         await handlePaymentIntentSucceeded(event);
         break;
       case "payment_intent.payment_failed":
-        await handlePaymentIntentFailed(event);
+        await handlePaymentIntentPaymentFailed(event);
         break;
       case "customer.subscription.created":
         await handleSubscriptionCreated(event);
@@ -920,29 +865,19 @@ export async function handleStripeBillingWebhook(
         await handleChargeSucceeded(event);
         break;
       default:
-        // Unhandled event type — still log it for audit purposes
+        // Log unhandled events
         await insertAuditLog({
           eventId: event.id,
           eventType: event.type,
-          status: "unhandled",
-          metadata: { note: "Event type not explicitly handled" },
+          status: "ignored",
+          metadata: { type: event.type },
         });
-        break;
+        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }
+
+    res.status(200).json({ received: true });
   } catch (err) {
     console.error(`[Stripe Webhook] Error processing event ${event.id}:`, err);
-    // Still return 200 to prevent Stripe from retrying — the event is logged
-    try {
-      await insertAuditLog({
-        eventId: event.id,
-        eventType: event.type,
-        status: "error",
-        metadata: { error: err instanceof Error ? err.message : "Unknown error" },
-      });
-    } catch {
-      // Swallow — we tried our best to log
-    }
+    res.status(500).json({ error: "Webhook handler failed" });
   }
-
-  res.json({ received: true });
 }
