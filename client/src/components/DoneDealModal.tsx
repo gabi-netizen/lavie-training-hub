@@ -124,6 +124,9 @@ export default function DoneDealModal({
   const [installments, setInstallments] = useState(1);
   const [shippingOption, setShippingOption] = useState<"today" | "tomorrow" | "custom">("today");
   const [customShipDate, setCustomShipDate] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
 
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: () => {
@@ -238,6 +241,8 @@ export default function DoneDealModal({
         total,
         monthlyPayment: Math.max(0, monthlyPayment),
         shippingDate: shipDate,
+        cardLast4: cardNumber.replace(/\s/g, "").slice(-4),
+        cardExpiry,
       },
     });
   };
@@ -512,6 +517,39 @@ export default function DoneDealModal({
             )}
           </div>
         </div>
+
+          {/* Card Details */}
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard size={16} className="text-gray-900" />
+              <span className="text-sm font-semibold text-gray-900">Card Details</span>
+            </div>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Card Number"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9\s]/g, "").slice(0, 19))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="MM/YY"
+                  value={cardExpiry}
+                  onChange={(e) => setCardExpiry(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="CVV"
+                  value={cardCvv}
+                  onChange={(e) => setCardCvv(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                  className="w-24 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-gray-100 px-6 py-4 flex items-center justify-end gap-3">

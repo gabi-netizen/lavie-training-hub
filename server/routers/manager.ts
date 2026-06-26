@@ -3123,6 +3123,8 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           total: z.number(),
           monthlyPayment: z.number(),
           shippingDate: z.string().optional(),
+          cardLast4: z.string().optional(),
+          cardExpiry: z.string().optional(),
         }),
       })
     )
@@ -3160,6 +3162,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         `Installments: ${dealDetails.installments}`,
         `Monthly Payment: £${dealDetails.monthlyPayment.toFixed(2)}`,
         `Ship Date: ${dealDetails.shippingDate || "Not specified"}`,
+        dealDetails.cardLast4 ? `Card: ****${dealDetails.cardLast4} (Exp: ${dealDetails.cardExpiry || "N/A"})` : `Card: Not provided`,
       ].join("\n");
 
       const htmlBody = `
@@ -3198,6 +3201,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             <tr><td style="padding: 6px 0; font-weight: bold;">Installments:</td><td>${dealDetails.installments}</td></tr>
             <tr><td style="padding: 6px 0; font-weight: bold;">Monthly Payment:</td><td>£${dealDetails.monthlyPayment.toFixed(2)}</td></tr>
             <tr><td style="padding: 6px 0; font-weight: bold;">Ship Date:</td><td style="font-weight: bold; color: #2563eb;">${dealDetails.shippingDate || "Not specified"}</td></tr>
+            <tr><td style="padding: 6px 0; font-weight: bold;">Card:</td><td>${dealDetails.cardLast4 ? `****${dealDetails.cardLast4} (Exp: ${dealDetails.cardExpiry || "N/A"})` : "Not provided"}</td></tr>
           </table>
         </div>
       `;
@@ -3215,7 +3219,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           body: JSON.stringify({
             From: "trial@lavielabs.com",
             To: "support@lavielabs.com",
-            Subject: `Done Deal — ${customerName} — ${agentName}`,
+            Subject: `🎉 Done Deal — ${customerName} — ${agentName}`,
             TextBody: textBody,
             HtmlBody: htmlBody,
             MessageStream: "outbound",
