@@ -39,25 +39,25 @@ interface DrillDownSub {
 // CSS Variables (inline styles matching the mockup)
 // ─────────────────────────────────────────────────────────────────────────────
 const COLORS = {
-  bgBase: "#0d1117",
-  bgSurface: "#161b27",
-  bgCard: "#1c2333",
-  bgCardAlt: "#1e2840",
-  bgHeader: "#111827",
-  border: "#2a3550",
-  borderLight: "#334166",
-  textPrimary: "#f0f4ff",
-  textSecondary: "#c8d3f0",
-  green: "#22c55e",
-  greenDim: "#16a34a",
-  blue: "#3b82f6",
-  blueDim: "#2563eb",
-  red: "#ef4444",
-  orange: "#f97316",
-  gold: "#f59e0b",
-  purple: "#a855f7",
-  purpleDim: "#7c3aed",
-  teal: "#14b8a6",
+  bgBase: "#f8fafc",
+  bgSurface: "#f1f5f9",
+  bgCard: "#ffffff",
+  bgCardAlt: "#f8fafc",
+  bgHeader: "#ffffff",
+  border: "#e2e8f0",
+  borderLight: "#cbd5e1",
+  textPrimary: "#1e293b",
+  textSecondary: "#475569",
+  green: "#16a34a",
+  greenDim: "#15803d",
+  blue: "#2563eb",
+  blueDim: "#1d4ed8",
+  red: "#dc2626",
+  orange: "#ea580c",
+  gold: "#d97706",
+  purple: "#7c3aed",
+  purpleDim: "#6d28d9",
+  teal: "#0d9488",
 };
 
 const AGENT_COLORS: Record<string, { primary: string; dim: string }> = {
@@ -161,12 +161,12 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
     return (
       <div
         style={{
-          background: COLORS.bgBase,
-          minHeight: "100vh",
+          background: "#f8fafc",
+          minHeight: "60vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: COLORS.textPrimary,
+          color: "#1e293b",
           fontFamily: "'Inter', system-ui, sans-serif",
         }}
       >
@@ -175,14 +175,14 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
             style={{
               width: 40,
               height: 40,
-              border: `3px solid ${COLORS.border}`,
-              borderTopColor: COLORS.blue,
+              border: "3px solid #e2e8f0",
+              borderTopColor: "#2563eb",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
               margin: "0 auto 16px",
             }}
           />
-          <div style={{ fontSize: 14, fontWeight: 500 }}>Loading performance data...</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#475569" }}>Loading performance data...</div>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -244,27 +244,27 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              background: "rgba(34,197,94,0.12)",
-              border: "1px solid rgba(34,197,94,0.3)",
+              background: "#dcfce7",
+              border: "1px solid #86efac",
               borderRadius: 6,
               padding: "5px 10px",
               fontSize: 11,
               fontWeight: 600,
-              color: COLORS.green,
+              color: "#15803d",
               letterSpacing: 0.5,
             }}
           >
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.green }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
             LIVE
           </div>
           <button
             onClick={() => refetch()}
             style={{
-              background: COLORS.bgCard,
-              border: `1px solid ${COLORS.border}`,
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
               borderRadius: 8,
               padding: "7px 12px",
-              color: COLORS.textSecondary,
+              color: "#475569",
               fontSize: 12,
               fontWeight: 500,
               cursor: "pointer",
@@ -369,13 +369,13 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               style={{
                 background: selectedAgents.includes(agent)
                   ? AGENT_COLORS[agent].primary
-                  : COLORS.bgCard,
-                border: `1px solid ${selectedAgents.includes(agent) ? AGENT_COLORS[agent].primary : COLORS.borderLight}`,
+                  : "#ffffff",
+                border: `1px solid ${selectedAgents.includes(agent) ? AGENT_COLORS[agent].primary : "#cbd5e1"}`,
                 borderRadius: 6,
                 padding: "5px 12px",
                 fontSize: 12,
                 fontWeight: 600,
-                color: selectedAgents.includes(agent) ? "#fff" : COLORS.textPrimary,
+                color: selectedAgents.includes(agent) ? "#fff" : "#1e293b",
                 cursor: "pointer",
                 transition: "all 0.15s",
               }}
@@ -653,7 +653,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               style={{
                 fontSize: 14,
                 fontWeight: 700,
-                color: COLORS.textPrimary,
+                color: "#1e293b",
                 textTransform: "uppercase",
                 letterSpacing: 1,
                 display: "flex",
@@ -661,23 +661,23 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                 gap: 10,
               }}
             >
-              <div style={{ width: 3, height: 16, background: COLORS.gold, borderRadius: 2 }} />
+              <div style={{ width: 3, height: 16, background: "#d97706", borderRadius: 2 }} />
               Deal Type Distribution
             </div>
             <div style={{ display: "flex", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#475569" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.green }} />
                 Instalments
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#475569" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.teal }} />
                 Subs
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(59,130,246,0.6)" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#475569" }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: "#93c5fd" }} />
                 Future
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#ffffff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 500, color: "#475569" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.gold }} />
                 One-Time
               </div>
@@ -686,11 +686,11 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
 
           <div
             style={{
-              background: COLORS.bgCard,
-              border: `1px solid ${COLORS.border}`,
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
               borderRadius: 14,
               padding: "20px 24px",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
               display: "flex",
               flexDirection: "column",
               gap: 14,
@@ -706,8 +706,8 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               return (
                 <div key={card.agent}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#ffffff" }}>{card.agent}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#ffffff" }}>{card.totalDeals} deals</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#1e293b" }}>{card.agent}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>{card.totalDeals} deals</span>
                   </div>
                   <div style={{ display: "flex", height: 24, borderRadius: 6, overflow: "hidden", gap: 2 }}>
                     {card.installments > 0 && (
@@ -794,27 +794,27 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
           {/* Conversion by Lead Type */}
           <div
             style={{
-              background: COLORS.bgCard,
-              border: `1px solid ${COLORS.border}`,
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
               borderRadius: 14,
               overflow: "hidden",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             }}
           >
             <div
               style={{
                 padding: "16px 22px",
-                borderBottom: `1px solid ${COLORS.border}`,
-                background: COLORS.bgCardAlt,
+                borderBottom: "1px solid #e2e8f0",
+                background: "#f8fafc",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary, textTransform: "uppercase", letterSpacing: 0.8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", textTransform: "uppercase", letterSpacing: 0.8 }}>
                 Conversion by Lead Type
               </div>
-              <div style={{ fontSize: 11, color: COLORS.textSecondary }}>
+              <div style={{ fontSize: 11, color: "#475569" }}>
                 {summary.totalLeads} total leads
               </div>
             </div>
@@ -828,12 +828,12 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                         padding: "11px 18px",
                         fontSize: 10,
                         fontWeight: 700,
-                        color: COLORS.textSecondary,
+                        color: "#475569",
                         textTransform: "uppercase",
                         letterSpacing: 0.9,
                         textAlign: i === 0 ? "left" : "right",
-                        background: "rgba(255,255,255,0.02)",
-                        borderBottom: `1px solid ${COLORS.border}`,
+                        background: "#f1f5f9",
+                        borderBottom: "1px solid #e2e8f0",
                       }}
                     >
                       {h}
@@ -848,10 +848,10 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                   return (
                     <tr
                       key={row.leadType}
-                      style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                      style={{ borderBottom: "1px solid #f1f5f9" }}
                     >
                       <td
-                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, cursor: "pointer" }}
+                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: "#1e293b", cursor: "pointer" }}
                         onClick={() => openDrillDown(`${row.leadType} - All Leads`, "leads", { leadType: row.leadType })}
                       >
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
@@ -868,7 +868,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                         </div>
                       </td>
                       <td
-                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, textAlign: "right", cursor: "pointer" }}
+                        style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: "#1e293b", textAlign: "right", cursor: "pointer" }}
                         onClick={() => openDrillDown(`${row.leadType} - All Leads`, "leads", { leadType: row.leadType })}
                       >
                         {row.leadsIn}
@@ -887,7 +887,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                       </td>
                       <td style={{ padding: "12px 18px", textAlign: "right" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
-                          <div style={{ width: 60, height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: 60, height: 5, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
                             <div style={{ height: "100%", width: `${pct}%`, background: pctColor, borderRadius: 3 }} />
                           </div>
                           <span style={{ fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: "right", color: pctColor }}>
@@ -906,24 +906,24 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div
               style={{
-                background: COLORS.bgCard,
-                border: `1px solid ${COLORS.border}`,
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
                 borderRadius: 14,
                 overflow: "hidden",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
               }}
             >
               <div
                 style={{
                   padding: "16px 22px",
-                  borderBottom: `1px solid ${COLORS.border}`,
-                  background: COLORS.bgCardAlt,
+                  borderBottom: "1px solid #e2e8f0",
+                  background: "#f8fafc",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", textTransform: "uppercase", letterSpacing: 0.8 }}>
                   Conversion by Agent
                 </div>
               </div>
@@ -937,12 +937,12 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                           padding: "11px 18px",
                           fontSize: 10,
                           fontWeight: 700,
-                          color: COLORS.textSecondary,
+                          color: "#475569",
                           textTransform: "uppercase",
                           letterSpacing: 0.9,
                           textAlign: i === 0 ? "left" : "right",
-                          background: "rgba(255,255,255,0.02)",
-                          borderBottom: `1px solid ${COLORS.border}`,
+                          background: "#f1f5f9",
+                          borderBottom: "1px solid #e2e8f0",
                         }}
                       >
                         {h}
@@ -959,10 +959,10 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                       return (
                         <tr
                           key={row.agent}
-                          style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" }}
+                          style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer" }}
                           onClick={() => openDrillDown(`${row.agent} - All Leads`, "leads", { agent: row.agent })}
                         >
-                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary }}>
+                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: "#1e293b" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                               <div style={{ width: 10, height: 10, borderRadius: "50%", background: colors.primary, flexShrink: 0 }} />
                               <span style={{ fontWeight: 600 }}>{row.agent}</span>
@@ -985,7 +985,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                               </div>
                             </div>
                           </td>
-                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: COLORS.textPrimary, textAlign: "right" }}>
+                          <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: "#1e293b", textAlign: "right" }}>
                             {row.assigned}
                           </td>
                           <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 700, color: COLORS.green, textAlign: "right" }}>
@@ -993,7 +993,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                           </td>
                           <td style={{ padding: "12px 18px", textAlign: "right" }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
-                              <div style={{ width: 50, height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ width: 50, height: 5, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
                                 <div style={{ height: "100%", width: `${row.conversionPct}%`, background: colors.primary, borderRadius: 3 }} />
                               </div>
                               <span style={{ fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: "right", color: pctColor }}>
@@ -1015,24 +1015,24 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
       <footer
         style={{
           padding: "16px 32px",
-          borderTop: `1px solid ${COLORS.border}`,
+          borderTop: "1px solid #e2e8f0",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           fontSize: 11,
-          color: COLORS.textSecondary,
-          background: COLORS.bgSurface,
+          color: "#475569",
+          background: "#f8fafc",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.green }} />
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
           <span>Last updated: {new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-          <span style={{ color: COLORS.borderLight }}>|</span>
+          <span style={{ color: "#cbd5e1" }}>|</span>
           <span>Data source: CRM & Billing System</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span>Retention Command Centre</span>
-          <span style={{ color: COLORS.borderLight }}>v2.4</span>
+          <span style={{ color: "#cbd5e1" }}>v2.4</span>
         </div>
       </footer>
 
@@ -1052,8 +1052,8 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
         >
           <div
             style={{
-              background: COLORS.bgCard,
-              border: `1px solid ${COLORS.border}`,
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
               borderRadius: 14,
               width: "90%",
               maxWidth: 900,
@@ -1061,7 +1061,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0 8px 48px rgba(0,0,0,0.6)",
+              boxShadow: "0 8px 48px rgba(0,0,0,0.2)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1069,22 +1069,22 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
             <div
               style={{
                 padding: "16px 24px",
-                borderBottom: `1px solid ${COLORS.border}`,
+                borderBottom: "1px solid #e2e8f0",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                background: COLORS.bgCardAlt,
+                background: "#f8fafc",
               }}
             >
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>{modalTitle}</div>
-                <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>{modalData.length} records</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>{modalTitle}</div>
+                <div style={{ fontSize: 12, color: "#475569", marginTop: 2 }}>{modalData.length} records</div>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
                 style={{
                   background: "transparent",
-                  border: `1px solid ${COLORS.border}`,
+                  border: "1px solid #e2e8f0",
                   borderRadius: 8,
                   width: 32,
                   height: 32,
@@ -1092,7 +1092,7 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  color: COLORS.textSecondary,
+                  color: "#475569",
                   fontSize: 18,
                 }}
               >
@@ -1113,12 +1113,12 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                               padding: "10px 14px",
                               fontSize: 10,
                               fontWeight: 700,
-                              color: COLORS.textSecondary,
+                              color: "#475569",
                               textTransform: "uppercase",
                               letterSpacing: 0.8,
                               textAlign: "left",
-                              background: "rgba(255,255,255,0.02)",
-                              borderBottom: `1px solid ${COLORS.border}`,
+                              background: "#f1f5f9",
+                              borderBottom: "1px solid #e2e8f0",
                               position: "sticky",
                               top: 0,
                               zIndex: 1,
@@ -1134,12 +1134,12 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                               padding: "10px 14px",
                               fontSize: 10,
                               fontWeight: 700,
-                              color: COLORS.textSecondary,
+                              color: "#475569",
                               textTransform: "uppercase",
                               letterSpacing: 0.8,
                               textAlign: "left",
-                              background: "rgba(255,255,255,0.02)",
-                              borderBottom: `1px solid ${COLORS.border}`,
+                              background: "#f1f5f9",
+                              borderBottom: "1px solid #e2e8f0",
                               position: "sticky",
                               top: 0,
                               zIndex: 1,
@@ -1153,36 +1153,36 @@ export function PerformanceTab({ agentFilter }: { agentFilter?: string } = {}) {
                 <tbody>
                   {modalType === "leads"
                     ? (modalData as DrillDownItem[]).map((item) => (
-                        <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.customerName}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.email}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.phone || "-"}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.leadType}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{formatCurrency(item.amount)}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.eventDate}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.workStatus}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.assignedAgent}</td>
+                        <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.customerName}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.email}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.phone || "-"}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.leadType}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{formatCurrency(item.amount)}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.eventDate}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.workStatus}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.assignedAgent}</td>
                         </tr>
                       ))
                     : (modalData as DrillDownSub[]).map((item) => (
-                        <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.customerName}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.email}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.phone || "-"}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.planType}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.planName}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{formatCurrency(item.amount)}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.eventDate}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.activatedOn || "-"}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.status}</td>
-                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: COLORS.textPrimary }}>{item.salesPerson}</td>
+                        <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.customerName}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.email}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.phone || "-"}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.planType}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.planName}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{formatCurrency(item.amount)}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.eventDate}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.activatedOn || "-"}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.status}</td>
+                          <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 500, color: "#1e293b" }}>{item.salesPerson}</td>
                         </tr>
-                      ))}
+                      ))
                   {modalData.length === 0 && (
                     <tr>
                       <td
                         colSpan={10}
-                        style={{ padding: "40px 14px", fontSize: 13, fontWeight: 500, color: COLORS.textSecondary, textAlign: "center" }}
+                        style={{ padding: "40px 14px", fontSize: 13, fontWeight: 500, color: "#475569", textAlign: "center" }}
                       >
                         No records found for this filter.
                       </td>
