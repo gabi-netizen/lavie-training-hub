@@ -8,8 +8,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions, leadAssignments, contacts, stripeAuditLog, shipments, stripeCustomers } from "../../drizzle/schema";
-import { eq, like, or, and, sql, desc, getTableColumns, isNull, isNotNull } from "drizzle-orm";
+import { clientSubscriptions, leadAssignments, contacts, stripeAuditLog, shipments, stripeCustomers, openingTrials } from "../../drizzle/schema";
+import { eq, like, or, and, sql, desc, getTableColumns, isNull, isNotNull, inArray } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 import Stripe from "stripe";
 import { getStripeClient } from "../stripe/index";
@@ -1361,6 +1361,7 @@ export const billingRouter = router({
           return {
             id: row.id,
             customerId: row.customerId,
+            contactId: contactId ? Number(contactId) : null,
             contactName,
             agentName,
             trialCreatedAt,
@@ -1381,6 +1382,287 @@ export const billingRouter = router({
       );
 
       return { count, transactions };
+    }),
+
+  // ─── Cancel Max Billing Transaction ─────────────────────────────────────────
+  cancelMaxBillingTransaction: adminProcedure
+    .input(z.object({ contactId: z.number(), customerId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { contactId, customerId } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // 1. Check shipment status — block if already despatched
+      const [mintsoftRecord] = await db
+        .select({ metadata: stripeAuditLog.metadata, status: stripeAuditLog.status })
+        .from(stripeAuditLog)
+        .where(
+          and(
+            eq(stripeAuditLog.eventType, "mintsoft_order_created"),
+            sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`
+          )
+        )
+        .orderBy(desc(stripeAuditLog.createdAt))
+        .limit(1);
+
+      // Check shipments table for despatched status
+      if (mintsoftRecord) {
+        const meta = (mintsoftRecord.metadata ?? {}) as Record<string, unknown>;
+        const orderNumber = meta.orderNumber as string | undefined;
+        if (orderNumber) {
+          const [shipment] = await db
+            .select({ status: shipments.status })
+            .from(shipments)
+            .where(eq(shipments.orderNumber, orderNumber))
+            .limit(1);
+          if (shipment && shipment.status === "Despatched") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot cancel - already shipped" });
+          }
+        }
+      }
+
+      // 2. Cancel Mintsoft order
+      if (mintsoftRecord) {
+        const meta = (mintsoftRecord.metadata ?? {}) as Record<string, unknown>;
+        const orderId = meta.orderId as number | string | undefined;
+        if (orderId) {
+          try {
+            // Authenticate with Mintsoft
+            const authRes = await fetch("https://api.mintsoft.co.uk/api/Auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ UserName: "Wendy@lavielabs.com", Password: "1809Gabi1609@!" }),
+            });
+            if (authRes.ok) {
+              const apiKeyRaw = await authRes.text();
+              const apiKey = apiKeyRaw.replace(/^"|"$/g, "");
+              // Cancel the order
+              await fetch(`https://api.mintsoft.co.uk/api/Order/${orderId}/Cancel?APIKey=${apiKey}`, {
+                method: "PUT",
+              });
+            }
+          } catch (err: any) {
+            console.error("[CancelMaxBilling] Mintsoft cancel error:", err.message);
+          }
+        }
+      }
+
+      // 3. Cancel Stripe Subscription Schedule
+      try {
+        const stripe = getStripeClient();
+        const schedules = await stripe.subscriptionSchedules.list({ customer: customerId, limit: 10 });
+        for (const schedule of schedules.data) {
+          if (schedule.status === "active" || schedule.status === "not_started") {
+            await stripe.subscriptionSchedules.cancel(schedule.id);
+          }
+        }
+      } catch (err: any) {
+        console.error("[CancelMaxBilling] Stripe schedule cancel error:", err.message);
+      }
+
+      // 4. Update audit log status to 'cancelled'
+      if (mintsoftRecord) {
+        await db
+          .update(stripeAuditLog)
+          .set({ status: "cancelled" })
+          .where(
+            and(
+              eq(stripeAuditLog.eventType, "mintsoft_order_created"),
+              sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`
+            )
+          );
+      }
+
+      // 5. Delete from opening_trials
+      await db
+        .delete(openingTrials)
+        .where(eq(openingTrials.subscriptionId, `max_billing_${contactId}`));
+
+      return { success: true };
+    }),
+
+  // ─── Delete Max Billing Transaction ───────────────────────────────────────────
+  deleteMaxBillingTransaction: adminProcedure
+    .input(z.object({ contactId: z.number(), customerId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { contactId, customerId } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // 1. Cancel Mintsoft order (same logic as cancel)
+      const [mintsoftRecord] = await db
+        .select({ metadata: stripeAuditLog.metadata })
+        .from(stripeAuditLog)
+        .where(
+          and(
+            eq(stripeAuditLog.eventType, "mintsoft_order_created"),
+            sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`
+          )
+        )
+        .orderBy(desc(stripeAuditLog.createdAt))
+        .limit(1);
+
+      if (mintsoftRecord) {
+        const meta = (mintsoftRecord.metadata ?? {}) as Record<string, unknown>;
+        const orderId = meta.orderId as number | string | undefined;
+        if (orderId) {
+          try {
+            const authRes = await fetch("https://api.mintsoft.co.uk/api/Auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ UserName: "Wendy@lavielabs.com", Password: "1809Gabi1609@!" }),
+            });
+            if (authRes.ok) {
+              const apiKeyRaw = await authRes.text();
+              const apiKey = apiKeyRaw.replace(/^"|"$/g, "");
+              await fetch(`https://api.mintsoft.co.uk/api/Order/${orderId}/Cancel?APIKey=${apiKey}`, {
+                method: "PUT",
+              });
+            }
+          } catch (err: any) {
+            console.error("[DeleteMaxBilling] Mintsoft cancel error:", err.message);
+          }
+        }
+      }
+
+      // 2. Cancel Stripe Subscription Schedule
+      try {
+        const stripe = getStripeClient();
+        const schedules = await stripe.subscriptionSchedules.list({ customer: customerId, limit: 10 });
+        for (const schedule of schedules.data) {
+          if (schedule.status === "active" || schedule.status === "not_started") {
+            await stripe.subscriptionSchedules.cancel(schedule.id);
+          }
+        }
+      } catch (err: any) {
+        console.error("[DeleteMaxBilling] Stripe schedule cancel error:", err.message);
+      }
+
+      // 3. Delete ALL related audit log records for this contactId with source = 'max_billing'
+      await db
+        .delete(stripeAuditLog)
+        .where(
+          and(
+            sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`,
+            eq(stripeAuditLog.source, "max_billing")
+          )
+        );
+
+      // 4. Delete from opening_trials
+      await db
+        .delete(openingTrials)
+        .where(eq(openingTrials.subscriptionId, `max_billing_${contactId}`));
+
+      return { success: true };
+    }),
+
+  // ─── Refund Max Billing Transaction ───────────────────────────────────────────
+  refundMaxBillingTransaction: adminProcedure
+    .input(z.object({ contactId: z.number(), customerId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { contactId, customerId } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // 1. Find the payment_intent.succeeded record to get the PaymentIntent ID
+      const [paymentRecord] = await db
+        .select({ metadata: stripeAuditLog.metadata })
+        .from(stripeAuditLog)
+        .where(
+          and(
+            eq(stripeAuditLog.eventType, "payment_intent.succeeded"),
+            sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`,
+            eq(stripeAuditLog.source, "max_billing")
+          )
+        )
+        .orderBy(desc(stripeAuditLog.createdAt))
+        .limit(1);
+
+      if (!paymentRecord) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Payment record not found for this contact" });
+      }
+
+      const paymentMeta = (paymentRecord.metadata ?? {}) as Record<string, unknown>;
+      const paymentIntentId = paymentMeta.paymentIntentId as string | undefined;
+
+      if (!paymentIntentId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "PaymentIntent ID not found in metadata" });
+      }
+
+      // 2. Issue Stripe refund
+      const stripe = getStripeClient();
+      try {
+        await stripe.refunds.create({ payment_intent: paymentIntentId });
+      } catch (err: any) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Refund failed: ${err.message}` });
+      }
+
+      // 3. Cancel Mintsoft order
+      const [mintsoftRecord] = await db
+        .select({ metadata: stripeAuditLog.metadata })
+        .from(stripeAuditLog)
+        .where(
+          and(
+            eq(stripeAuditLog.eventType, "mintsoft_order_created"),
+            sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`
+          )
+        )
+        .orderBy(desc(stripeAuditLog.createdAt))
+        .limit(1);
+
+      if (mintsoftRecord) {
+        const meta = (mintsoftRecord.metadata ?? {}) as Record<string, unknown>;
+        const orderId = meta.orderId as number | string | undefined;
+        if (orderId) {
+          try {
+            const authRes = await fetch("https://api.mintsoft.co.uk/api/Auth", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ UserName: "Wendy@lavielabs.com", Password: "1809Gabi1609@!" }),
+            });
+            if (authRes.ok) {
+              const apiKeyRaw = await authRes.text();
+              const apiKey = apiKeyRaw.replace(/^"|"$/g, "");
+              await fetch(`https://api.mintsoft.co.uk/api/Order/${orderId}/Cancel?APIKey=${apiKey}`, {
+                method: "PUT",
+              });
+            }
+          } catch (err: any) {
+            console.error("[RefundMaxBilling] Mintsoft cancel error:", err.message);
+          }
+        }
+      }
+
+      // 4. Cancel Stripe Subscription Schedule
+      try {
+        const schedules = await stripe.subscriptionSchedules.list({ customer: customerId, limit: 10 });
+        for (const schedule of schedules.data) {
+          if (schedule.status === "active" || schedule.status === "not_started") {
+            await stripe.subscriptionSchedules.cancel(schedule.id);
+          }
+        }
+      } catch (err: any) {
+        console.error("[RefundMaxBilling] Stripe schedule cancel error:", err.message);
+      }
+
+      // 5. Delete from opening_trials
+      await db
+        .delete(openingTrials)
+        .where(eq(openingTrials.subscriptionId, `max_billing_${contactId}`));
+
+      // 6. Update audit log status to 'refunded'
+      await db
+        .update(stripeAuditLog)
+        .set({ status: "refunded" })
+        .where(
+          and(
+            eq(stripeAuditLog.eventType, "payment_intent.succeeded"),
+            sql`JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(contactId)}`,
+            eq(stripeAuditLog.source, "max_billing")
+          )
+        );
+
+      return { success: true };
     }),
 
   // ─── Create PaymentIntent for Stripe Elements (returns client_secret) ──────

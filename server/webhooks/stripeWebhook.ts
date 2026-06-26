@@ -23,7 +23,7 @@ import type { Request, Response } from "express";
 import Stripe from "stripe";
 import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
-import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions, billingPlans } from "../../drizzle/schema";
+import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions, billingPlans, openingTrials } from "../../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { createMintsoftOrder, createMintsoftOrderFromPhase } from "../mintsoft";
 
@@ -425,6 +425,37 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
               },
             });
             console.log(`[Stripe Webhook] Mintsoft trial order created: ${result.orderNumber} for contact ${contactId}`);
+
+            // ─── Insert into opening_trials for Opening Dashboard ──────────
+            try {
+              // Get agent name (first name only, matching opening_trials format)
+              const [contactForAgent] = await db
+                .select({ agentName: contacts.agentName })
+                .from(contacts)
+                .where(eq(contacts.id, Number(contactId)))
+                .limit(1);
+              const fullAgentName = contactForAgent?.agentName || "Unknown";
+              const firstName = fullAgentName.trim().split(/\s+/)[0];
+              const today = new Date();
+              const createdDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+              const month = createdDate.substring(0, 7); // YYYY-MM
+
+              await db.insert(openingTrials).values({
+                subscriptionId: `max_billing_${contactId}`,
+                customerName: contact.name || null,
+                email: contact.email || null,
+                agentName: firstName,
+                planName: `Max Billing - ${contact.trialKit || "Trial Kit"}`,
+                createdDate,
+                status: "trial",
+                classification: "still_in_trial",
+                month,
+              }).onDuplicateKeyUpdate({ set: { status: "trial" } });
+
+              console.log(`[Stripe Webhook] Opening trial recorded for ${contact.name} (agent: ${firstName}, month: ${month})`);
+            } catch (otErr) {
+              console.error(`[Stripe Webhook] Failed to insert opening_trial for contact ${contactId}:`, otErr);
+            }
           } else {
             await db.insert(stripeAuditLog).values({
               eventId: `mintsoft-failed-${contactId}-${Date.now()}`,

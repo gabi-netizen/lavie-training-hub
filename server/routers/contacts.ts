@@ -46,7 +46,7 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses, clientSubscriptions, billingPlans } from "../../drizzle/schema";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses, clientSubscriptions, billingPlans, openingTrials } from "../../drizzle/schema";
 import {
   createSubscriptionSchedule,
   getCustomerPaymentMethods,
@@ -1386,6 +1386,31 @@ export const contactsRouter = router({
         // Mark as done_deal + assign billing plan
         const updateData2: any = { status: "done_deal", billingPlanId };
         await db.update(contactsSchema).set(updateData2).where(eq(contactsSchema.id, contactId));
+
+        // ─── Insert into opening_trials for Opening Dashboard ──────────
+        try {
+          const fullAgentName = contact.agentName || "Unknown";
+          const agentFirstName = fullAgentName.trim().split(/\s+/)[0];
+          const today = new Date();
+          const createdDate = today.toISOString().split("T")[0];
+          const month = createdDate.substring(0, 7);
+
+          await db.insert(openingTrials).values({
+            subscriptionId: `max_billing_${contactId}`,
+            customerName: contact.name || null,
+            email: contact.email || null,
+            agentName: agentFirstName,
+            planName: `Max Billing - ${contact.trialKit || "Trial Kit"}`,
+            createdDate,
+            status: "trial",
+            classification: "still_in_trial",
+            month,
+          }).onDuplicateKeyUpdate({ set: { status: "trial" } });
+          console.log(`[confirmSold] Opening trial recorded for ${contact.name} (agent: ${agentFirstName}, month: ${month})`);
+        } catch (otErr) {
+          console.error(`[confirmSold] Failed to insert opening_trial for contact ${contactId}:`, otErr);
+        }
+
         return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
       } else {
         // Log failure

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus, X, Package, CreditCard, Search } from "lucide-react";
+import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus, X, Package, CreditCard, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
@@ -106,6 +106,45 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [showMaxBillingModal, setShowMaxBillingModal] = useState(false);
 
+  // Admin check — use trpc to get current user role
+  const { data: currentUser } = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false });
+  const isAdmin = currentUser?.role === "admin" || !currentUser?.team;
+
+  // Max Billing action state
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "cancel" | "delete" | "refund"; txId: string; contactId: number; customerId: string } | null>(null);
+
+  const cancelMaxBilling = trpc.billing.cancelMaxBillingTransaction.useMutation({
+    onSuccess: () => { toast.success("Transaction cancelled successfully"); refetchMaxBilling(); setActionLoadingId(null); },
+    onError: (e) => { toast.error(e.message); setActionLoadingId(null); },
+  });
+  const deleteMaxBilling = trpc.billing.deleteMaxBillingTransaction.useMutation({
+    onSuccess: () => { toast.success("Transaction deleted successfully"); refetchMaxBilling(); setActionLoadingId(null); },
+    onError: (e) => { toast.error(e.message); setActionLoadingId(null); },
+  });
+  const refundMaxBilling = trpc.billing.refundMaxBillingTransaction.useMutation({
+    onSuccess: () => { toast.success("Transaction refunded successfully"); refetchMaxBilling(); setActionLoadingId(null); },
+    onError: (e) => { toast.error(e.message); setActionLoadingId(null); },
+  });
+
+  const handleMaxBillingAction = (type: "cancel" | "delete" | "refund", txId: string, contactId: number, customerId: string) => {
+    setConfirmAction({ type, txId, contactId, customerId });
+  };
+
+  const executeMaxBillingAction = () => {
+    if (!confirmAction) return;
+    const { type, txId, contactId, customerId } = confirmAction;
+    setActionLoadingId(txId + "_" + type);
+    setConfirmAction(null);
+    if (type === "cancel") {
+      cancelMaxBilling.mutate({ contactId, customerId });
+    } else if (type === "delete") {
+      deleteMaxBilling.mutate({ contactId, customerId });
+    } else if (type === "refund") {
+      refundMaxBilling.mutate({ contactId, customerId });
+    }
+  };
+
   // Manual Charge sub-modal state
   const [showManualChargeModal, setShowManualChargeModal] = useState(false);
   const [manualChargeSearch, setManualChargeSearch] = useState("");
@@ -120,7 +159,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   );
 
   // Max Billing stats
-  const { data: maxBillingData } = trpc.billing.getMaxBillingStats.useQuery(
+  const { data: maxBillingData, refetch: refetchMaxBilling } = trpc.billing.getMaxBillingStats.useQuery(
     undefined,
     { refetchOnWindowFocus: false }
   );
@@ -1277,7 +1316,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
               </button>
             </div>
 
-            {/* Table */}
+            {/* Table — CSS Grid */}
             <div className="flex-1 overflow-y-auto">
               {maxBillingTransactions.length === 0 ? (
                 <div className="flex items-center justify-center py-16 text-gray-500 text-sm">
@@ -1285,81 +1324,129 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Customer</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Agent</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Trial Date</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Trial Kit</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Amount</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Days Left</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Source</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Shipment</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Tracking</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {maxBillingTransactions.map((tx: any) => {
-                      // Shipment status badge colors
-                      const shipmentStatusColors: Record<string, string> = {
-                        Despatched: "bg-green-100 text-green-800",
-                        Printed: "bg-blue-100 text-blue-800",
-                        "New": "bg-yellow-100 text-yellow-800",
-                        Packed: "bg-indigo-100 text-indigo-800",
-                        Delivered: "bg-emerald-100 text-emerald-800",
-                        Returned: "bg-red-100 text-red-800",
-                        created: "bg-green-100 text-green-800",
-                        failed: "bg-red-100 text-red-800",
-                        skipped: "bg-yellow-100 text-yellow-800",
-                        duplicate: "bg-gray-100 text-gray-700",
-                        pending: "bg-blue-50 text-blue-700",
-                      };
-                      // Use shipmentStatus from shipments table if available, otherwise fall back to mintsoftStatus from audit log
-                      const displayStatus = tx.shipmentStatus ?? tx.mintsoftStatus;
-                      const statusColor = shipmentStatusColors[displayStatus] ?? "bg-gray-100 text-gray-700";
-                      return (
-                        <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 font-semibold text-gray-800">{tx.contactName ?? tx.customerId ?? "—"}</td>
-                          <td className="px-4 py-3 text-gray-800">{tx.agentName ?? "—"}</td>
-                          <td className="px-4 py-3 text-gray-800 whitespace-nowrap">
-                            {tx.trialCreatedAt ? new Date(tx.trialCreatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                          </td>
-                          <td className="px-4 py-3 text-gray-800 whitespace-nowrap">{tx.trialKit ?? "—"}</td>
-                          <td className="px-4 py-3 font-bold text-gray-800">
-                            {tx.amount != null ? `£${(tx.amount / 100).toFixed(2)}` : "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            {tx.daysUntilSub != null ? (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                tx.daysUntilSub <= 3 ? "bg-red-100 text-red-800" :
-                                tx.daysUntilSub <= 7 ? "bg-orange-100 text-orange-800" :
-                                "bg-blue-100 text-blue-800"
-                              }`}>
-                                {tx.daysUntilSub}d
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-gray-800">{tx.source ?? "—"}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusColor}`}>
-                              {displayStatus}
+                  {/* Grid Header */}
+                  <div
+                    className="grid items-center gap-1 px-3 py-3 border-b border-gray-200 bg-gray-50 sticky top-0 min-w-[1200px]"
+                    style={{ gridTemplateColumns: isAdmin ? "140px 90px 90px 90px 60px 60px 70px 80px 100px 160px" : "150px 100px 100px 100px 70px 70px 80px 90px 110px" }}
+                  >
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Customer</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Agent</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Trial Date</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Trial Kit</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Amount</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Days Left</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Source</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Shipment</div>
+                    <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Tracking</div>
+                    {isAdmin && <div className="text-[11px] font-bold text-gray-800 uppercase tracking-wide">Actions</div>}
+                  </div>
+
+                  {/* Grid Body */}
+                  {maxBillingTransactions.map((tx: any) => {
+                    const shipmentStatusColors: Record<string, string> = {
+                      Despatched: "bg-green-100 text-green-800",
+                      Printed: "bg-blue-100 text-blue-800",
+                      "New": "bg-yellow-100 text-yellow-800",
+                      Packed: "bg-indigo-100 text-indigo-800",
+                      Delivered: "bg-emerald-100 text-emerald-800",
+                      Returned: "bg-red-100 text-red-800",
+                      created: "bg-green-100 text-green-800",
+                      failed: "bg-red-100 text-red-800",
+                      skipped: "bg-yellow-100 text-yellow-800",
+                      duplicate: "bg-gray-100 text-gray-700",
+                      pending: "bg-blue-50 text-blue-700",
+                    };
+                    const displayStatus = tx.shipmentStatus ?? tx.mintsoftStatus;
+                    const statusColor = shipmentStatusColors[displayStatus] ?? "bg-gray-100 text-gray-700";
+                    const isCancelled = tx.status === "cancelled";
+                    const isRefunded = tx.status === "refunded";
+                    const resolvedContactId = tx.contactId ? Number(tx.contactId) : 0;
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className={`grid items-center gap-1 px-3 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition-colors min-w-[1200px] ${isCancelled ? "opacity-70" : ""} ${isRefunded ? "opacity-70" : ""}`}
+                        style={{ gridTemplateColumns: isAdmin ? "140px 90px 90px 90px 60px 60px 70px 80px 100px 160px" : "150px 100px 100px 100px 70px 70px 80px 90px 110px" }}
+                      >
+                        <div className="text-sm font-semibold text-gray-800 truncate" title={tx.contactName ?? tx.customerId}>
+                          {tx.contactName ?? tx.customerId ?? "—"}
+                          {isCancelled && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 uppercase">Cancelled</span>}
+                          {isRefunded && <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 uppercase">Refunded</span>}
+                        </div>
+                        <div className="text-sm text-gray-800 truncate">{tx.agentName ?? "—"}</div>
+                        <div className="text-sm text-gray-800 whitespace-nowrap">
+                          {tx.trialCreatedAt ? new Date(tx.trialCreatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                        </div>
+                        <div className="text-sm text-gray-800 whitespace-nowrap truncate">{tx.trialKit ?? "—"}</div>
+                        <div className="text-sm font-bold text-gray-800">
+                          {tx.amount != null ? `£${(tx.amount / 100).toFixed(2)}` : "—"}
+                        </div>
+                        <div>
+                          {tx.daysUntilSub != null ? (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              tx.daysUntilSub <= 3 ? "bg-red-100 text-red-800" :
+                              tx.daysUntilSub <= 7 ? "bg-orange-100 text-orange-800" :
+                              "bg-blue-100 text-blue-800"
+                            }`}>
+                              {tx.daysUntilSub}d
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-gray-800">
-                            {tx.trackingNumber ? (
-                              <span className="text-xs font-mono">{tx.trackingNumber}</span>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-800 truncate">{tx.source ?? "—"}</div>
+                        <div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusColor}`}>
+                            {displayStatus}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-800">
+                          {tx.trackingNumber ? (
+                            <span className="text-xs font-mono">{tx.trackingNumber}</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </div>
+                        {isAdmin && (
+                          <div className="flex items-center gap-1">
+                            {!isCancelled && !isRefunded ? (
+                              <>
+                                <button
+                                  onClick={() => handleMaxBillingAction("cancel", String(tx.id), resolvedContactId, tx.customerId)}
+                                  disabled={actionLoadingId === tx.id + "_cancel"}
+                                  className="px-2 py-1 text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {actionLoadingId === tx.id + "_cancel" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Cancel"}
+                                </button>
+                                <button
+                                  onClick={() => handleMaxBillingAction("refund", String(tx.id), resolvedContactId, tx.customerId)}
+                                  disabled={actionLoadingId === tx.id + "_refund"}
+                                  className="px-2 py-1 text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {actionLoadingId === tx.id + "_refund" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Refund"}
+                                </button>
+                                <button
+                                  onClick={() => handleMaxBillingAction("delete", String(tx.id), resolvedContactId, tx.customerId)}
+                                  disabled={actionLoadingId === tx.id + "_delete"}
+                                  className="px-2 py-1 text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {actionLoadingId === tx.id + "_delete" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Delete"}
+                                </button>
+                              </>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <button
+                                onClick={() => handleMaxBillingAction("delete", String(tx.id), resolvedContactId, tx.customerId)}
+                                disabled={actionLoadingId === tx.id + "_delete"}
+                                className="px-2 py-1 text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition disabled:opacity-50 whitespace-nowrap"
+                              >
+                                {actionLoadingId === tx.id + "_delete" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Delete"}
+                              </button>
                             )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1374,6 +1461,42 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog for Max Billing Actions */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-base font-bold text-gray-900 mb-3">
+              {confirmAction.type === "cancel" ? "Cancel Transaction" : confirmAction.type === "refund" ? "Refund Transaction" : "Delete Transaction"}
+            </h3>
+            <p className="text-sm text-gray-800 mb-5">
+              {confirmAction.type === "cancel"
+                ? "Are you sure you want to cancel this transaction?"
+                : confirmAction.type === "refund"
+                  ? "Are you sure you want to refund \u00a34.95 to the customer? This will also cancel the order and subscription schedule."
+                  : "Are you sure you want to permanently delete this transaction? This cannot be undone."}
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                No, go back
+              </button>
+              <button
+                onClick={executeMaxBillingAction}
+                className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition ${
+                  confirmAction.type === "cancel" ? "bg-orange-600 hover:bg-orange-700" :
+                  confirmAction.type === "refund" ? "bg-purple-600 hover:bg-purple-700" :
+                  "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {confirmAction.type === "cancel" ? "Yes, Cancel" : confirmAction.type === "refund" ? "Yes, Refund" : "Yes, Delete"}
               </button>
             </div>
           </div>
