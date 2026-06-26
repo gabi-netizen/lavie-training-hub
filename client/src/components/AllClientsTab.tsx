@@ -1423,8 +1423,8 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 {/* Results dropdown */}
                 {manualChargeSearch.length >= 2 && !manualChargeContact && (
                   <div className="mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-lg">
-                    {(manualChargeContacts as any)?.contacts?.length > 0 ? (
-                      (manualChargeContacts as any).contacts.map((c: any) => (
+                    {(manualChargeContacts as any)?.length > 0 ? (
+                      (manualChargeContacts as any).map((c: any) => (
                         <button
                           key={c.id}
                           onClick={() => { setManualChargeContact({ id: c.id, name: c.name }); setManualChargeSearch(c.name); }}
