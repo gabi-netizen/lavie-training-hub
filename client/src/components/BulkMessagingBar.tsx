@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageCircle, MessageSquare, Mail, X } from "lucide-react";
+import { MessageCircle, MessageSquare, Mail, Trash2, X } from "lucide-react";
 
 interface BulkMessagingBarProps {
   selectedCount: number;
@@ -7,6 +7,7 @@ interface BulkMessagingBarProps {
   onSms: () => void;
   onEmail: () => void;
   onClear: () => void;
+  onDelete?: () => void;
 }
 
 /**
@@ -19,6 +20,7 @@ export function BulkMessagingBar({
   onSms,
   onEmail,
   onClear,
+  onDelete,
 }: BulkMessagingBarProps) {
   if (selectedCount === 0) return null;
 
@@ -49,6 +51,15 @@ export function BulkMessagingBar({
           <Mail className="w-4 h-4" />
           Email
         </button>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        )}
       </div>
       <button
         onClick={onClear}

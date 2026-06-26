@@ -585,6 +585,7 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
             name: contacts.name,
             email: contacts.email,
             phone: contacts.phone,
+            address: contacts.address,
             trialKit: contacts.trialKit,
             agentName: contacts.agentName
           })
@@ -645,6 +646,71 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
             });
             
             console.log(`[Stripe Webhook] Created new client_subscription ${subscriptionId} for contact ${mapping.contactId}`);
+          }
+
+          // ── Auto-create Mintsoft order for Matinika 60ML on subscription payment ──
+          try {
+            if (contact.address) {
+              // Check for duplicate Mintsoft subscription order
+              const existingSubOrder = await db
+                .select({ id: stripeAuditLog.id })
+                .from(stripeAuditLog)
+                .where(
+                  sql`${stripeAuditLog.eventType} = 'mintsoft_subscription_order' AND ${stripeAuditLog.eventId} = ${event.id}`
+                )
+                .limit(1);
+              if (existingSubOrder.length === 0) {
+                const nameParts = (contact.name || "").trim().split(/\s+/);
+                const firstName = nameParts[0] || "";
+                const lastName = nameParts.slice(1).join(" ") || "";
+                const mintsoftResult = await createMintsoftOrder({
+                  contactId: mapping.contactId,
+                  firstName,
+                  lastName,
+                  email: contact.email || "",
+                  phone: contact.phone || "",
+                  address: contact.address,
+                  trialKit: "Matinika 60ML", // Always Matinika on subscription
+                });
+                if (mintsoftResult.success) {
+                  await db.insert(stripeAuditLog).values({
+                    eventId: event.id,
+                    eventType: "mintsoft_subscription_order",
+                    customerId,
+                    subscriptionId,
+                    status: "processed",
+                    source: "max_billing",
+                    metadata: {
+                      contactId: mapping.contactId,
+                      orderId: mintsoftResult.orderId,
+                      orderNumber: mintsoftResult.orderNumber,
+                      product: "Matinika 60ML",
+                      triggeredBy: "subscription_invoice_paid",
+                    },
+                  });
+                  console.log(`[Stripe Webhook] Mintsoft subscription order created for contact ${mapping.contactId}: ${mintsoftResult.orderNumber}`);
+                } else {
+                  await db.insert(stripeAuditLog).values({
+                    eventId: `mintsoft-sub-failed-${mapping.contactId}-${Date.now()}`,
+                    eventType: "mintsoft_subscription_order_failed",
+                    customerId,
+                    subscriptionId,
+                    status: "failed",
+                    source: "max_billing",
+                    metadata: {
+                      contactId: mapping.contactId,
+                      error: mintsoftResult.error,
+                      triggeredBy: "subscription_invoice_paid",
+                    },
+                  });
+                  console.error(`[Stripe Webhook] Mintsoft subscription order FAILED for contact ${mapping.contactId}: ${mintsoftResult.error}`);
+                }
+              }
+            } else {
+              console.warn(`[Stripe Webhook] Mintsoft subscription order skipped for contact ${mapping.contactId}: no address`);
+            }
+          } catch (mintsoftErr) {
+            console.error(`[Stripe Webhook] Mintsoft subscription order error for contact ${mapping.contactId}:`, mintsoftErr);
           }
         }
       }

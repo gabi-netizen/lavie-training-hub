@@ -344,6 +344,16 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  // Bulk delete leads (admin/manager only)
+  const bulkDeleteLeadsMutation = trpc.manager.bulkDeleteLeads.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.deleted} lead${data.deleted > 1 ? "s" : ""} deleted`);
+      refetch();
+      bulkClearSelection();
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
   // Clear billing callback (dismiss from My Callbacks)
   const clearCallbackMutation = trpc.billing.clearClientCallback.useMutation({
     onSuccess: () => {
@@ -1185,6 +1195,15 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
                 onSms={() => setBulkMsgChannel("sms")}
                 onEmail={() => setBulkMsgChannel("email")}
                 onClear={bulkClearSelection}
+                onDelete={!user?.team ? () => {
+                  if (confirm(`Delete ${bulkSelectedCount} lead${bulkSelectedCount > 1 ? "s" : ""}? This cannot be undone.`)) {
+                    const selectedLeads = (leadsData?.leads ?? []).filter((l: any) => bulkSelectedIds.has(l.subscriptionId));
+                    const ids = selectedLeads.map((l: any) => l.id).filter(Boolean);
+                    if (ids.length > 0) {
+                      bulkDeleteLeadsMutation.mutate({ ids });
+                    }
+                  }
+                } : undefined}
               />
               {/* Bulk Return to CC (managers only) */}
               {!user?.team && bulkSelectedCount > 0 && (
