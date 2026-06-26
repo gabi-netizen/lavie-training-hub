@@ -749,6 +749,65 @@ export const billingDashboardRouter = router({
     }),
 
   /**
+   * getLastShipmentBatch — given a list of customer emails, returns the most recent
+   * non-cancelled shipment for each email. Used by the Billing Dashboard table to
+   * show a "Last Shipment" column without N+1 queries.
+   *
+   * Returns a map: { [email]: { orderDate, status, orderNumber } | null }
+   */
+  getLastShipmentBatch: adminProcedure
+    .input(z.object({ emails: z.array(z.string()).max(200) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return {};
+
+      const normalised = input.emails
+        .map((e) => e.toLowerCase().trim())
+        .filter(Boolean);
+
+      if (normalised.length === 0) return {};
+
+      // For each email, fetch the most recent non-cancelled shipment via a
+      // single query using ROW_NUMBER() window function.
+      const rows = await db.execute(
+        sql`
+          SELECT customerEmail, orderDate, status, orderNumber
+          FROM (
+            SELECT
+              customerEmail,
+              orderDate,
+              status,
+              orderNumber,
+              ROW_NUMBER() OVER (
+                PARTITION BY customerEmail
+                ORDER BY orderDate DESC
+              ) AS rn
+            FROM shipments
+            WHERE customerEmail IN (${sql.join(normalised.map((e) => sql`${e}`), sql`, `)})
+              AND status != 'cancelled'
+          ) ranked
+          WHERE rn = 1
+        `
+      );
+
+      const result: Record<string, { orderDate: string; status: string; orderNumber: string } | null> = {};
+      for (const email of normalised) {
+        result[email] = null;
+      }
+      for (const row of rows as any[]) {
+        const email = String(row.customerEmail ?? "").toLowerCase().trim();
+        if (email) {
+          result[email] = {
+            orderDate: row.orderDate ? String(row.orderDate) : "",
+            status: row.status ?? "",
+            orderNumber: row.orderNumber ?? "",
+          };
+        }
+      }
+      return result;
+    }),
+
+  /**
    * syncShipments — admin-only endpoint that triggers a full Mintsoft → DB sync.
    */
   syncShipments: adminProcedure

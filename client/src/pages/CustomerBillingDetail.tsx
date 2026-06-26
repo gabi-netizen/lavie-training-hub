@@ -561,15 +561,23 @@ export default function CustomerBillingDetail() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {shipmentData.map((shipment) => {
-                        const statusStyles: Record<string, string> = {
-                          Dispatched: "bg-green-100 text-green-800 border border-green-300",
-                          Packed: "bg-yellow-100 text-yellow-800 border border-yellow-300",
-                          New: "bg-gray-100 text-gray-700 border border-gray-300",
-                          "On Hold": "bg-red-100 text-red-800 border border-red-300",
-                          "Part Shipped": "bg-blue-100 text-blue-800 border border-blue-300",
-                          Unknown: "bg-gray-100 text-gray-700 border border-gray-300",
+                        const getShipmentBadgeCls = (s: string) => {
+                          switch (s.toLowerCase()) {
+                            case "despatched":
+                            case "dispatched": return "bg-blue-100 text-blue-800 border border-blue-300";
+                            case "delivered": return "bg-green-100 text-green-800 border border-green-300";
+                            case "picked":
+                            case "packed": return "bg-indigo-100 text-indigo-800 border border-indigo-300";
+                            case "new": return "bg-gray-100 text-gray-700 border border-gray-300";
+                            case "on hold": return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+                            case "cancelled":
+                            case "canceled": return "bg-red-100 text-red-800 border border-red-300";
+                            case "returned": return "bg-red-100 text-red-800 border border-red-300";
+                            case "part shipped": return "bg-orange-100 text-orange-800 border border-orange-300";
+                            default: return "bg-gray-100 text-gray-700 border border-gray-300";
+                          }
                         };
-                        const badgeCls = statusStyles[shipment.status] ?? "bg-gray-100 text-gray-700 border border-gray-300";
+                        const badgeCls = getShipmentBadgeCls(shipment.status);
 
                         return (
                           <tr key={shipment.orderNumber} className="hover:bg-gray-50 transition">

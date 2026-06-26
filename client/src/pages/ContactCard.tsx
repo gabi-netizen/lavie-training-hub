@@ -2173,14 +2173,18 @@ export default function ContactCard() {
                 const shipmentsLoading = shipmentsQuery.isLoading;
 
                 const shipmentStatusBadge = (status: string) => {
-                  switch (status) {
-                    case "Delivered": return "bg-green-100 text-green-800 border-green-200";
-                    case "Dispatched": return "bg-blue-100 text-blue-800 border-blue-200";
-                    case "New": return "bg-gray-100 text-gray-800 border-gray-200";
-                    case "Packed": return "bg-indigo-100 text-indigo-800 border-indigo-200";
-                    case "On Hold": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-                    case "Returned": return "bg-red-100 text-red-800 border-red-200";
-                    case "Part Shipped": return "bg-orange-100 text-orange-800 border-orange-200";
+                  switch (status.toLowerCase()) {
+                    case "delivered": return "bg-green-100 text-green-800 border-green-200";
+                    case "despatched":
+                    case "dispatched": return "bg-blue-100 text-blue-800 border-blue-200";
+                    case "new": return "bg-gray-100 text-gray-800 border-gray-200";
+                    case "packed":
+                    case "picked": return "bg-indigo-100 text-indigo-800 border-indigo-200";
+                    case "on hold": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+                    case "cancelled":
+                    case "canceled": return "bg-red-100 text-red-800 border-red-200";
+                    case "returned": return "bg-red-100 text-red-800 border-red-200";
+                    case "part shipped": return "bg-orange-100 text-orange-800 border-orange-200";
                     default: return "bg-gray-100 text-gray-800 border-gray-200";
                   }
                 };

@@ -401,6 +401,16 @@ export default function BillingPage() {
   const uniqueAgents = chargesData?.uniqueAgents ?? [];
   const rows = chargesData?.rows ?? [];
 
+  // Collect emails from current page rows for the Last Shipment batch query
+  const pageEmails = useMemo(
+    () => rows.map((r) => r.email).filter(Boolean),
+    [rows]
+  );
+  const { data: lastShipmentMap } = trpc.billingDashboard.getLastShipmentBatch.useQuery(
+    { emails: pageEmails },
+    { enabled: pageEmails.length > 0 }
+  );
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Header with Action Buttons ── */}
@@ -707,8 +717,8 @@ export default function BillingPage() {
           <div className="overflow-x-auto">
             {/* Header */}
             <div
-              className="grid items-center px-5 py-3 border-b border-gray-200 bg-gray-50 min-w-[1100px]"
-              style={{ gridTemplateColumns: "1.5fr 1.7fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.2fr 1.3fr" }}
+              className="grid items-center px-5 py-3 border-b border-gray-200 bg-gray-50 min-w-[1280px]"
+              style={{ gridTemplateColumns: "1.5fr 1.7fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.1fr 1.1fr 1.3fr" }}
             >
               <button onClick={() => handleSort("customerName")} className="flex items-center text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-blue-700 transition">
                 Customer <SortIcon field="customerName" currentSort={sortBy} currentDir={sortDir} />
@@ -732,6 +742,10 @@ export default function BillingPage() {
                 Days Until <SortIcon field="currentBillingCycle" currentSort={sortBy} currentDir={sortDir} />
               </button>
               <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Progress</div>
+              <div className="flex items-center gap-1 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                <Package size={11} />
+                Last Shipment
+              </div>
               <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</div>
             </div>
 
@@ -750,8 +764,8 @@ export default function BillingPage() {
                 {rows.map((row) => (
                   <div
                     key={row.subscriptionId}
-                    className="grid items-center px-5 py-4 hover:bg-gray-50 transition-colors min-w-[1100px] border-b border-gray-100"
-                    style={{ gridTemplateColumns: "1.5fr 1.7fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.2fr 1.3fr" }}
+                    className="grid items-center px-5 py-4 hover:bg-gray-50 transition-colors min-w-[1280px] border-b border-gray-100"
+                    style={{ gridTemplateColumns: "1.5fr 1.7fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr 1.1fr 1.1fr 1.3fr" }}
                   >
                     {/* Customer */}
                     <div className="truncate">
@@ -772,6 +786,32 @@ export default function BillingPage() {
                     {/* Progress */}
                     <div>
                       <ProgressBar current={row.currentBillingCycle} total={row.billingCycles} />
+                    </div>
+                    {/* Last Shipment */}
+                    <div>
+                      {(() => {
+                        const ls = lastShipmentMap?.[row.email?.toLowerCase().trim() ?? ""];
+                        if (!ls) return <span className="text-xs text-gray-400">—</span>;
+                        const shipBadge = (s: string) => {
+                          switch (s.toLowerCase()) {
+                            case "despatched":
+                            case "dispatched": return "bg-blue-100 text-blue-800";
+                            case "delivered": return "bg-green-100 text-green-800";
+                            case "picked":
+                            case "packed": return "bg-indigo-100 text-indigo-800";
+                            case "new": return "bg-gray-100 text-gray-700";
+                            default: return "bg-gray-100 text-gray-700";
+                          }
+                        };
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs text-gray-800">{formatDate(ls.orderDate)}</span>
+                            <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide w-fit", shipBadge(ls.status))}>
+                              {ls.status}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     {/* Actions */}
                     <div className="flex items-center gap-2">
