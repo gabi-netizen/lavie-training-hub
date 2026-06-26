@@ -1150,12 +1150,12 @@ export default function ContactCard() {
                         setWaModalOpen(true);
                       }}
                       disabled={!contact.phone && !currentRetentionLead?.phone}
-                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-green-50 hover:bg-green-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-green-700">
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                       </svg>
-                      <span className="text-[10px] font-bold text-green-800">WhatsApp</span>
+                      <span className="text-[10px] font-bold text-white">WhatsApp</span>
                     </button>
                     <button
                       onClick={() => {
@@ -1163,10 +1163,10 @@ export default function ContactCard() {
                         setEmailOpen((v) => !v);
                       }}
                       disabled={!contact.email}
-                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-purple-50 hover:bg-purple-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-amber-400 hover:bg-amber-500 text-white transition disabled:opacity-40 disabled:cursor-not-allowed border-2 border-amber-500"
                     >
-                      <Mail size={18} className="text-purple-700" />
-                      <span className="text-[10px] font-bold text-purple-800">Email</span>
+                      <Mail size={18} className="text-white" />
+                      <span className="text-[10px] font-bold text-white">Email</span>
                     </button>
                     <button
                       onClick={() => {
@@ -1174,24 +1174,24 @@ export default function ContactCard() {
                         setSmsModalOpen(true);
                       }}
                       disabled={!contact.phone && !currentRetentionLead?.phone}
-                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <MessageSquare size={18} className="text-indigo-700" />
-                      <span className="text-[10px] font-bold text-indigo-800">SMS</span>
+                      <MessageSquare size={18} className="text-white" />
+                      <span className="text-[10px] font-bold text-white">SMS</span>
                     </button>
                     <button
                       onClick={() => { setCallbackModalType("callback"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
-                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 transition"
+                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition"
                     >
-                      <Calendar size={18} className="text-amber-700" />
-                      <span className="text-[10px] font-bold text-amber-800">Callback</span>
+                      <Calendar size={18} className="text-white" />
+                      <span className="text-[10px] font-bold text-white">Callback</span>
                     </button>
                     <button
                       onClick={() => { setCallbackModalType("follow_up"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
-                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-cyan-50 hover:bg-cyan-100 transition"
+                      className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-teal-500 hover:bg-teal-600 text-white transition"
                     >
-                      <Clock size={18} className="text-cyan-700" />
-                      <span className="text-[10px] font-bold text-cyan-800">Follow Up</span>
+                      <Clock size={18} className="text-white" />
+                      <span className="text-[10px] font-bold text-white">Follow Up</span>
                     </button>
                   </div>
                 </div>
