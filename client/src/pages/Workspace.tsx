@@ -40,6 +40,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ==========================================
 // TYPES
@@ -117,6 +126,20 @@ const PRODUCTS_USED_OPTIONS = [
 ];
 
 const TRIAL_KIT_OPTIONS = ["Matinika + Oulala", "Matinika + Ashkara"];
+
+function getMissingPaymentRequirements(contact: Pick<Contact, "trialKit" | "address">): string[] {
+  const missing: string[] = [];
+
+  if (!contact.trialKit?.trim()) {
+    missing.push("Please select a Trial Kit before processing payment");
+  }
+
+  if (!contact.address?.trim()) {
+    missing.push("Please add the customer's address before processing payment");
+  }
+
+  return missing;
+}
 
 // ==========================================
 // AGE SEARCHABLE COMBOBOX COMPONENT
@@ -483,7 +506,21 @@ function ContactCard({
   const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [autoSelectFormTemplate, setAutoSelectFormTemplate] = useState(false);
   const [autoSelectCreditCardTemplate, setAutoSelectCreditCardTemplate] = useState(false);
+  const [paymentValidationOpen, setPaymentValidationOpen] = useState(false);
+  const [paymentValidationMessages, setPaymentValidationMessages] = useState<string[]>([]);
   const emailDropRef = useRef<HTMLDivElement>(null);
+
+  const validatePaymentRequirements = useCallback(() => {
+    const missingMessages = getMissingPaymentRequirements(contact);
+    if (missingMessages.length === 0) {
+      return true;
+    }
+
+    setPaymentValidationMessages(missingMessages);
+    setPaymentValidationOpen(true);
+    setDetailsOpen(true);
+    return false;
+  }, [contact]);
 
   // Close email dropdown when clicking outside
   useEffect(() => {
@@ -1215,7 +1252,10 @@ function ContactCard({
           </div>
           {/* Row 3: Take Payment + Send Email + Send WhatsApp */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
-            <button onClick={() => setPayOpen(!payOpen)} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 6, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', justifyContent: 'center', whiteSpace: 'nowrap' }}>
+            <button onClick={() => {
+              if (!payOpen && !validatePaymentRequirements()) return;
+              setPayOpen(!payOpen);
+            }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 6, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', justifyContent: 'center', whiteSpace: 'nowrap' }}>
               <CreditCard size={12} /> Payment
             </button>
             <button
@@ -1384,10 +1424,12 @@ function ContactCard({
             <StripePaymentSection
               contact={contact}
               isAdmin={isAdmin}
+              validateBeforePayment={validatePaymentRequirements}
               onSuccess={() => {
                 setPayOpen(false);
               }}
               onCreditCardClick={() => {
+                if (!validatePaymentRequirements()) return;
                 setEmailTemplateOpen(true);
                 setAutoSelectCreditCardTemplate(true);
               }}
@@ -1395,6 +1437,25 @@ function ContactCard({
           )}
         </div>
       )}
+
+      <AlertDialog open={paymentValidationOpen} onOpenChange={setPaymentValidationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Missing payment information</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {paymentValidationMessages.map((message) => (
+                  <p key={message}>{message}</p>
+                ))}
+                <p>Please update the contact details and try again.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1505,11 +1566,13 @@ function StripeCheckoutForm({
 function StripePaymentSection({
   contact,
   isAdmin,
+  validateBeforePayment,
   onSuccess,
   onCreditCardClick,
 }: {
   contact: Contact;
   isAdmin: boolean;
+  validateBeforePayment: () => boolean;
   onSuccess: () => void;
   onCreditCardClick?: () => void;
 }) {
@@ -1536,6 +1599,9 @@ function StripePaymentSection({
   });
 
   const handleSendPaymentEmail = () => {
+    if (!validateBeforePayment()) {
+      return;
+    }
     if (!contact.email) {
       toast.error("Contact must have an email address.");
       return;
@@ -1587,12 +1653,12 @@ function StripePaymentSection({
   });
 
   const handleTakePayment = () => {
-    if (!contact.email) {
-      setError("Contact must have an email address to process payment.");
+    setError(null);
+    if (!validateBeforePayment()) {
       return;
     }
-    if (!contact.address) {
-      setError("Contact must have an address to process payment. Please add the address first.");
+    if (!contact.email) {
+      setError("Contact must have an email address to process payment.");
       return;
     }
     setLoading(true);
@@ -1703,6 +1769,9 @@ function StripePaymentSection({
         <button
           type="button"
           onClick={() => {
+            if (!validateBeforePayment()) {
+              return;
+            }
             if (!contact.email) {
               toast.error("Contact must have an email address.");
               return;
