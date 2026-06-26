@@ -1091,11 +1091,12 @@ export const managerRouter = router({
 
       if (input.tab === "clients") {
         // Use client_subscriptions table, filter by salesPerson, status=live
+        // Sort by createdOn DESC to match the My Clients tab display order (newest first = row #1)
         const csRows = await db
           .select()
           .from(clientSubscriptions)
           .where(eq(clientSubscriptions.status, "live"))
-          .orderBy(clientSubscriptions.id);
+          .orderBy(desc(clientSubscriptions.createdOn));
         const csFiltered = csRows.filter((r) => {
           const sp = (r.salesPerson ?? "").toLowerCase();
           return sp === af || sp.includes(af) || af.includes(sp);
@@ -1112,7 +1113,7 @@ export const managerRouter = router({
       }
 
       // All other tabs use lead_assignments
-      const rows = await db.select().from(leadAssignments).orderBy(leadAssignments.id);
+      const rows = await db.select().from(leadAssignments);
       let filtered = rows.filter((r) => {
         const agent = (r.assignedAgent ?? "").toLowerCase();
         return agent === af || agent.includes(af) || af.includes(agent);
@@ -1137,8 +1138,12 @@ export const managerRouter = router({
       }
       // tab === "queue" => no leadType filter
 
-      // Sort by id ascending
-      filtered.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+      // Sort by createdAt DESC to match the frontend display order (newest first = row #1)
+      filtered.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
       const leads = filtered.map((row) => ({
         assignmentId: row.id,
         contactId: row.contactId ?? null,
