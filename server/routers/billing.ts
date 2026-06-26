@@ -8,7 +8,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions, leadAssignments, contacts } from "../../drizzle/schema";
+import { clientSubscriptions, leadAssignments, contacts, stripeAuditLog } from "../../drizzle/schema";
 import { eq, like, or, and, sql, desc, getTableColumns, isNull, isNotNull } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 
@@ -1203,5 +1203,97 @@ export const billingRouter = router({
         .where(eq(clientSubscriptions.subscriptionId, input.subscriptionId));
 
       return { success: true };
+    }),
+
+  // ─── Max Billing Stats ────────────────────────────────────────────────
+  getMaxBillingStats: protectedProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return { count: 0, transactions: [] as any[] };
+
+      // Count successful £4.95 Max Billing payments
+      const countResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(stripeAuditLog)
+        .where(
+          sql`${stripeAuditLog.eventType} = 'payment_intent.succeeded'
+          AND ${stripeAuditLog.amount} = 495
+          AND ${stripeAuditLog.source} = 'max_billing'`
+        );
+
+      const count = Number(countResult[0]?.count ?? 0);
+
+      // Fetch transaction details
+      const rows = await db
+        .select({
+          id: stripeAuditLog.id,
+          customerId: stripeAuditLog.customerId,
+          amount: stripeAuditLog.amount,
+          currency: stripeAuditLog.currency,
+          status: stripeAuditLog.status,
+          metadata: stripeAuditLog.metadata,
+          createdAt: stripeAuditLog.createdAt,
+        })
+        .from(stripeAuditLog)
+        .where(
+          sql`${stripeAuditLog.eventType} = 'payment_intent.succeeded'
+          AND ${stripeAuditLog.amount} = 495
+          AND ${stripeAuditLog.source} = 'max_billing'`
+        )
+        .orderBy(desc(stripeAuditLog.createdAt))
+        .limit(200);
+
+      // Enrich with contact name, agent, and Mintsoft status
+      const transactions = await Promise.all(
+        rows.map(async (row) => {
+          const meta = (row.metadata ?? {}) as Record<string, unknown>;
+          const contactId = meta.contactId as string | undefined;
+
+          let contactName: string | null = null;
+          let agentName: string | null = null;
+          if (contactId) {
+            const [c] = await db
+              .select({ name: contacts.name, agentName: contacts.agentName })
+              .from(contacts)
+              .where(eq(contacts.id, Number(contactId)))
+              .limit(1);
+            if (c) { contactName = c.name; agentName = c.agentName; }
+          }
+
+          // Get Mintsoft order status for this contact
+          let mintsoftStatus = "pending";
+          if (contactId) {
+            const [mintsoftRow] = await db
+              .select({ eventType: stripeAuditLog.eventType })
+              .from(stripeAuditLog)
+              .where(
+                sql`(${stripeAuditLog.eventType} = 'mintsoft_order_created'
+                  OR ${stripeAuditLog.eventType} = 'mintsoft_order_failed'
+                  OR ${stripeAuditLog.eventType} = 'mintsoft_order_skipped'
+                  OR ${stripeAuditLog.eventType} = 'mintsoft_order_duplicate')
+                  AND JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${contactId}`
+              )
+              .orderBy(desc(stripeAuditLog.createdAt))
+              .limit(1);
+            if (mintsoftRow) {
+              mintsoftStatus = mintsoftRow.eventType.replace("mintsoft_order_", "");
+            }
+          }
+
+          return {
+            id: row.id,
+            customerId: row.customerId,
+            contactName,
+            agentName,
+            amount: row.amount,
+            currency: row.currency,
+            status: row.status,
+            mintsoftStatus,
+            createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+          };
+        })
+      );
+
+      return { count, transactions };
     }),
 });

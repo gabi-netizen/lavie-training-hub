@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus } from "lucide-react";
+import { Phone, MessageCircle, Mail, MessageSquare, Calendar, RotateCcw, RefreshCw, ChevronRight, UserPlus, X, Package } from "lucide-react";
 import { toast } from "sonner";
 import { useCheckboxSelection } from "@/hooks/useCheckboxSelection";
 import { BulkMessagingBar } from "@/components/BulkMessagingBar";
@@ -103,6 +103,15 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [showMaxBillingModal, setShowMaxBillingModal] = useState(false);
+
+  // Max Billing stats
+  const { data: maxBillingData } = trpc.billing.getMaxBillingStats.useQuery(
+    undefined,
+    { refetchOnWindowFocus: false }
+  );
+  const maxBillingCount = maxBillingData?.count ?? 0;
+  const maxBillingTransactions = maxBillingData?.transactions ?? [];
 
   // Bulk messaging state
   const { selectedIds, isSelected, toggle, toggleAll, isAllSelected, clearSelection, selectedCount } = useCheckboxSelection();
@@ -329,6 +338,17 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
         <div onClick={() => handleCardClick("live", "trial")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "live" && planTypeFilter === "trial" ? "border-2 border-purple-600 ring-2 ring-purple-100" : "border border-purple-200 hover:border-purple-400"}`}>
           <div className="text-xs font-semibold text-purple-800 uppercase tracking-wide mb-1">Trials</div>
           <div className="text-2xl font-bold text-purple-800">{summary.trials}</div>
+        </div>
+        <div
+          onClick={() => setShowMaxBillingModal(true)}
+          className="cursor-pointer bg-green-50 rounded-xl p-4 shadow-sm transition-all border-2 border-green-500 hover:border-green-600 hover:bg-green-100 ring-0 hover:ring-2 hover:ring-green-200"
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <Package size={11} className="text-green-700" />
+            <div className="text-xs font-bold text-green-800 uppercase tracking-wide">Max Billing</div>
+          </div>
+          <div className="text-2xl font-bold text-green-800">{maxBillingCount}</div>
+          <div className="text-[10px] text-green-700 mt-0.5 font-medium">£4.95 trial payments</div>
         </div>
         <div onClick={() => handleCardClick("dunning")} className={`cursor-pointer bg-white rounded-xl p-4 shadow-sm transition-all ${statusFilter === "dunning" ? "border-2 border-red-600 ring-2 ring-red-100" : "border border-red-200 hover:border-red-400"}`}>
           <div className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-1">Decline</div>
@@ -1204,6 +1224,98 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                 className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {assignToRetention.isPending ? "Assigning..." : "Assign"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Max Billing Modal ─────────────────────────────────────────────────── */}
+      {showMaxBillingModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowMaxBillingModal(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center">
+                  <Package size={18} className="text-green-700" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Max Billing Transactions</h2>
+                  <p className="text-xs text-gray-500">{maxBillingCount} £4.95 trial payments processed via Max Billing</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMaxBillingModal(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto">
+              {maxBillingTransactions.length === 0 ? (
+                <div className="flex items-center justify-center py-16 text-gray-500 text-sm">
+                  No Max Billing transactions found yet.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Customer</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Agent</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Date</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Amount</th>
+                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Mintsoft</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {maxBillingTransactions.map((tx) => {
+                      const mintsoftColors: Record<string, string> = {
+                        created: "bg-green-100 text-green-800",
+                        failed: "bg-red-100 text-red-800",
+                        skipped: "bg-yellow-100 text-yellow-800",
+                        duplicate: "bg-gray-100 text-gray-700",
+                        pending: "bg-blue-50 text-blue-700",
+                      };
+                      const mintsoftColor = mintsoftColors[tx.mintsoftStatus] ?? "bg-gray-100 text-gray-700";
+                      return (
+                        <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-3 font-semibold text-gray-800">{tx.contactName ?? tx.customerId ?? "—"}</td>
+                          <td className="px-5 py-3 text-gray-600">{tx.agentName ?? "—"}</td>
+                          <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
+                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                          </td>
+                          <td className="px-5 py-3 font-bold text-gray-800">
+                            {tx.amount != null ? `£${(tx.amount / 100).toFixed(2)}` : "—"}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${mintsoftColor}`}>
+                              {tx.mintsoftStatus}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                Showing {maxBillingTransactions.length} of {maxBillingCount} transactions
+              </span>
+              <button
+                onClick={() => setShowMaxBillingModal(false)}
+                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+              >
+                Close
               </button>
             </div>
           </div>
