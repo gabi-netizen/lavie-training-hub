@@ -8,7 +8,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { clientSubscriptions, leadAssignments, contacts, stripeAuditLog } from "../../drizzle/schema";
+import { clientSubscriptions, leadAssignments, contacts, stripeAuditLog, shipments, stripeCustomers } from "../../drizzle/schema";
 import { eq, like, or, and, sql, desc, getTableColumns, isNull, isNotNull } from "drizzle-orm";
 import { syncClientSubscriptionsFromZoho, getSyncStatus } from "../syncClientSubscriptions";
 
@@ -1243,24 +1243,53 @@ export const billingRouter = router({
         .orderBy(desc(stripeAuditLog.createdAt))
         .limit(200);
 
-      // Enrich with contact name, agent, and Mintsoft status
+      // Enrich with contact details, Mintsoft status, and shipment tracking
       const transactions = await Promise.all(
         rows.map(async (row) => {
           const meta = (row.metadata ?? {}) as Record<string, unknown>;
-          const contactId = meta.contactId as string | undefined;
+          let contactId = meta.contactId as string | undefined;
+          const orderNumber = meta.orderNumber as string | undefined;
+
+          // If contactId not in metadata, look up via stripe_customers table
+          if (!contactId && row.customerId) {
+            const [mapping] = await db
+              .select({ contactId: stripeCustomers.contactId })
+              .from(stripeCustomers)
+              .where(eq(stripeCustomers.stripeCustomerId, row.customerId))
+              .limit(1);
+            if (mapping) {
+              contactId = String(mapping.contactId);
+            }
+          }
 
           let contactName: string | null = null;
           let agentName: string | null = null;
+          let trialCreatedAt: string | null = null;
+          let trialKit: string | null = null;
+          let source: string | null = null;
+
           if (contactId) {
             const [c] = await db
-              .select({ name: contacts.name, agentName: contacts.agentName })
+              .select({
+                name: contacts.name,
+                agentName: contacts.agentName,
+                createdAt: contacts.createdAt,
+                trialKit: contacts.trialKit,
+                source: contacts.source,
+              })
               .from(contacts)
               .where(eq(contacts.id, Number(contactId)))
               .limit(1);
-            if (c) { contactName = c.name; agentName = c.agentName; }
+            if (c) {
+              contactName = c.name;
+              agentName = c.agentName;
+              trialCreatedAt = c.createdAt ? c.createdAt.toISOString() : null;
+              trialKit = c.trialKit;
+              source = c.source;
+            }
           }
 
-          // Get Mintsoft order status for this contact
+          // Get Mintsoft order status from audit log
           let mintsoftStatus = "pending";
           if (contactId) {
             const [mintsoftRow] = await db
@@ -1280,15 +1309,67 @@ export const billingRouter = router({
             }
           }
 
+          // Get shipment tracking from shipments table
+          let trackingNumber: string | null = null;
+          let shipmentStatus: string | null = null;
+          if (orderNumber) {
+            const [shipment] = await db
+              .select({
+                trackingNumber: shipments.trackingNumber,
+                status: shipments.status,
+              })
+              .from(shipments)
+              .where(eq(shipments.orderNumber, orderNumber))
+              .limit(1);
+            if (shipment) {
+              trackingNumber = shipment.trackingNumber;
+              shipmentStatus = shipment.status;
+            }
+          }
+
+          // Get subscription start date (days left until first £44.90 charge)
+          let daysUntilSub: number | null = null;
+          let subStartDate: string | null = null;
+          if (row.customerId) {
+            const [scheduleRow] = await db
+              .select({ metadata: stripeAuditLog.metadata })
+              .from(stripeAuditLog)
+              .where(
+                sql`${stripeAuditLog.eventType} = 'subscription_schedule.auto_created'
+                  AND ${stripeAuditLog.customerId} = ${row.customerId}
+                  AND ${stripeAuditLog.source} = 'max_billing'`
+              )
+              .orderBy(desc(stripeAuditLog.createdAt))
+              .limit(1);
+            if (scheduleRow) {
+              const scheduleMeta = (scheduleRow.metadata ?? {}) as Record<string, unknown>;
+              const startTimestamp = scheduleMeta.startDate as number | undefined;
+              if (startTimestamp) {
+                const startMs = startTimestamp * 1000;
+                subStartDate = new Date(startMs).toISOString();
+                const nowMs = Date.now();
+                daysUntilSub = Math.max(0, Math.ceil((startMs - nowMs) / (1000 * 60 * 60 * 24)));
+              }
+            }
+          }
+
           return {
             id: row.id,
             customerId: row.customerId,
             contactName,
             agentName,
+            trialCreatedAt,
+            trialKit,
+            source,
             amount: row.amount,
             currency: row.currency,
             status: row.status,
             mintsoftStatus,
+            shipmentStatus,
+            trackingNumber,
+            orderNumber: orderNumber ?? null,
+            daysUntilSub,
+            subStartDate,
             createdAt: row.createdAt ? row.createdAt.toISOString() : null,
           };
         })

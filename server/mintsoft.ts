@@ -267,6 +267,7 @@ export async function createMintsoftOrder(params: CreateMintsoftOrderParams): Pr
     WarehouseId: 3, // HAY
     CourierServiceId: 17, // Royal Mail Tracked 48 & Signed
     CurrencyId: 1, // GBP
+    Channel: "Max Billing",
     OrderValue: 4.95,
     OrderItems: orderItems.map((item) => ({
       SKU: item.SKU,
@@ -358,6 +359,7 @@ export async function createMintsoftOrderFromPhase(params: CreateMintsoftOrderFr
     WarehouseId: 3, // HAY
     CourierServiceId: 17, // Royal Mail Tracked 48 & Signed
     CurrencyId: 1, // GBP
+    Channel: "Max Billing",
     OrderValue: orderValue ?? 44.90,
     OrderItems: mintsoftItems.map((item) => ({
       SKU: item.SKU,

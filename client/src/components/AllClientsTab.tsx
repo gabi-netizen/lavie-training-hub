@@ -1236,7 +1236,7 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={(e) => { if (e.target === e.currentTarget) setShowMaxBillingModal(false); }}
         >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 max-h-[85vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
@@ -1263,46 +1263,83 @@ export function AllClientsTab({ onWhatsApp, onSms, onEmail, onCallback, onOpenCa
                   No Max Billing transactions found yet.
                 </div>
               ) : (
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Customer</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Agent</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Date</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Amount</th>
-                      <th className="text-left px-5 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Mintsoft</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Customer</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Agent</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Trial Date</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Trial Kit</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Amount</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Days Left</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Source</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Shipment</th>
+                      <th className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wide">Tracking</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {maxBillingTransactions.map((tx) => {
-                      const mintsoftColors: Record<string, string> = {
+                    {maxBillingTransactions.map((tx: any) => {
+                      // Shipment status badge colors
+                      const shipmentStatusColors: Record<string, string> = {
+                        Despatched: "bg-green-100 text-green-800",
+                        Printed: "bg-blue-100 text-blue-800",
+                        "New": "bg-yellow-100 text-yellow-800",
+                        Packed: "bg-indigo-100 text-indigo-800",
+                        Delivered: "bg-emerald-100 text-emerald-800",
+                        Returned: "bg-red-100 text-red-800",
                         created: "bg-green-100 text-green-800",
                         failed: "bg-red-100 text-red-800",
                         skipped: "bg-yellow-100 text-yellow-800",
                         duplicate: "bg-gray-100 text-gray-700",
                         pending: "bg-blue-50 text-blue-700",
                       };
-                      const mintsoftColor = mintsoftColors[tx.mintsoftStatus] ?? "bg-gray-100 text-gray-700";
+                      // Use shipmentStatus from shipments table if available, otherwise fall back to mintsoftStatus from audit log
+                      const displayStatus = tx.shipmentStatus ?? tx.mintsoftStatus;
+                      const statusColor = shipmentStatusColors[displayStatus] ?? "bg-gray-100 text-gray-700";
                       return (
                         <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-5 py-3 font-semibold text-gray-800">{tx.contactName ?? tx.customerId ?? "—"}</td>
-                          <td className="px-5 py-3 text-gray-600">{tx.agentName ?? "—"}</td>
-                          <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
-                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                          <td className="px-4 py-3 font-semibold text-gray-800">{tx.contactName ?? tx.customerId ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-800">{tx.agentName ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-800 whitespace-nowrap">
+                            {tx.trialCreatedAt ? new Date(tx.trialCreatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                           </td>
-                          <td className="px-5 py-3 font-bold text-gray-800">
+                          <td className="px-4 py-3 text-gray-800 whitespace-nowrap">{tx.trialKit ?? "—"}</td>
+                          <td className="px-4 py-3 font-bold text-gray-800">
                             {tx.amount != null ? `£${(tx.amount / 100).toFixed(2)}` : "—"}
                           </td>
-                          <td className="px-5 py-3">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${mintsoftColor}`}>
-                              {tx.mintsoftStatus}
+                          <td className="px-4 py-3">
+                            {tx.daysUntilSub != null ? (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                tx.daysUntilSub <= 3 ? "bg-red-100 text-red-800" :
+                                tx.daysUntilSub <= 7 ? "bg-orange-100 text-orange-800" :
+                                "bg-blue-100 text-blue-800"
+                              }`}>
+                                {tx.daysUntilSub}d
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-800">{tx.source ?? "—"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusColor}`}>
+                              {displayStatus}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-800">
+                            {tx.trackingNumber ? (
+                              <span className="text-xs font-mono">{tx.trackingNumber}</span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
 

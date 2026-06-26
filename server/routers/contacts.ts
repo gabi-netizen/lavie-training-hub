@@ -46,7 +46,7 @@ import { clickToCall, getCloudTalkAgents, getCallHistory, fetchRecording, syncCo
 import { sendWhatsAppMessage, fetchTemplateBody } from "../twilio";
 import { protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
-import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses, clientSubscriptions } from "../../drizzle/schema";
+import { users, leadAssignments, whatsappMessages, contacts as contactsSchema, stripeAuditLog, stripeCustomers, contactCallNotes, callAnalyses, clientSubscriptions, billingPlans } from "../../drizzle/schema";
 import {
   createSubscriptionSchedule,
   getCustomerPaymentMethods,
@@ -1265,7 +1265,9 @@ export const contactsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const { contactId, billingPlanId } = input;
+      const { contactId, billingPlanId: inputBillingPlanId } = input;
+      // Default to billing plan 1 (Trial Campaign) if not specified
+      const billingPlanId = inputBillingPlanId ?? 1;
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -1345,8 +1347,7 @@ export const contactsRouter = router({
         .limit(1);
       if (existingOrder.length > 0) {
         // Order already exists — just mark as sold without creating duplicate
-        const updateData: any = { status: "done_deal" };
-        if (billingPlanId) updateData.billingPlanId = billingPlanId;
+        const updateData: any = { status: "done_deal", billingPlanId };
         await db.update(contactsSchema).set(updateData).where(eq(contactsSchema.id, contactId));
         return { success: true, alreadyShipped: true, message: "Deal confirmed (shipment already created)" };
       }
@@ -1383,8 +1384,7 @@ export const contactsRouter = router({
           },
         });
         // Mark as done_deal + assign billing plan
-        const updateData2: any = { status: "done_deal" };
-        if (billingPlanId) updateData2.billingPlanId = billingPlanId;
+        const updateData2: any = { status: "done_deal", billingPlanId };
         await db.update(contactsSchema).set(updateData2).where(eq(contactsSchema.id, contactId));
         return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
       } else {
