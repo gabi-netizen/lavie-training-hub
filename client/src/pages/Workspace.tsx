@@ -1257,13 +1257,7 @@ function ContactCard({
           </div>
           {/* Row 3: Take Payment + Send Email + Send WhatsApp */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
-            <button onClick={() => {
-              if (!payOpen) {
-                validatePaymentRequirements(() => setPayOpen(true));
-              } else {
-                setPayOpen(false);
-              }
-            }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 6, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', justifyContent: 'center', whiteSpace: 'nowrap' }}>
+            <button onClick={() => setPayOpen(!payOpen)} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 6, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', justifyContent: 'center', whiteSpace: 'nowrap' }}>
               <CreditCard size={12} /> Payment
             </button>
             <button
@@ -1437,10 +1431,8 @@ function ContactCard({
                 setPayOpen(false);
               }}
               onCreditCardClick={() => {
-                validatePaymentRequirements(() => {
-                  setEmailTemplateOpen(true);
-                  setAutoSelectCreditCardTemplate(true);
-                });
+                setEmailTemplateOpen(true);
+                setAutoSelectCreditCardTemplate(true);
               }}
             />
           )}
@@ -1683,11 +1675,7 @@ function StripePaymentSection({
 
   const handleSendPaymentEmail = () => {
     validateBeforePayment(() => {
-      if (!contact.email) {
-        toast.error("Contact must have an email address.");
-        return;
-      }
-      // Continue with email send...
+      handleSendPaymentEmailInternal();
     });
   };
 
@@ -1743,32 +1731,26 @@ function StripePaymentSection({
   });
 
   const handleTakePayment = () => {
-    setError(null);
+    handleTakePaymentInternal();
+  };
+
+  const handleTakePaymentInternal = () => {
     validateBeforePayment(() => {
+      setError(null);
       if (!contact.email) {
         setError("Contact must have an email address to process payment.");
         return;
       }
       setLoading(true);
-      // ... existing payment logic continues below
-    });
-  };
-
-  const handleTakePaymentInternal = () => {
-    setError(null);
-    if (!contact.email) {
-      setError("Contact must have an email address to process payment.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setClientSecret(null);
-    setCustomerId(null);
-    createPaymentIntent.mutate({
-      contactId: contact.id,
-      name: contact.name,
-      email: contact.email,
-      address: contact.address || undefined,
+      setError(null);
+      setClientSecret(null);
+      setCustomerId(null);
+      createPaymentIntent.mutate({
+        contactId: contact.id,
+        name: contact.name,
+        email: contact.email,
+        address: contact.address || undefined,
+      });
     });
   };
 
@@ -1868,13 +1850,11 @@ function StripePaymentSection({
         <button
           type="button"
           onClick={() => {
-            validateBeforePayment(() => {
-              if (!contact.email) {
-                toast.error("Contact must have an email address.");
-                return;
-              }
-              if (onCreditCardClick) onCreditCardClick();
-            });
+            if (!contact.email) {
+              toast.error("Contact must have an email address.");
+              return;
+            }
+            if (onCreditCardClick) onCreditCardClick();
           }}
           style={{
             width: "100%",
