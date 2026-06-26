@@ -1112,15 +1112,15 @@ export const managerRouter = router({
       const csRows = await db
         .select()
         .from(clientSubscriptions)
-        .where(
-          and(
-            eq(clientSubscriptions.salesPerson, input.agentFilter),
-            eq(clientSubscriptions.status, "live")
-          )
-        )
+        .where(eq(clientSubscriptions.status, "live"))
         .orderBy(clientSubscriptions.id);
+      const af3 = input.agentFilter.toLowerCase();
+      const csFiltered = csRows.filter((r) => {
+        const sp = (r.salesPerson ?? "").toLowerCase();
+        return sp === af3 || sp.includes(af3) || af3.includes(sp);
+      });
 
-      const leads = csRows.map((row) => ({
+      const leads = csFiltered.map((row) => ({
         assignmentId: row.id,
         contactId: row.contactId ?? null,
         subscriptionId: row.subscriptionId,
