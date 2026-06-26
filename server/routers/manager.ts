@@ -1147,6 +1147,29 @@ export const managerRouter = router({
         workStatus: row.workStatus ?? "new",
       }));
       const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);
+      // Fallback: if contact not found in lead_assignments, try client_subscriptions
+      if (currentIndex === -1) {
+        const csRows2 = await db
+          .select()
+          .from(clientSubscriptions)
+          .where(eq(clientSubscriptions.status, "live"))
+          .orderBy(clientSubscriptions.id);
+        const csFiltered2 = csRows2.filter((r) => {
+          const sp = (r.salesPerson ?? "").toLowerCase();
+          return sp === af || sp.includes(af) || af.includes(sp);
+        });
+        const csLeads = csFiltered2.map((row) => ({
+          assignmentId: row.id,
+          contactId: row.contactId ?? null,
+          subscriptionId: row.subscriptionId,
+          customerName: row.customerName ?? "Unknown",
+          workStatus: "live" as string,
+        }));
+        const csIndex = csLeads.findIndex((l) => l.contactId === input.currentContactId);
+        if (csIndex !== -1) {
+          return { leads: csLeads, currentIndex: csIndex, total: csLeads.length };
+        }
+      }
       return { leads, currentIndex, total: leads.length };
     }),
 
