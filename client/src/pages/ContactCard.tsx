@@ -1198,6 +1198,30 @@ export default function ContactCard() {
                     </button>
                   </div>
                 </div>
+                {/* Lead Navigation (Prev/Next) — inline after Quick Actions */}
+                {isFromRetention && totalLeads > 0 && (
+                  <div className="flex items-center justify-between py-3 mt-1 border-t border-gray-100">
+                    <button
+                      onClick={() => prevLead && navigateToLead(prevLead, currentLeadIndex - 1)}
+                      disabled={!prevLead}
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft size={16} />
+                      Prev
+                    </button>
+                    <span className="text-sm font-bold text-slate-800">
+                      {currentLeadIndex >= 0 ? currentLeadIndex + 1 : "\u2014"} / {totalLeads}
+                    </span>
+                    <button
+                      onClick={() => nextLead && navigateToLead(nextLead, currentLeadIndex + 1)}
+                      disabled={!nextLead}
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
                 {/* Card (Stripe) */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Card</span>
@@ -1239,31 +1263,6 @@ export default function ContactCard() {
               )}
             </div>
           </div>
-
-          {/* Lead Navigation (Prev/Next) */}
-          {isFromRetention && totalLeads > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 px-4 py-3 flex items-center justify-between">
-              <button
-                onClick={() => prevLead && navigateToLead(prevLead, currentLeadIndex - 1)}
-                disabled={!prevLead}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={16} />
-                Prev
-              </button>
-              <span className="text-sm font-bold text-slate-800">
-                {currentLeadIndex >= 0 ? currentLeadIndex + 1 : "—"} / {totalLeads}
-              </span>
-              <button
-                onClick={() => nextLead && navigateToLead(nextLead, currentLeadIndex + 1)}
-                disabled={!nextLead}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
 
           {/* WhatsApp Template Modal */}
           {waModalOpen && (
