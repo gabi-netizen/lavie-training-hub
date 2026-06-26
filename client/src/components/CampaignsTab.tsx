@@ -18,6 +18,8 @@ interface Phase {
   currency: string;
   triggerType: "immediate" | "days_after_start" | "recurring";
   triggerDays: number;
+  intervalDays: number;
+  iterations: number | null; // null = unlimited
   mintsoftItems: { SKU: string; Quantity: number }[];
 }
 
@@ -64,6 +66,8 @@ function emptyPhase(phaseNum: number): Phase {
     currency: "GBP",
     triggerType: "immediate",
     triggerDays: 0,
+    intervalDays: 60,
+    iterations: null,
     mintsoftItems: [{ SKU: "", Quantity: 1 }],
   };
 }
@@ -427,6 +431,53 @@ export default function CampaignsTab() {
                         />
                       </div>
                     </div>
+
+                    {/* Recurring Interval & Iterations — only for subscription phases with trigger != immediate */}
+                    {formType === "subscription" && phase.triggerType !== "immediate" && (
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-800 mb-1">Recurring Every</label>
+                          <select
+                            value={[30, 45, 60, 90].includes(phase.intervalDays) ? phase.intervalDays : "custom"}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val !== "custom") updatePhase(idx, { intervalDays: parseInt(val) });
+                            }}
+                            className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value={30}>Every 30 days</option>
+                            <option value={45}>Every 45 days</option>
+                            <option value={60}>Every 60 days</option>
+                            <option value={90}>Every 90 days</option>
+                            <option value="custom">Custom...</option>
+                          </select>
+                          {![30, 45, 60, 90].includes(phase.intervalDays) && (
+                            <input
+                              type="number"
+                              min={1}
+                              value={phase.intervalDays}
+                              onChange={(e) => updatePhase(idx, { intervalDays: parseInt(e.target.value) || 1 })}
+                              placeholder="Days"
+                              className="mt-1 w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-800 mb-1">Iterations</label>
+                          <select
+                            value={phase.iterations === null ? "unlimited" : String(phase.iterations)}
+                            onChange={(e) => updatePhase(idx, { iterations: e.target.value === "unlimited" ? null : parseInt(e.target.value) })}
+                            className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="unlimited">Unlimited</option>
+                            <option value="3">3 payments</option>
+                            <option value="6">6 payments</option>
+                            <option value="12">12 payments</option>
+                            <option value="24">24 payments</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Mintsoft Items */}
                     <div>

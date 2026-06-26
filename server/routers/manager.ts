@@ -2607,8 +2607,9 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
     const now = Date.now();
     const tenMinutesFromNow = now + 10 * 60 * 1000;
 
+    // Retention callbacks (lead_assignments — callbackAt stored as bigint ms)
     const result = await db.execute(sql`
-      SELECT id, customerName, phone, callbackAt, assignedAgent
+      SELECT id, customerName, phone, callbackAt, assignedAgent, contactId, subscriptionId
       FROM lead_assignments
       WHERE callbackAt IS NOT NULL
         AND callbackAt > ${now}
@@ -2617,12 +2618,40 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
     `);
 
     const rows = (result as unknown as any[][])[0] as any[];
-    return (rows || []).map((r) => ({
+    const retentionCallbacks = (rows || []).map((r) => ({
       id: r.id,
       customerName: r.customerName || "Unknown",
       phone: r.phone || null,
-      callbackAt: r.callbackAt,
+      callbackAt: Number(r.callbackAt),
+      contactId: r.contactId ?? null,
+      subscriptionId: r.subscriptionId ?? null,
+      source: "retention" as const,
     }));
+
+    // Opening callbacks (contacts — callbackAt stored as timestamp)
+    const nowDate = new Date();
+    const tenMinDate = new Date(tenMinutesFromNow);
+    const openingResult = await db.execute(sql`
+      SELECT id, name, phone, callbackAt, agentName
+      FROM contacts
+      WHERE callbackAt IS NOT NULL
+        AND callbackAt > ${nowDate}
+        AND callbackAt <= ${tenMinDate}
+        AND agentName = ${userName}
+    `);
+
+    const openingRows = (openingResult as unknown as any[][])[0] as any[];
+    const openingCallbacks = (openingRows || []).map((r) => ({
+      id: r.id + 1000000,
+      customerName: r.name || "Unknown",
+      phone: r.phone || null,
+      callbackAt: new Date(r.callbackAt).getTime(),
+      contactId: r.id ?? null,
+      subscriptionId: null as string | null,
+      source: "opening" as const,
+    }));
+
+    return [...retentionCallbacks, ...openingCallbacks].sort((a, b) => a.callbackAt - b.callbackAt);
   }),
 
   // ─── Performance Dashboard ──────────────────────────────────────────────────

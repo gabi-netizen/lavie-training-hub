@@ -1,6 +1,7 @@
 import TopNav from "./TopNav";
 import FloatingDialler from "./FloatingDialler";
 import MessageNotifications from "./MessageNotifications";
+import CallbackNotifications from "./CallbackNotifications";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <FloatingDialler />
       {/* Global message notifications (WhatsApp/SMS) */}
       <MessageNotifications />
+      {/* Global callback reminder popups */}
+      <CallbackNotifications />
     </div>
   );
 }
