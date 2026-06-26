@@ -957,7 +957,7 @@ export default function ContactCard() {
         {/* ══════════════════════════════════════════════════
             LEFT SIDEBAR (~300px)
         ══════════════════════════════════════════════════ */}
-        <div className="shrink-0 flex flex-col gap-4" style={{ width: "360px" }}>
+        <div className="shrink-0 flex flex-col gap-4" style={{ width: "400px" }}>
 
           {/* ── Contact Identity Card (White) ── */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -992,60 +992,7 @@ export default function ContactCard() {
               </p>
             </div>
 
-            {/* Quick Actions Strip (inline, compact) */}
-            <div className="px-5 pb-3">
-              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                <button
-                  onClick={() => {
-                    if (!contact.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
-                    setWaModalOpen(true);
-                  }}
-                  disabled={!contact.phone && !currentRetentionLead?.phone}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-700">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                  </svg>
-                  <span className="text-[9px] font-bold text-green-800">WhatsApp</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (!contact.email) { toast.error("No email address on file"); return; }
-                    setEmailOpen((v) => !v);
-                  }}
-                  disabled={!contact.email}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Mail size={14} className="text-purple-700" />
-                  <span className="text-[9px] font-bold text-purple-800">Email</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (!contact.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
-                    setSmsModalOpen(true);
-                  }}
-                  disabled={!contact.phone && !currentRetentionLead?.phone}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <MessageSquare size={14} className="text-indigo-700" />
-                  <span className="text-[9px] font-bold text-indigo-800">SMS</span>
-                </button>
-                <button
-                  onClick={() => { setCallbackModalType("callback"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition"
-                >
-                  <Calendar size={14} className="text-amber-700" />
-                  <span className="text-[9px] font-bold text-amber-800">Callback</span>
-                </button>
-                <button
-                  onClick={() => { setCallbackModalType("follow_up"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
-                  className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 transition"
-                >
-                  <Clock size={14} className="text-cyan-700" />
-                  <span className="text-[9px] font-bold text-cyan-800">Follow Up</span>
-                </button>
-              </div>
-            </div>
+
 
             {/* Best Time to Contact Section */}
             <div className="px-5 pb-4">
@@ -1151,13 +1098,7 @@ export default function ContactCard() {
             {/* Customer Details Table */}
             <div className="px-5 pb-4">
               <div className="divide-y divide-gray-100">
-                {/* Email */}
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm font-bold text-black">Email</span>
-                  <a href={`mailto:${contact.email}`} className="text-sm font-semibold text-blue-600 hover:underline text-right max-w-[180px] truncate">
-                    {contact.email || "\u2014"}
-                  </a>
-                </div>
+
                 {/* Phone — Click to Call */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Phone</span>
@@ -1200,17 +1141,59 @@ export default function ContactCard() {
                     <option value="closed">Closed</option>
                   </select>
                 </div>
-                {/* Owner */}
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm font-bold text-black">Owner</span>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {currentRetentionLead?.assignedAgent || contact.agentName || "\u2014"}
-                  </span>
-                </div>
-                {/* Source */}
-                <div className="flex justify-between items-center py-2.5">
-                  <span className="text-sm font-bold text-black">Source</span>
-                  <span className="text-sm font-semibold text-gray-800">{currentRetentionLead?.leadType || contact.source || "\u2014"}</span>
+                {/* Quick Actions Strip */}
+                <div className="py-3">
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => {
+                        if (!contact.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
+                        setWaModalOpen(true);
+                      }}
+                      disabled={!contact.phone && !currentRetentionLead?.phone}
+                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-green-700">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                      </svg>
+                      <span className="text-[9px] font-bold text-green-800">WhatsApp</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!contact.email) { toast.error("No email address on file"); return; }
+                        setEmailOpen((v) => !v);
+                      }}
+                      disabled={!contact.email}
+                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Mail size={14} className="text-purple-700" />
+                      <span className="text-[9px] font-bold text-purple-800">Email</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!contact.phone && !currentRetentionLead?.phone) { toast.error("No phone number on file"); return; }
+                        setSmsModalOpen(true);
+                      }}
+                      disabled={!contact.phone && !currentRetentionLead?.phone}
+                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <MessageSquare size={14} className="text-indigo-700" />
+                      <span className="text-[9px] font-bold text-indigo-800">SMS</span>
+                    </button>
+                    <button
+                      onClick={() => { setCallbackModalType("callback"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
+                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition"
+                    >
+                      <Calendar size={14} className="text-amber-700" />
+                      <span className="text-[9px] font-bold text-amber-800">Callback</span>
+                    </button>
+                    <button
+                      onClick={() => { setCallbackModalType("follow_up"); setCallbackModalOpen(true); setCallbackDateTime(""); }}
+                      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 transition"
+                    >
+                      <Clock size={14} className="text-cyan-700" />
+                      <span className="text-[9px] font-bold text-cyan-800">Follow Up</span>
+                    </button>
+                  </div>
                 </div>
                 {/* Card (Stripe) */}
                 <div className="flex justify-between items-center py-2.5">
