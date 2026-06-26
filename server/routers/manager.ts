@@ -1120,12 +1120,11 @@ export const managerRouter = router({
       const af = input.agentFilter.toLowerCase();
 
       if (input.tab === "clients") {
-        // Use client_subscriptions table, filter by salesPerson, status=live
+        // Use client_subscriptions table, filter by salesPerson, ALL statuses
         // Sort by createdOn DESC to match the My Clients tab display order (newest first = row #1)
         const csRows = await db
           .select()
           .from(clientSubscriptions)
-          .where(eq(clientSubscriptions.status, "live"))
           .orderBy(desc(clientSubscriptions.createdOn));
         const csFiltered = csRows.filter((r) => {
           const sp = (r.salesPerson ?? "").toLowerCase();
@@ -1136,7 +1135,7 @@ export const managerRouter = router({
           contactId: row.contactId ?? null,
           subscriptionId: row.subscriptionId,
           customerName: row.customerName ?? "Unknown",
-          workStatus: "live" as string,
+          workStatus: (row.status ?? "live") as string,
         }));
         const currentIndex = leads.findIndex((l) => l.contactId === input.currentContactId);
         return { leads, currentIndex, total: leads.length };
