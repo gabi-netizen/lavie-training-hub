@@ -4528,6 +4528,19 @@ export default function Workspace() {
               </button>
               <button
                 onClick={() => {
+                  // Switch to validation modal so user can edit address/trial kit
+                  const cId = soldConfirmModal.contactId;
+                  setSoldModalAddress(soldConfirmModal.address || "");
+                  setSoldModalTrialKit(soldConfirmModal.trialKit || "");
+                  setSoldValidationModal({ contactId: cId, missing: [] });
+                  setSoldConfirmModal(null);
+                }}
+                style={{ padding: "9px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#fef3c7", color: "#92400e", border: "1px solid #fbbf24", cursor: "pointer" }}
+              >
+                ✏️ Edit
+              </button>
+              <button
+                onClick={() => {
                   const cId = soldConfirmModal.contactId;
                   // Call confirmSold which checks Stripe payment + creates Mintsoft order
                   setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [cId]: "Sold" }));
@@ -4542,7 +4555,7 @@ export default function Workspace() {
                 disabled={confirmSold.isPending}
                 style={{ background: "#16a34a", color: "white", fontWeight: 700, padding: "9px 18px", borderRadius: 8, fontSize: 14, border: "none", cursor: "pointer" }}
               >
-                Confirm Deal ✓
+                Confirm & Ship ✓
               </button>
             </div>
           </div>
