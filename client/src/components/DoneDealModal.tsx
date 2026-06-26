@@ -78,9 +78,8 @@ const PRODUCT_CATALOG: ProductDef[] = [
   },
 ];
 
-const PRICE_OPTIONS = [
-  5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 52, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 115, 120, 130, 140, 150,
-];
+// Generate price options from 32 to 130
+const PRICE_OPTIONS = Array.from({ length: 130 - 32 + 1 }, (_, i) => i + 32);
 
 const DEPOSIT_OPTIONS = [
   0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 109, 120, 130, 140, 150, 200, 250, 300,
@@ -93,7 +92,8 @@ interface ProductSelection {
   variant: string; // label
   sku: string;
   quantity: number;
-  pricePerUnit: number | "free";
+  pricePerUnit: number | "free" | "custom";
+  customPrice?: number;
 }
 
 interface DoneDealModalProps {
@@ -190,7 +190,7 @@ export default function DoneDealModal({
   // Calculated fields
   const total = useMemo(() => {
     return Object.values(selectedProducts).reduce(
-      (sum, p) => sum + p.quantity * (p.pricePerUnit === "free" ? 0 : p.pricePerUnit),
+      (sum, p) => sum + p.quantity * (p.pricePerUnit === "free" ? 0 : p.pricePerUnit === "custom" ? (p.customPrice ?? 0) : p.pricePerUnit),
       0
     );
   }, [selectedProducts]);
@@ -230,7 +230,7 @@ export default function DoneDealModal({
         products: products.map((p) => ({
           name: `${p.name} — ${p.variant} (${p.sku})`,
           quantity: p.quantity,
-          pricePerUnit: p.pricePerUnit === "free" ? 0 : p.pricePerUnit,
+          pricePerUnit: p.pricePerUnit === "free" ? 0 : p.pricePerUnit === "custom" ? (p.customPrice ?? 0) : p.pricePerUnit,
         })),
         freeProduct,
         deposit,
@@ -344,26 +344,59 @@ export default function DoneDealModal({
                     {/* Price per unit */}
                     <div>
                       <label className="text-xs font-semibold text-gray-900 block mb-1">Price per unit</label>
-                      <select
-                        value={product.pricePerUnit}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateProduct(key, "pricePerUnit", val === "free" ? "free" as any : parseInt(val));
-                        }}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {PRICE_OPTIONS.map((p) => (
-                          <option key={p} value={p}>
-                            £{p}
-                          </option>
-                        ))}
-                        <option value="free">Free</option>
-                      </select>
+                      {product.pricePerUnit === "custom" ? (
+                        <div className="flex gap-1">
+                          <input
+                            type="number"
+                            min={1}
+                            value={product.customPrice ?? ""}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              setSelectedProducts((prev) => ({
+                                ...prev,
+                                [key]: { ...prev[key], customPrice: val },
+                              }));
+                            }}
+                            placeholder="£"
+                            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            onClick={() => updateProduct(key, "pricePerUnit", 50)}
+                            className="px-2 py-2 rounded-lg text-xs font-medium bg-gray-200 hover:bg-gray-300 text-gray-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={product.pricePerUnit}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "custom") {
+                              setSelectedProducts((prev) => ({
+                                ...prev,
+                                [key]: { ...prev[key], pricePerUnit: "custom" as any, customPrice: undefined },
+                              }));
+                            } else {
+                              updateProduct(key, "pricePerUnit", val === "free" ? "free" as any : parseInt(val));
+                            }
+                          }}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {PRICE_OPTIONS.map((p) => (
+                            <option key={p} value={p}>
+                              £{p}
+                            </option>
+                          ))}
+                          <option value="custom">Custom...</option>
+                          <option value="free">Free</option>
+                        </select>
+                      )}
                     </div>
                   </div>
                   <div className="mt-2 text-right">
                     <span className="text-sm font-bold text-gray-900">
-                      Subtotal: {product.pricePerUnit === "free" ? "Free" : `£${product.quantity * product.pricePerUnit}`}
+                      Subtotal: {product.pricePerUnit === "free" ? "Free" : product.pricePerUnit === "custom" ? (product.customPrice ? `£${product.quantity * product.customPrice}` : "—") : `£${product.quantity * product.pricePerUnit}`}
                     </span>
                   </div>
                 </div>
