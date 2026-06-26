@@ -55,6 +55,7 @@ import {
 import { eq, or, and, sql, ne, isNull, isNotNull, inArray, notInArray, count as drizzleCount, gte, lte, desc } from "drizzle-orm";
 import { notifyNewContact } from "../n8n";
 import { getZohoBillingDataByEmail } from "../zohoBilling";
+import { createMintsoftOrder } from "../mintsoft";
 
 // Admin email for notifications
 const ADMIN_EMAIL = "gabriel@lavielabs.com";
@@ -1255,7 +1256,155 @@ export const contactsRouter = router({
       return { paid: false, amount: null, currency: null, paidAt: null };
     }),
 
-  // ─── Get retention data from lead_assignments linked to a contact ───────────
+  // ─── Confirm Sold: verify Stripe payment + create Mintsoft order ────────────
+  confirmSold: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { contactId } = input;
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Get contact details
+      const [contact] = await db
+        .select()
+        .from(contactsSchema)
+        .where(eq(contactsSchema.id, contactId))
+        .limit(1);
+      if (!contact) throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+      if (!contact.trialKit || !contact.address) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Missing trialKit or address" });
+      }
+
+      // ── Check Stripe for £4.95 payment ──
+      let paymentFound = false;
+      let paymentId: string | null = null;
+
+      // Search by contactId in metadata first (most reliable)
+      const paymentIntents = await stripe.paymentIntents.list({ limit: 50 });
+      const piByContactId = paymentIntents.data.find(
+        (pi) => pi.status === "succeeded" && pi.metadata?.contactId === String(contactId)
+      );
+      if (piByContactId) {
+        paymentFound = true;
+        paymentId = piByContactId.id;
+      }
+
+      // Fallback: search by email
+      if (!paymentFound && contact.email) {
+        const piByEmail = paymentIntents.data.find(
+          (pi) => pi.status === "succeeded" && pi.receipt_email === contact.email
+        );
+        if (piByEmail) {
+          paymentFound = true;
+          paymentId = piByEmail.id;
+        }
+        // Also check checkout sessions
+        if (!paymentFound) {
+          const sessions = await stripe.checkout.sessions.list({ limit: 50 });
+          const sessionByEmail = sessions.data.find(
+            (s) => s.payment_status === "paid" && s.customer_details?.email === contact.email
+          );
+          if (sessionByEmail) {
+            paymentFound = true;
+            paymentId = sessionByEmail.payment_intent as string || sessionByEmail.id;
+          }
+        }
+      }
+
+      // Fallback: search by phone in customer metadata
+      if (!paymentFound && contact.phone) {
+        const normalizedPhone = contact.phone.replace(/[\s\-\+\(\)]/g, "");
+        const piByPhone = paymentIntents.data.find(
+          (pi) => pi.status === "succeeded" && pi.metadata?.phone?.replace(/[\s\-\+\(\)]/g, "")?.includes(normalizedPhone.slice(-10))
+        );
+        if (piByPhone) {
+          paymentFound = true;
+          paymentId = piByPhone.id;
+        }
+      }
+
+      if (!paymentFound) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "No payment of \u00a34.95 found for this customer. Please process payment first.",
+        });
+      }
+
+      // ── Check for duplicate Mintsoft order ──
+      const existingOrder = await db
+        .select({ id: stripeAuditLog.id })
+        .from(stripeAuditLog)
+        .where(
+          sql`${stripeAuditLog.eventType} = 'mintsoft_order_created' AND JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${contactId}`
+        )
+        .limit(1);
+      if (existingOrder.length > 0) {
+        // Order already exists — just mark as sold without creating duplicate
+        await db.update(contactsSchema).set({ status: "done_deal" }).where(eq(contactsSchema.id, contactId));
+        return { success: true, alreadyShipped: true, message: "Deal confirmed (shipment already created)" };
+      }
+
+      // ── Create Mintsoft order ──
+      const nameParts = (contact.name || "").trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      const result = await createMintsoftOrder({
+        contactId,
+        firstName,
+        lastName,
+        email: contact.email || "",
+        phone: contact.phone || "",
+        address: contact.address,
+        trialKit: contact.trialKit,
+      });
+
+      if (result.success) {
+        // Log success
+        await db.insert(stripeAuditLog).values({
+          eventId: `mintsoft-sold-${contactId}-${Date.now()}`,
+          eventType: "mintsoft_order_created",
+          customerId: paymentId || "",
+          status: "processed",
+          source: "max_billing",
+          metadata: {
+            contactId,
+            orderId: result.orderId,
+            orderNumber: result.orderNumber,
+            trialKit: contact.trialKit,
+            triggeredBy: "sold_button",
+          },
+        });
+        // Mark as done_deal
+        await db.update(contactsSchema).set({ status: "done_deal" }).where(eq(contactsSchema.id, contactId));
+        return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
+      } else {
+        // Log failure
+        await db.insert(stripeAuditLog).values({
+          eventId: `mintsoft-failed-${contactId}-${Date.now()}`,
+          eventType: "mintsoft_order_failed",
+          customerId: paymentId || "",
+          status: "failed",
+          source: "max_billing",
+          metadata: {
+            contactId,
+            error: result.error,
+            trialKit: contact.trialKit,
+            triggeredBy: "sold_button",
+          },
+        });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Mintsoft order failed: ${result.error}`,
+        });
+      }
+    }),
+
+  // ─── Get retention data from lead_assignments linked to a contact ───────────────
   getRetentionData: protectedProcedure
     .input(z.object({ contactId: z.number() }))
     .query(async ({ input }) => {

@@ -3052,6 +3052,8 @@ export default function Workspace() {
   const [soldValidationModal, setSoldValidationModal] = useState<{ contactId: number; missing: string[] } | null>(null);
   const [soldModalTrialKit, setSoldModalTrialKit] = useState("");
   const [soldModalAddress, setSoldModalAddress] = useState("");
+  // ── Sold confirmation popup state (when all fields are present) ──
+  const [soldConfirmModal, setSoldConfirmModal] = useState<{ contactId: number; name: string; address: string; trialKit: string } | null>(null);
   const managerMode = activeTab === "manager";
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(() => {
     const saved = localStorage.getItem('ws_selectedAgentId');
@@ -3275,6 +3277,21 @@ export default function Workspace() {
     onSuccess: () => refetch(),
   });
 
+  // Confirm Sold: verify Stripe payment + create Mintsoft order
+  const confirmSold = trpc.contacts.confirmSold.useMutation({
+    onSuccess: (data) => {
+      if (data.alreadyShipped) {
+        toast.success("Deal confirmed! (shipment already created) \u2705");
+      } else {
+        toast.success(`Deal confirmed! Mintsoft order #${data.orderNumber} created \u2705`);
+      }
+      refetch();
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to confirm deal");
+    },
+  });
+
   const deleteContact = trpc.contacts.delete.useMutation({
     onSuccess: () => refetch(),
   });
@@ -3338,11 +3355,13 @@ export default function Workspace() {
         setSoldValidationModal({ contactId, missing });
         return;
       }
-      setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [contactId]: "Sold" }));
-      updateContact.mutate({ id: contactId, status: "done_deal" as any, callbackAt: null, previousStatus: soldContact?.status || "working" });
-      const currentIndex = contacts.findIndex((c: any) => c.id === contactId);
-      const nextContact = contacts[currentIndex + 1];
-      if (nextContact) setActiveId(nextContact.id);
+      // All fields present — show confirmation popup
+      setSoldConfirmModal({
+        contactId,
+        name: soldContact?.name || "",
+        address: soldContact?.address || "",
+        trialKit: soldContact?.trialKit || "",
+      });
     } else if (action === "no" || action === "skip" || action === "done") {
       // If skip is pressed, silently end any active/ringing call
       if (action === "skip") {
@@ -4456,6 +4475,61 @@ export default function Workspace() {
         </div>
       )}
 
+      {/* ── Sold Confirmation Popup (all fields present) ── */}
+      {soldConfirmModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", maxWidth: 440, width: "90%", boxShadow: "0 8px 30px rgba(0,0,0,0.25)" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: "#16a34a", margin: "0 0 6px" }}>✅ Confirm Deal</h2>
+            <p style={{ fontSize: 13, color: "#374151", margin: "0 0 16px" }}>Please verify the details before confirming the sale:</p>
+
+            <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Customer Name</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", textAlign: "right" }}>{soldConfirmModal.name || "—"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Full Address</span>
+                <span style={{ fontSize: 13, color: "#374151", textAlign: "right", maxWidth: 240 }}>{soldConfirmModal.address || "—"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Trial Kit</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", textAlign: "right" }}>{soldConfirmModal.trialKit || "—"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #bbf7d0", paddingTop: 10, marginTop: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 110 }}>Amount</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "#15803d" }}>£4.95</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setSoldConfirmModal(null)}
+                style={{ padding: "9px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const cId = soldConfirmModal.contactId;
+                  // Call confirmSold which checks Stripe payment + creates Mintsoft order
+                  setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [cId]: "Sold" }));
+                  confirmSold.mutate({ contactId: cId });
+                  setSoldConfirmModal(null);
+                  // Move to next
+                  const currentIndex = contacts.findIndex((c: any) => c.id === cId);
+                  const nextContact = contacts[currentIndex + 1];
+                  if (nextContact) setActiveId(nextContact.id);
+                }}
+                disabled={confirmSold.isPending}
+                style={{ background: "#16a34a", color: "white", fontWeight: 700, padding: "9px 18px", borderRadius: 8, fontSize: 14, border: "none", cursor: "pointer" }}
+              >
+                Confirm Deal ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Sold Validation Popup ── */}
       {soldValidationModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -4512,14 +4586,14 @@ export default function Workspace() {
                   const soldContact = (contacts as any[]).find((c) => c.id === cId);
                   // Save the fields to DB
                   updateContact.mutate({ id: cId, trialKit: soldModalTrialKit, address: soldModalAddress });
-                  // Mark as sold
-                  setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [cId]: "Sold" }));
-                  updateContact.mutate({ id: cId, status: "done_deal" as any, callbackAt: null, previousStatus: soldContact?.status || "working" });
+                  // Close validation modal and open confirmation modal
                   setSoldValidationModal(null);
-                  // Move to next
-                  const currentIndex = contacts.findIndex((c: any) => c.id === cId);
-                  const nextContact = contacts[currentIndex + 1];
-                  if (nextContact) setActiveId(nextContact.id);
+                  setSoldConfirmModal({
+                    contactId: cId,
+                    name: soldContact?.name || "",
+                    address: soldModalAddress,
+                    trialKit: soldModalTrialKit,
+                  });
                 }}
                 style={{ background: "#16a34a", color: "white", fontWeight: 700, padding: "9px 18px", borderRadius: 8, fontSize: 14, border: "none", cursor: "pointer" }}
               >
