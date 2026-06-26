@@ -354,6 +354,10 @@ export default function ContactCard() {
   const [agentNoteValue, setAgentNoteValue] = useState("");
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [doneDealModalOpen, setDoneDealModalOpen] = useState(false);
+  const [takePaymentOpen, setTakePaymentOpen] = useState(false);
+  const [paymentCardNumber, setPaymentCardNumber] = useState("");
+  const [paymentExpiry, setPaymentExpiry] = useState("");
+  const [paymentCvv, setPaymentCvv] = useState("");
 
   // Sync agent note value from data
   useEffect(() => {
@@ -1219,6 +1223,23 @@ export default function ContactCard() {
                     >
                       Next
                       <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+                {/* Done Deal + Take Payment buttons */}
+                {isFromRetention && (
+                  <div className="flex gap-2 py-3 border-t border-gray-100">
+                    <button
+                      onClick={() => setDoneDealModalOpen(true)}
+                      className="flex-1 px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition shadow-sm"
+                    >
+                      Done Deal
+                    </button>
+                    <button
+                      onClick={() => setTakePaymentOpen(true)}
+                      className="flex-1 px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition shadow-sm"
+                    >
+                      Take Payment
                     </button>
                   </div>
                 )}
@@ -3207,6 +3228,76 @@ export default function ContactCard() {
         }
       }}
     />
+    {/* Take Payment Modal (placeholder — card details only, no processing yet) */}
+    {takePaymentOpen && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50" onClick={() => setTakePaymentOpen(false)} />
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
+          <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Take Payment</h2>
+            <button onClick={() => setTakePaymentOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
+              <X size={20} className="text-gray-900" />
+            </button>
+          </div>
+          <div className="px-6 py-5 space-y-4">
+            <p className="text-sm text-gray-900 font-medium">Enter card details for {contact.name}</p>
+            <div>
+              <label className="text-xs font-semibold text-gray-900 block mb-1">Card Number</label>
+              <input
+                type="text"
+                value={paymentCardNumber}
+                onChange={(e) => setPaymentCardNumber(e.target.value.replace(/[^0-9\s]/g, "").slice(0, 19))}
+                placeholder="1234 5678 9012 3456"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-900 block mb-1">Expiry (MM/YY)</label>
+                <input
+                  type="text"
+                  value={paymentExpiry}
+                  onChange={(e) => setPaymentExpiry(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))}
+                  placeholder="12/28"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-900 block mb-1">CVV</label>
+                <input
+                  type="text"
+                  value={paymentCvv}
+                  onChange={(e) => setPaymentCvv(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                  placeholder="123"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs text-yellow-800 font-medium">Payment processing will be enabled soon. Card details are saved for future use.</p>
+            </div>
+          </div>
+          <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+            <button
+              onClick={() => setTakePaymentOpen(false)}
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-900 border-2 border-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                toast.success("Card details saved");
+                setTakePaymentOpen(false);
+              }}
+              disabled={!paymentCardNumber || !paymentExpiry || !paymentCvv}
+              className="px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition disabled:opacity-50 shadow-sm"
+            >
+              Save Card
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
