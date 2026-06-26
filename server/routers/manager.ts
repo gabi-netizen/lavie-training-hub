@@ -3125,6 +3125,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           shippingDate: z.string().optional(),
           cardLast4: z.string().optional(),
           cardExpiry: z.string().optional(),
+          notes: z.string().optional(),
         }),
       })
     )
@@ -3163,7 +3164,8 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         `Monthly Payment: £${dealDetails.monthlyPayment.toFixed(2)}`,
         `Ship Date: ${dealDetails.shippingDate || "Not specified"}`,
         dealDetails.cardLast4 ? `Card: ****${dealDetails.cardLast4} (Exp: ${dealDetails.cardExpiry || "N/A"})` : `Card: Not provided`,
-      ].join("\n");
+        dealDetails.notes ? `Notes: ${dealDetails.notes}` : "",
+      ].filter(Boolean).join("\n");
 
       const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -3202,6 +3204,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             <tr><td style="padding: 6px 0; font-weight: bold;">Monthly Payment:</td><td>£${dealDetails.monthlyPayment.toFixed(2)}</td></tr>
             <tr><td style="padding: 6px 0; font-weight: bold;">Ship Date:</td><td style="font-weight: bold; color: #2563eb;">${dealDetails.shippingDate || "Not specified"}</td></tr>
             <tr><td style="padding: 6px 0; font-weight: bold;">Card:</td><td>${dealDetails.cardLast4 ? `****${dealDetails.cardLast4} (Exp: ${dealDetails.cardExpiry || "N/A"})` : "Not provided"}</td></tr>
+            ${dealDetails.notes ? `<tr><td style="padding: 6px 0; font-weight: bold;">Notes:</td><td>${dealDetails.notes}</td></tr>` : ""}
           </table>
         </div>
       `;

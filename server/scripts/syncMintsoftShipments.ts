@@ -15,13 +15,29 @@ import { getMintsoftOrders, type MintsoftOrder } from "../mintsoft";
  * Maps Mintsoft OrderStatusId to a human-readable status string.
  */
 const STATUS_MAP: Record<number, string> = {
-  4: "Dispatched",
-  5: "Delivered",
-  6: "Returned",
-  9: "On Hold",
-  14: "New",
-  15: "Packed",
-  17: "Part Shipped",
+  1: "New",
+  2: "Printed",
+  3: "Cancelled",
+  4: "Despatched",
+  5: "Invoiced",
+  6: "Invoice Failed",
+  7: "Holding",
+  8: "Failed",
+  9: "On Backorder",
+  10: "Awaiting Confirmation",
+  11: "Awaiting Documentation",
+  12: "Awaiting Payment",
+  13: "Query Raised",
+  14: "Pack and Hold",
+  15: "Awaiting Picking",
+  16: "Picking Started",
+  17: "Picked",
+  18: "Fraud Risk",
+  19: "Picking Skipped",
+  20: "Packed",
+  21: "Awaiting Replen",
+  22: "Processing",
+  23: "Rebinned",
 };
 
 /**

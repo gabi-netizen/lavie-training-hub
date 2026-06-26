@@ -2172,17 +2172,30 @@ export default function ContactCard() {
               {centerTopTab === "shipments" && (() => {
                 const shipmentStatusBadge = (status: string) => {
                   switch (status.toLowerCase()) {
-                    case "delivered": return "bg-green-100 text-green-800 border-green-200";
                     case "despatched":
-                    case "dispatched": return "bg-blue-100 text-blue-800 border-blue-200";
-                    case "new": return "bg-gray-100 text-gray-800 border-gray-200";
+                    case "dispatched": return "bg-green-100 text-green-800 border-green-200";
+                    case "new": return "bg-blue-100 text-blue-800 border-blue-200";
+                    case "picked":
                     case "packed":
-                    case "picked": return "bg-indigo-100 text-indigo-800 border-indigo-200";
-                    case "on hold": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-                    case "cancelled":
-                    case "canceled": return "bg-red-100 text-red-800 border-red-200";
-                    case "returned": return "bg-red-100 text-red-800 border-red-200";
-                    case "part shipped": return "bg-orange-100 text-orange-800 border-orange-200";
+                    case "picking started": return "bg-indigo-100 text-indigo-800 border-indigo-200";
+                    case "printed":
+                    case "processing": return "bg-cyan-100 text-cyan-800 border-cyan-200";
+                    case "cancelled": return "bg-red-100 text-red-800 border-red-200";
+                    case "failed":
+                    case "fraud risk": return "bg-red-100 text-red-800 border-red-200";
+                    case "invoice failed": return "bg-orange-100 text-orange-800 border-orange-200";
+                    case "invoiced": return "bg-emerald-100 text-emerald-800 border-emerald-200";
+                    case "on backorder":
+                    case "holding":
+                    case "pack and hold": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+                    case "awaiting confirmation":
+                    case "awaiting documentation":
+                    case "awaiting payment":
+                    case "awaiting picking":
+                    case "awaiting replen": return "bg-amber-100 text-amber-800 border-amber-200";
+                    case "query raised": return "bg-purple-100 text-purple-800 border-purple-200";
+                    case "picking skipped":
+                    case "rebinned": return "bg-gray-100 text-gray-800 border-gray-200";
                     default: return "bg-gray-100 text-gray-800 border-gray-200";
                   }
                 };

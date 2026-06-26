@@ -127,6 +127,7 @@ export default function DoneDealModal({
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+  const [dealNotes, setDealNotes] = useState("");
 
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: () => {
@@ -243,6 +244,7 @@ export default function DoneDealModal({
         shippingDate: shipDate,
         cardLast4: cardNumber.replace(/\s/g, "").slice(-4),
         cardExpiry,
+        notes: dealNotes,
       },
     });
   };
@@ -517,6 +519,18 @@ export default function DoneDealModal({
             )}
           </div>
         </div>
+
+          {/* Notes */}
+          <div className="mt-6 px-6">
+            <label className="text-sm font-semibold text-gray-900 block mb-1">Notes</label>
+            <textarea
+              value={dealNotes}
+              onChange={(e) => setDealNotes(e.target.value)}
+              placeholder="Add notes about this deal..."
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
 
           {/* Card Details */}
           <div className="mt-6 p-4 bg-slate-50 rounded-xl border-2 border-black">

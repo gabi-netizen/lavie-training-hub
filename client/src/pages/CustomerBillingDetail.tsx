@@ -564,16 +564,29 @@ export default function CustomerBillingDetail() {
                         const getShipmentBadgeCls = (s: string) => {
                           switch (s.toLowerCase()) {
                             case "despatched":
-                            case "dispatched": return "bg-blue-100 text-blue-800 border border-blue-300";
-                            case "delivered": return "bg-green-100 text-green-800 border border-green-300";
+                            case "dispatched": return "bg-green-100 text-green-800 border border-green-300";
+                            case "new": return "bg-blue-100 text-blue-800 border border-blue-300";
                             case "picked":
-                            case "packed": return "bg-indigo-100 text-indigo-800 border border-indigo-300";
-                            case "new": return "bg-gray-100 text-gray-700 border border-gray-300";
-                            case "on hold": return "bg-yellow-100 text-yellow-800 border border-yellow-300";
-                            case "cancelled":
-                            case "canceled": return "bg-red-100 text-red-800 border border-red-300";
-                            case "returned": return "bg-red-100 text-red-800 border border-red-300";
-                            case "part shipped": return "bg-orange-100 text-orange-800 border border-orange-300";
+                            case "packed":
+                            case "picking started": return "bg-indigo-100 text-indigo-800 border border-indigo-300";
+                            case "printed":
+                            case "processing": return "bg-cyan-100 text-cyan-800 border border-cyan-300";
+                            case "cancelled": return "bg-red-100 text-red-800 border border-red-300";
+                            case "failed":
+                            case "fraud risk": return "bg-red-100 text-red-800 border border-red-300";
+                            case "invoice failed": return "bg-orange-100 text-orange-800 border border-orange-300";
+                            case "invoiced": return "bg-emerald-100 text-emerald-800 border border-emerald-300";
+                            case "on backorder":
+                            case "holding":
+                            case "pack and hold": return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+                            case "awaiting confirmation":
+                            case "awaiting documentation":
+                            case "awaiting payment":
+                            case "awaiting picking":
+                            case "awaiting replen": return "bg-amber-100 text-amber-800 border border-amber-300";
+                            case "query raised": return "bg-purple-100 text-purple-800 border border-purple-300";
+                            case "picking skipped":
+                            case "rebinned": return "bg-gray-100 text-gray-700 border border-gray-300";
                             default: return "bg-gray-100 text-gray-700 border border-gray-300";
                           }
                         };
