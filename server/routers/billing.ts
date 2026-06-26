@@ -631,6 +631,10 @@ export const billingRouter = router({
                 eq(clientSubscriptions.status, "canceled")
               )
             );
+            // Exclude customers who have another live/future subscription or installment
+            conditions.push(
+              sql`${clientSubscriptions.email} NOT IN (SELECT email FROM client_subscriptions WHERE status IN ('live','future') AND email IS NOT NULL AND email != '')`
+            );
           } else if (statusFilter === "expired") {
             // End Installments: only installment plans (not Starter Kit/subscriptions)
             conditions.push(eq(clientSubscriptions.status, "expired"));
