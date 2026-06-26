@@ -538,6 +538,11 @@ export default function ContactCard() {
   const [centerBottomTab, setCenterBottomTab] = useState<"documents" | "activities" | "cloudtalk" | "privacy">("documents");
   const [transactionIdx, setTransactionIdx] = useState(0);
 
+  const { data: shipmentsData, isLoading: shipmentsLoading } = trpc.billingDashboard.getShipmentHistory.useQuery(
+    { email: contact?.email ?? "" },
+    { enabled: !!contact?.email }
+  );
+
   const { data: callHistoryFromDb, isLoading: historyLoading } = trpc.contacts.getCallHistoryFromDb.useQuery(
     { contactId: contact?.id ?? 0 },
     { enabled: !!contact?.id }
@@ -2165,13 +2170,6 @@ export default function ContactCard() {
 
               {/* Shipments tab */}
               {centerTopTab === "shipments" && (() => {
-                const shipmentsQuery = trpc.billingDashboard.getShipmentHistory.useQuery(
-                  { email: contact?.email ?? "" },
-                  { enabled: !!contact?.email }
-                );
-                const shipmentsData = shipmentsQuery.data;
-                const shipmentsLoading = shipmentsQuery.isLoading;
-
                 const shipmentStatusBadge = (status: string) => {
                   switch (status.toLowerCase()) {
                     case "delivered": return "bg-green-100 text-green-800 border-green-200";
