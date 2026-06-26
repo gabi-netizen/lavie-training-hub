@@ -25,6 +25,7 @@ import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule 
 import { getDb } from "../db";
 import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { createMintsoftOrder } from "../mintsoft";
 
 // ─── Signature Verification & Event Construction ─────────────────────────────
 
@@ -317,6 +318,118 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
               source: "webhook_payment_intent.succeeded",
               error: err instanceof Error ? err.message : "Unknown error",
               contactId,
+            },
+          });
+        }
+      } catch {
+        // Swallow — best effort audit
+      }
+    }
+
+    // ─── Auto-create Mintsoft order for trial kit shipment ──────────────────
+    try {
+      const db = await getDb();
+      if (db) {
+        const [contact] = await db
+          .select({
+            name: contacts.name,
+            email: contacts.email,
+            phone: contacts.phone,
+            address: contacts.address,
+            trialKit: contacts.trialKit,
+          })
+          .from(contacts)
+          .where(eq(contacts.id, Number(contactId)))
+          .limit(1);
+
+        if (!contact) {
+          console.warn(`[Stripe Webhook] Mintsoft order skipped: contact ${contactId} not found`);
+        } else if (!contact.trialKit || !contact.address) {
+          // Missing required fields — log and skip
+          await db.insert(stripeAuditLog).values({
+            eventId: `mintsoft-skipped-${contactId}-${Date.now()}`,
+            eventType: "mintsoft_order_skipped",
+            customerId,
+            status: "skipped",
+            metadata: {
+              contactId,
+              reason: !contact.trialKit
+                ? "Missing trialKit"
+                : "Missing address",
+              hasTrialKit: !!contact.trialKit,
+              hasAddress: !!contact.address,
+            },
+          });
+          console.warn(
+            `[Stripe Webhook] Mintsoft order skipped for contact ${contactId}: missing ${!contact.trialKit ? "trialKit" : "address"}`
+          );
+        } else {
+          // Parse name into first/last
+          const nameParts = (contact.name || "").trim().split(/\s+/);
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          const result = await createMintsoftOrder({
+            contactId: Number(contactId),
+            firstName,
+            lastName,
+            email: contact.email || "",
+            phone: contact.phone || "",
+            address: contact.address,
+            trialKit: contact.trialKit,
+          });
+
+          if (result.success) {
+            await db.insert(stripeAuditLog).values({
+              eventId: `mintsoft-created-${contactId}-${Date.now()}`,
+              eventType: "mintsoft_order_created",
+              customerId,
+              status: "processed",
+              metadata: {
+                contactId,
+                mintsoftOrderId: result.orderId,
+                orderNumber: result.orderNumber,
+                trialKit: contact.trialKit,
+              },
+            });
+            console.log(
+              `[Stripe Webhook] Mintsoft order created: ${result.orderNumber} (ID: ${result.orderId}) for contact ${contactId}`
+            );
+          } else {
+            await db.insert(stripeAuditLog).values({
+              eventId: `mintsoft-failed-${contactId}-${Date.now()}`,
+              eventType: "mintsoft_order_failed",
+              customerId,
+              status: "error",
+              metadata: {
+                contactId,
+                error: result.error,
+                trialKit: contact.trialKit,
+              },
+            });
+            console.error(
+              `[Stripe Webhook] Mintsoft order failed for contact ${contactId}: ${result.error}`
+            );
+          }
+        }
+      }
+    } catch (mintsoftErr) {
+      // Mintsoft failure must NOT break the webhook response
+      console.error(
+        `[Stripe Webhook] Mintsoft order error for contact ${contactId}:`,
+        mintsoftErr
+      );
+      try {
+        const db = await getDb();
+        if (db) {
+          await db.insert(stripeAuditLog).values({
+            eventId: `mintsoft-error-${contactId}-${Date.now()}`,
+            eventType: "mintsoft_order_failed",
+            customerId,
+            status: "error",
+            metadata: {
+              contactId,
+              error: mintsoftErr instanceof Error ? mintsoftErr.message : "Unknown error",
             },
           });
         }
