@@ -24,7 +24,7 @@ import Stripe from "stripe";
 import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
 import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createMintsoftOrder } from "../mintsoft";
 
 // ─── Signature Verification & Event Construction ─────────────────────────────
@@ -67,6 +67,7 @@ interface AuditLogEntry {
   currency?: string | null;
   status: string;
   metadata?: unknown;
+  source?: string | null;
 }
 
 async function insertAuditLog(entry: AuditLogEntry): Promise<void> {
@@ -85,6 +86,7 @@ async function insertAuditLog(entry: AuditLogEntry): Promise<void> {
     currency: entry.currency ?? null,
     status: entry.status,
     metadata: entry.metadata ?? null,
+    source: entry.source ?? null,
   });
 }
 
@@ -177,6 +179,8 @@ async function updateContactCardInfo(stripeCustomerId: string): Promise<void> {
 async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> {
   const pi = event.data.object as Stripe.PaymentIntent;
   const customerId = extractCustomerId(pi.customer as any);
+  const contactId = (pi.metadata as Record<string, string>)?.contactId;
+
   await insertAuditLog({
     eventId: event.id,
     eventType: event.type,
@@ -185,6 +189,7 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
     currency: pi.currency,
     status: "processed",
     metadata: { paymentIntentId: pi.id, status: pi.status },
+    source: pi.amount === 495 && contactId ? "max_billing" : null,
   });
 
   if (customerId) {
@@ -194,7 +199,6 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
   }
 
   // ─── Auto-create Subscription Schedule for £4.95 trial payments ──────────
-  const contactId = (pi.metadata as Record<string, string>)?.contactId;
   if (pi.amount === 495 && contactId && customerId) {
     try {
       const db = await getDb();
@@ -290,6 +294,7 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
           amount: 4495,
           currency: "gbp",
           status: "processed",
+          source: "max_billing",
           metadata: {
             source: "webhook_payment_intent.succeeded",
             trialAmount: 495,
@@ -330,6 +335,31 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
     try {
       const db = await getDb();
       if (db) {
+        // Safety net: check for existing Mintsoft order for this contact
+        const existingOrder = await db
+          .select({ id: stripeAuditLog.id })
+          .from(stripeAuditLog)
+          .where(
+            sql`${stripeAuditLog.eventType} = 'mintsoft_order_created' AND JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${contactId}`
+          )
+          .limit(1);
+
+        if (existingOrder.length > 0) {
+          await db.insert(stripeAuditLog).values({
+            eventId: `mintsoft-duplicate-${contactId}-${Date.now()}`,
+            eventType: "mintsoft_order_duplicate",
+            customerId,
+            status: "skipped",
+            source: "max_billing",
+            metadata: {
+              contactId,
+              reason: "Duplicate order prevented (already exists in audit log)",
+            },
+          });
+          console.log(`[Stripe Webhook] Mintsoft order skipped for contact ${contactId}: already created`);
+          return;
+        }
+
         const [contact] = await db
           .select({
             name: contacts.name,
@@ -385,6 +415,7 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
               eventType: "mintsoft_order_created",
               customerId,
               status: "processed",
+              source: "max_billing",
               metadata: {
                 contactId,
                 mintsoftOrderId: result.orderId,

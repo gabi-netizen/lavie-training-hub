@@ -364,6 +364,7 @@ export const billingDashboardRouter = router({
           amount: e.amount,
           currency: e.currency,
           status: e.status,
+          source: e.source,
           createdAt: e.createdAt ? e.createdAt.toISOString() : null,
         })),
       };
@@ -657,6 +658,7 @@ export const billingDashboardRouter = router({
           currency: p.currency,
           status: p.status,
           metadata: p.metadata,
+          source: p.source,
           createdAt: p.createdAt ? p.createdAt.toISOString() : null,
         })),
       };

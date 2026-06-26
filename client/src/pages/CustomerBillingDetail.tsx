@@ -493,8 +493,13 @@ export default function CustomerBillingDetail() {
                           )}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-gray-800">
+                          <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                             {p.amount ? formatCurrency(p.amount / 100) : "—"} — {formatEventType(p.eventType)}
+                            {p.source === "max_billing" && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-green-100 text-green-700 border border-green-200">
+                                Max Billing
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">{p.subscriptionId}</div>
                         </div>

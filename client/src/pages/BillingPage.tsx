@@ -336,6 +336,7 @@ export default function BillingPage() {
   const [agentFilter, setAgentFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>("this_week");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "max_billing" | "other">("all");
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortField>("nextBillingOn");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -366,6 +367,15 @@ export default function BillingPage() {
   });
 
   const { data: activityData } = trpc.billingDashboard.getRecentActivity.useQuery({});
+
+  const filteredActivity = useMemo(() => {
+    if (!activityData?.entries) return [];
+    if (sourceFilter === "all") return activityData.entries;
+    return activityData.entries.filter((entry) => {
+      if (sourceFilter === "max_billing") return entry.source === "max_billing";
+      return entry.source !== "max_billing";
+    });
+  }, [activityData, sourceFilter]);
   const { data: quickStats } = trpc.billingDashboard.getQuickStats.useQuery({});
   const { data: cardExpiry } = trpc.billingDashboard.getCardExpiry.useQuery({});
   const { data: cardExpiryCustomers, isLoading: cardExpiryCustomersLoading } =
@@ -888,13 +898,24 @@ export default function BillingPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
           {/* Recent Activity Feed (2/3 width) */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 xl:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity size={16} className="text-gray-800" />
-              <h3 className="text-base font-bold text-gray-800">Recent Activity</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Activity size={16} className="text-gray-800" />
+                <h3 className="text-base font-bold text-gray-800">Recent Activity</h3>
+              </div>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value as any)}
+                className="text-[10px] font-bold text-gray-700 border border-gray-300 rounded px-1.5 py-0.5 bg-white outline-none"
+              >
+                <option value="all">ALL SOURCES</option>
+                <option value="max_billing">MAX BILLING</option>
+                <option value="other">OTHER / ZOHO</option>
+              </select>
             </div>
             <div className="space-y-0 max-h-[360px] overflow-y-auto">
-              {activityData?.entries && activityData.entries.length > 0 ? (
-                activityData.entries.map((entry, idx) => (
+              {filteredActivity.length > 0 ? (
+                filteredActivity.map((entry, idx) => (
                   <div key={entry.id} className={cn("flex gap-3 items-start py-3", idx > 0 && "border-t border-gray-100")}>
                     <div className={cn(
                       "w-2.5 h-2.5 rounded-full mt-1.5 shrink-0",
@@ -906,7 +927,14 @@ export default function BillingPage() {
                       "bg-red-500"
                     )} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-gray-800">{formatEventType(entry.eventType)}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold text-gray-800">{formatEventType(entry.eventType)}</div>
+                        {entry.source === "max_billing" && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-green-100 text-green-700 border border-green-200">
+                            Max Billing
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         {entry.amount !== null && entry.amount !== undefined && (
                           <span className="text-xs text-gray-600">

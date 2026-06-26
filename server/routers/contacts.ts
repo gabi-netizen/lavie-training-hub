@@ -1320,6 +1320,35 @@ export const contactsRouter = router({
       return getZohoBillingDataByEmail(input.email);
     }),
 
+  // ─── Duplicate Payment Check ────────────────────────────────────────────────
+  checkDuplicatePayment: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { isDuplicate: false };
+
+      // Check for successful trial payments (£4.95) for this contact
+      const existing = await db
+        .select({ createdAt: stripeAuditLog.createdAt })
+        .from(stripeAuditLog)
+        .where(
+          sql`${stripeAuditLog.eventType} = 'payment_intent.succeeded' 
+          AND ${stripeAuditLog.amount} = 495 
+          AND JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${String(input.contactId)}`
+        )
+        .orderBy(desc(stripeAuditLog.createdAt))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return {
+          isDuplicate: true,
+          existingPaymentDate: existing[0].createdAt.toISOString(),
+        };
+      }
+
+      return { isDuplicate: false };
+    }),
+
   // ─── Data Management Dashboard (admin only) ─────────────────────────────────
   dataManagement: adminProcedure
     .input(

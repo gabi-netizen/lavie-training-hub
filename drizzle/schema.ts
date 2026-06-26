@@ -956,6 +956,8 @@ export const stripeAuditLog = mysqlTable("stripe_audit_log", {
   status: varchar("status", { length: 32 }).default("received").notNull(),
   /** Full event payload or relevant metadata as JSON */
   metadata: json("metadata"),
+  /** Source of the transaction: max_billing, zoho, etc. */
+  source: varchar("source", { length: 32 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

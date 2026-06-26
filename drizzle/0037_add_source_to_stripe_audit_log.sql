@@ -1,0 +1,1 @@
+ALTER TABLE stripe_audit_log ADD COLUMN source VARCHAR(32) DEFAULT NULL;

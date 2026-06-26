@@ -508,19 +508,39 @@ function ContactCard({
   const [autoSelectCreditCardTemplate, setAutoSelectCreditCardTemplate] = useState(false);
   const [paymentValidationOpen, setPaymentValidationOpen] = useState(false);
   const [paymentValidationMessages, setPaymentValidationMessages] = useState<string[]>([]);
+  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
+  const [duplicateWarningDate, setDuplicateWarningDate] = useState("");
+  const [pendingPaymentAction, setPendingPaymentAction] = useState<(() => void) | null>(null);
   const emailDropRef = useRef<HTMLDivElement>(null);
 
-  const validatePaymentRequirements = useCallback(() => {
+  const checkDuplicateMutation = trpc.contacts.checkDuplicatePayment.useMutation();
+
+  const validatePaymentRequirements = useCallback(async (onConfirm: () => void) => {
+    // 1. Check for missing required fields (blocking)
     const missingMessages = getMissingPaymentRequirements(contact);
-    if (missingMessages.length === 0) {
-      return true;
+    if (missingMessages.length > 0) {
+      setPaymentValidationMessages(missingMessages);
+      setPaymentValidationOpen(true);
+      setDetailsOpen(true);
+      return;
     }
 
-    setPaymentValidationMessages(missingMessages);
-    setPaymentValidationOpen(true);
-    setDetailsOpen(true);
-    return false;
-  }, [contact]);
+    // 2. Check for duplicate payments (warning)
+    try {
+      const result = await checkDuplicateMutation.mutateAsync({ contactId: contact.id });
+      if (result.isDuplicate) {
+        setDuplicateWarningDate(result.existingPaymentDate ? new Date(result.existingPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "the past");
+        setPendingPaymentAction(() => onConfirm);
+        setDuplicateWarningOpen(true);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to check for duplicate payment:", err);
+      // Proceed anyway on error
+    }
+
+    onConfirm();
+  }, [contact, checkDuplicateMutation]);
 
   // Close email dropdown when clicking outside
   useEffect(() => {
@@ -1253,8 +1273,11 @@ function ContactCard({
           {/* Row 3: Take Payment + Send Email + Send WhatsApp */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
             <button onClick={() => {
-              if (!payOpen && !validatePaymentRequirements()) return;
-              setPayOpen(!payOpen);
+              if (!payOpen) {
+                validatePaymentRequirements(() => setPayOpen(true));
+              } else {
+                setPayOpen(false);
+              }
             }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '7px 4px', borderRadius: 6, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', cursor: 'pointer', justifyContent: 'center', whiteSpace: 'nowrap' }}>
               <CreditCard size={12} /> Payment
             </button>
@@ -1429,9 +1452,10 @@ function ContactCard({
                 setPayOpen(false);
               }}
               onCreditCardClick={() => {
-                if (!validatePaymentRequirements()) return;
-                setEmailTemplateOpen(true);
-                setAutoSelectCreditCardTemplate(true);
+                validatePaymentRequirements(() => {
+                  setEmailTemplateOpen(true);
+                  setAutoSelectCreditCardTemplate(true);
+                });
               }}
             />
           )}
@@ -1453,6 +1477,46 @@ function ContactCard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate payment detected</AlertDialogTitle>
+            <AlertDialogDescription>
+              This customer has already paid £4.95 on {duplicateWarningDate}. A duplicate order will NOT be created in Mintsoft.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <button
+              onClick={() => {
+                setDuplicateWarningOpen(false);
+                setPendingPaymentAction(null);
+              }}
+              style={{ 
+                padding: "8px 16px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: 500,
+                background: "#f3f4f6", 
+                color: "#374151", 
+                border: "1px solid #d1d5db",
+                cursor: "pointer"
+              }}
+            >
+              Cancel
+            </button>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingPaymentAction) pendingPaymentAction();
+                setDuplicateWarningOpen(false);
+                setPendingPaymentAction(null);
+              }}
+            >
+              Proceed Anyway
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1572,7 +1636,7 @@ function StripePaymentSection({
 }: {
   contact: Contact;
   isAdmin: boolean;
-  validateBeforePayment: () => boolean;
+  validateBeforePayment: (onConfirm: () => void) => void;
   onSuccess: () => void;
   onCreditCardClick?: () => void;
 }) {
@@ -1599,9 +1663,16 @@ function StripePaymentSection({
   });
 
   const handleSendPaymentEmail = () => {
-    if (!validateBeforePayment()) {
-      return;
-    }
+    validateBeforePayment(() => {
+      if (!contact.email) {
+        toast.error("Contact must have an email address.");
+        return;
+      }
+      // Continue with email send...
+    });
+  };
+
+  const handleSendPaymentEmailInternal = () => {
     if (!contact.email) {
       toast.error("Contact must have an email address.");
       return;
@@ -1654,9 +1725,18 @@ function StripePaymentSection({
 
   const handleTakePayment = () => {
     setError(null);
-    if (!validateBeforePayment()) {
-      return;
-    }
+    validateBeforePayment(() => {
+      if (!contact.email) {
+        setError("Contact must have an email address to process payment.");
+        return;
+      }
+      setLoading(true);
+      // ... existing payment logic continues below
+    });
+  };
+
+  const handleTakePaymentInternal = () => {
+    setError(null);
     if (!contact.email) {
       setError("Contact must have an email address to process payment.");
       return;
@@ -1769,14 +1849,13 @@ function StripePaymentSection({
         <button
           type="button"
           onClick={() => {
-            if (!validateBeforePayment()) {
-              return;
-            }
-            if (!contact.email) {
-              toast.error("Contact must have an email address.");
-              return;
-            }
-            if (onCreditCardClick) onCreditCardClick();
+            validateBeforePayment(() => {
+              if (!contact.email) {
+                toast.error("Contact must have an email address.");
+                return;
+              }
+              if (onCreditCardClick) onCreditCardClick();
+            });
           }}
           style={{
             width: "100%",
