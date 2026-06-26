@@ -1173,6 +1173,7 @@ export default function ContactCard() {
                     <option value="callback">Callback</option>
                     <option value="follow_up">Follow Up</option>
                     <option value="no_answer">No Answer</option>
+                    <option value="not_interested">Not Interested</option>
                     <option value="done_deal">Done Deal</option>
                     <option value="closed">Closed</option>
                   </select>
