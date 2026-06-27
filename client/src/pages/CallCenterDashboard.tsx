@@ -190,15 +190,25 @@ function statusBadge(status: string) {
   }
 }
 
-function callTypeIcon(callType: string | null, score: number | null) {
-  if (score !== null && score < 40) {
+const INBOUND_CALL_TYPES = ["follow_up", "live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "retention_win_back", "instalment_decline"];
+
+function getCallDirection(callType: string | null, durationSeconds: number | null): "inbound" | "outbound" | "missed" {
+  const isInboundType = INBOUND_CALL_TYPES.includes(callType || "");
+  if (isInboundType && (!durationSeconds || durationSeconds === 0)) return "missed";
+  if (isInboundType) return "inbound";
+  return "outbound";
+}
+
+function callTypeIcon(callType: string | null, durationSeconds: number | null) {
+  const direction = getCallDirection(callType, durationSeconds);
+  if (direction === "missed") {
     return (
-      <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
-        <XIcon size={16} strokeWidth={2.5} />
+      <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center flex-shrink-0">
+        <XIcon size={16} strokeWidth={3} />
       </div>
     );
   }
-  if (callType === "follow_up" || callType === "live_sub" || callType === "pre_cycle_cancelled" || callType === "pre_cycle_decline" || callType === "end_of_instalment" || callType === "from_cat" || callType === "retention_win_back" || callType === "instalment_decline") {
+  if (direction === "inbound") {
     return (
       <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
         <ArrowDownLeft size={16} strokeWidth={2.5} />
@@ -804,10 +814,12 @@ export default function CallCenterDashboard() {
                   >
                     {/* Type */}
                     <div className="flex items-center gap-2.5">
-                      {callTypeIcon(call.callType, call.overallScore)}
+                      {callTypeIcon(call.callType, call.durationSeconds)}
                       <div>
-                        <div className="text-[13px] font-medium text-gray-900 capitalize">{call.agentTeam || call.callTypeLabel}</div>
-                        <div className="text-xs text-gray-600">{formatDuration(call.durationSeconds)}</div>
+                        <div className="text-[13px] font-medium text-gray-900">
+                          {getCallDirection(call.callType, call.durationSeconds) === "missed" ? "Missed call" : getCallDirection(call.callType, call.durationSeconds) === "inbound" ? "Inbound" : "Outbound"}
+                        </div>
+                        <div className="text-xs text-gray-600 capitalize">{(call.agentTeam || call.callTypeLabel)} • {formatDuration(call.durationSeconds)}</div>
                       </div>
                     </div>
 
