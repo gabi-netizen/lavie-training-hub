@@ -1513,19 +1513,22 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
     }
     await updateCallAnalysisStatus(analysisId, savePayload);
 
-    // Step 4: WhatsApp Notification for Low Product Value Closed Deals
+    // Step 4: WhatsApp Notification on ALL Closed Deals
     try {
-      const _pvScore = (report as any).saleQualityScore as number | undefined;
-      if (report.dealClosed && _pvScore !== undefined && _pvScore <= 68) {
+      if (report.dealClosed) {
         // Ensure share token exists
         const shareToken = await generateShareToken(analysisId);
         const shareLink = `https://lavie-training-hub-production.up.railway.app/shared/call/${shareToken}`;
         
         // Use repName from record, fallback to "Agent"
         const agentName = record?.repName || "Agent";
-        const score = _pvScore;
+        const score = (report as any).callScore ?? (report as any).saleQualityScore ?? (report as any).overallScore ?? "N/A";
         
-        const messageText = `⚠️ Low Product Value Alert\nAgent: ${agentName}\nScore: ${score}/100\nDeal: Closed\nReview: ${shareLink}`;
+        // Determine department from callType
+        const _retentionCallTypes = new Set(["live_sub", "pre_cycle_cancelled", "pre_cycle_decline", "end_of_instalment", "from_cat", "retention_win_back", "retention_cancel_trial", "instalment_decline"]);
+        const department = _retentionCallTypes.has(callType) ? "Retention" : "Opening";
+        
+        const messageText = `🎯 Deal Closed!\nAgent: ${agentName}\nDepartment: ${department}\nScore: ${score}/100\nReview: ${shareLink}`;
         
         const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
         const apiKeySid = process.env.TWILIO_API_KEY_SID || "";
@@ -1541,7 +1544,7 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
         const twilioAuth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
         const recipients = ["whatsapp:+972522222828", "whatsapp:+447934284636"];
         
-        console.log(`[CallAnalysis] Sending WhatsApp alert for low product value (${score}) on closed deal by ${agentName} to ${recipients.length} recipients`);
+        console.log(`[CallAnalysis] Sending WhatsApp deal-closed alert for ${agentName} (${department}) to ${recipients.length} recipients`);
         
         for (const recipient of recipients) {
           const bodyParams = new URLSearchParams();
@@ -1565,7 +1568,7 @@ export async function processCallAnalysis(analysisId: number, audioUrl: string, 
             console.log(`[CallAnalysis] WhatsApp alert sent to ${recipient} successfully`);
           }
         }
-        } // end if accountSid && authToken
+        } // end if credentials
       }
     } catch (waErr) {
       console.warn(`[CallAnalysis] Failed to process WhatsApp notification:`, waErr);
