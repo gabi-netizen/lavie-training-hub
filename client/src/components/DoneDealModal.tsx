@@ -159,7 +159,7 @@ export default function DoneDealModal({
           variant: defaultVariant.label,
           sku: defaultVariant.sku,
           quantity: 1,
-          pricePerUnit: 50,
+          pricePerUnit: "custom" as any,
         },
       };
     });
@@ -410,8 +410,8 @@ export default function DoneDealModal({
                           type="number"
                           min={0}
                           value={
-                            product.pricePerUnit === "free" ? 0 :
-                            product.pricePerUnit === "custom" ? (product.customPrice ?? "") :
+                            product.pricePerUnit === "free" ? "" :
+                            product.pricePerUnit === "custom" ? (product.customPrice || "") :
                             product.pricePerUnit
                           }
                           onChange={(e) => {
@@ -421,7 +421,7 @@ export default function DoneDealModal({
                               [key]: { ...prev[key], pricePerUnit: "custom" as any, customPrice: val },
                             }));
                           }}
-                          placeholder="£"
+                          placeholder="Enter price"
                           className="w-full px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
                         />
                         <select
