@@ -147,13 +147,8 @@ export default function DoneDealModal({
   const [instCustomInterval, setInstCustomInterval] = useState("");
   const [instFirstPaymentDate, setInstFirstPaymentDate] = useState("");
   // Custom mode — per-payment schedule
-  const [customPaymentCount, setCustomPaymentCount] = useState("4");
-  const [customPayments, setCustomPayments] = useState<{ amount: string; interval: string }[]>([
-    { amount: "", interval: "30" },
-    { amount: "", interval: "30" },
-    { amount: "", interval: "30" },
-    { amount: "", interval: "30" },
-  ]);
+  const [customPaymentCount, setCustomPaymentCount] = useState("0");
+  const [customPayments, setCustomPayments] = useState<{ amount: string; interval: string }[]>([]);
   const [customFirstPaymentDate, setCustomFirstPaymentDate] = useState("");
 
   // ─── Derived ────────────────────────────────────────────────────────────────
@@ -187,7 +182,7 @@ export default function DoneDealModal({
 
   // Update custom payments count
   const handleCustomPaymentCountChange = (count: string) => {
-    const n = parseInt(count) || 2;
+    const n = parseInt(count) || 0;
     setCustomPaymentCount(count);
     setCustomPayments((prev) => {
       if (n > prev.length) {
@@ -887,7 +882,7 @@ export default function DoneDealModal({
                   onChange={(e) => handleCustomPaymentCountChange(e.target.value)}
                   className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
                 >
-                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
                     <option key={n} value={n}>{n}</option>
                   ))}
                 </select>
