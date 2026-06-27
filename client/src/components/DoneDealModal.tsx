@@ -148,7 +148,8 @@ export default function DoneDealModal({
   const [instFirstPaymentDate, setInstFirstPaymentDate] = useState("");
   // Custom mode — per-payment schedule
   const [customPaymentCount, setCustomPaymentCount] = useState("0");
-  const [customPayments, setCustomPayments] = useState<{ amount: string; interval: string }[]>([]);
+  const [customDeposit, setCustomDeposit] = useState("");
+  const [customPayments, setCustomPayments] = useState<{ amount: string; interval: string; locked?: boolean }[]>([]);
   const [customFirstPaymentDate, setCustomFirstPaymentDate] = useState("");
 
   // ─── Derived ────────────────────────────────────────────────────────────────
@@ -180,20 +181,61 @@ export default function DoneDealModal({
     return customPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   }, [customPayments]);
 
+  // Auto-distribute custom payments
+  const distributeCustomPayments = (count: number, deposit: number, total: number, lockedPayments?: { amount: string; interval: string; locked?: boolean }[]) => {
+    if (count <= 0) return [];
+    const remaining = total - deposit;
+    if (!lockedPayments || lockedPayments.length === 0) {
+      const perPayment = count > 0 ? (remaining / count).toFixed(2) : "0";
+      return Array(count).fill(null).map(() => ({ amount: perPayment, interval: "30", locked: false }));
+    }
+    // Redistribute: locked payments keep their amount, unlocked ones share the rest
+    const lockedSum = lockedPayments.reduce((s, p) => s + (p.locked ? (parseFloat(p.amount) || 0) : 0), 0);
+    const unlockedCount = lockedPayments.filter(p => !p.locked).length;
+    const perUnlocked = unlockedCount > 0 ? ((remaining - lockedSum) / unlockedCount).toFixed(2) : "0";
+    return lockedPayments.map(p => p.locked ? p : { ...p, amount: perUnlocked });
+  };
+
   // Update custom payments count
   const handleCustomPaymentCountChange = (count: string) => {
     const n = parseInt(count) || 0;
     setCustomPaymentCount(count);
-    setCustomPayments((prev) => {
-      if (n > prev.length) {
-        return [...prev, ...Array(n - prev.length).fill(null).map(() => ({ amount: "", interval: "30" }))];
-      }
-      return prev.slice(0, n);
-    });
+    const dep = parseFloat(customDeposit) || 0;
+    const total = instProductsTotal > 0 ? instProductsTotal : 0;
+    const newPayments = distributeCustomPayments(n, dep, total);
+    setCustomPayments(newPayments);
+  };
+
+  // When deposit changes, redistribute
+  const handleCustomDepositChange = (value: string) => {
+    setCustomDeposit(value);
+    const dep = parseFloat(value) || 0;
+    const total = instProductsTotal > 0 ? instProductsTotal : 0;
+    const n = parseInt(customPaymentCount) || 0;
+    setCustomPayments(distributeCustomPayments(n, dep, total, customPayments));
   };
 
   const updateCustomPayment = (idx: number, field: "amount" | "interval", value: string) => {
-    setCustomPayments((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+    setCustomPayments((prev) => {
+      const updated = prev.map((p, i) => {
+        if (i === idx) {
+          if (field === "amount") return { ...p, amount: value, locked: true };
+          return { ...p, [field]: value };
+        }
+        return p;
+      });
+      // Redistribute unlocked payments
+      if (field === "amount") {
+        const dep = parseFloat(customDeposit) || 0;
+        const total = instProductsTotal > 0 ? instProductsTotal : 0;
+        const remaining = total - dep;
+        const lockedSum = updated.reduce((s, p) => s + (p.locked ? (parseFloat(p.amount) || 0) : 0), 0);
+        const unlockedCount = updated.filter(p => !p.locked).length;
+        const perUnlocked = unlockedCount > 0 ? ((remaining - lockedSum) / unlockedCount).toFixed(2) : "0";
+        return updated.map(p => p.locked ? p : { ...p, amount: perUnlocked });
+      }
+      return updated;
+    });
   };
 
   // Group subscription products by cycle for summary
@@ -875,17 +917,30 @@ export default function DoneDealModal({
           ) : (
             /* Custom mode */
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-black mb-1 block">Number of payments</label>
-                <select
-                  value={customPaymentCount}
-                  onChange={(e) => handleCustomPaymentCountChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-                >
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-black mb-1 block">Number of payments</label>
+                  <select
+                    value={customPaymentCount}
+                    onChange={(e) => handleCustomPaymentCountChange(e.target.value)}
+                    className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-black mb-1 block">Deposit (£)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={customDeposit}
+                    onChange={(e) => handleCustomDepositChange(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               {/* Payment rows */}
@@ -995,12 +1050,18 @@ export default function DoneDealModal({
                   <span className="text-lg font-bold text-black">£{instProductsTotal.toFixed(2)}</span>
                 </div>
               )}
+              {(parseFloat(customDeposit) || 0) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-black">Deposit</span>
+                  <span className="text-xs font-bold text-green-700">−£{parseFloat(customDeposit).toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-black">Payments Total ({customPayments.length} payments)</span>
-                <span className={`text-lg font-bold ${customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal - instProductsTotal) > 0.01 ? "text-red-600" : "text-green-700"}`}>£{customTotal.toFixed(2)}</span>
+                <span className={`text-lg font-bold ${customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal + (parseFloat(customDeposit) || 0) - instProductsTotal) > 0.01 ? "text-red-600" : "text-green-700"}`}>£{customTotal.toFixed(2)}</span>
               </div>
-              {customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal - instProductsTotal) > 0.01 && (
-                <p className="text-[10px] font-bold text-red-600">Payments total doesn’t match products total (£{instProductsTotal.toFixed(2)})</p>
+              {customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal + (parseFloat(customDeposit) || 0) - instProductsTotal) > 0.01 && (
+                <p className="text-[10px] font-bold text-red-600">Deposit + Payments (£{(customTotal + (parseFloat(customDeposit) || 0)).toFixed(2)}) doesn’t match products total (£{instProductsTotal.toFixed(2)})</p>
               )}
               <div className="border-t border-gray-200 pt-2 space-y-1">
                 {customPayments.map((p, i) => {
