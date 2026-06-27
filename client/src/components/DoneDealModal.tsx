@@ -140,8 +140,8 @@ export default function DoneDealModal({
   const [instProducts, setInstProducts] = useState<InstProduct[]>([]);
   const [instMode, setInstMode] = useState<"equal" | "custom">("equal");
   // Equal mode
-  const [instTotalAmount, setInstTotalAmount] = useState("420.00");
-  const [instDeposit, setInstDeposit] = useState("0.00");
+  const [instTotalAmount, setInstTotalAmount] = useState("");
+  const [instDeposit, setInstDeposit] = useState("");
   const [instPayments, setInstPayments] = useState("1");
   const [instInterval, setInstInterval] = useState("30");
   const [instCustomInterval, setInstCustomInterval] = useState("");
