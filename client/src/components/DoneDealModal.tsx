@@ -165,6 +165,39 @@ export default function DoneDealModal({
     });
   };
 
+  // Add another size/variant for the same product
+  const addAnotherSize = (product: ProductDef) => {
+    // Find a variant that isn't already selected
+    const existingSkus = Object.keys(selectedProducts)
+      .filter((k) => k.startsWith(`${product.name}|`))
+      .map((k) => k.split("|")[1]);
+    const available = product.variants.find((v) => !existingSkus.includes(v.sku));
+    if (!available) {
+      toast.error("All sizes already added");
+      return;
+    }
+    const newKey = `${product.name}|${available.sku}`;
+    setSelectedProducts((prev) => ({
+      ...prev,
+      [newKey]: {
+        name: product.name,
+        variant: available.label,
+        sku: available.sku,
+        quantity: 1,
+        pricePerUnit: 50,
+      },
+    }));
+  };
+
+  // Remove a specific variant row
+  const removeVariantRow = (key: string) => {
+    setSelectedProducts((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   // Change variant for a product
   const changeVariant = (oldKey: string, product: ProductDef, newSku: string) => {
     const newVariant = product.variants.find((v) => v.sku === newSku);
@@ -401,7 +434,13 @@ export default function DoneDealModal({
                       )}
                     </div>
                   </div>
-                  <div className="mt-2 text-right">
+                  <div className="mt-2 flex items-center justify-between">
+                    <button
+                      onClick={() => removeVariantRow(key)}
+                      className="text-xs font-medium text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      ✕ Remove
+                    </button>
                     <span className="text-sm font-bold text-gray-900">
                       Subtotal: {product.pricePerUnit === "free" ? "Free" : product.pricePerUnit === "custom" ? (product.customPrice ? `£${product.quantity * product.customPrice}` : "—") : `£${product.quantity * product.pricePerUnit}`}
                     </span>
@@ -409,6 +448,20 @@ export default function DoneDealModal({
                 </div>
               );
             })}
+
+            {/* Add Size buttons for products that have multiple variants and are selected */}
+            {PRODUCT_CATALOG.filter((p) => {
+              const selectedKeys = Object.keys(selectedProducts).filter((k) => k.startsWith(`${p.name}|`));
+              return selectedKeys.length > 0 && selectedKeys.length < p.variants.length;
+            }).map((product) => (
+              <button
+                key={`add-${product.name}`}
+                onClick={() => addAnotherSize(product)}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 mb-2 block"
+              >
+                + Add another {product.name} size
+              </button>
+            ))}
           </div>
 
           {/* Free Product */}
