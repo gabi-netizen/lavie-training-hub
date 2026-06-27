@@ -578,8 +578,8 @@ export default function DoneDealModal({
             min={todayStr}
             className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
           />
-          <p className="text-[10px] text-black font-medium mt-1">
-            {isSubFuture ? "⏳ Future deal — charge on selected date, shipment after payment" : "Leave empty to charge today"}
+          <p className={`text-xs mt-1 font-bold ${isSubFuture ? "text-purple-700" : "text-black"}`}>
+            {isSubFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
           </p>
         </div>
 
@@ -803,8 +803,8 @@ export default function DoneDealModal({
                 min={todayStr}
                 className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-[10px] text-black font-medium mt-1">
-                {isInstFuture ? "⏳ Future deal — charge on selected date, shipment after payment" : "Leave empty to charge today"}
+              <p className={`text-xs mt-1 font-bold ${isInstFuture ? "text-purple-700" : "text-black"}`}>
+                {isInstFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
               </p>
             </div>
           </div>
