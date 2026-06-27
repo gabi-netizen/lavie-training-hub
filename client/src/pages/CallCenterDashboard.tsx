@@ -216,7 +216,7 @@ function callTypeIcon(callType: string | null, durationSeconds: number | null) {
     );
   }
   return (
-    <div className="w-8 h-8 rounded-full text-white flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#128C7E" }}>
+    <div className="w-8 h-8 rounded-full text-white flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#22c55e" }}>
       <ArrowUpRight size={16} strokeWidth={2.5} />
     </div>
   );
