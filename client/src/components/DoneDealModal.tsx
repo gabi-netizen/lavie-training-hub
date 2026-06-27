@@ -994,10 +994,19 @@ export default function DoneDealModal({
           ) : (
             /* Custom mode summary */
             <>
+              {instProductsTotal > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-black">Products Total</span>
+                  <span className="text-lg font-bold text-black">£{instProductsTotal.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-black">Total ({customPayments.length} payments)</span>
-                <span className="text-lg font-bold text-black">£{customTotal.toFixed(2)}</span>
+                <span className="text-xs font-semibold text-black">Payments Total ({customPayments.length} payments)</span>
+                <span className={`text-lg font-bold ${customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal - instProductsTotal) > 0.01 ? "text-red-600" : "text-green-700"}`}>£{customTotal.toFixed(2)}</span>
               </div>
+              {customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal - instProductsTotal) > 0.01 && (
+                <p className="text-[10px] font-bold text-red-600">Payments total doesn’t match products total (£{instProductsTotal.toFixed(2)})</p>
+              )}
               <div className="border-t border-gray-200 pt-2 space-y-1">
                 {customPayments.map((p, i) => {
                   const intervalLabel = p.interval === "7" ? "Weekly" : p.interval === "14" ? "Bi-weekly" : "Monthly";
