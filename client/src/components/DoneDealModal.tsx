@@ -290,7 +290,7 @@ export default function DoneDealModal({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal — wide checkout style */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4 max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white rounded-t-2xl border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
@@ -357,118 +357,116 @@ export default function DoneDealModal({
               })}
             </div>
 
-            {/* Expanded product details */}
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+            {/* Compact product rows */}
+            <div className="space-y-0 max-h-[50vh] overflow-y-auto">
               {Object.entries(selectedProducts).map(([key, product]) => {
                 const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
                 if (!catalogProduct) return null;
                 return (
                   <div
                     key={key}
-                    className="bg-blue-50 border border-blue-200 rounded-xl p-3"
+                    className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-b-0"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-gray-900">{product.name}</span>
-                      <span className="text-[10px] font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                    {/* Product name + SKU badge */}
+                    <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0 w-28">
+                      <span className="text-xs font-bold text-gray-900 truncate">{product.name}</span>
+                      <span className="text-[9px] font-medium text-blue-700 bg-blue-100 px-1 py-0.5 rounded whitespace-nowrap flex-shrink-0">
                         {product.sku}
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* Size/Variant */}
-                      {catalogProduct.variants.length > 1 && (
-                        <div className="col-span-3">
-                          <select
-                            value={product.sku}
-                            onChange={(e) => changeVariant(key, catalogProduct, e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            {catalogProduct.variants.map((v) => (
-                              <option key={v.sku} value={v.sku}>
-                                {v.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {/* Quantity */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-gray-700 block mb-0.5">Qty</label>
-                        <select
-                          value={product.quantity}
-                          onChange={(e) => updateProduct(key, "quantity", parseInt(e.target.value))}
-                          className="w-full px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
-                            <option key={q} value={q}>{q}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {/* Price per unit — input first, dropdown below */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-gray-700 block mb-0.5">Price (£)</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={
-                            product.pricePerUnit === "free" ? "" :
-                            product.pricePerUnit === "custom" ? (product.customPrice || "") :
-                            product.pricePerUnit
-                          }
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
+
+                    {/* Variant dropdown */}
+                    {catalogProduct.variants.length > 1 ? (
+                      <select
+                        value={product.sku}
+                        onChange={(e) => changeVariant(key, catalogProduct, e.target.value)}
+                        className="flex-1 min-w-0 px-1.5 py-1 rounded border border-gray-300 bg-white text-[11px] text-gray-900 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        {catalogProduct.variants.map((v) => (
+                          <option key={v.sku} value={v.sku}>
+                            {v.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="flex-1 min-w-0 text-[11px] text-gray-800 truncate">
+                        {product.variant}
+                      </span>
+                    )}
+
+                    {/* Qty dropdown */}
+                    <select
+                      value={product.quantity}
+                      onChange={(e) => updateProduct(key, "quantity", parseInt(e.target.value))}
+                      className="w-12 px-1 py-1 rounded border border-gray-300 bg-white text-[11px] text-gray-900 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 flex-shrink-0"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
+                        <option key={q} value={q}>{q}</option>
+                      ))}
+                    </select>
+
+                    {/* Price input */}
+                    <div className="flex flex-col gap-0.5 flex-shrink-0 w-20">
+                      <input
+                        type="number"
+                        min={0}
+                        value={
+                          product.pricePerUnit === "free" ? "" :
+                          product.pricePerUnit === "custom" ? (product.customPrice || "") :
+                          product.pricePerUnit
+                        }
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setSelectedProducts((prev) => ({
+                            ...prev,
+                            [key]: { ...prev[key], pricePerUnit: "custom" as any, customPrice: val },
+                          }));
+                        }}
+                        placeholder="£ price"
+                        className="w-full px-1.5 py-1 rounded border border-gray-300 bg-white text-[11px] text-gray-900 font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <select
+                        value={
+                          product.pricePerUnit === "free" ? "" :
+                          product.pricePerUnit === "custom" ? "" :
+                          product.pricePerUnit
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val) {
+                            const num = parseInt(val);
                             setSelectedProducts((prev) => ({
                               ...prev,
-                              [key]: { ...prev[key], pricePerUnit: "custom" as any, customPrice: val },
+                              [key]: { ...prev[key], pricePerUnit: num, customPrice: undefined },
                             }));
-                          }}
-                          placeholder="Enter price"
-                          className="w-full px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
-                        />
-                        <select
-                          value={
-                            product.pricePerUnit === "free" ? "free" :
-                            product.pricePerUnit === "custom" ? "" :
-                            product.pricePerUnit
                           }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === "free") {
-                              setSelectedProducts((prev) => ({
-                                ...prev,
-                                [key]: { ...prev[key], pricePerUnit: "free" as any, customPrice: undefined },
-                              }));
-                            } else if (val) {
-                              const num = parseInt(val);
-                              setSelectedProducts((prev) => ({
-                                ...prev,
-                                [key]: { ...prev[key], pricePerUnit: num, customPrice: undefined },
-                              }));
-                            }
-                          }}
-                          className="w-full px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-[10px] text-gray-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400"
-                        >
-                          <option value="">Quick select...</option>
-                          {PRICE_OPTIONS.map((p) => (
-                            <option key={p} value={p}>£{p}</option>
-                          ))}
-                          <option value="free">Free</option>
-                        </select>
-                      </div>
-                      {/* Subtotal */}
-                      <div className="flex items-end">
-                        <span className="text-xs font-bold text-gray-900">
-                          {product.pricePerUnit === "free" ? "Free" : product.pricePerUnit === "custom" ? (product.customPrice ? `£${product.quantity * product.customPrice}` : "—") : `£${product.quantity * (product.pricePerUnit as number)}`}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-1.5 text-right">
-                      <button
-                        onClick={() => removeVariantRow(key)}
-                        className="text-[10px] font-medium text-red-600 hover:text-red-800 transition-colors"
+                        }}
+                        className="w-full px-1 py-0.5 rounded border border-gray-200 bg-gray-50 text-[9px] text-gray-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400"
                       >
-                        ✕ Remove
-                      </button>
+                        <option value="">Quick...</option>
+                        {PRICE_OPTIONS.map((p) => (
+                          <option key={p} value={p}>£{p}</option>
+                        ))}
+                      </select>
                     </div>
+
+                    {/* Subtotal */}
+                    <span className="text-xs font-bold text-gray-900 w-10 text-right flex-shrink-0">
+                      {product.pricePerUnit === "free"
+                        ? "Free"
+                        : product.pricePerUnit === "custom"
+                          ? (product.customPrice ? `£${product.quantity * product.customPrice}` : "—")
+                          : `£${product.quantity * (product.pricePerUnit as number)}`}
+                    </span>
+
+                    {/* Remove button */}
+                    <button
+                      onClick={() => removeVariantRow(key)}
+                      className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-0.5"
+                      title="Remove"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                 );
               })}
@@ -481,29 +479,11 @@ export default function DoneDealModal({
                 <button
                   key={`add-${product.name}`}
                   onClick={() => addAnotherSize(product)}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 block"
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 block mt-1"
                 >
                   + Add another {product.name} size
                 </button>
               ))}
-            </div>
-
-            {/* Free Product */}
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Gift size={14} className="text-gray-900" />
-                <span className="text-xs font-semibold text-gray-900">Free Product</span>
-              </div>
-              <select
-                value={freeProduct}
-                onChange={(e) => setFreeProduct(e.target.value)}
-                className="w-full px-2 py-1.5 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="None">None</option>
-                {PRODUCT_CATALOG.map((p) => (
-                  <option key={p.name} value={p.name}>{p.name}</option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -594,6 +574,36 @@ export default function DoneDealModal({
               )}
             </div>
 
+            {/* Free Gift */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Gift size={14} className="text-gray-900" />
+                <span className="text-xs font-semibold text-gray-900">Free Gift</span>
+              </div>
+              <select
+                value={freeProduct}
+                onChange={(e) => setFreeProduct(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="None">None</option>
+                {PRODUCT_CATALOG.map((p) => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-xs font-semibold text-gray-900 block mb-1">Notes</label>
+              <textarea
+                value={dealNotes}
+                onChange={(e) => setDealNotes(e.target.value)}
+                placeholder="Add notes about this deal..."
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+
             {/* Totals */}
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
@@ -619,18 +629,6 @@ export default function DoneDealModal({
                   Deposit exceeds total
                 </p>
               )}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="text-xs font-semibold text-gray-900 block mb-1">Notes</label>
-              <textarea
-                value={dealNotes}
-                onChange={(e) => setDealNotes(e.target.value)}
-                placeholder="Add notes about this deal..."
-                rows={2}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
             </div>
 
             {/* Card Details */}
