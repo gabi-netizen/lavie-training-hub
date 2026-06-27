@@ -33,50 +33,50 @@ const PRODUCT_CATALOG: ProductDef[] = [
   {
     name: "Oulala",
     variants: [
-      { label: "30ml Black Bottle", sku: "BBS30" },
-      { label: "30ml Silver Bottle", sku: "S30" },
+      { label: "30ml Black Bottle (Full Size)", sku: "BBS30" },
+      { label: "30ml Silver Bottle (Full Size)", sku: "S30" },
       { label: "10ml (Starter)", sku: "S10" },
     ],
   },
   {
     name: "Ashkara Eye Serum",
     variants: [
-      { label: "15ml", sku: "DLM15" },
+      { label: "15ml (Full Size)", sku: "DLM15" },
       { label: "5ml (Starter)", sku: "LM5" },
     ],
   },
   {
     name: "Brightening Gel",
     variants: [
-      { label: "30ml", sku: "GEL30" },
+      { label: "30ml (Full Size)", sku: "GEL30" },
       { label: "5ml (Starter)", sku: "GEL05" },
     ],
   },
   {
     name: "Skin Immortality",
     variants: [
-      { label: "50ml NEW BOX", sku: "JSIM50" },
-      { label: "50ml", sku: "SIM50" },
+      { label: "50ml NEW BOX (Full Size)", sku: "JSIM50" },
+      { label: "50ml (Full Size)", sku: "SIM50" },
       { label: "20ml (Starter)", sku: "SIM20" },
     ],
   },
   {
     name: "Facial Cleanser",
     variants: [
-      { label: "125ml", sku: "FC125" },
+      { label: "125ml (Full Size)", sku: "FC125" },
     ],
   },
   {
     name: "Sun Defense SPF25",
     variants: [
-      { label: "SPF25", sku: "SPF25" },
+      { label: "SPF25 (Full Size)", sku: "SPF25" },
     ],
   },
   {
     name: "Bosem Exfoliating",
     variants: [
-      { label: "60ml", sku: "VE50" },
-      { label: "15ml", sku: "VE15" },
+      { label: "60ml (Full Size)", sku: "VE50" },
+      { label: "15ml (Starter)", sku: "VE15" },
     ],
   },
 ];
