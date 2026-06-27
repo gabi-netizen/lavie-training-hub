@@ -4523,20 +4523,22 @@ export default function Workspace() {
               </div>
             </div>
 
-            {/* Campaign Selection */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Assign Campaign (Billing Plan)</label>
-              <select
-                value={soldCampaignId ?? ""}
-                onChange={(e) => setSoldCampaignId(e.target.value ? Number(e.target.value) : null)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 13, color: "#1f2937", background: "#fff" }}
-              >
-                <option value="">No campaign</option>
-                {(billingPlansList as any[] || []).map((plan: any) => (
-                  <option key={plan.id} value={plan.id}>{plan.name} ({plan.type})</option>
-                ))}
-              </select>
-            </div>
+            {/* Campaign Selection — only show for Retention agents */}
+            {user?.team === "retention" && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Assign Campaign (Billing Plan)</label>
+                <select
+                  value={soldCampaignId ?? ""}
+                  onChange={(e) => setSoldCampaignId(e.target.value ? Number(e.target.value) : null)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1.5px solid #d1d5db", fontSize: 13, color: "#1f2937", background: "#fff" }}
+                >
+                  <option value="">No campaign</option>
+                  {(billingPlansList as any[] || []).map((plan: any) => (
+                    <option key={plan.id} value={plan.id}>{plan.name} ({plan.type})</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <button
@@ -4563,7 +4565,7 @@ export default function Workspace() {
                   const cId = soldConfirmModal.contactId;
                   // Call confirmSold which checks Stripe payment + creates Mintsoft order
                   setLocalDoneItems((prev: Record<number, string>) => ({ ...prev, [cId]: "Sold" }));
-                  confirmSold.mutate({ contactId: cId, billingPlanId: soldCampaignId ?? undefined });
+                  confirmSold.mutate({ contactId: cId, billingPlanId: user?.team === "retention" ? (soldCampaignId ?? undefined) : 1 });
                   setSoldConfirmModal(null);
                   setSoldCampaignId(null);
                   // Move to next
