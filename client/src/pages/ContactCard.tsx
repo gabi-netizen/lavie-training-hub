@@ -803,7 +803,7 @@ export default function ContactCard() {
               className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 shadow-sm"
               style={{ background: "#16a34a" }}
             >
-              Mark Done Deal
+              Create Deal
             </button>
             <button
               onClick={() => handleQuickAction("closed")}
@@ -1263,7 +1263,7 @@ export default function ContactCard() {
                       onClick={() => setDoneDealModalOpen(true)}
                       className="flex-1 px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition shadow-sm"
                     >
-                      Done Deal
+                      Create Deal
                     </button>
                     <button
                       onClick={() => setTakePaymentOpen(true)}
