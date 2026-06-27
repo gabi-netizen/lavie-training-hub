@@ -1,9 +1,10 @@
 /**
  * DoneDealModal — Records deal details when marking a lead as Done Deal.
- * Two-column checkout-style layout with Subscription/Installment toggle.
+ * Two tabs: Subscription / Installment — fields match Max Billing modals.
+ * Retention agents only (Opening uses confirmSold flow).
  */
 import { useState, useMemo } from "react";
-import { X, Package, Gift, CreditCard, Calculator, Truck } from "lucide-react";
+import { X, Package, Gift, CreditCard, Calculator, Truck, RefreshCw, Calendar } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -78,13 +79,6 @@ const PRODUCT_CATALOG: ProductDef[] = [
   },
 ];
 
-// Generate price options from 32 to 130
-const PRICE_OPTIONS = Array.from({ length: 130 - 32 + 1 }, (_, i) => i + 32);
-
-const DEPOSIT_OPTIONS = [
-  0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 109, 120, 130, 140, 150, 200, 250, 300,
-];
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ProductSelection {
@@ -92,8 +86,6 @@ interface ProductSelection {
   variant: string;
   sku: string;
   quantity: number;
-  pricePerUnit: number | "free" | "custom";
-  customPrice?: number;
 }
 
 interface DoneDealModalProps {
@@ -117,11 +109,84 @@ export default function DoneDealModal({
   agentName,
   onSuccess,
 }: DoneDealModalProps) {
-  const [dealType, setDealType] = useState<"subscription" | "installment">("installment");
-  const [selectedProducts, setSelectedProducts] = useState<Record<string, ProductSelection>>({});
-  const [freeGifts, setFreeGifts] = useState<Record<string, { name: string; variant: string; sku: string; quantity: number }>>({});
+  const [dealType, setDealType] = useState<"subscription" | "installment">("subscription");
 
-  // Free gift helpers
+  // ─── Shared State ─────────────────────────────────────────────────────────────
+  const [selectedProducts, setSelectedProducts] = useState<ProductSelection[]>([]);
+  const [freeGifts, setFreeGifts] = useState<Record<string, { name: string; variant: string; sku: string; quantity: number }>>({});
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [dealNotes, setDealNotes] = useState("");
+
+  // Ship date (only shown when first charge = today)
+  const [shipOption, setShipOption] = useState<"today" | "tomorrow" | "custom">("today");
+  const [customShipDate, setCustomShipDate] = useState("");
+
+  // ─── Subscription State ─────────────────────────────────────────────────────
+  const [subAmount, setSubAmount] = useState("44.90");
+  const [subBillingCycle, setSubBillingCycle] = useState("30");
+  const [subCustomCycle, setSubCustomCycle] = useState("");
+  const [subFirstChargeDate, setSubFirstChargeDate] = useState(""); // empty = today
+
+  // ─── Installment State ──────────────────────────────────────────────────────
+  const [instTotalAmount, setInstTotalAmount] = useState("420.00");
+  const [instDeposit, setInstDeposit] = useState("0.00");
+  const [instPayments, setInstPayments] = useState("12");
+  const [instInterval, setInstInterval] = useState("30");
+  const [instCustomInterval, setInstCustomInterval] = useState("");
+  const [instFirstPaymentDate, setInstFirstPaymentDate] = useState(""); // empty = today
+
+  // ─── Derived ────────────────────────────────────────────────────────────────
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const isSubFuture = subFirstChargeDate !== "" && subFirstChargeDate > todayStr;
+  const isInstFuture = instFirstPaymentDate !== "" && instFirstPaymentDate > todayStr;
+  const isFutureDeal = dealType === "subscription" ? isSubFuture : isInstFuture;
+
+  const instMonthlyPayment = useMemo(() => {
+    const total = parseFloat(instTotalAmount) || 0;
+    const dep = parseFloat(instDeposit) || 0;
+    const payments = parseInt(instPayments) || 1;
+    return payments > 0 ? (total - dep) / payments : 0;
+  }, [instTotalAmount, instDeposit, instPayments]);
+
+  const billingCycleDays = subBillingCycle === "custom" ? (parseInt(subCustomCycle) || 30) : parseInt(subBillingCycle);
+  const intervalDays = instInterval === "custom" ? (parseInt(instCustomInterval) || 30) : parseInt(instInterval);
+
+  // ─── Product Helpers ────────────────────────────────────────────────────────
+  const addProduct = (product: ProductDef) => {
+    const exists = selectedProducts.find((p) => p.name === product.name);
+    if (exists) {
+      setSelectedProducts((prev) => prev.filter((p) => p.name !== product.name));
+    } else {
+      setSelectedProducts((prev) => [
+        ...prev,
+        { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1 },
+      ]);
+    }
+  };
+
+  const updateProductVariant = (idx: number, sku: string) => {
+    const product = PRODUCT_CATALOG.find((p) => p.name === selectedProducts[idx].name);
+    if (!product) return;
+    const v = product.variants.find((x) => x.sku === sku);
+    if (!v) return;
+    setSelectedProducts((prev) => prev.map((p, i) => i === idx ? { ...p, variant: v.label, sku: v.sku } : p));
+  };
+
+  const updateProductQty = (idx: number, qty: number) => {
+    setSelectedProducts((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: qty } : p));
+  };
+
+  const removeProduct = (idx: number) => {
+    setSelectedProducts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // ─── Free Gift Helpers ──────────────────────────────────────────────────────
   const toggleFreeGift = (product: ProductDef) => {
     const key = `free_${product.name}|${product.variants[0].sku}`;
     setFreeGifts((prev) => {
@@ -134,9 +199,11 @@ export default function DoneDealModal({
       return { ...prev, [key]: { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1 } };
     });
   };
+
   const removeFreeGift = (key: string) => {
     setFreeGifts((prev) => { const next = { ...prev }; delete next[key]; return next; });
   };
+
   const updateFreeGiftVariant = (oldKey: string, product: ProductDef, newSku: string) => {
     const v = product.variants.find((x) => x.sku === newSku);
     if (!v) return;
@@ -149,144 +216,42 @@ export default function DoneDealModal({
       return next;
     });
   };
+
   const updateFreeGiftQty = (key: string, qty: number) => {
     setFreeGifts((prev) => ({ ...prev, [key]: { ...prev[key], quantity: qty } }));
   };
-  const [deposit, setDeposit] = useState(0);
-  const [installments, setInstallments] = useState(1);
-  const [monthlyAmount, setMonthlyAmount] = useState(0); // for subscription
-  const [shippingOption, setShippingOption] = useState<"today" | "tomorrow" | "custom">("today");
-  const [customShipDate, setCustomShipDate] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [dealNotes, setDealNotes] = useState("");
 
+  // ─── Mutations ──────────────────────────────────────────────────────────────
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: () => {
-      toast.success("Done Deal confirmed! Email sent to support.");
+      toast.success("Done Deal confirmed!");
       onClose();
       onSuccess?.();
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error(err.message || "Failed to mark done deal");
     },
   });
 
-  // Toggle product selection
-  const toggleProduct = (product: ProductDef) => {
-    const defaultVariant = product.variants[0];
-    const key = `${product.name}|${defaultVariant.sku}`;
-    setSelectedProducts((prev) => {
-      const existingKeys = Object.keys(prev).filter((k) => k.startsWith(`${product.name}|`));
-      if (existingKeys.length > 0) {
-        const next = { ...prev };
-        existingKeys.forEach((k) => delete next[k]);
-        return next;
-      }
-      return {
-        ...prev,
-        [key]: {
-          name: product.name,
-          variant: defaultVariant.label,
-          sku: defaultVariant.sku,
-          quantity: 1,
-          pricePerUnit: "custom" as any,
-        },
-      };
-    });
-  };
-
-  // Add another size/variant for the same product
-  const addAnotherSize = (product: ProductDef) => {
-    const existingSkus = Object.keys(selectedProducts)
-      .filter((k) => k.startsWith(`${product.name}|`))
-      .map((k) => k.split("|")[1]);
-    const available = product.variants.find((v) => !existingSkus.includes(v.sku));
-    if (!available) {
-      toast.error("All sizes already added");
-      return;
-    }
-    const newKey = `${product.name}|${available.sku}`;
-    setSelectedProducts((prev) => ({
-      ...prev,
-      [newKey]: {
-        name: product.name,
-        variant: available.label,
-        sku: available.sku,
-        quantity: 1,
-        pricePerUnit: 50,
-      },
-    }));
-  };
-
-  // Remove a specific variant row
-  const removeVariantRow = (key: string) => {
-    setSelectedProducts((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  };
-
-  // Change variant for a product
-  const changeVariant = (oldKey: string, product: ProductDef, newSku: string) => {
-    const newVariant = product.variants.find((v) => v.sku === newSku);
-    if (!newVariant) return;
-    const newKey = `${product.name}|${newSku}`;
-    setSelectedProducts((prev) => {
-      const old = prev[oldKey];
-      const next = { ...prev };
-      delete next[oldKey];
-      next[newKey] = {
-        ...old,
-        variant: newVariant.label,
-        sku: newVariant.sku,
-      };
-      return next;
-    });
-  };
-
-  // Update product details
-  const updateProduct = (key: string, field: "quantity" | "pricePerUnit", value: number | "free") => {
-    setSelectedProducts((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], [field]: value },
-    }));
-  };
-
-  // Calculated fields
-  const total = useMemo(() => {
-    return Object.values(selectedProducts).reduce(
-      (sum, p) => sum + p.quantity * (p.pricePerUnit === "free" ? 0 : p.pricePerUnit === "custom" ? (p.customPrice ?? 0) : p.pricePerUnit),
-      0
-    );
-  }, [selectedProducts]);
-
-  const monthlyPayment = useMemo(() => {
-    if (dealType === "subscription") return monthlyAmount;
-    if (installments <= 0) return 0;
-    return (total - deposit) / installments;
-  }, [total, deposit, installments, dealType, monthlyAmount]);
-
-  // Submit handler
+  // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleConfirm = () => {
-    const products = Object.values(selectedProducts);
-    if (products.length === 0) {
+    if (selectedProducts.length === 0) {
       toast.error("Please select at least one product");
       return;
     }
 
-    let shipDate: string;
-    const today = new Date();
-    if (shippingOption === "today") {
-      shipDate = today.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    } else if (shippingOption === "tomorrow") {
-      const tmr = new Date(today);
-      tmr.setDate(tmr.getDate() + 1);
-      shipDate = tmr.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    } else {
-      shipDate = customShipDate ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "TBD";
+    let shipDate = "After payment";
+    if (!isFutureDeal) {
+      const today = new Date();
+      if (shipOption === "today") {
+        shipDate = today.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      } else if (shipOption === "tomorrow") {
+        const tmr = new Date(today);
+        tmr.setDate(tmr.getDate() + 1);
+        shipDate = tmr.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      } else {
+        shipDate = customShipDate ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "TBD";
+      }
     }
 
     markDoneDealMutation.mutate({
@@ -295,18 +260,18 @@ export default function DoneDealModal({
       customerName,
       agentName,
       dealDetails: {
-        products: products.map((p) => ({
+        products: selectedProducts.map((p) => ({
           name: `${p.name} — ${p.variant} (${p.sku})`,
           quantity: p.quantity,
-          pricePerUnit: p.pricePerUnit === "free" ? 0 : p.pricePerUnit === "custom" ? (p.customPrice ?? 0) : p.pricePerUnit,
+          pricePerUnit: 0,
         })),
         freeProduct: Object.values(freeGifts).length > 0
           ? Object.values(freeGifts).map((g) => `${g.name} — ${g.variant} (${g.sku}) x${g.quantity}`).join(", ")
           : "None",
-        deposit: dealType === "installment" ? deposit : 0,
-        installments: dealType === "installment" ? installments : 0,
-        total,
-        monthlyPayment: Math.max(0, monthlyPayment),
+        deposit: dealType === "installment" ? (parseFloat(instDeposit) || 0) : 0,
+        installments: dealType === "installment" ? (parseInt(instPayments) || 0) : 0,
+        total: dealType === "installment" ? (parseFloat(instTotalAmount) || 0) : (parseFloat(subAmount) || 0),
+        monthlyPayment: dealType === "installment" ? instMonthlyPayment : (parseFloat(subAmount) || 0),
         shippingDate: shipDate,
         cardLast4: cardNumber.replace(/\s/g, "").slice(-4),
         cardExpiry,
@@ -318,18 +283,523 @@ export default function DoneDealModal({
 
   if (!open) return null;
 
+  // ─── Shared: Products Section ───────────────────────────────────────────────
+  const renderProductsSection = () => (
+    <div>
+      <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Products to Ship</div>
+      {/* Product Chips */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {PRODUCT_CATALOG.map((product) => {
+          const isSelected = selectedProducts.some((p) => p.name === product.name);
+          return (
+            <button
+              key={product.name}
+              onClick={() => addProduct(product)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                isSelected
+                  ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
+                  : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+              }`}
+            >
+              {product.name}
+            </button>
+          );
+        })}
+      </div>
+      {/* Selected product rows */}
+      {selectedProducts.map((product, idx) => {
+        const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
+        if (!catalogProduct) return null;
+        return (
+          <div key={`${product.name}-${idx}`} className="flex items-center gap-2 py-2 border-b border-gray-100">
+            <span className="text-xs font-bold text-black w-24 truncate">{product.name}</span>
+            {catalogProduct.variants.length > 1 ? (
+              <select
+                value={product.sku}
+                onChange={(e) => updateProductVariant(idx, e.target.value)}
+                className="flex-1 px-2 py-1 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+              >
+                {catalogProduct.variants.map((v) => (
+                  <option key={v.sku} value={v.sku}>{v.label}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="flex-1 text-xs text-black">{product.variant}</span>
+            )}
+            <select
+              value={product.quantity}
+              onChange={(e) => updateProductQty(idx, parseInt(e.target.value))}
+              className="w-14 px-1 py-1 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
+                <option key={q} value={q}>x{q}</option>
+              ))}
+            </select>
+            <button onClick={() => removeProduct(idx)} className="text-red-500 hover:text-red-700 p-0.5">
+              <X size={14} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // ─── Shared: Free Gifts Section ─────────────────────────────────────────────
+  const renderFreeGiftsSection = () => (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Gift size={14} className="text-black" />
+        <span className="text-[11px] font-bold text-black uppercase tracking-wide">Free Gifts (optional)</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {PRODUCT_CATALOG.map((product) => {
+          const isSelected = Object.keys(freeGifts).some((k) => k.includes(`free_${product.name}|`));
+          return (
+            <button
+              key={`fg-${product.name}`}
+              onClick={() => toggleFreeGift(product)}
+              className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                isSelected
+                  ? "bg-green-600 text-white border border-green-700"
+                  : "bg-gray-100 text-black border border-gray-200 hover:border-green-300"
+              }`}
+            >
+              {product.name}
+            </button>
+          );
+        })}
+      </div>
+      {Object.entries(freeGifts).map(([key, gift]) => {
+        const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === gift.name);
+        if (!catalogProduct) return null;
+        return (
+          <div key={key} className="flex items-center gap-2 py-1 border-b border-gray-100 text-xs">
+            <span className="font-semibold text-black w-16 truncate">{gift.name}</span>
+            <select
+              value={gift.sku}
+              onChange={(e) => updateFreeGiftVariant(key, catalogProduct, e.target.value)}
+              className="px-1.5 py-1 rounded border border-gray-300 bg-white text-xs text-black flex-1"
+            >
+              {catalogProduct.variants.map((v) => (
+                <option key={v.sku} value={v.sku}>{v.label}</option>
+              ))}
+            </select>
+            <select
+              value={gift.quantity}
+              onChange={(e) => updateFreeGiftQty(key, parseInt(e.target.value))}
+              className="px-1.5 py-1 rounded border border-gray-300 bg-white text-xs text-black w-12"
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => <option key={q} value={q}>{q}</option>)}
+            </select>
+            <button onClick={() => removeFreeGift(key)} className="text-red-500 hover:text-red-700 font-bold">✕</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // ─── Shared: Ship Date Section (only when NOT future) ───────────────────────
+  const renderShipDateSection = () => (
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <Truck size={14} className="text-black" />
+        <span className="text-[11px] font-bold text-black uppercase tracking-wide">Ship Date</span>
+      </div>
+      <div className="flex gap-2 mb-2">
+        {(["today", "tomorrow", "custom"] as const).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setShipOption(opt)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              shipOption === opt
+                ? "bg-blue-600 text-white border-2 border-blue-700"
+                : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300"
+            }`}
+          >
+            {opt === "today" ? "Today" : opt === "tomorrow" ? "Tomorrow" : "Custom"}
+          </button>
+        ))}
+      </div>
+      {shipOption === "custom" && (
+        <input
+          type="date"
+          value={customShipDate}
+          onChange={(e) => setCustomShipDate(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      )}
+    </div>
+  );
+
+  // ─── Shared: Card Details Section ───────────────────────────────────────────
+  const renderCardSection = () => (
+    <div className="p-3 bg-slate-50 rounded-xl border-2 border-black">
+      <div className="flex items-center gap-2 mb-1">
+        <CreditCard size={16} className="text-black" />
+        <span className="text-sm font-bold text-black">Card Details</span>
+      </div>
+      <p className="text-[11px] text-black font-medium mb-3">
+        Leave empty to use the card on file. Fill in only for a new or replacement card.
+      </p>
+      <div className="space-y-2">
+        <input
+          type="text"
+          placeholder="Card Number"
+          value={cardNumber}
+          onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9\s]/g, "").slice(0, 19))}
+          className="w-full px-3 py-2.5 rounded-lg border-2 border-black bg-white text-sm text-black font-bold placeholder:text-black placeholder:font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="MM/YY"
+            value={cardExpiry}
+            onChange={(e) => setCardExpiry(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))}
+            className="flex-1 px-3 py-2.5 rounded-lg border-2 border-black bg-white text-sm text-black font-bold placeholder:text-black placeholder:font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            placeholder="CVV"
+            value={cardCvv}
+            onChange={(e) => setCardCvv(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+            className="w-24 px-3 py-2.5 rounded-lg border-2 border-black bg-white text-sm text-black font-bold placeholder:text-black placeholder:font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  // ─── Subscription Tab ───────────────────────────────────────────────────────
+  const renderSubscriptionTab = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+      {/* LEFT — Billing Configuration + Products */}
+      <div className="px-6 py-5 border-r border-gray-100 space-y-5">
+        {/* Billing Configuration */}
+        <div>
+          <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Billing Configuration</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Amount (£)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={subAmount}
+                onChange={(e) => setSubAmount(e.target.value)}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Billing cycle</label>
+              <select
+                value={subBillingCycle}
+                onChange={(e) => setSubBillingCycle(e.target.value)}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="30">Every 30 days</option>
+                <option value="60">Every 60 days</option>
+                <option value="90">Every 90 days</option>
+                <option value="custom">Custom...</option>
+              </select>
+              {subBillingCycle === "custom" && (
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Days"
+                  value={subCustomCycle}
+                  onChange={(e) => setSubCustomCycle(e.target.value)}
+                  className="w-full mt-2 px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                />
+              )}
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-black mb-1 block">
+                <Calendar size={12} className="inline mr-1" />
+                First charge date
+              </label>
+              <input
+                type="date"
+                value={subFirstChargeDate}
+                onChange={(e) => setSubFirstChargeDate(e.target.value)}
+                min={todayStr}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                placeholder="Leave empty for today"
+              />
+              <p className="text-[10px] text-black font-medium mt-1">
+                {isSubFuture ? "⏳ Future deal — charge on selected date, shipment after payment" : "Leave empty to charge today"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Products */}
+        {renderProductsSection()}
+
+        {/* Free Gifts */}
+        {renderFreeGiftsSection()}
+      </div>
+
+      {/* RIGHT — Summary + Ship + Card */}
+      <div className="px-6 py-5 space-y-4">
+        <span className="text-sm font-bold text-black">Order Summary</span>
+
+        {/* Summary card */}
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-black">Recurring Amount</span>
+            <span className="text-lg font-bold text-green-700">£{subAmount || "0"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-black">Billing Cycle</span>
+            <span className="text-xs font-bold text-black">Every {billingCycleDays} days</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-black">First Charge</span>
+            <span className="text-xs font-bold text-black">
+              {isSubFuture ? new Date(subFirstChargeDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+            </span>
+          </div>
+          {isSubFuture && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
+              <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
+              <p className="text-[10px] text-purple-800 font-medium">Shipment will be sent automatically after successful payment</p>
+            </div>
+          )}
+          {selectedProducts.length > 0 && (
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <span className="text-[10px] font-bold text-black uppercase">Products</span>
+              {selectedProducts.map((p, i) => (
+                <div key={i} className="flex justify-between text-xs text-black mt-1">
+                  <span>{p.name} — {p.variant}</span>
+                  <span className="font-bold">x{p.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {Object.values(freeGifts).length > 0 && (
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <span className="text-[10px] font-bold text-black uppercase">Free Gifts</span>
+              {Object.values(freeGifts).map((g, i) => (
+                <div key={i} className="flex justify-between text-xs text-black mt-1">
+                  <span>{g.name} — {g.variant}</span>
+                  <span className="font-bold">x{g.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ship Date — only if NOT future */}
+        {!isSubFuture && renderShipDateSection()}
+
+        {/* Notes */}
+        <div>
+          <label className="text-xs font-semibold text-black block mb-1">Notes</label>
+          <textarea
+            value={dealNotes}
+            onChange={(e) => setDealNotes(e.target.value)}
+            placeholder="Add notes about this deal..."
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
+        </div>
+
+        {/* Card Details */}
+        {renderCardSection()}
+      </div>
+    </div>
+  );
+
+  // ─── Installment Tab ────────────────────────────────────────────────────────
+  const renderInstallmentTab = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+      {/* LEFT — Instalment Configuration + Products */}
+      <div className="px-6 py-5 border-r border-gray-100 space-y-5">
+        {/* Instalment Configuration */}
+        <div>
+          <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Instalment Configuration</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Total amount (£)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={instTotalAmount}
+                onChange={(e) => setInstTotalAmount(e.target.value)}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Deposit (£)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={instDeposit}
+                onChange={(e) => setInstDeposit(e.target.value)}
+                placeholder="0.00"
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Number of payments</label>
+              <select
+                value={instPayments}
+                onChange={(e) => setInstPayments(e.target.value)}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+              >
+                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Payment interval</label>
+              <select
+                value={instInterval}
+                onChange={(e) => setInstInterval(e.target.value)}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="14">Every 14 days</option>
+                <option value="30">Every 30 days</option>
+                <option value="60">Every 60 days</option>
+                <option value="90">Every 90 days</option>
+                <option value="custom">Custom...</option>
+              </select>
+              {instInterval === "custom" && (
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Days"
+                  value={instCustomInterval}
+                  onChange={(e) => setInstCustomInterval(e.target.value)}
+                  className="w-full mt-2 px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                />
+              )}
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-black mb-1 block">
+                <Calendar size={12} className="inline mr-1" />
+                First payment date
+              </label>
+              <input
+                type="date"
+                value={instFirstPaymentDate}
+                onChange={(e) => setInstFirstPaymentDate(e.target.value)}
+                min={todayStr}
+                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-[10px] text-black font-medium mt-1">
+                {isInstFuture ? "⏳ Future deal — charge on selected date, shipment after payment" : "Leave empty to charge today"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Products */}
+        {renderProductsSection()}
+
+        {/* Free Gifts */}
+        {renderFreeGiftsSection()}
+      </div>
+
+      {/* RIGHT — Summary + Ship + Card */}
+      <div className="px-6 py-5 space-y-4">
+        <span className="text-sm font-bold text-black">Order Summary</span>
+
+        {/* Summary card */}
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-black">Total Amount</span>
+            <span className="text-lg font-bold text-black">£{instTotalAmount || "0"}</span>
+          </div>
+          {(parseFloat(instDeposit) || 0) > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-black">Deposit</span>
+              <span className="text-sm font-bold text-black">-£{instDeposit}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+            <span className="text-xs font-semibold text-black">Per Payment (x{instPayments})</span>
+            <span className="text-lg font-bold text-green-700">
+              £{instMonthlyPayment > 0 ? instMonthlyPayment.toFixed(2) : "0.00"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-black">Payment Interval</span>
+            <span className="text-xs font-bold text-black">Every {intervalDays} days</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-black">First Payment</span>
+            <span className="text-xs font-bold text-black">
+              {isInstFuture ? new Date(instFirstPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+            </span>
+          </div>
+          {isInstFuture && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
+              <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
+              <p className="text-[10px] text-purple-800 font-medium">Shipment will be sent automatically after successful payment</p>
+            </div>
+          )}
+          {instMonthlyPayment < 0 && (
+            <p className="text-xs text-red-600 mt-1 font-bold">Deposit exceeds total!</p>
+          )}
+          {selectedProducts.length > 0 && (
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <span className="text-[10px] font-bold text-black uppercase">Products</span>
+              {selectedProducts.map((p, i) => (
+                <div key={i} className="flex justify-between text-xs text-black mt-1">
+                  <span>{p.name} — {p.variant}</span>
+                  <span className="font-bold">x{p.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {Object.values(freeGifts).length > 0 && (
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <span className="text-[10px] font-bold text-black uppercase">Free Gifts</span>
+              {Object.values(freeGifts).map((g, i) => (
+                <div key={i} className="flex justify-between text-xs text-black mt-1">
+                  <span>{g.name} — {g.variant}</span>
+                  <span className="font-bold">x{g.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ship Date — only if NOT future */}
+        {!isInstFuture && renderShipDateSection()}
+
+        {/* Notes */}
+        <div>
+          <label className="text-xs font-semibold text-black block mb-1">Notes</label>
+          <textarea
+            value={dealNotes}
+            onChange={(e) => setDealNotes(e.target.value)}
+            placeholder="Add notes about this deal..."
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
+        </div>
+
+        {/* Card Details */}
+        {renderCardSection()}
+      </div>
+    </div>
+  );
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      {/* Modal — wide checkout style */}
+      {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4 max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white rounded-t-2xl border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Done Deal</h2>
-            <p className="text-sm text-gray-900">{customerName}</p>
+            <h2 className="text-lg font-bold text-black">Done Deal</h2>
+            <p className="text-sm text-black">{customerName}</p>
           </div>
           {/* Deal Type Toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
@@ -338,7 +808,7 @@ export default function DoneDealModal({
               className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
                 dealType === "subscription"
                   ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-700 hover:text-gray-900"
+                  : "text-black hover:text-black"
               }`}
             >
               Subscription
@@ -348,410 +818,49 @@ export default function DoneDealModal({
               className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
                 dealType === "installment"
                   ? "bg-blue-600 text-white shadow-sm"
-                  : "text-gray-700 hover:text-gray-900"
+                  : "text-black hover:text-black"
               }`}
             >
               Installment
             </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <X size={20} className="text-gray-900" />
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={20} className="text-black" />
           </button>
         </div>
 
-        {/* Two-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-          {/* LEFT — Products (Cart) */}
-          <div className="px-6 py-5 border-r border-gray-100 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Package size={16} className="text-gray-900" />
-              <span className="text-sm font-semibold text-gray-900">Products</span>
-            </div>
-
-            {/* Product Chips */}
-            <div className="flex flex-wrap gap-2">
-              {PRODUCT_CATALOG.map((product) => {
-                const isSelected = Object.keys(selectedProducts).some((k) => k.startsWith(`${product.name}|`));
-                return (
-                  <button
-                    key={product.name}
-                    onClick={() => toggleProduct(product)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      isSelected
-                        ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
-                        : "bg-gray-100 text-gray-900 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-                    }`}
-                  >
-                    {product.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Compact product rows */}
-            <div className="space-y-0 max-h-[50vh] overflow-y-auto">
-              {Object.entries(selectedProducts).map(([key, product]) => {
-                const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
-                if (!catalogProduct) return null;
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-b-0"
-                  >
-                    {/* Product name + SKU badge */}
-                    <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0 w-28">
-                      <span className="text-xs font-bold text-gray-900 truncate">{product.name}</span>
-                      <span className="text-[9px] font-medium text-blue-700 bg-blue-100 px-1 py-0.5 rounded whitespace-nowrap flex-shrink-0">
-                        {product.sku}
-                      </span>
-                    </div>
-
-                    {/* Variant dropdown */}
-                    {catalogProduct.variants.length > 1 ? (
-                      <select
-                        value={product.sku}
-                        onChange={(e) => changeVariant(key, catalogProduct, e.target.value)}
-                        className="flex-1 min-w-0 px-1.5 py-1 rounded border border-gray-300 bg-white text-[11px] text-gray-900 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        {catalogProduct.variants.map((v) => (
-                          <option key={v.sku} value={v.sku}>
-                            {v.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="flex-1 min-w-0 text-[11px] text-gray-800 truncate">
-                        {product.variant}
-                      </span>
-                    )}
-
-                    {/* Qty dropdown */}
-                    <select
-                      value={product.quantity}
-                      onChange={(e) => updateProduct(key, "quantity", parseInt(e.target.value))}
-                      className="w-12 px-1 py-1 rounded border border-gray-300 bg-white text-[11px] text-gray-900 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 flex-shrink-0"
-                    >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
-                        <option key={q} value={q}>{q}</option>
-                      ))}
-                    </select>
-
-                    {/* Price input */}
-                    <div className="flex flex-col gap-0.5 flex-shrink-0 w-20">
-                      <input
-                        type="number"
-                        min={0}
-                        value={
-                          product.pricePerUnit === "free" ? "" :
-                          product.pricePerUnit === "custom" ? (product.customPrice || "") :
-                          product.pricePerUnit
-                        }
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          setSelectedProducts((prev) => ({
-                            ...prev,
-                            [key]: { ...prev[key], pricePerUnit: "custom" as any, customPrice: val },
-                          }));
-                        }}
-                        placeholder="£ price"
-                        className="w-full px-1.5 py-1 rounded border border-gray-300 bg-white text-[11px] text-gray-900 font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      <select
-                        value={
-                          product.pricePerUnit === "free" ? "" :
-                          product.pricePerUnit === "custom" ? "" :
-                          product.pricePerUnit
-                        }
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val) {
-                            const num = parseInt(val);
-                            setSelectedProducts((prev) => ({
-                              ...prev,
-                              [key]: { ...prev[key], pricePerUnit: num, customPrice: undefined },
-                            }));
-                          }
-                        }}
-                        className="w-full px-1 py-0.5 rounded border border-gray-200 bg-gray-50 text-[9px] text-gray-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      >
-                        <option value="">Quick...</option>
-                        {PRICE_OPTIONS.map((p) => (
-                          <option key={p} value={p}>£{p}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Subtotal */}
-                    <span className="text-xs font-bold text-gray-900 w-10 text-right flex-shrink-0">
-                      {product.pricePerUnit === "free"
-                        ? "Free"
-                        : product.pricePerUnit === "custom"
-                          ? (product.customPrice ? `£${product.quantity * product.customPrice}` : "—")
-                          : `£${product.quantity * (product.pricePerUnit as number)}`}
-                    </span>
-
-                    {/* Remove button */}
-                    <button
-                      onClick={() => removeVariantRow(key)}
-                      className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-0.5"
-                      title="Remove"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                );
-              })}
-
-              {/* Add Size buttons */}
-              {PRODUCT_CATALOG.filter((p) => {
-                const selectedKeys = Object.keys(selectedProducts).filter((k) => k.startsWith(`${p.name}|`));
-                return selectedKeys.length > 0 && selectedKeys.length < p.variants.length;
-              }).map((product) => (
-                <button
-                  key={`add-${product.name}`}
-                  onClick={() => addAnotherSize(product)}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 block mt-1"
-                >
-                  + Add another {product.name} size
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* RIGHT — Order Summary */}
-          <div className="px-6 py-5 space-y-4">
-            <span className="text-sm font-bold text-gray-900">Order Summary</span>
-
-            {/* Subscription-specific: Monthly Amount */}
-            {dealType === "subscription" && (
-              <div>
-                <label className="text-xs font-semibold text-gray-900 block mb-1">Monthly Amount (£)</label>
-                <select
-                  value={monthlyAmount}
-                  onChange={(e) => setMonthlyAmount(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {[0, 29, 34, 36, 39, 44, 49, 54, 59, 64, 69, 74, 79, 84, 89, 99, 109, 119, 129].map((a) => (
-                    <option key={a} value={a}>£{a}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Installment-specific: Deposit + Number of Installments */}
-            {dealType === "installment" && (
-              <>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <CreditCard size={14} className="text-gray-900" />
-                    <span className="text-xs font-semibold text-gray-900">Deposit</span>
-                  </div>
-                  <select
-                    value={deposit}
-                    onChange={(e) => setDeposit(parseInt(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {DEPOSIT_OPTIONS.map((d) => (
-                      <option key={d} value={d}>£{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calculator size={14} className="text-gray-900" />
-                    <span className="text-xs font-semibold text-gray-900">Number of Installments</span>
-                  </div>
-                  <select
-                    value={installments}
-                    onChange={(e) => setInstallments(parseInt(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Array.from({ length: 13 }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-
-            {/* Shipping Date */}
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Truck size={14} className="text-gray-900" />
-                <span className="text-xs font-semibold text-gray-900">Ship Products</span>
-              </div>
-              <div className="flex gap-2 mb-2">
-                {(["today", "tomorrow", "custom"] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setShippingOption(opt)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      shippingOption === opt
-                        ? "bg-blue-600 text-white border-2 border-blue-700"
-                        : "bg-gray-100 text-gray-900 border-2 border-gray-200 hover:border-blue-300"
-                    }`}
-                  >
-                    {opt === "today" ? "Today" : opt === "tomorrow" ? "Tomorrow" : "Custom"}
-                  </button>
-                ))}
-              </div>
-              {shippingOption === "custom" && (
-                <input
-                  type="date"
-                  value={customShipDate}
-                  onChange={(e) => setCustomShipDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              )}
-            </div>
-
-            {/* Free Gifts — multi-select with variants */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Gift size={14} className="text-gray-900" />
-                <span className="text-xs font-semibold text-gray-900">Free Gifts</span>
-              </div>
-              {/* Product chips */}
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {PRODUCT_CATALOG.map((product) => {
-                  const isSelected = Object.keys(freeGifts).some((k) => k.includes(`free_${product.name}|`));
-                  return (
-                    <button
-                      key={`fg-${product.name}`}
-                      onClick={() => toggleFreeGift(product)}
-                      className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
-                        isSelected
-                          ? "bg-green-600 text-white border border-green-700"
-                          : "bg-gray-100 text-gray-800 border border-gray-200 hover:border-green-300"
-                      }`}
-                    >
-                      {product.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Selected free gift rows */}
-              {Object.entries(freeGifts).map(([key, gift]) => {
-                const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === gift.name);
-                if (!catalogProduct) return null;
-                return (
-                  <div key={key} className="flex items-center gap-2 py-1 border-b border-gray-100 text-xs">
-                    <span className="font-semibold text-gray-900 w-16 truncate">{gift.name}</span>
-                    <select
-                      value={gift.sku}
-                      onChange={(e) => updateFreeGiftVariant(key, catalogProduct, e.target.value)}
-                      className="px-1.5 py-1 rounded border border-gray-300 bg-white text-xs text-gray-900 flex-1"
-                    >
-                      {catalogProduct.variants.map((v) => (
-                        <option key={v.sku} value={v.sku}>{v.label}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={gift.quantity}
-                      onChange={(e) => updateFreeGiftQty(key, parseInt(e.target.value))}
-                      className="px-1.5 py-1 rounded border border-gray-300 bg-white text-xs text-gray-900 w-12"
-                    >
-                      {[1,2,3,4,5,6,7,8,9,10].map((q) => <option key={q} value={q}>{q}</option>)}
-                    </select>
-                    <button onClick={() => removeFreeGift(key)} className="text-red-500 hover:text-red-700 font-bold">✕</button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="text-xs font-semibold text-gray-900 block mb-1">Notes</label>
-              <textarea
-                value={dealNotes}
-                onChange={(e) => setDealNotes(e.target.value)}
-                placeholder="Add notes about this deal..."
-                rows={2}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
-
-            {/* Totals */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-gray-900">Total</span>
-                <span className="text-xl font-bold text-gray-900">£{total}</span>
-              </div>
-              {dealType === "installment" && deposit > 0 && (
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-700">Deposit</span>
-                  <span className="text-sm font-semibold text-gray-900">-£{deposit}</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between border-t border-gray-200 pt-2">
-                <span className="text-sm font-semibold text-gray-900">
-                  {dealType === "subscription" ? "Monthly" : `Per Installment (×${installments})`}
-                </span>
-                <span className="text-lg font-bold text-green-700">
-                  £{monthlyPayment > 0 ? monthlyPayment.toFixed(2) : "0.00"}
-                </span>
-              </div>
-              {monthlyPayment < 0 && (
-                <p className="text-xs text-red-600 mt-1 font-medium">
-                  Deposit exceeds total
-                </p>
-              )}
-            </div>
-
-            {/* Card Details */}
-            <div className="p-3 bg-slate-50 rounded-xl border-2 border-black">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard size={16} className="text-black" />
-                <span className="text-sm font-bold text-black">Card Details</span>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Card Number"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9\s]/g, "").slice(0, 19))}
-                  className="w-full px-3 py-2.5 rounded-lg border-2 border-black bg-white text-sm text-black font-bold placeholder:text-black placeholder:font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))}
-                    className="flex-1 px-3 py-2.5 rounded-lg border-2 border-black bg-white text-sm text-black font-bold placeholder:text-black placeholder:font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="CVV"
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-                    className="w-24 px-3 py-2.5 rounded-lg border-2 border-black bg-white text-sm text-black font-bold placeholder:text-black placeholder:font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Tab Content */}
+        {dealType === "subscription" ? renderSubscriptionTab() : renderInstallmentTab()}
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-gray-100 px-6 py-4 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-900 border-2 border-gray-300 hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={markDoneDealMutation.isPending || Object.keys(selectedProducts).length === 0}
-            className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-md"
-            style={{ background: "#16a34a" }}
-          >
-            {markDoneDealMutation.isPending ? "Sending..." : "Confirm Deal"}
-          </button>
+        <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+          {isFutureDeal && (
+            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200">
+              ⏳ Future Deal — No charge today
+            </span>
+          )}
+          <div className="flex items-center gap-3 ml-auto">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-black border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={markDoneDealMutation.isPending || selectedProducts.length === 0}
+              className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-md"
+              style={{ background: isFutureDeal ? "#7c3aed" : "#16a34a" }}
+            >
+              {markDoneDealMutation.isPending
+                ? "Processing..."
+                : isFutureDeal
+                  ? "Schedule Future Deal"
+                  : dealType === "subscription"
+                    ? "Confirm Subscription"
+                    : "Confirm Installment"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
