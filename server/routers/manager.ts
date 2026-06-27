@@ -3189,6 +3189,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           cardLast4: z.string().optional(),
           cardExpiry: z.string().optional(),
           notes: z.string().optional(),
+          dealType: z.enum(["subscription", "installment"]).optional(),
         }),
       })
     )

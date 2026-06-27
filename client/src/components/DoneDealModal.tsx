@@ -119,7 +119,39 @@ export default function DoneDealModal({
 }: DoneDealModalProps) {
   const [dealType, setDealType] = useState<"subscription" | "installment">("installment");
   const [selectedProducts, setSelectedProducts] = useState<Record<string, ProductSelection>>({});
-  const [freeProduct, setFreeProduct] = useState("None");
+  const [freeGifts, setFreeGifts] = useState<Record<string, { name: string; variant: string; sku: string; quantity: number }>>({});
+
+  // Free gift helpers
+  const toggleFreeGift = (product: ProductDef) => {
+    const key = `free_${product.name}|${product.variants[0].sku}`;
+    setFreeGifts((prev) => {
+      const existingKeys = Object.keys(prev).filter((k) => k.includes(`free_${product.name}|`));
+      if (existingKeys.length > 0) {
+        const next = { ...prev };
+        existingKeys.forEach((k) => delete next[k]);
+        return next;
+      }
+      return { ...prev, [key]: { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1 } };
+    });
+  };
+  const removeFreeGift = (key: string) => {
+    setFreeGifts((prev) => { const next = { ...prev }; delete next[key]; return next; });
+  };
+  const updateFreeGiftVariant = (oldKey: string, product: ProductDef, newSku: string) => {
+    const v = product.variants.find((x) => x.sku === newSku);
+    if (!v) return;
+    const newKey = `free_${product.name}|${newSku}`;
+    setFreeGifts((prev) => {
+      const old = prev[oldKey];
+      const next = { ...prev };
+      delete next[oldKey];
+      next[newKey] = { ...old, variant: v.label, sku: v.sku };
+      return next;
+    });
+  };
+  const updateFreeGiftQty = (key: string, qty: number) => {
+    setFreeGifts((prev) => ({ ...prev, [key]: { ...prev[key], quantity: qty } }));
+  };
   const [deposit, setDeposit] = useState(0);
   const [installments, setInstallments] = useState(1);
   const [monthlyAmount, setMonthlyAmount] = useState(0); // for subscription
@@ -268,7 +300,9 @@ export default function DoneDealModal({
           quantity: p.quantity,
           pricePerUnit: p.pricePerUnit === "free" ? 0 : p.pricePerUnit === "custom" ? (p.customPrice ?? 0) : p.pricePerUnit,
         })),
-        freeProduct,
+        freeProduct: Object.values(freeGifts).length > 0
+          ? Object.values(freeGifts).map((g) => `${g.name} — ${g.variant} (${g.sku}) x${g.quantity}`).join(", ")
+          : "None",
         deposit: dealType === "installment" ? deposit : 0,
         installments: dealType === "installment" ? installments : 0,
         total,
@@ -574,22 +608,58 @@ export default function DoneDealModal({
               )}
             </div>
 
-            {/* Free Gift */}
+            {/* Free Gifts — multi-select with variants */}
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-2">
                 <Gift size={14} className="text-gray-900" />
-                <span className="text-xs font-semibold text-gray-900">Free Gift</span>
+                <span className="text-xs font-semibold text-gray-900">Free Gifts</span>
               </div>
-              <select
-                value={freeProduct}
-                onChange={(e) => setFreeProduct(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="None">None</option>
-                {PRODUCT_CATALOG.map((p) => (
-                  <option key={p.name} value={p.name}>{p.name}</option>
-                ))}
-              </select>
+              {/* Product chips */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {PRODUCT_CATALOG.map((product) => {
+                  const isSelected = Object.keys(freeGifts).some((k) => k.includes(`free_${product.name}|`));
+                  return (
+                    <button
+                      key={`fg-${product.name}`}
+                      onClick={() => toggleFreeGift(product)}
+                      className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                        isSelected
+                          ? "bg-green-600 text-white border border-green-700"
+                          : "bg-gray-100 text-gray-800 border border-gray-200 hover:border-green-300"
+                      }`}
+                    >
+                      {product.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Selected free gift rows */}
+              {Object.entries(freeGifts).map(([key, gift]) => {
+                const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === gift.name);
+                if (!catalogProduct) return null;
+                return (
+                  <div key={key} className="flex items-center gap-2 py-1 border-b border-gray-100 text-xs">
+                    <span className="font-semibold text-gray-900 w-16 truncate">{gift.name}</span>
+                    <select
+                      value={gift.sku}
+                      onChange={(e) => updateFreeGiftVariant(key, catalogProduct, e.target.value)}
+                      className="px-1.5 py-1 rounded border border-gray-300 bg-white text-xs text-gray-900 flex-1"
+                    >
+                      {catalogProduct.variants.map((v) => (
+                        <option key={v.sku} value={v.sku}>{v.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={gift.quantity}
+                      onChange={(e) => updateFreeGiftQty(key, parseInt(e.target.value))}
+                      className="px-1.5 py-1 rounded border border-gray-300 bg-white text-xs text-gray-900 w-12"
+                    >
+                      {[1,2,3,4,5,6,7,8,9,10].map((q) => <option key={q} value={q}>{q}</option>)}
+                    </select>
+                    <button onClick={() => removeFreeGift(key)} className="text-red-500 hover:text-red-700 font-bold">✕</button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Notes */}
