@@ -128,7 +128,7 @@ export default function DoneDealModal({
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [dealNotes, setDealNotes] = useState("");
-  const [shipOption, setShipOption] = useState<"today" | "tomorrow" | "custom">("today");
+  const [shipOption, setShipOption] = useState<"immediate" | "custom">("immediate");
   const [customShipDate, setCustomShipDate] = useState("");
 
   // ─── Subscription State (per-product price + cycle) ─────────────────────────
@@ -297,13 +297,8 @@ export default function DoneDealModal({
 
     let shipDate = "After payment";
     if (!isFutureDeal) {
-      const today = new Date();
-      if (shipOption === "today") {
-        shipDate = today.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-      } else if (shipOption === "tomorrow") {
-        const tmr = new Date(today);
-        tmr.setDate(tmr.getDate() + 1);
-        shipDate = tmr.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      if (shipOption === "immediate") {
+        shipDate = "Immediate";
       } else {
         shipDate = customShipDate ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "TBD";
       }
@@ -404,25 +399,33 @@ export default function DoneDealModal({
         <span className="text-[11px] font-bold text-black uppercase tracking-wide">Ship Date</span>
       </div>
       <div className="flex gap-2 mb-2">
-        {(["today", "tomorrow", "custom"] as const).map((opt) => (
-          <button
-            key={opt}
-            onClick={() => setShipOption(opt)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              shipOption === opt
-                ? "bg-blue-600 text-white border-2 border-blue-700"
-                : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300"
-            }`}
-          >
-            {opt === "today" ? "Today" : opt === "tomorrow" ? "Tomorrow" : "Custom"}
-          </button>
-        ))}
+        <button
+          onClick={() => setShipOption("immediate")}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            shipOption === "immediate"
+              ? "bg-green-600 text-white border-2 border-green-700 shadow-md"
+              : "bg-gray-100 text-black border-2 border-gray-200 hover:border-green-300"
+          }`}
+        >
+          Immediate
+        </button>
+        <button
+          onClick={() => setShipOption("custom")}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            shipOption === "custom"
+              ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
+              : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300"
+          }`}
+        >
+          Select Date
+        </button>
       </div>
       {shipOption === "custom" && (
         <input
           type="date"
           value={customShipDate}
           onChange={(e) => setCustomShipDate(e.target.value)}
+          min={todayStr}
           className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       )}
