@@ -137,19 +137,31 @@ export default function DoneDealModal({
 
   // ─── Installment State ──────────────────────────────────────────────────────
   const [instProducts, setInstProducts] = useState<InstProduct[]>([]);
+  const [instMode, setInstMode] = useState<"equal" | "custom">("equal");
+  // Equal mode
   const [instTotalAmount, setInstTotalAmount] = useState("420.00");
   const [instDeposit, setInstDeposit] = useState("0.00");
   const [instPayments, setInstPayments] = useState("12");
   const [instInterval, setInstInterval] = useState("30");
   const [instCustomInterval, setInstCustomInterval] = useState("");
   const [instFirstPaymentDate, setInstFirstPaymentDate] = useState("");
+  // Custom mode — per-payment schedule
+  const [customPaymentCount, setCustomPaymentCount] = useState("4");
+  const [customPayments, setCustomPayments] = useState<{ amount: string; interval: string }[]>([
+    { amount: "", interval: "30" },
+    { amount: "", interval: "30" },
+    { amount: "", interval: "30" },
+    { amount: "", interval: "30" },
+  ]);
+  const [customFirstPaymentDate, setCustomFirstPaymentDate] = useState("");
 
   // ─── Derived ────────────────────────────────────────────────────────────────
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const isSubFuture = subFirstChargeDate !== "" && subFirstChargeDate > todayStr;
   const isInstFuture = instFirstPaymentDate !== "" && instFirstPaymentDate > todayStr;
-  const isFutureDeal = dealType === "subscription" ? isSubFuture : isInstFuture;
+  const isCustomInstFuture = customFirstPaymentDate !== "" && customFirstPaymentDate > todayStr;
+  const isFutureDeal = dealType === "subscription" ? isSubFuture : (instMode === "custom" ? isCustomInstFuture : isInstFuture);
 
   const instMonthlyPayment = useMemo(() => {
     const total = parseFloat(instTotalAmount) || 0;
@@ -159,6 +171,27 @@ export default function DoneDealModal({
   }, [instTotalAmount, instDeposit, instPayments]);
 
   const intervalDays = instInterval === "custom" ? (parseInt(instCustomInterval) || 30) : parseInt(instInterval);
+
+  // Custom mode: total and future check
+  const customTotal = useMemo(() => {
+    return customPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  }, [customPayments]);
+
+  // Update custom payments count
+  const handleCustomPaymentCountChange = (count: string) => {
+    const n = parseInt(count) || 2;
+    setCustomPaymentCount(count);
+    setCustomPayments((prev) => {
+      if (n > prev.length) {
+        return [...prev, ...Array(n - prev.length).fill(null).map(() => ({ amount: "", interval: "30" }))];
+      }
+      return prev.slice(0, n);
+    });
+  };
+
+  const updateCustomPayment = (idx: number, field: "amount" | "interval", value: string) => {
+    setCustomPayments((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  };
 
   // Group subscription products by cycle for summary
   const subGroupedByCycle = useMemo(() => {
@@ -736,81 +769,159 @@ export default function DoneDealModal({
         {/* Instalment Configuration */}
         <div>
           <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Instalment Configuration</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-black mb-1 block">Total amount (£)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={instTotalAmount}
-                onChange={(e) => setInstTotalAmount(e.target.value)}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-black mb-1 block">Deposit (£)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={instDeposit}
-                onChange={(e) => setInstDeposit(e.target.value)}
-                placeholder="0.00"
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-black mb-1 block">Number of payments</label>
-              <select
-                value={instPayments}
-                onChange={(e) => setInstPayments(e.target.value)}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-              >
-                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-black mb-1 block">Payment interval</label>
-              <select
-                value={instInterval}
-                onChange={(e) => setInstInterval(e.target.value)}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="14">Every 14 days</option>
-                <option value="30">Every 30 days</option>
-                <option value="60">Every 60 days</option>
-                <option value="90">Every 90 days</option>
-                <option value="custom">Custom...</option>
-              </select>
-              {instInterval === "custom" && (
+          {/* Mode Toggle */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setInstMode("equal")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                instMode === "equal"
+                  ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
+                  : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300"
+              }`}
+            >
+              Equal Payments
+            </button>
+            <button
+              onClick={() => setInstMode("custom")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                instMode === "custom"
+                  ? "bg-orange-600 text-white border-2 border-orange-700 shadow-md"
+                  : "bg-gray-100 text-black border-2 border-gray-200 hover:border-orange-300"
+              }`}
+            >
+              Custom Payments
+            </button>
+          </div>
+
+          {instMode === "equal" ? (
+            /* Equal mode */
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-black mb-1 block">Total amount (£)</label>
                 <input
                   type="number"
-                  min={1}
-                  placeholder="Days"
-                  value={instCustomInterval}
-                  onChange={(e) => setInstCustomInterval(e.target.value)}
-                  className="w-full mt-2 px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                  step="0.01"
+                  value={instTotalAmount}
+                  onChange={(e) => setInstTotalAmount(e.target.value)}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
                 />
-              )}
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-black mb-1 block">Deposit (£)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={instDeposit}
+                  onChange={(e) => setInstDeposit(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-black mb-1 block">Number of payments</label>
+                <select
+                  value={instPayments}
+                  onChange={(e) => setInstPayments(e.target.value)}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                >
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-black mb-1 block">Payment interval</label>
+                <select
+                  value={instInterval}
+                  onChange={(e) => setInstInterval(e.target.value)}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="7">Weekly (7 days)</option>
+                  <option value="14">Bi-weekly (14 days)</option>
+                  <option value="30">Monthly (30 days)</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-black mb-1 block">
+                  <Calendar size={12} className="inline mr-1" />
+                  First payment date
+                </label>
+                <input
+                  type="date"
+                  value={instFirstPaymentDate}
+                  onChange={(e) => setInstFirstPaymentDate(e.target.value)}
+                  min={todayStr}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                />
+                <p className={`text-xs mt-1 font-bold ${isInstFuture ? "text-purple-700" : "text-black"}`}>
+                  {isInstFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
+                </p>
+              </div>
             </div>
-            <div className="col-span-2">
-              <label className="text-xs font-semibold text-black mb-1 block">
-                <Calendar size={12} className="inline mr-1" />
-                First payment date
-              </label>
-              <input
-                type="date"
-                value={instFirstPaymentDate}
-                onChange={(e) => setInstFirstPaymentDate(e.target.value)}
-                min={todayStr}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-              />
-              <p className={`text-xs mt-1 font-bold ${isInstFuture ? "text-purple-700" : "text-black"}`}>
-                {isInstFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
-              </p>
+          ) : (
+            /* Custom mode */
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-black mb-1 block">Number of payments</label>
+                <select
+                  value={customPaymentCount}
+                  onChange={(e) => handleCustomPaymentCountChange(e.target.value)}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                >
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Payment rows */}
+              <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                {customPayments.map((payment, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2 border border-gray-200">
+                    <span className="text-xs font-bold text-black w-6">#{idx + 1}</span>
+                    <div className="relative flex-1">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-black">£</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={payment.amount}
+                        onChange={(e) => updateCustomPayment(idx, "amount", e.target.value)}
+                        placeholder="Amount"
+                        className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-300 bg-white text-xs text-black font-bold focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <select
+                      value={payment.interval}
+                      onChange={(e) => updateCustomPayment(idx, "interval", e.target.value)}
+                      className="w-32 px-2 py-1.5 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+                    >
+                      <option value="7">Weekly</option>
+                      <option value="14">Bi-weekly</option>
+                      <option value="30">Monthly</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              {/* First payment date */}
+              <div>
+                <label className="text-xs font-semibold text-black mb-1 block">
+                  <Calendar size={12} className="inline mr-1" />
+                  First payment date
+                </label>
+                <input
+                  type="date"
+                  value={customFirstPaymentDate}
+                  onChange={(e) => setCustomFirstPaymentDate(e.target.value)}
+                  min={todayStr}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+                />
+                <p className={`text-xs mt-1 font-bold ${isCustomInstFuture ? "text-purple-700" : "text-black"}`}>
+                  {isCustomInstFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Free Gifts */}
@@ -822,40 +933,76 @@ export default function DoneDealModal({
         <span className="text-sm font-bold text-black">Order Summary</span>
 
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-black">Total Amount</span>
-            <span className="text-lg font-bold text-black">£{instTotalAmount || "0"}</span>
-          </div>
-          {(parseFloat(instDeposit) || 0) > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-black">Deposit</span>
-              <span className="text-sm font-bold text-black">-£{instDeposit}</span>
-            </div>
-          )}
-          <div className="flex items-center justify-between border-t border-gray-200 pt-2">
-            <span className="text-xs font-semibold text-black">Per Payment (x{instPayments})</span>
-            <span className="text-lg font-bold text-green-700">
-              £{instMonthlyPayment > 0 ? instMonthlyPayment.toFixed(2) : "0.00"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-black">Payment Interval</span>
-            <span className="text-xs font-bold text-black">Every {intervalDays} days</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-black">First Payment</span>
-            <span className="text-xs font-bold text-black">
-              {isInstFuture ? new Date(instFirstPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
-            </span>
-          </div>
-          {isInstFuture && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
-              <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
-              <p className="text-[10px] text-purple-800 font-medium">Shipment after successful payment</p>
-            </div>
-          )}
-          {instMonthlyPayment < 0 && (
-            <p className="text-xs text-red-600 mt-1 font-bold">Deposit exceeds total!</p>
+          {instMode === "equal" ? (
+            /* Equal mode summary */
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-black">Total Amount</span>
+                <span className="text-lg font-bold text-black">£{instTotalAmount || "0"}</span>
+              </div>
+              {(parseFloat(instDeposit) || 0) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-black">Deposit</span>
+                  <span className="text-sm font-bold text-black">-£{instDeposit}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                <span className="text-xs font-semibold text-black">Per Payment (x{instPayments})</span>
+                <span className="text-lg font-bold text-green-700">
+                  £{instMonthlyPayment > 0 ? instMonthlyPayment.toFixed(2) : "0.00"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-black">Payment Interval</span>
+                <span className="text-xs font-bold text-black">Every {intervalDays} days</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-black">First Payment</span>
+                <span className="text-xs font-bold text-black">
+                  {isInstFuture ? new Date(instFirstPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+                </span>
+              </div>
+              {isInstFuture && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
+                  <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
+                  <p className="text-[10px] text-purple-800 font-medium">Shipment after successful payment</p>
+                </div>
+              )}
+              {instMonthlyPayment < 0 && (
+                <p className="text-xs text-red-600 mt-1 font-bold">Deposit exceeds total!</p>
+              )}
+            </>
+          ) : (
+            /* Custom mode summary */
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-black">Total ({customPayments.length} payments)</span>
+                <span className="text-lg font-bold text-black">£{customTotal.toFixed(2)}</span>
+              </div>
+              <div className="border-t border-gray-200 pt-2 space-y-1">
+                {customPayments.map((p, i) => {
+                  const intervalLabel = p.interval === "7" ? "Weekly" : p.interval === "14" ? "Bi-weekly" : "Monthly";
+                  return (
+                    <div key={i} className="flex justify-between text-xs text-black">
+                      <span>#{i + 1} — {intervalLabel}</span>
+                      <span className="font-bold">£{p.amount || "0"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                <span className="text-xs font-semibold text-black">First Payment</span>
+                <span className="text-xs font-bold text-black">
+                  {isCustomInstFuture ? new Date(customFirstPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+                </span>
+              </div>
+              {isCustomInstFuture && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
+                  <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
+                  <p className="text-[10px] text-purple-800 font-medium">Shipment after successful payment</p>
+                </div>
+              )}
+            </>
           )}
           {instProducts.length > 0 && (
             <div className="border-t border-gray-200 pt-2 mt-2">
