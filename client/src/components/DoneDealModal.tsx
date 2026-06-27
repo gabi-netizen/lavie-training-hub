@@ -1,10 +1,12 @@
 /**
  * DoneDealModal — Records deal details when marking a lead as Done Deal.
- * Two tabs: Subscription / Installment — fields match Max Billing modals.
+ * Two tabs: Subscription / Installment.
+ * Subscription: each product gets its own price + billing cycle.
+ * Products with the same cycle ship together in one Mintsoft order.
  * Retention agents only (Opening uses confirmSold flow).
  */
 import { useState, useMemo } from "react";
-import { X, Package, Gift, CreditCard, Calculator, Truck, RefreshCw, Calendar } from "lucide-react";
+import { X, Package, Gift, CreditCard, Calculator, Truck, Calendar } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -81,7 +83,16 @@ const PRODUCT_CATALOG: ProductDef[] = [
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ProductSelection {
+interface SubProduct {
+  name: string;
+  variant: string;
+  sku: string;
+  quantity: number;
+  price: string; // per cycle
+  cycle: string; // "30" | "60" | "90" | custom number
+}
+
+interface InstProduct {
   name: string;
   variant: string;
   sku: string;
@@ -112,36 +123,29 @@ export default function DoneDealModal({
   const [dealType, setDealType] = useState<"subscription" | "installment">("subscription");
 
   // ─── Shared State ─────────────────────────────────────────────────────────────
-  const [selectedProducts, setSelectedProducts] = useState<ProductSelection[]>([]);
   const [freeGifts, setFreeGifts] = useState<Record<string, { name: string; variant: string; sku: string; quantity: number }>>({});
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [dealNotes, setDealNotes] = useState("");
-
-  // Ship date (only shown when first charge = today)
   const [shipOption, setShipOption] = useState<"today" | "tomorrow" | "custom">("today");
   const [customShipDate, setCustomShipDate] = useState("");
 
-  // ─── Subscription State ─────────────────────────────────────────────────────
-  const [subAmount, setSubAmount] = useState("44.90");
-  const [subBillingCycle, setSubBillingCycle] = useState("30");
-  const [subCustomCycle, setSubCustomCycle] = useState("");
-  const [subFirstChargeDate, setSubFirstChargeDate] = useState(""); // empty = today
+  // ─── Subscription State (per-product price + cycle) ─────────────────────────
+  const [subProducts, setSubProducts] = useState<SubProduct[]>([]);
+  const [subFirstChargeDate, setSubFirstChargeDate] = useState("");
 
   // ─── Installment State ──────────────────────────────────────────────────────
+  const [instProducts, setInstProducts] = useState<InstProduct[]>([]);
   const [instTotalAmount, setInstTotalAmount] = useState("420.00");
   const [instDeposit, setInstDeposit] = useState("0.00");
   const [instPayments, setInstPayments] = useState("12");
   const [instInterval, setInstInterval] = useState("30");
   const [instCustomInterval, setInstCustomInterval] = useState("");
-  const [instFirstPaymentDate, setInstFirstPaymentDate] = useState(""); // empty = today
+  const [instFirstPaymentDate, setInstFirstPaymentDate] = useState("");
 
   // ─── Derived ────────────────────────────────────────────────────────────────
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
-  }, []);
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const isSubFuture = subFirstChargeDate !== "" && subFirstChargeDate > todayStr;
   const isInstFuture = instFirstPaymentDate !== "" && instFirstPaymentDate > todayStr;
@@ -154,36 +158,86 @@ export default function DoneDealModal({
     return payments > 0 ? (total - dep) / payments : 0;
   }, [instTotalAmount, instDeposit, instPayments]);
 
-  const billingCycleDays = subBillingCycle === "custom" ? (parseInt(subCustomCycle) || 30) : parseInt(subBillingCycle);
   const intervalDays = instInterval === "custom" ? (parseInt(instCustomInterval) || 30) : parseInt(instInterval);
 
-  // ─── Product Helpers ────────────────────────────────────────────────────────
-  const addProduct = (product: ProductDef) => {
-    const exists = selectedProducts.find((p) => p.name === product.name);
+  // Group subscription products by cycle for summary
+  const subGroupedByCycle = useMemo(() => {
+    const groups: Record<string, { products: SubProduct[]; total: number }> = {};
+    subProducts.forEach((p) => {
+      const key = p.cycle;
+      if (!groups[key]) groups[key] = { products: [], total: 0 };
+      groups[key].products.push(p);
+      groups[key].total += (parseFloat(p.price) || 0) * p.quantity;
+    });
+    return groups;
+  }, [subProducts]);
+
+  const subTotalPerCycle = useMemo(() => {
+    return Object.entries(subGroupedByCycle).map(([cycle, data]) => ({
+      cycle: parseInt(cycle),
+      total: data.total,
+      products: data.products,
+    }));
+  }, [subGroupedByCycle]);
+
+  // ─── Subscription Product Helpers ───────────────────────────────────────────
+  const addSubProduct = (product: ProductDef) => {
+    const exists = subProducts.find((p) => p.name === product.name);
     if (exists) {
-      setSelectedProducts((prev) => prev.filter((p) => p.name !== product.name));
+      setSubProducts((prev) => prev.filter((p) => p.name !== product.name));
     } else {
-      setSelectedProducts((prev) => [
+      setSubProducts((prev) => [
+        ...prev,
+        { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1, price: "", cycle: "60" },
+      ]);
+    }
+  };
+
+  const updateSubProduct = (idx: number, field: keyof SubProduct, value: string | number) => {
+    setSubProducts((prev) => prev.map((p, i) => {
+      if (i !== idx) return p;
+      if (field === "sku") {
+        const cat = PRODUCT_CATALOG.find((c) => c.name === p.name);
+        const v = cat?.variants.find((x) => x.sku === value);
+        if (v) return { ...p, sku: v.sku, variant: v.label };
+        return p;
+      }
+      return { ...p, [field]: value };
+    }));
+  };
+
+  const removeSubProduct = (idx: number) => {
+    setSubProducts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // ─── Installment Product Helpers ────────────────────────────────────────────
+  const addInstProduct = (product: ProductDef) => {
+    const exists = instProducts.find((p) => p.name === product.name);
+    if (exists) {
+      setInstProducts((prev) => prev.filter((p) => p.name !== product.name));
+    } else {
+      setInstProducts((prev) => [
         ...prev,
         { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1 },
       ]);
     }
   };
 
-  const updateProductVariant = (idx: number, sku: string) => {
-    const product = PRODUCT_CATALOG.find((p) => p.name === selectedProducts[idx].name);
-    if (!product) return;
-    const v = product.variants.find((x) => x.sku === sku);
-    if (!v) return;
-    setSelectedProducts((prev) => prev.map((p, i) => i === idx ? { ...p, variant: v.label, sku: v.sku } : p));
+  const updateInstProduct = (idx: number, field: string, value: string | number) => {
+    setInstProducts((prev) => prev.map((p, i) => {
+      if (i !== idx) return p;
+      if (field === "sku") {
+        const cat = PRODUCT_CATALOG.find((c) => c.name === p.name);
+        const v = cat?.variants.find((x) => x.sku === value);
+        if (v) return { ...p, sku: v.sku, variant: v.label };
+        return p;
+      }
+      return { ...p, [field]: value };
+    }));
   };
 
-  const updateProductQty = (idx: number, qty: number) => {
-    setSelectedProducts((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: qty } : p));
-  };
-
-  const removeProduct = (idx: number) => {
-    setSelectedProducts((prev) => prev.filter((_, i) => i !== idx));
+  const removeInstProduct = (idx: number) => {
+    setInstProducts((prev) => prev.filter((_, i) => i !== idx));
   };
 
   // ─── Free Gift Helpers ──────────────────────────────────────────────────────
@@ -235,7 +289,8 @@ export default function DoneDealModal({
 
   // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleConfirm = () => {
-    if (selectedProducts.length === 0) {
+    const products = dealType === "subscription" ? subProducts : instProducts;
+    if (products.length === 0) {
       toast.error("Please select at least one product");
       return;
     }
@@ -254,24 +309,28 @@ export default function DoneDealModal({
       }
     }
 
+    const totalAmount = dealType === "subscription"
+      ? subTotalPerCycle.reduce((sum, g) => sum + g.total, 0)
+      : (parseFloat(instTotalAmount) || 0);
+
     markDoneDealMutation.mutate({
       contactId,
       subscriptionId,
       customerName,
       agentName,
       dealDetails: {
-        products: selectedProducts.map((p) => ({
+        products: products.map((p) => ({
           name: `${p.name} — ${p.variant} (${p.sku})`,
           quantity: p.quantity,
-          pricePerUnit: 0,
+          pricePerUnit: dealType === "subscription" ? (parseFloat((p as SubProduct).price) || 0) : 0,
         })),
         freeProduct: Object.values(freeGifts).length > 0
           ? Object.values(freeGifts).map((g) => `${g.name} — ${g.variant} (${g.sku}) x${g.quantity}`).join(", ")
           : "None",
         deposit: dealType === "installment" ? (parseFloat(instDeposit) || 0) : 0,
         installments: dealType === "installment" ? (parseInt(instPayments) || 0) : 0,
-        total: dealType === "installment" ? (parseFloat(instTotalAmount) || 0) : (parseFloat(subAmount) || 0),
-        monthlyPayment: dealType === "installment" ? instMonthlyPayment : (parseFloat(subAmount) || 0),
+        total: totalAmount,
+        monthlyPayment: dealType === "installment" ? instMonthlyPayment : totalAmount,
         shippingDate: shipDate,
         cardLast4: cardNumber.replace(/\s/g, "").slice(-4),
         cardExpiry,
@@ -282,67 +341,6 @@ export default function DoneDealModal({
   };
 
   if (!open) return null;
-
-  // ─── Shared: Products Section ───────────────────────────────────────────────
-  const renderProductsSection = () => (
-    <div>
-      <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Products to Ship</div>
-      {/* Product Chips */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {PRODUCT_CATALOG.map((product) => {
-          const isSelected = selectedProducts.some((p) => p.name === product.name);
-          return (
-            <button
-              key={product.name}
-              onClick={() => addProduct(product)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                isSelected
-                  ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
-                  : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-              }`}
-            >
-              {product.name}
-            </button>
-          );
-        })}
-      </div>
-      {/* Selected product rows */}
-      {selectedProducts.map((product, idx) => {
-        const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
-        if (!catalogProduct) return null;
-        return (
-          <div key={`${product.name}-${idx}`} className="flex items-center gap-2 py-2 border-b border-gray-100">
-            <span className="text-xs font-bold text-black w-24 truncate">{product.name}</span>
-            {catalogProduct.variants.length > 1 ? (
-              <select
-                value={product.sku}
-                onChange={(e) => updateProductVariant(idx, e.target.value)}
-                className="flex-1 px-2 py-1 rounded border border-gray-300 bg-white text-xs text-black font-medium"
-              >
-                {catalogProduct.variants.map((v) => (
-                  <option key={v.sku} value={v.sku}>{v.label}</option>
-                ))}
-              </select>
-            ) : (
-              <span className="flex-1 text-xs text-black">{product.variant}</span>
-            )}
-            <select
-              value={product.quantity}
-              onChange={(e) => updateProductQty(idx, parseInt(e.target.value))}
-              className="w-14 px-1 py-1 rounded border border-gray-300 bg-white text-xs text-black font-medium"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
-                <option key={q} value={q}>x{q}</option>
-              ))}
-            </select>
-            <button onClick={() => removeProduct(idx)} className="text-red-500 hover:text-red-700 p-0.5">
-              <X size={14} />
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
 
   // ─── Shared: Free Gifts Section ─────────────────────────────────────────────
   const renderFreeGiftsSection = () => (
@@ -398,7 +396,7 @@ export default function DoneDealModal({
     </div>
   );
 
-  // ─── Shared: Ship Date Section (only when NOT future) ───────────────────────
+  // ─── Shared: Ship Date Section ──────────────────────────────────────────────
   const renderShipDateSection = () => (
     <div>
       <div className="flex items-center gap-2 mb-1">
@@ -472,111 +470,169 @@ export default function DoneDealModal({
   // ─── Subscription Tab ───────────────────────────────────────────────────────
   const renderSubscriptionTab = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-      {/* LEFT — Billing Configuration + Products */}
+      {/* LEFT — Products with price + cycle each */}
       <div className="px-6 py-5 border-r border-gray-100 space-y-5">
-        {/* Billing Configuration */}
+        {/* Product Selection */}
         <div>
-          <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Billing Configuration</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-black mb-1 block">Amount (£)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={subAmount}
-                onChange={(e) => setSubAmount(e.target.value)}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-black mb-1 block">Billing cycle</label>
-              <select
-                value={subBillingCycle}
-                onChange={(e) => setSubBillingCycle(e.target.value)}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="30">Every 30 days</option>
-                <option value="60">Every 60 days</option>
-                <option value="90">Every 90 days</option>
-                <option value="custom">Custom...</option>
-              </select>
-              {subBillingCycle === "custom" && (
-                <input
-                  type="number"
-                  min={1}
-                  placeholder="Days"
-                  value={subCustomCycle}
-                  onChange={(e) => setSubCustomCycle(e.target.value)}
-                  className="w-full mt-2 px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-                />
-              )}
-            </div>
-            <div className="col-span-2">
-              <label className="text-xs font-semibold text-black mb-1 block">
-                <Calendar size={12} className="inline mr-1" />
-                First charge date
-              </label>
-              <input
-                type="date"
-                value={subFirstChargeDate}
-                onChange={(e) => setSubFirstChargeDate(e.target.value)}
-                min={todayStr}
-                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-                placeholder="Leave empty for today"
-              />
-              <p className="text-[10px] text-black font-medium mt-1">
-                {isSubFuture ? "⏳ Future deal — charge on selected date, shipment after payment" : "Leave empty to charge today"}
-              </p>
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <Package size={16} className="text-black" />
+            <span className="text-[11px] font-bold text-black uppercase tracking-wide">Products</span>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {PRODUCT_CATALOG.map((product) => {
+              const isSelected = subProducts.some((p) => p.name === product.name);
+              return (
+                <button
+                  key={product.name}
+                  onClick={() => addSubProduct(product)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    isSelected
+                      ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
+                      : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                  }`}
+                >
+                  {product.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Product rows with price + cycle */}
+          <div className="space-y-3">
+            {subProducts.map((product, idx) => {
+              const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
+              if (!catalogProduct) return null;
+              return (
+                <div key={`${product.name}-${idx}`} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-black">{product.name}</span>
+                    <button onClick={() => removeSubProduct(idx)} className="text-red-500 hover:text-red-700">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Variant */}
+                    {catalogProduct.variants.length > 1 ? (
+                      <select
+                        value={product.sku}
+                        onChange={(e) => updateSubProduct(idx, "sku", e.target.value)}
+                        className="px-2 py-1.5 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+                      >
+                        {catalogProduct.variants.map((v) => (
+                          <option key={v.sku} value={v.sku}>{v.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="px-2 py-1.5 text-xs text-black font-medium">{product.variant}</span>
+                    )}
+                    {/* Qty */}
+                    <select
+                      value={product.quantity}
+                      onChange={(e) => updateSubProduct(idx, "quantity", parseInt(e.target.value))}
+                      className="px-2 py-1.5 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
+                        <option key={q} value={q}>x{q}</option>
+                      ))}
+                    </select>
+                    {/* Price */}
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-black">£</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={product.price}
+                        onChange={(e) => updateSubProduct(idx, "price", e.target.value)}
+                        placeholder="Price"
+                        className="w-full pl-5 pr-2 py-1.5 rounded border border-gray-300 bg-white text-xs text-black font-bold focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    {/* Cycle */}
+                    <select
+                      value={product.cycle}
+                      onChange={(e) => updateSubProduct(idx, "cycle", e.target.value)}
+                      className="px-2 py-1.5 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+                    >
+                      <option value="30">Every 30 days</option>
+                      <option value="60">Every 60 days</option>
+                      <option value="90">Every 90 days</option>
+                      <option value="120">Every 120 days</option>
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Products */}
-        {renderProductsSection()}
+        {/* First Charge Date */}
+        <div>
+          <label className="text-xs font-semibold text-black mb-1 block">
+            <Calendar size={12} className="inline mr-1" />
+            First charge date
+          </label>
+          <input
+            type="date"
+            value={subFirstChargeDate}
+            onChange={(e) => setSubFirstChargeDate(e.target.value)}
+            min={todayStr}
+            className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-[10px] text-black font-medium mt-1">
+            {isSubFuture ? "⏳ Future deal — charge on selected date, shipment after payment" : "Leave empty to charge today"}
+          </p>
+        </div>
 
         {/* Free Gifts */}
         {renderFreeGiftsSection()}
       </div>
 
-      {/* RIGHT — Summary + Ship + Card */}
+      {/* RIGHT — Order Summary */}
       <div className="px-6 py-5 space-y-4">
         <span className="text-sm font-bold text-black">Order Summary</span>
 
-        {/* Summary card */}
-        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-black">Recurring Amount</span>
-            <span className="text-lg font-bold text-green-700">£{subAmount || "0"}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-black">Billing Cycle</span>
-            <span className="text-xs font-bold text-black">Every {billingCycleDays} days</span>
-          </div>
-          <div className="flex items-center justify-between">
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
+          {/* Grouped by cycle */}
+          {subTotalPerCycle.length > 0 ? (
+            subTotalPerCycle.map((group) => (
+              <div key={group.cycle} className="border-b border-gray-200 pb-3 last:border-b-0 last:pb-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-blue-700 uppercase">Every {group.cycle} days</span>
+                  <span className="text-sm font-bold text-green-700">£{group.total.toFixed(2)}</span>
+                </div>
+                {group.products.map((p, i) => (
+                  <div key={i} className="flex justify-between text-xs text-black pl-2">
+                    <span>{p.name} — {p.variant} x{p.quantity}</span>
+                    <span className="font-semibold">£{((parseFloat(p.price) || 0) * p.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+                <p className="text-[10px] text-black font-medium mt-1 pl-2">
+                  Ships together every {group.cycle} days
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-black font-medium">No products selected</p>
+          )}
+
+          {/* First Charge */}
+          <div className="flex items-center justify-between border-t border-gray-200 pt-2">
             <span className="text-xs font-semibold text-black">First Charge</span>
             <span className="text-xs font-bold text-black">
               {isSubFuture ? new Date(subFirstChargeDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
             </span>
           </div>
+
           {isSubFuture && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
               <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
-              <p className="text-[10px] text-purple-800 font-medium">Shipment will be sent automatically after successful payment</p>
+              <p className="text-[10px] text-purple-800 font-medium">Shipment after successful payment</p>
             </div>
           )}
-          {selectedProducts.length > 0 && (
-            <div className="border-t border-gray-200 pt-2 mt-2">
-              <span className="text-[10px] font-bold text-black uppercase">Products</span>
-              {selectedProducts.map((p, i) => (
-                <div key={i} className="flex justify-between text-xs text-black mt-1">
-                  <span>{p.name} — {p.variant}</span>
-                  <span className="font-bold">x{p.quantity}</span>
-                </div>
-              ))}
-            </div>
-          )}
+
+          {/* Free Gifts in summary */}
           {Object.values(freeGifts).length > 0 && (
-            <div className="border-t border-gray-200 pt-2 mt-2">
+            <div className="border-t border-gray-200 pt-2">
               <span className="text-[10px] font-bold text-black uppercase">Free Gifts</span>
               {Object.values(freeGifts).map((g, i) => (
                 <div key={i} className="flex justify-between text-xs text-black mt-1">
@@ -612,8 +668,68 @@ export default function DoneDealModal({
   // ─── Installment Tab ────────────────────────────────────────────────────────
   const renderInstallmentTab = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-      {/* LEFT — Instalment Configuration + Products */}
+      {/* LEFT — Products + Configuration */}
       <div className="px-6 py-5 border-r border-gray-100 space-y-5">
+        {/* Products */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Package size={16} className="text-black" />
+            <span className="text-[11px] font-bold text-black uppercase tracking-wide">Products to Ship</span>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {PRODUCT_CATALOG.map((product) => {
+              const isSelected = instProducts.some((p) => p.name === product.name);
+              return (
+                <button
+                  key={product.name}
+                  onClick={() => addInstProduct(product)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    isSelected
+                      ? "bg-blue-600 text-white border-2 border-blue-700 shadow-md"
+                      : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                  }`}
+                >
+                  {product.name}
+                </button>
+              );
+            })}
+          </div>
+          {instProducts.map((product, idx) => {
+            const catalogProduct = PRODUCT_CATALOG.find((p) => p.name === product.name);
+            if (!catalogProduct) return null;
+            return (
+              <div key={`${product.name}-${idx}`} className="flex items-center gap-2 py-2 border-b border-gray-100">
+                <span className="text-xs font-bold text-black w-24 truncate">{product.name}</span>
+                {catalogProduct.variants.length > 1 ? (
+                  <select
+                    value={product.sku}
+                    onChange={(e) => updateInstProduct(idx, "sku", e.target.value)}
+                    className="flex-1 px-2 py-1 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+                  >
+                    {catalogProduct.variants.map((v) => (
+                      <option key={v.sku} value={v.sku}>{v.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="flex-1 text-xs text-black">{product.variant}</span>
+                )}
+                <select
+                  value={product.quantity}
+                  onChange={(e) => updateInstProduct(idx, "quantity", parseInt(e.target.value))}
+                  className="w-14 px-1 py-1 rounded border border-gray-300 bg-white text-xs text-black font-medium"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((q) => (
+                    <option key={q} value={q}>x{q}</option>
+                  ))}
+                </select>
+                <button onClick={() => removeInstProduct(idx)} className="text-red-500 hover:text-red-700 p-0.5">
+                  <X size={14} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Instalment Configuration */}
         <div>
           <div className="text-[11px] font-bold text-black uppercase tracking-wide mb-3">Instalment Configuration</div>
@@ -694,18 +810,14 @@ export default function DoneDealModal({
           </div>
         </div>
 
-        {/* Products */}
-        {renderProductsSection()}
-
         {/* Free Gifts */}
         {renderFreeGiftsSection()}
       </div>
 
-      {/* RIGHT — Summary + Ship + Card */}
+      {/* RIGHT — Summary */}
       <div className="px-6 py-5 space-y-4">
         <span className="text-sm font-bold text-black">Order Summary</span>
 
-        {/* Summary card */}
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-black">Total Amount</span>
@@ -736,16 +848,16 @@ export default function DoneDealModal({
           {isInstFuture && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-2">
               <span className="text-xs font-bold text-purple-800">⏳ Future Deal</span>
-              <p className="text-[10px] text-purple-800 font-medium">Shipment will be sent automatically after successful payment</p>
+              <p className="text-[10px] text-purple-800 font-medium">Shipment after successful payment</p>
             </div>
           )}
           {instMonthlyPayment < 0 && (
             <p className="text-xs text-red-600 mt-1 font-bold">Deposit exceeds total!</p>
           )}
-          {selectedProducts.length > 0 && (
+          {instProducts.length > 0 && (
             <div className="border-t border-gray-200 pt-2 mt-2">
               <span className="text-[10px] font-bold text-black uppercase">Products</span>
-              {selectedProducts.map((p, i) => (
+              {instProducts.map((p, i) => (
                 <div key={i} className="flex justify-between text-xs text-black mt-1">
                   <span>{p.name} — {p.variant}</span>
                   <span className="font-bold">x{p.quantity}</span>
@@ -790,10 +902,8 @@ export default function DoneDealModal({
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl mx-4 max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white rounded-t-2xl border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
@@ -801,7 +911,6 @@ export default function DoneDealModal({
             <h2 className="text-lg font-bold text-black">Done Deal</h2>
             <p className="text-sm text-black">{customerName}</p>
           </div>
-          {/* Deal Type Toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setDealType("subscription")}
@@ -848,7 +957,7 @@ export default function DoneDealModal({
             </button>
             <button
               onClick={handleConfirm}
-              disabled={markDoneDealMutation.isPending || selectedProducts.length === 0}
+              disabled={markDoneDealMutation.isPending || (dealType === "subscription" ? subProducts.length === 0 : instProducts.length === 0)}
               className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-md"
               style={{ background: isFutureDeal ? "#7c3aed" : "#16a34a" }}
             >
