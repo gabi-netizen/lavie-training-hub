@@ -142,7 +142,7 @@ export default function DoneDealModal({
   // Equal mode
   const [instTotalAmount, setInstTotalAmount] = useState("420.00");
   const [instDeposit, setInstDeposit] = useState("0.00");
-  const [instPayments, setInstPayments] = useState("12");
+  const [instPayments, setInstPayments] = useState("1");
   const [instInterval, setInstInterval] = useState("30");
   const [instCustomInterval, setInstCustomInterval] = useState("");
   const [instFirstPaymentDate, setInstFirstPaymentDate] = useState("");
@@ -843,13 +843,13 @@ export default function DoneDealModal({
                   onChange={(e) => setInstPayments(e.target.value)}
                   className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
                 >
-                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-black mb-1 block">Payment interval</label>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => (
+                  <option key={n} value={n}>{n === 1 ? "1 (One Time Payment)" : String(n)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-black mb-1 block">Payment interval</label>
                 <select
                   value={instInterval}
                   onChange={(e) => setInstInterval(e.target.value)}
