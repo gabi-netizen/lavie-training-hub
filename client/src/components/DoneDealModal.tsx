@@ -97,6 +97,7 @@ interface InstProduct {
   variant: string;
   sku: string;
   quantity: number;
+  price: string;
 }
 
 interface DoneDealModalProps {
@@ -163,12 +164,19 @@ export default function DoneDealModal({
   const isCustomInstFuture = customFirstPaymentDate !== "" && customFirstPaymentDate > todayStr;
   const isFutureDeal = dealType === "subscription" ? isSubFuture : (instMode === "custom" ? isCustomInstFuture : isInstFuture);
 
+  // Auto-calculate total from products
+  const instProductsTotal = useMemo(() => {
+    return instProducts.reduce((sum, p) => sum + (parseFloat(p.price) || 0) * p.quantity, 0);
+  }, [instProducts]);
+
+  const instEffectiveTotal = instProductsTotal > 0 ? instProductsTotal.toFixed(2) : instTotalAmount;
+
   const instMonthlyPayment = useMemo(() => {
-    const total = parseFloat(instTotalAmount) || 0;
+    const total = instProductsTotal > 0 ? instProductsTotal : (parseFloat(instTotalAmount) || 0);
     const dep = parseFloat(instDeposit) || 0;
     const payments = parseInt(instPayments) || 1;
     return payments > 0 ? (total - dep) / payments : 0;
-  }, [instTotalAmount, instDeposit, instPayments]);
+  }, [instProductsTotal, instTotalAmount, instDeposit, instPayments]);
 
   const intervalDays = instInterval === "custom" ? (parseInt(instCustomInterval) || 30) : parseInt(instInterval);
 
@@ -251,7 +259,7 @@ export default function DoneDealModal({
     } else {
       setInstProducts((prev) => [
         ...prev,
-        { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1 },
+        { name: product.name, variant: product.variants[0].label, sku: product.variants[0].sku, quantity: 1, price: "" },
       ]);
     }
   };
@@ -735,7 +743,7 @@ export default function DoneDealModal({
             if (!catalogProduct) return null;
             return (
               <div key={`${product.name}-${idx}`} className="flex items-center gap-2 py-2 border-b border-gray-100">
-                <span className="text-xs font-bold text-black w-24 truncate">{product.name}</span>
+                <span className="text-xs font-bold text-black w-20 truncate">{product.name}</span>
                 {catalogProduct.variants.length > 1 ? (
                   <select
                     value={product.sku}
@@ -749,6 +757,17 @@ export default function DoneDealModal({
                 ) : (
                   <span className="flex-1 text-xs text-black">{product.variant}</span>
                 )}
+                <div className="relative w-20">
+                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs font-bold text-black">£</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={product.price}
+                    onChange={(e) => updateInstProduct(idx, "price", e.target.value)}
+                    placeholder="Price"
+                    className="w-full pl-4 pr-1 py-1 rounded border border-gray-300 bg-white text-xs text-black font-bold focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                </div>
                 <select
                   value={product.quantity}
                   onChange={(e) => updateInstProduct(idx, "quantity", parseInt(e.target.value))}
@@ -938,7 +957,7 @@ export default function DoneDealModal({
             <>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-black">Total Amount</span>
-                <span className="text-lg font-bold text-black">£{instTotalAmount || "0"}</span>
+                <span className="text-lg font-bold text-black">£{instEffectiveTotal || "0"}</span>
               </div>
               {(parseFloat(instDeposit) || 0) > 0 && (
                 <div className="flex items-center justify-between">
