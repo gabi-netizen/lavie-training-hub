@@ -1187,8 +1187,8 @@ export const retentionDeals = mysqlTable("retention_deals", {
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   /** Stripe Subscription Schedule ID (sched_xxx) */
   stripeScheduleId: varchar("stripeScheduleId", { length: 128 }),
-  /** Stripe Subscription ID — filled once the schedule activates */
-  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  /** Stripe Subscription IDs — JSON array, one per billing cycle (subscription deals) */
+  stripeSubscriptionIds: json("stripeSubscriptionIds"),
   /** Total deal amount in GBP */
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
   /** Deposit amount */
@@ -1225,7 +1225,7 @@ export const retentionDeals = mysqlTable("retention_deals", {
   index("retention_deals_contactId_idx").on(table.contactId),
   index("retention_deals_status_idx").on(table.status),
   index("retention_deals_stripeScheduleId_idx").on(table.stripeScheduleId),
-  index("retention_deals_stripeSubscriptionId_idx").on(table.stripeSubscriptionId),
+  // stripeSubscriptionIds is JSON — no index needed
 ]);
 
 export type RetentionDeal = typeof retentionDeals.$inferSelect;

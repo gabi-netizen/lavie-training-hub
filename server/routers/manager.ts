@@ -9,7 +9,8 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes } from "../../drizzle/schema";
+import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes, stripeCustomers, retentionDeals } from "../../drizzle/schema";
+import { getStripeClient, createSubscriptionSchedule } from "../stripe/index";
 import { addCallNote, updateContact, normalisePhone } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte, inArray, notInArray } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
@@ -3250,7 +3251,254 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const { contactId, subscriptionId, customerName, agentName, dealDetails } = input;
+      const {
+        contactId, subscriptionId, customerName, agentName,
+        dealType, subProducts, instMode, instProducts,
+        instDeposit, instPayments, instInterval, customPayments,
+        freeGifts, shipDate, isFutureDeal,
+        cardNumber, cardExpiry, cardCvv, notes,
+        dealDetails,
+      } = input;
+
+      const now = Date.now();
+
+      // ─── 1. Fetch contact details (for Stripe customer creation) ─────────────
+      const [contact] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, contactId))
+        .limit(1);
+
+      if (!contact) throw new Error(`[markDoneDeal] Contact ${contactId} not found`);
+
+      // ─── 2. Get or create Stripe Customer ────────────────────────────────────
+      const stripe = getStripeClient();
+      let stripeCustomerId: string;
+      let stripePaymentMethodId: string | undefined;
+
+      const [existingStripeCustomer] = await db
+        .select()
+        .from(stripeCustomers)
+        .where(eq(stripeCustomers.contactId, contactId))
+        .limit(1);
+
+      if (existingStripeCustomer) {
+        stripeCustomerId = existingStripeCustomer.stripeCustomerId;
+        stripePaymentMethodId = existingStripeCustomer.paymentMethodId ?? undefined;
+      } else {
+        // Create new Stripe customer
+        const stripeCustomer = await stripe.customers.create({
+          name: customerName,
+          email: contact.email ?? undefined,
+          phone: contact.phone ?? undefined,
+          metadata: { contactId: String(contactId), agentName },
+        });
+        stripeCustomerId = stripeCustomer.id;
+        await db.insert(stripeCustomers).values({
+          contactId,
+          stripeCustomerId,
+          agentName,
+          agentEmail: contact.email ?? undefined,
+        });
+      }
+
+      // ─── 3. Attach new card if provided ──────────────────────────────────────
+      const cardLast4 = cardNumber ? cardNumber.replace(/\s/g, "").slice(-4) : undefined;
+
+      if (cardNumber && cardExpiry && cardCvv) {
+        try {
+          const [expMonth, expYear] = (cardExpiry || "").split("/").map((s) => parseInt(s.trim()));
+          const pm = await stripe.paymentMethods.create({
+            type: "card",
+            card: {
+              number: cardNumber.replace(/\s/g, ""),
+              exp_month: expMonth,
+              exp_year: expYear + 2000,
+              cvc: cardCvv,
+            },
+          });
+          await stripe.paymentMethods.attach(pm.id, { customer: stripeCustomerId });
+          await stripe.customers.update(stripeCustomerId, {
+            invoice_settings: { default_payment_method: pm.id },
+          });
+          stripePaymentMethodId = pm.id;
+          // Update DB
+          await db
+            .update(stripeCustomers)
+            .set({ paymentMethodId: pm.id })
+            .where(eq(stripeCustomers.contactId, contactId));
+        } catch (cardErr: any) {
+          console.error(`[markDoneDeal] Card attach failed: ${cardErr.message}`);
+          // Non-fatal — continue without card
+        }
+      }
+
+      // ─── 4. Build Stripe subscriptions / schedule ─────────────────────────────────
+      let stripeScheduleId: string | undefined;
+      let stripeSubscriptionIds: string[] = [];
+      let totalAmount = 0;
+      let billingCycle: number | undefined;
+      let paymentCount: number | undefined;
+      let paymentsJson: { amount: number; interval: number }[] | undefined;
+
+      // Convert ship date to Unix timestamp for future deals
+      const startDateUnix = isFutureDeal && shipDate
+        ? Math.floor(new Date(shipDate).getTime() / 1000)
+        : undefined;
+
+      try {
+        if (dealType === "subscription") {
+          // ── Subscription: one Stripe subscription per unique billing cycle ────────
+          // Group products by cycle
+          const cycleMap = new Map<number, { amount: number; cycle: number; productNames: string[] }>();
+          for (const p of subProducts) {
+            const prev = cycleMap.get(p.cycle) ?? { amount: 0, cycle: p.cycle, productNames: [] };
+            prev.amount += p.price * p.quantity;
+            prev.productNames.push(p.name);
+            cycleMap.set(p.cycle, prev);
+          }
+
+          totalAmount = subProducts.reduce((s, p) => s + p.price * p.quantity, 0);
+          // Use the first cycle as the primary billing cycle for display
+          billingCycle = cycleMap.size > 0 ? Array.from(cycleMap.keys())[0] : undefined;
+
+          for (const [cycle, group] of Array.from(cycleMap.entries())) {
+            const amountPence = Math.round(group.amount * 100);
+            const meta = {
+              contactId: String(contactId),
+              agentName,
+              dealType: "subscription",
+              billingCycleDays: String(cycle),
+              retentionDeal: "true",
+            };
+
+            if (isFutureDeal && startDateUnix) {
+              // Future deal — use Subscription Schedule with start_date
+              const schedule = await createSubscriptionSchedule({
+                customerId: stripeCustomerId,
+                phases: [{ amount: amountPence, interval: "day", intervalCount: cycle, iterations: 999 }],
+                defaultPaymentMethod: stripePaymentMethodId,
+                startDate: startDateUnix!,
+                metadata: meta,
+              });
+              stripeSubscriptionIds.push(schedule.id);
+            } else {
+              // Immediate deal — create a regular subscription
+              const product = await stripe.products.create({
+                name: `Lavie Labs — ${group.productNames.join(", ")} (every ${cycle} days)`,
+              });
+              const price = await stripe.prices.create({
+                product: product.id,
+                unit_amount: amountPence,
+                currency: "gbp",
+                recurring: { interval: "day", interval_count: cycle },
+              });
+              const sub = await stripe.subscriptions.create({
+                customer: stripeCustomerId,
+                items: [{ price: price.id }],
+                default_payment_method: stripePaymentMethodId,
+                metadata: meta,
+              });
+              stripeSubscriptionIds.push(sub.id);
+            }
+          }
+
+        } else {
+          // ── Installment ───────────────────────────────────────────────────────
+          totalAmount = instProducts.reduce((s, p) => s + p.price * p.quantity, 0);
+          const deposit = instDeposit ?? 0;
+          const remaining = totalAmount - deposit;
+
+          let phases: { amount: number; interval: "day"; intervalCount: number; iterations: number }[] = [];
+
+          if (instMode === "equal") {
+            const numPayments = instPayments ?? 1;
+            const interval = instInterval ?? 30;
+            const perPayment = numPayments > 0 ? remaining / numPayments : remaining;
+            paymentCount = numPayments;
+            paymentsJson = Array.from({ length: numPayments }, () => ({
+              amount: parseFloat(perPayment.toFixed(2)),
+              interval,
+            }));
+
+            // Phase 1: deposit (if any)
+            if (deposit > 0) {
+              phases.push({ amount: Math.round(deposit * 100), interval: "day", intervalCount: 1, iterations: 1 });
+            }
+            // Phase 2: equal payments
+            phases.push({
+              amount: Math.round(perPayment * 100),
+              interval: "day",
+              intervalCount: interval,
+              iterations: numPayments,
+            });
+
+          } else {
+            // Custom payments
+            paymentCount = customPayments.length;
+            paymentsJson = customPayments.map((p) => ({ amount: p.amount, interval: p.interval }));
+
+            if (deposit > 0) {
+              phases.push({ amount: Math.round(deposit * 100), interval: "day", intervalCount: 1, iterations: 1 });
+            }
+            for (const p of customPayments) {
+              phases.push({
+                amount: Math.round(p.amount * 100),
+                interval: "day",
+                intervalCount: p.interval,
+                iterations: 1,
+              });
+            }
+          }
+
+          if (phases.length > 0) {
+            const schedule = await createSubscriptionSchedule({
+              customerId: stripeCustomerId,
+              phases,
+              defaultPaymentMethod: stripePaymentMethodId,
+              startDate: startDateUnix,
+              metadata: {
+                contactId: String(contactId),
+                agentName,
+                dealType: "installment",
+                instMode: instMode ?? "equal",
+                retentionDeal: "true",
+              },
+            });
+            stripeScheduleId = schedule.id;
+          }
+        }
+      } catch (stripeErr: any) {
+        console.error(`[markDoneDeal] Stripe schedule creation failed: ${stripeErr.message}`);
+        // Non-fatal for now — we still save the deal record
+      }
+
+      // ─── 5. Save retention deal to DB ────────────────────────────────────────
+      const products = dealType === "subscription" ? subProducts : instProducts;
+
+      await db.insert(retentionDeals).values({
+        contactId,
+        agentName,
+        dealType,
+        instMode: instMode ?? null,
+        stripeCustomerId,
+        stripeScheduleId: stripeScheduleId ?? null,
+        stripeSubscriptionIds: stripeSubscriptionIds.length > 0 ? stripeSubscriptionIds as any : null,
+        totalAmount: String(totalAmount.toFixed(2)),
+        deposit: String((instDeposit ?? 0).toFixed(2)),
+        paymentCount: paymentCount ?? null,
+        billingCycle: billingCycle ?? null,
+        products: products as any,
+        freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+        payments: paymentsJson ? paymentsJson as any : null,
+        shipDate: shipDate ?? null,
+        isFutureDeal: isFutureDeal ?? false,
+        cardLast4: cardLast4 ?? null,
+        status: isFutureDeal ? "future" : stripeScheduleId ? "active" : "pending",
+        notes: notes ?? null,
+        createdAt: now,
+        updatedAt: now,
+      });
 
       // Build email body
       const productLines = dealDetails.products
@@ -3372,6 +3620,11 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         }
       }
 
-      return { success: true };
+      return {
+        success: true,
+        stripeScheduleId: stripeScheduleId ?? null,
+        stripeSubscriptionIds,
+        isFutureDeal: isFutureDeal ?? false,
+      };
     }),
 });

@@ -6,7 +6,7 @@ CREATE TABLE retention_deals (
   instMode ENUM('equal', 'custom') DEFAULT NULL,
   stripeCustomerId VARCHAR(128) DEFAULT NULL,
   stripeScheduleId VARCHAR(128) DEFAULT NULL,
-  stripeSubscriptionId VARCHAR(128) DEFAULT NULL,
+  stripeSubscriptionIds JSON DEFAULT NULL,
   totalAmount DECIMAL(10, 2) NOT NULL,
   deposit DECIMAL(10, 2) DEFAULT 0,
   paymentCount INT DEFAULT NULL,
@@ -26,5 +26,5 @@ CREATE TABLE retention_deals (
   INDEX idx_retention_deals_contactId (contactId),
   INDEX idx_retention_deals_status (status),
   INDEX idx_retention_deals_stripeScheduleId (stripeScheduleId),
-  INDEX idx_retention_deals_stripeSubscriptionId (stripeSubscriptionId)
+  -- stripeSubscriptionIds is JSON, no index needed
 );
