@@ -130,7 +130,8 @@ export default function DoneDealModal({
   const [cardCvv, setCardCvv] = useState("");
   const [dealNotes, setDealNotes] = useState("");
   const [shipOption, setShipOption] = useState<"immediate" | "custom">("immediate");
-  const [customShipDate, setCustomShipDate] = useState("");
+  const [customShipDate, setCustomShipDate] = useState(""); // internal format: yyyy-mm-dd
+  const [customShipDateDisplay, setCustomShipDateDisplay] = useState(""); // display format: dd/mm/yyyy
 
   // ─── Subscription State (per-product price + cycle) ─────────────────────────
   const [subProducts, setSubProducts] = useState<SubProduct[]>([]);
@@ -498,23 +499,30 @@ export default function DoneDealModal({
         </button>
       </div>
       {shipOption === "custom" && (
-        <>
-          <input
-            type="date"
-            value={customShipDate}
-            onChange={(e) => setCustomShipDate(e.target.value)}
-            min={todayStr}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {customShipDate && (
-            <p className="text-xs mt-1 font-bold text-blue-700">
-              {(() => {
-                const [y, m, d] = customShipDate.split("-");
-                return `${d}/${m}/${y}`;
-              })()}
-            </p>
-          )}
-        </>
+        <input
+          type="text"
+          placeholder="dd/mm/yyyy"
+          value={customShipDateDisplay}
+          onChange={(e) => {
+            let val = e.target.value.replace(/[^0-9/]/g, "");
+            // Auto-insert slashes
+            if (val.length === 2 && customShipDateDisplay.length === 1) val = val + "/";
+            if (val.length === 5 && customShipDateDisplay.length === 4) val = val + "/";
+            if (val.length > 10) return;
+            setCustomShipDateDisplay(val);
+            // Convert to internal yyyy-mm-dd when full date entered
+            if (val.length === 10) {
+              const [d, m, y] = val.split("/");
+              if (d && m && y && y.length === 4) {
+                setCustomShipDate(`${y}-${m}-${d}`);
+              }
+            } else {
+              setCustomShipDate("");
+            }
+          }}
+          maxLength={10}
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
       )}
     </div>
   );
