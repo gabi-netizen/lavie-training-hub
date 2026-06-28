@@ -491,7 +491,7 @@ export default function DoneDealModal({
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
             shipOption === "custom"
               ? "bg-purple-600 text-white border-2 border-purple-700 shadow-md"
-              : "bg-gray-100 text-black border-2 border-gray-200 hover:border-purple-300"
+              : "bg-purple-100 text-purple-700 border-2 border-purple-300 hover:bg-purple-200"
           }`}
         >
           Future Deal
