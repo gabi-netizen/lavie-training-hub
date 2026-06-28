@@ -3696,6 +3696,32 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
 
       // ─── WhatsApp notification ───────────────────────────────────────────────────────────────────────────────────
       try {
+        // Look for the most recent call analysis for this agent + contact in the last 24 hours
+        let aiScore: number | null = null;
+        let analysisLink: string | null = null;
+        try {
+          const since24h = Date.now() - 24 * 60 * 60 * 1000;
+          const recentAnalyses = await db
+            .select({ id: callAnalyses.id, overallScore: callAnalyses.overallScore, repName: callAnalyses.repName })
+            .from(callAnalyses)
+            .where(
+              and(
+                eq(callAnalyses.contactId, contactId),
+                eq(callAnalyses.status, "done" as any),
+                gte(callAnalyses.createdAt, new Date(since24h))
+              )
+            )
+            .orderBy(desc(callAnalyses.createdAt))
+            .limit(1);
+
+          if (recentAnalyses.length > 0 && recentAnalyses[0].overallScore != null) {
+            aiScore = recentAnalyses[0].overallScore;
+            analysisLink = `https://training.lavielabs.com/call-coach?id=${recentAnalyses[0].id}`;
+          }
+        } catch (scoreErr: any) {
+          console.warn("[markDoneDeal] Could not fetch AI score:", scoreErr.message);
+        }
+
         const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
         const apiKeySid = process.env.TWILIO_API_KEY_SID || "";
         const apiKeySecret = process.env.TWILIO_API_KEY_SECRET || "";
@@ -3712,6 +3738,8 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             `Type: ${dealTypeLabel}${isFutureDeal ? " (Future Deal)" : ""}`,
             `Customer: ${customerName}`,
             `Total: £${totalAmount.toFixed(2)}`,
+            aiScore != null ? `AI Score: ${Number(aiScore).toFixed(1)}/10` : `AI Score: No call recording`,
+            analysisLink ? `Analysis: ${analysisLink}` : "",
             mintsoftOrderNumber ? `Order: ${mintsoftOrderNumber}` : "",
           ].filter(Boolean).join("\n");
 
