@@ -131,6 +131,7 @@ export default function DoneDealModal({
   const [dealNotes, setDealNotes] = useState("");
   const [shipOption, setShipOption] = useState<"immediate" | "custom">("immediate");
   const [customShipDate, setCustomShipDate] = useState("");
+  const [editingShipDate, setEditingShipDate] = useState(true);
 
   // ─── Subscription State (per-product price + cycle) ─────────────────────────
   const [subProducts, setSubProducts] = useState<SubProduct[]>([]);
@@ -499,20 +500,32 @@ export default function DoneDealModal({
       </div>
       {shipOption === "custom" && (
         <>
-          <input
-            type="date"
-            value={customShipDate}
-            onChange={(e) => setCustomShipDate(e.target.value)}
-            min={todayStr}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          {customShipDate && (
-            <p className="text-xs mt-1 font-bold text-purple-700">
-              {(() => {
-                const [y, m, d] = customShipDate.split("-");
-                return `${d}/${m}/${y}`;
-              })()}
-            </p>
+          {customShipDate && !editingShipDate ? (
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-purple-300 bg-purple-50">
+              <span className="text-sm font-bold text-purple-700">
+                {(() => {
+                  const [y, m, d] = customShipDate.split("-");
+                  return `${d}/${m}/${y}`;
+                })()}
+              </span>
+              <button
+                onClick={() => setEditingShipDate(true)}
+                className="text-xs font-bold text-purple-600 hover:text-purple-800 underline ml-2"
+              >
+                Edit
+              </button>
+            </div>
+          ) : (
+            <input
+              type="date"
+              value={customShipDate}
+              onChange={(e) => {
+                setCustomShipDate(e.target.value);
+                if (e.target.value) setEditingShipDate(false);
+              }}
+              min={todayStr}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           )}
         </>
       )}
