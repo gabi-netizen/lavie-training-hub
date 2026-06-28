@@ -3172,6 +3172,52 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         subscriptionId: z.string(),
         customerName: z.string(),
         agentName: z.string(),
+        dealType: z.enum(["subscription", "installment"]),
+        // ─── Subscription fields ───────────────────────────────────────────
+        subProducts: z.array(
+          z.object({
+            name: z.string(),
+            sku: z.string(),
+            quantity: z.number(),
+            price: z.number(),   // price per cycle
+            cycle: z.number(),   // billing cycle in days
+          })
+        ).optional().default([]),
+        // ─── Installment fields ────────────────────────────────────────────
+        instMode: z.enum(["equal", "custom"]).optional(),
+        instProducts: z.array(
+          z.object({
+            name: z.string(),
+            sku: z.string(),
+            quantity: z.number(),
+            price: z.number(),
+          })
+        ).optional().default([]),
+        instDeposit: z.number().optional().default(0),
+        instPayments: z.number().optional().default(1),   // equal mode
+        instInterval: z.number().optional().default(30),  // equal mode — days
+        customPayments: z.array(
+          z.object({
+            amount: z.number(),
+            interval: z.number(), // days
+          })
+        ).optional().default([]),
+        // ─── Shared fields ─────────────────────────────────────────────────
+        freeGifts: z.array(
+          z.object({
+            name: z.string(),
+            sku: z.string(),
+            quantity: z.number(),
+          })
+        ).optional().default([]),
+        shipDate: z.string().optional(),   // yyyy-mm-dd
+        isFutureDeal: z.boolean().optional().default(false),
+        // ─── Card details (new or replacement card) ────────────────────────
+        cardNumber: z.string().optional(),
+        cardExpiry: z.string().optional(),  // MM/YY
+        cardCvv: z.string().optional(),
+        notes: z.string().optional(),
+        // ─── Legacy fields — kept for email summary ────────────────────────
         dealDetails: z.object({
           products: z.array(
             z.object({
@@ -3179,18 +3225,25 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
               quantity: z.number(),
               pricePerUnit: z.number(),
             })
-          ),
-          freeProduct: z.string(),
-          deposit: z.number(),
-          installments: z.number(),
-          total: z.number(),
-          monthlyPayment: z.number(),
+          ).optional().default([]),
+          freeProduct: z.string().optional().default(""),
+          deposit: z.number().optional().default(0),
+          installments: z.number().optional().default(1),
+          total: z.number().optional().default(0),
+          monthlyPayment: z.number().optional().default(0),
           shippingDate: z.string().optional(),
           cardLast4: z.string().optional(),
           cardExpiry: z.string().optional(),
           notes: z.string().optional(),
           dealType: z.enum(["subscription", "installment"]).optional(),
-        }),
+        }).optional().default(() => ({
+          products: [],
+          freeProduct: "",
+          deposit: 0,
+          installments: 1,
+          total: 0,
+          monthlyPayment: 0,
+        })),
       })
     )
     .mutation(async ({ input }) => {

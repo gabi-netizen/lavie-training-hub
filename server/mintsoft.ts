@@ -396,3 +396,45 @@ export async function createMintsoftOrderFromPhase(params: CreateMintsoftOrderFr
     orderNumber: orderNumber,
   };
 }
+
+// ─── Mark Order as Pack and Hold ─────────────────────────────────────────────
+
+/**
+ * Moves a Mintsoft order to "Pack and Hold" status (status 14).
+ * Used for all Retention Done Deal orders so they are not shipped automatically.
+ * An operator must manually release the order after verifying it is correct.
+ *
+ * @param orderId  Mintsoft internal order ID (returned by createMintsoftOrder*)
+ * @param releaseDate  Optional ISO date string (yyyy-MM-dd) for auto-release
+ */
+export async function markOrderPackAndHold(
+  orderId: number,
+  releaseDate?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const apiKey = await getMintsoftApiKey();
+
+    const url = new URL(`https://api.mintsoft.co.uk/api/Order/${orderId}/MarkPackAndHold`);
+    url.searchParams.append("APIKey", apiKey);
+    if (releaseDate) {
+      url.searchParams.append("ReleaseDate", releaseDate);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: `Mintsoft MarkPackAndHold failed: ${response.status} ${response.statusText} - ${errorText}`,
+      };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: `Mintsoft MarkPackAndHold error: ${err.message}` };
+  }
+}
