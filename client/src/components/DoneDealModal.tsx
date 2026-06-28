@@ -134,8 +134,6 @@ export default function DoneDealModal({
 
   // ─── Subscription State (per-product price + cycle) ─────────────────────────
   const [subProducts, setSubProducts] = useState<SubProduct[]>([]);
-  const [subFirstChargeDate, setSubFirstChargeDate] = useState("");
-
   // ─── Installment State ──────────────────────────────────────────────────────
   const [instProducts, setInstProducts] = useState<InstProduct[]>([]);
   const [instMode, setInstMode] = useState<"equal" | "custom">("equal");
@@ -155,7 +153,7 @@ export default function DoneDealModal({
   // ─── Derived ────────────────────────────────────────────────────────────────
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  const isSubFuture = subFirstChargeDate !== "" && subFirstChargeDate > todayStr;
+  const isSubFuture = shipOption === "custom" && customShipDate !== "" && customShipDate > todayStr;
   const isInstFuture = instFirstPaymentDate !== "" && instFirstPaymentDate > todayStr;
   const isCustomInstFuture = customFirstPaymentDate !== "" && customFirstPaymentDate > todayStr;
   const isFutureDeal = dealType === "subscription" ? isSubFuture : (instMode === "custom" ? isCustomInstFuture : isInstFuture);
@@ -224,11 +222,12 @@ export default function DoneDealModal({
         }
         return p;
       });
-      // Redistribute unlocked payments
+      // Redistribute unlocked payments whenever an amount is manually changed
       if (field === "amount") {
         const dep = parseFloat(customDeposit) || 0;
         const total = instProductsTotal > 0 ? instProductsTotal : 0;
         const remaining = total - dep;
+        // Use the updated locked amount (the one just typed) for the locked sum
         const lockedSum = updated.reduce((s, p) => s + (p.locked ? (parseFloat(p.amount) || 0) : 0), 0);
         const unlockedCount = updated.filter(p => !p.locked).length;
         const perUnlocked = unlockedCount > 0 ? ((remaining - lockedSum) / unlockedCount).toFixed(2) : "0";
@@ -495,17 +494,27 @@ export default function DoneDealModal({
               : "bg-gray-100 text-black border-2 border-gray-200 hover:border-blue-300"
           }`}
         >
-          Select Date
+          Future Deal
         </button>
       </div>
       {shipOption === "custom" && (
-        <input
-          type="date"
-          value={customShipDate}
-          onChange={(e) => setCustomShipDate(e.target.value)}
-          min={todayStr}
-          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <>
+          <input
+            type="date"
+            value={customShipDate}
+            onChange={(e) => setCustomShipDate(e.target.value)}
+            min={todayStr}
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {customShipDate && (
+            <p className="text-xs mt-1 font-bold text-blue-700">
+              {(() => {
+                const [y, m, d] = customShipDate.split("-");
+                return `${d}/${m}/${y}`;
+              })()}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
@@ -646,24 +655,6 @@ export default function DoneDealModal({
           </div>
         </div>
 
-        {/* First Charge Date */}
-        <div>
-          <label className="text-xs font-semibold text-black mb-1 block">
-            <Calendar size={12} className="inline mr-1" />
-            First charge date
-          </label>
-          <input
-            type="date"
-            value={subFirstChargeDate}
-            onChange={(e) => setSubFirstChargeDate(e.target.value)}
-            min={todayStr}
-            className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-          />
-          <p className={`text-xs mt-1 font-bold ${isSubFuture ? "text-purple-700" : "text-black"}`}>
-            {isSubFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
-          </p>
-        </div>
-
         {/* Free Gifts */}
         {renderFreeGiftsSection()}
       </div>
@@ -700,7 +691,7 @@ export default function DoneDealModal({
           <div className="flex items-center justify-between border-t border-gray-200 pt-2">
             <span className="text-xs font-semibold text-black">First Charge</span>
             <span className="text-xs font-bold text-black">
-              {isSubFuture ? new Date(subFirstChargeDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+              {isSubFuture ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
             </span>
           </div>
 
