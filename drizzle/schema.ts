@@ -1166,3 +1166,67 @@ export const billingPlans = mysqlTable("billing_plans", {
 
 export type BillingPlan = typeof billingPlans.$inferSelect;
 export type InsertBillingPlan = typeof billingPlans.$inferInsert;
+
+// ─── Retention Deals ──────────────────────────────────────────────────────────
+/**
+ * Retention Deals — records every Done Deal created by Retention agents.
+ * This is the source of truth for all retention deal data.
+ * Stripe webhooks update the status column when payment events occur.
+ */
+export const retentionDeals = mysqlTable("retention_deals", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Internal contact ID */
+  contactId: int("contactId").notNull(),
+  /** Agent who closed the deal */
+  agentName: varchar("agentName", { length: 256 }).notNull(),
+  /** Deal type */
+  dealType: mysqlEnum("dealType", ["subscription", "installment"]).notNull(),
+  /** Installment mode — only for installment deals */
+  instMode: mysqlEnum("instMode", ["equal", "custom"]),
+  /** Stripe Customer ID */
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  /** Stripe Subscription Schedule ID (sched_xxx) */
+  stripeScheduleId: varchar("stripeScheduleId", { length: 128 }),
+  /** Stripe Subscription ID — filled once the schedule activates */
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  /** Total deal amount in GBP */
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  /** Deposit amount */
+  deposit: decimal("deposit", { precision: 10, scale: 2 }).default("0"),
+  /** Number of payments (installment) */
+  paymentCount: int("paymentCount"),
+  /** Billing cycle in days (subscription) */
+  billingCycle: int("billingCycle"),
+  /** Products sold — JSON array of { name, sku, quantity, price, cycle? } */
+  products: json("products").notNull(),
+  /** Free gifts — JSON array of { name, sku, quantity } */
+  freeGifts: json("freeGifts"),
+  /** Payment schedule — JSON array of { amount, interval } */
+  payments: json("payments"),
+  /** Ship date (yyyy-mm-dd) */
+  shipDate: varchar("shipDate", { length: 32 }),
+  /** Whether this is a future deal (no charge today) */
+  isFutureDeal: boolean("isFutureDeal").default(false),
+  /** Last 4 digits of the card used */
+  cardLast4: varchar("cardLast4", { length: 4 }),
+  /** Mintsoft order ID */
+  mintsoftOrderId: int("mintsoftOrderId"),
+  /** Mintsoft order number */
+  mintsoftOrderNumber: varchar("mintsoftOrderNumber", { length: 128 }),
+  /** Deal status — updated by Stripe webhooks */
+  status: mysqlEnum("status", ["pending", "active", "future", "failed", "cancelled"]).default("pending").notNull(),
+  /** Agent notes */
+  notes: text("notes"),
+  /** Creation timestamp (ms) */
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+  /** Last update timestamp (ms) */
+  updatedAt: bigint("updatedAt", { mode: "number" }).notNull(),
+}, (table) => [
+  index("retention_deals_contactId_idx").on(table.contactId),
+  index("retention_deals_status_idx").on(table.status),
+  index("retention_deals_stripeScheduleId_idx").on(table.stripeScheduleId),
+  index("retention_deals_stripeSubscriptionId_idx").on(table.stripeSubscriptionId),
+]);
+
+export type RetentionDeal = typeof retentionDeals.$inferSelect;
+export type InsertRetentionDeal = typeof retentionDeals.$inferInsert;
