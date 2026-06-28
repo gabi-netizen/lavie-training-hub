@@ -3330,7 +3330,40 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             .where(eq(stripeCustomers.contactId, contactId));
         } catch (cardErr: any) {
           console.error(`[markDoneDeal] Card attach failed: ${cardErr.message}`);
-          // Non-fatal — continue without card
+          const stripeMsg = cardErr?.raw?.message || cardErr?.message || "Unknown card error";
+          // Save a failed deal record so the agent can retry
+          const now2 = Date.now();
+          const products2 = dealType === "subscription" ? subProducts : instProducts;
+          // Check if a failed deal already exists for this contact — update it instead of inserting
+          const [existingFailed] = await db
+            .select({ id: retentionDeals.id })
+            .from(retentionDeals)
+            .where(and(eq(retentionDeals.contactId, contactId), eq(retentionDeals.status, "failed")))
+            .limit(1);
+          if (existingFailed) {
+            await db.update(retentionDeals).set({
+              agentName, dealType, stripeCustomerId,
+              totalAmount: "0", deposit: "0",
+              products: products2 as any,
+              freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+              shipDate: shipDate ?? null, isFutureDeal: isFutureDeal ?? false,
+              cardLast4: cardLast4 ?? null, notes: notes ?? null,
+              status: "failed", errorMessage: `Card error: ${stripeMsg}`,
+              updatedAt: now2,
+            }).where(eq(retentionDeals.id, existingFailed.id));
+          } else {
+            await db.insert(retentionDeals).values({
+              contactId, agentName, dealType, instMode: instMode ?? null,
+              stripeCustomerId, totalAmount: "0", deposit: "0",
+              products: products2 as any,
+              freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+              shipDate: shipDate ?? null, isFutureDeal: isFutureDeal ?? false,
+              cardLast4: cardLast4 ?? null, notes: notes ?? null,
+              status: "failed", errorMessage: `Card error: ${stripeMsg}`,
+              createdAt: now2, updatedAt: now2,
+            });
+          }
+          return { success: false, errorMessage: `Card error: ${stripeMsg}` };
         }
       }
 
@@ -3471,7 +3504,40 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         }
       } catch (stripeErr: any) {
         console.error(`[markDoneDeal] Stripe schedule creation failed: ${stripeErr.message}`);
-        // Non-fatal for now — we still save the deal record
+        const stripeMsg = stripeErr?.raw?.message || stripeErr?.message || "Unknown Stripe error";
+        const errNow = Date.now();
+        const products3 = dealType === "subscription" ? subProducts : instProducts;
+        // Check if a failed deal already exists for this contact — update it instead of inserting
+        const [existingFailed2] = await db
+          .select({ id: retentionDeals.id })
+          .from(retentionDeals)
+          .where(and(eq(retentionDeals.contactId, contactId), eq(retentionDeals.status, "failed")))
+          .limit(1);
+        if (existingFailed2) {
+          await db.update(retentionDeals).set({
+            agentName, dealType, stripeCustomerId,
+            totalAmount: String(totalAmount.toFixed(2)), deposit: String((instDeposit ?? 0).toFixed(2)),
+            products: products3 as any,
+            freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+            shipDate: shipDate ?? null, isFutureDeal: isFutureDeal ?? false,
+            cardLast4: cardLast4 ?? null, notes: notes ?? null,
+            status: "failed", errorMessage: `Payment setup failed: ${stripeMsg}`,
+            updatedAt: errNow,
+          }).where(eq(retentionDeals.id, existingFailed2.id));
+        } else {
+          await db.insert(retentionDeals).values({
+            contactId, agentName, dealType, instMode: instMode ?? null,
+            stripeCustomerId,
+            totalAmount: String(totalAmount.toFixed(2)), deposit: String((instDeposit ?? 0).toFixed(2)),
+            products: products3 as any,
+            freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+            shipDate: shipDate ?? null, isFutureDeal: isFutureDeal ?? false,
+            cardLast4: cardLast4 ?? null, notes: notes ?? null,
+            status: "failed", errorMessage: `Payment setup failed: ${stripeMsg}`,
+            createdAt: errNow, updatedAt: errNow,
+          });
+        }
+        return { success: false, errorMessage: `Payment setup failed: ${stripeMsg}` };
       }
 
       // ─── 5. Save retention deal to DB ────────────────────────────────────────

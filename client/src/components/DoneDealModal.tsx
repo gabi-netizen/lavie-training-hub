@@ -386,14 +386,28 @@ export default function DoneDealModal({
   };
 
   // ─── Mutations ──────────────────────────────────────────────────────────────
+  const [dealError, setDealError] = useState<string | null>(null);
+
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
-    onSuccess: () => {
-      toast.success("Done Deal confirmed!");
+    onSuccess: (data: any) => {
+      if (data?.success === false) {
+        // Stripe/card error — deal saved as failed, modal stays open
+        setDealError(data.errorMessage || "Payment failed. Please check card details and try again.");
+        return;
+      }
+      setDealError(null);
+      const dealTypeLabel = dealType === "subscription" ? "Subscription" : "Installment";
+      const isFutureLabel = isFutureDeal ? " (Future Deal)" : "";
+      toast.success(
+        `Deal confirmed! ${dealTypeLabel}${isFutureLabel} for ${customerName}` +
+        (data?.mintsoftOrderNumber ? ` — Order ${data.mintsoftOrderNumber} created` : ""),
+        { duration: 6000 }
+      );
       onClose();
       onSuccess?.();
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to mark done deal");
+      setDealError(err.message || "Failed to mark done deal");
     },
   });
 
@@ -1219,6 +1233,17 @@ export default function DoneDealModal({
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-gray-100 px-6 py-4 space-y-2">
+          {/* Error banner */}
+          {dealError && (
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-50 border-2 border-red-400">
+              <span className="text-red-600 font-bold text-sm mt-0.5">✕</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-red-700">התשלום נכשל — אנא תקן ונסה שוב</p>
+                <p className="text-xs font-semibold text-red-600 mt-0.5">{dealError}</p>
+              </div>
+              <button onClick={() => setDealError(null)} className="text-red-400 hover:text-red-600 font-bold text-sm">✕</button>
+            </div>
+          )}
           {/* Address display */}
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${
             contactAddress

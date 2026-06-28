@@ -1219,6 +1219,8 @@ export const retentionDeals = mysqlTable("retention_deals", {
   shipmentStatus: mysqlEnum("shipmentStatus", ["pending", "created", "failed", "skipped"]).default("pending"),
   /** Agent notes */
   notes: text("notes"),
+  /** Error message if status=failed (Stripe or Mintsoft error reason) */
+  errorMessage: text("errorMessage"),
   /** Creation timestamp (ms) */
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
   /** Last update timestamp (ms) */
