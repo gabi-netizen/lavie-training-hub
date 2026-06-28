@@ -198,8 +198,21 @@ export default function DoneDealModal({
     // Redistribute: locked payments keep their amount, unlocked ones share the rest
     const lockedSum = lockedPayments.reduce((s, p) => s + (p.locked ? (parseFloat(p.amount) || 0) : 0), 0);
     const unlockedCount = lockedPayments.filter(p => !p.locked).length;
-    const perUnlocked = unlockedCount > 0 ? ((remaining - lockedSum) / unlockedCount).toFixed(2) : "0";
-    return lockedPayments.map(p => p.locked ? p : { ...p, amount: perUnlocked });
+    const perUnlockedRaw = unlockedCount > 0 ? (remaining - lockedSum) / unlockedCount : 0;
+    const perUnlocked = (Math.round(perUnlockedRaw * 100) / 100).toFixed(2);
+    // Distribute rounding remainder to the last unlocked payment
+    const distributed = lockedPayments.map(p => p.locked ? p : { ...p, amount: perUnlocked });
+    const distributedSum = distributed.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+    const totalWithDeposit = deposit + distributedSum + lockedSum;
+    const roundingDiff = Math.round((total - totalWithDeposit) * 100) / 100;
+    if (roundingDiff !== 0) {
+      const lastUnlockedIdx = [...distributed].map((p, i) => ({ p, i })).reverse().find(({ p }) => !p.locked)?.i;
+      if (lastUnlockedIdx !== undefined) {
+        const adj = (Math.round((parseFloat(distributed[lastUnlockedIdx].amount) + roundingDiff) * 100) / 100).toFixed(2);
+        distributed[lastUnlockedIdx] = { ...distributed[lastUnlockedIdx], amount: adj };
+      }
+    }
+    return distributed;
   };
 
   // Update custom payments count
@@ -238,8 +251,20 @@ export default function DoneDealModal({
         // Use the updated locked amount (the one just typed) for the locked sum
         const lockedSum = updated.reduce((s, p) => s + (p.locked ? (parseFloat(p.amount) || 0) : 0), 0);
         const unlockedCount = updated.filter(p => !p.locked).length;
-        const perUnlocked = unlockedCount > 0 ? ((remaining - lockedSum) / unlockedCount).toFixed(2) : "0";
-        return updated.map(p => p.locked ? p : { ...p, amount: perUnlocked });
+        const perUnlockedRaw = unlockedCount > 0 ? (remaining - lockedSum) / unlockedCount : 0;
+        const perUnlocked = (Math.round(perUnlockedRaw * 100) / 100).toFixed(2);
+        const redistributed = updated.map(p => p.locked ? p : { ...p, amount: perUnlocked });
+        // Fix rounding remainder on last unlocked payment
+        const redistSum = redistributed.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+        const roundingDiff2 = Math.round((total - dep - redistSum) * 100) / 100;
+        if (roundingDiff2 !== 0) {
+          const lastIdx = [...redistributed].map((p, i) => ({ p, i })).reverse().find(({ p }) => !p.locked)?.i;
+          if (lastIdx !== undefined) {
+            const adj = (Math.round((parseFloat(redistributed[lastIdx].amount) + roundingDiff2) * 100) / 100).toFixed(2);
+            redistributed[lastIdx] = { ...redistributed[lastIdx], amount: adj };
+          }
+        }
+        return redistributed;
       }
       return updated;
     });
@@ -1075,9 +1100,9 @@ export default function DoneDealModal({
               )}
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-black">Payments Total ({customPayments.length} payments)</span>
-                <span className={`text-lg font-bold ${customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal + (parseFloat(customDeposit) || 0) - instProductsTotal) > 0.01 ? "text-red-600" : "text-green-700"}`}>£{customTotal.toFixed(2)}</span>
+                <span className={`text-lg font-bold ${customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal + (parseFloat(customDeposit) || 0) - instProductsTotal) > 0.05 ? "text-red-600" : "text-green-700"}`}>£{customTotal.toFixed(2)}</span>
               </div>
-              {customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal + (parseFloat(customDeposit) || 0) - instProductsTotal) > 0.01 && (
+              {customTotal > 0 && instProductsTotal > 0 && Math.abs(customTotal + (parseFloat(customDeposit) || 0) - instProductsTotal) > 0.05 && (
                 <p className="text-[10px] font-bold text-red-600">Deposit + Payments (£{(customTotal + (parseFloat(customDeposit) || 0)).toFixed(2)}) doesn’t match products total (£{instProductsTotal.toFixed(2)})</p>
               )}
               <div className="border-t border-gray-200 pt-2 space-y-1">
