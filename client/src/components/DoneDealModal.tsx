@@ -123,6 +123,13 @@ export default function DoneDealModal({
 }: DoneDealModalProps) {
   const [dealType, setDealType] = useState<"subscription" | "installment">("subscription");
 
+  // ─── Fetch contact address ─────────────────────────────────────────────────────────────────────
+  const { data: contactData } = trpc.contacts.get.useQuery(
+    { id: contactId },
+    { enabled: open }
+  );
+  const contactAddress = contactData?.address ?? null;
+
   // ─── Shared State ─────────────────────────────────────────────────────────────
   const [freeGifts, setFreeGifts] = useState<Record<string, { name: string; variant: string; sku: string; quantity: number }>>({});
   const [cardNumber, setCardNumber] = useState("");
@@ -386,11 +393,50 @@ export default function DoneDealModal({
       ? subTotalPerCycle.reduce((sum, g) => sum + g.total, 0)
       : (parseFloat(instTotalAmount) || 0);
 
+    // Block if no address on file
+    if (!contactAddress) {
+      toast.error("Update address before confirming deal");
+      return;
+    }
+
     markDoneDealMutation.mutate({
       contactId,
       subscriptionId,
       customerName,
       agentName,
+      dealType,
+      subProducts: subProducts.map((p) => ({
+        name: p.name,
+        sku: p.sku,
+        quantity: p.quantity,
+        price: parseFloat(p.price) || 0,
+        cycle: parseInt(p.cycle) || 30,
+      })),
+      instMode: instMode as "equal" | "custom",
+      instProducts: instProducts.map((p) => ({
+        name: p.name,
+        sku: p.sku,
+        quantity: p.quantity,
+        price: parseFloat(p.price) || 0,
+      })),
+      instDeposit: parseFloat(instDeposit) || 0,
+      instPayments: parseInt(instPayments) || 1,
+      instInterval: intervalDays,
+      customPayments: customPayments.map((p) => ({
+        amount: parseFloat(p.amount) || 0,
+        interval: parseInt(p.interval) || 30,
+      })),
+      freeGifts: Object.values(freeGifts).map((g) => ({
+        name: g.name,
+        sku: g.sku,
+        quantity: g.quantity,
+      })),
+      shipDate: customShipDate || undefined,
+      isFutureDeal,
+      cardNumber: cardNumber || undefined,
+      cardExpiry: cardExpiry || undefined,
+      cardCvv: cardCvv || undefined,
+      notes: dealNotes || undefined,
       dealDetails: {
         products: products.map((p) => ({
           name: `${p.name} — ${p.variant} (${p.sku})`,
@@ -1147,33 +1193,49 @@ export default function DoneDealModal({
         {dealType === "subscription" ? renderSubscriptionTab() : renderInstallmentTab()}
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-gray-100 px-6 py-4 flex items-center justify-between">
-          {isFutureDeal && (
-            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200">
-              ⏳ Future Deal — No charge today
-            </span>
-          )}
-          <div className="flex items-center gap-3 ml-auto">
-            <button
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-black border-2 border-gray-300 hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={markDoneDealMutation.isPending || (dealType === "subscription" ? subProducts.length === 0 : instProducts.length === 0)}
-              className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-md"
-              style={{ background: isFutureDeal ? "#7c3aed" : "#16a34a" }}
-            >
-              {markDoneDealMutation.isPending
-                ? "Processing..."
-                : isFutureDeal
-                  ? "Schedule Future Deal"
-                  : dealType === "subscription"
-                    ? "Confirm Subscription"
-                    : "Confirm Installment"}
-            </button>
+        <div className="sticky bottom-0 bg-white rounded-b-2xl border-t border-gray-100 px-6 py-4 space-y-2">
+          {/* Address display */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${
+            contactAddress
+              ? "bg-gray-50 border border-gray-200 text-black"
+              : "bg-red-50 border border-red-300 text-red-700"
+          }`}>
+            <span className="font-bold">{contactAddress ? "Ship to:" : "⚠ No address on file —"}</span>
+            <span>{contactAddress ?? "update address in the customer card before confirming"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            {isFutureDeal && (
+              <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200">
+                ⏳ Future Deal — No charge today
+              </span>
+            )}
+            <div className="flex items-center gap-3 ml-auto">
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-black border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={
+                  markDoneDealMutation.isPending ||
+                  !contactAddress ||
+                  (dealType === "subscription" ? subProducts.length === 0 : instProducts.length === 0)
+                }
+                title={!contactAddress ? "Update address before confirming deal" : undefined}
+                className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-md"
+                style={{ background: isFutureDeal ? "#7c3aed" : "#16a34a" }}
+              >
+                {markDoneDealMutation.isPending
+                  ? "Processing..."
+                  : isFutureDeal
+                    ? "Schedule Future Deal"
+                    : dealType === "subscription"
+                      ? "Confirm Subscription"
+                      : "Confirm Installment"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
