@@ -3694,6 +3694,60 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         }
       }
 
+      // ─── WhatsApp notification ───────────────────────────────────────────────────────────────────────────────────
+      try {
+        const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+        const apiKeySid = process.env.TWILIO_API_KEY_SID || "";
+        const apiKeySecret = process.env.TWILIO_API_KEY_SECRET || "";
+        const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+        const authUser = apiKeySid || accountSid;
+        const authPass = apiKeySid ? apiKeySecret : authToken;
+
+        if (accountSid && authUser && authPass) {
+          const dealTypeLabel = dealType === "subscription" ? "Subscription" : "Installment";
+          const messageText = [
+            `🎯 Deal Closed! (Max Billing)`,
+            `Agent: ${agentName}`,
+            `Department: Retention`,
+            `Type: ${dealTypeLabel}${isFutureDeal ? " (Future Deal)" : ""}`,
+            `Customer: ${customerName}`,
+            `Total: £${totalAmount.toFixed(2)}`,
+            mintsoftOrderNumber ? `Order: ${mintsoftOrderNumber}` : "",
+          ].filter(Boolean).join("\n");
+
+          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+          const twilioAuth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
+          const recipients = ["whatsapp:+972522222828", "whatsapp:+447934284636"];
+
+          for (const recipient of recipients) {
+            const bodyParams = new URLSearchParams();
+            bodyParams.append("From", "whatsapp:+447888868298");
+            bodyParams.append("To", recipient);
+            bodyParams.append("Body", messageText);
+
+            const twilioRes = await fetch(twilioUrl, {
+              method: "POST",
+              headers: {
+                "Authorization": `Basic ${twilioAuth}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: bodyParams.toString(),
+            });
+
+            if (!twilioRes.ok) {
+              const errText = await twilioRes.text();
+              console.warn(`[markDoneDeal] WhatsApp alert to ${recipient} failed: ${twilioRes.status} ${errText}`);
+            } else {
+              console.log(`[markDoneDeal] WhatsApp alert sent to ${recipient}`);
+            }
+          }
+        } else {
+          console.warn("[markDoneDeal] WhatsApp alert skipped: Twilio credentials not set");
+        }
+      } catch (waErr: any) {
+        console.warn("[markDoneDeal] WhatsApp notification failed:", waErr.message);
+      }
+
       return {
         success: true,
         stripeScheduleId: stripeScheduleId ?? null,
