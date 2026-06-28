@@ -925,6 +925,63 @@ export const managerRouter = router({
         const subscriptionId = `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
         try {
+          // ── Find or create a contact for this lead so we can save the address ──
+          // This runs before the leadAssignments upsert so contactId is always set.
+          let linkedContactId: number | null = null;
+          if (lead.email || lead.phone) {
+            // 1. Try to find existing contact by email
+            if (lead.email) {
+              const byEmail = await db
+                .select({ id: contacts.id, address: contacts.address })
+                .from(contacts)
+                .where(eq(contacts.email, lead.email))
+                .limit(1);
+              if (byEmail.length > 0) {
+                linkedContactId = byEmail[0].id;
+                // Backfill address if contact has none and CSV has one
+                if (lead.address && !byEmail[0].address) {
+                  await db.update(contacts)
+                    .set({ address: lead.address })
+                    .where(eq(contacts.id, linkedContactId));
+                }
+              }
+            }
+            // 2. Fall back to phone match
+            if (!linkedContactId && lead.phone) {
+              const normalizedPhone = lead.phone.replace(/[\s\-().+]/g, "");
+              const byPhone = await db
+                .select({ id: contacts.id, address: contacts.address })
+                .from(contacts)
+                .where(or(
+                  like(contacts.phone, `%${normalizedPhone}%`),
+                  like(contacts.phone, `%${lead.phone}%`)
+                ))
+                .limit(1);
+              if (byPhone.length > 0) {
+                linkedContactId = byPhone[0].id;
+                // Backfill address if contact has none and CSV has one
+                if (lead.address && !byPhone[0].address) {
+                  await db.update(contacts)
+                    .set({ address: lead.address })
+                    .where(eq(contacts.id, linkedContactId));
+                }
+              }
+            }
+            // 3. No existing contact — create one with address
+            if (!linkedContactId) {
+              const [newContactResult] = await db.insert(contacts).values({
+                name: lead.customerName || "Unknown",
+                email: lead.email || null,
+                phone: lead.phone || null,
+                address: lead.address || null,
+                department: "retention",
+                leadType: lead.leadType || null,
+                status: "new",
+              });
+              linkedContactId = (newContactResult as any).insertId as number || null;
+            }
+          }
+
           // Check for existing lead by email or phone (upsert logic)
           let existingId: number | null = null;
           if (lead.email) {
@@ -949,7 +1006,7 @@ export const managerRouter = router({
           const normalizedAgent = normalizeAgentName(lead.assignedAgent);
 
           if (existingId) {
-            // Update existing lead with new data
+            // Update existing lead with new data; also link contact if not yet linked
             await db.update(leadAssignments)
               .set({
                 customerName: lead.customerName,
@@ -960,6 +1017,7 @@ export const managerRouter = router({
                 callbackAt: lead.callbackAt || undefined,
                 managerNote: lead.customerNote ? stripHtml(lead.customerNote) : undefined,
                 statusChangedAt: Date.now(),
+                ...(linkedContactId ? { contactId: linkedContactId } : {}),
               })
               .where(eq(leadAssignments.id, existingId));
             updated++;
@@ -977,7 +1035,7 @@ export const managerRouter = router({
               if (dupCheck.length > 0) isDuplicate = true;
             }
 
-            // Insert new lead
+            // Insert new lead — address is now on the contacts table, not agentNote
             await db.insert(leadAssignments).values({
               subscriptionId,
               customerName: lead.customerName,
@@ -997,7 +1055,8 @@ export const managerRouter = router({
               assignedAt: normalizedAgent ? Date.now() : null,
               callbackAt: lead.callbackAt || null,
               managerNote: lead.customerNote ? stripHtml(lead.customerNote) : null,
-              agentNote: lead.address || null,
+              agentNote: null, // address is stored on contacts table, not here
+              contactId: linkedContactId,
               isDuplicate,
             });
             inserted++;
