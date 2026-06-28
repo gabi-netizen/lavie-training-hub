@@ -11,6 +11,7 @@ import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { leadAssignments, callAttempts, contacts, clientSubscriptions, callAnalyses, supportTickets, whatsappMessages, emailLogs, openingTrials, butlerUsageLog, users, contactCallNotes, stripeCustomers, retentionDeals } from "../../drizzle/schema";
 import { getStripeClient, createSubscriptionSchedule } from "../stripe/index";
+import { createMintsoftOrderFromPhase, markOrderPackAndHold, parseUkAddress } from "../mintsoft";
 import { addCallNote, updateContact, normalisePhone } from "../contacts";
 import { eq, like, or, and, desc, sql, isNull, gte, lte, inArray, notInArray } from "drizzle-orm";
 import { stripHtml } from "../utils/stripHtml";
@@ -3500,6 +3501,70 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         updatedAt: now,
       });
 
+      // ─── 6. Create Mintsoft order (immediate deals only) ─────────────────────────
+      let mintsoftOrderId: number | undefined;
+      let mintsoftOrderNumber: string | undefined;
+
+      if (!isFutureDeal) {
+        try {
+          // Build SKU list: paid products + free gifts
+          const allProducts = dealType === "subscription" ? subProducts : instProducts;
+          const mintsoftItems: { SKU: string; Quantity: number }[] = [
+            ...allProducts.map((p) => ({ SKU: p.sku, Quantity: p.quantity })),
+            ...(freeGifts ?? []).map((g) => ({ SKU: g.sku, Quantity: g.quantity })),
+          ];
+
+          if (mintsoftItems.length > 0 && contact.address) {
+            const nameParts = (contact.name || "").trim().split(/\s+/);
+            const firstName = nameParts[0] || "";
+            const lastName = nameParts.slice(1).join(" ") || "";
+
+            const orderResult = await createMintsoftOrderFromPhase({
+              contactId,
+              firstName,
+              lastName,
+              email: contact.email || "",
+              phone: contact.phone || "",
+              address: contact.address,
+              mintsoftItems,
+              orderValue: totalAmount,
+            });
+
+            if (orderResult.success && orderResult.orderId) {
+              mintsoftOrderId = orderResult.orderId;
+              mintsoftOrderNumber = orderResult.orderNumber;
+
+              // Put order on Pack and Hold — do not ship automatically
+              const holdResult = await markOrderPackAndHold(orderResult.orderId);
+              if (!holdResult.success) {
+                console.error(`[markDoneDeal] MarkPackAndHold failed for order ${orderResult.orderId}: ${holdResult.error}`);
+              }
+
+              // Update retention_deal record with Mintsoft order details
+              await db
+                .update(retentionDeals)
+                .set({
+                  mintsoftOrderId: orderResult.orderId,
+                  mintsoftOrderNumber: orderResult.orderNumber ?? null,
+                  updatedAt: Date.now(),
+                })
+                .where(
+                  eq(retentionDeals.contactId, contactId)
+                );
+
+              console.log(`[markDoneDeal] Mintsoft order created: ${orderResult.orderNumber} (Pack and Hold) for contact ${contactId}`);
+            } else {
+              console.error(`[markDoneDeal] Mintsoft order failed for contact ${contactId}: ${orderResult.error}`);
+            }
+          } else if (!contact.address) {
+            console.warn(`[markDoneDeal] Mintsoft order skipped for contact ${contactId}: no address on file`);
+          }
+        } catch (mintsoftErr: any) {
+          console.error(`[markDoneDeal] Mintsoft error: ${mintsoftErr.message}`);
+          // Non-fatal — deal is already saved
+        }
+      }
+
       // Build email body
       const productLines = dealDetails.products
         .map((p) => `• ${p.name} — Qty: ${p.quantity} × £${p.pricePerUnit} = £${p.quantity * p.pricePerUnit}`)
@@ -3625,6 +3690,8 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         stripeScheduleId: stripeScheduleId ?? null,
         stripeSubscriptionIds,
         isFutureDeal: isFutureDeal ?? false,
+        mintsoftOrderId: mintsoftOrderId ?? null,
+        mintsoftOrderNumber: mintsoftOrderNumber ?? null,
       };
     }),
 });
