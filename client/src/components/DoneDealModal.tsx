@@ -154,9 +154,9 @@ export default function DoneDealModal({
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const isSubFuture = shipOption === "custom" && customShipDate !== "" && customShipDate > todayStr;
-  const isInstFuture = instFirstPaymentDate !== "" && instFirstPaymentDate > todayStr;
-  const isCustomInstFuture = customFirstPaymentDate !== "" && customFirstPaymentDate > todayStr;
-  const isFutureDeal = dealType === "subscription" ? isSubFuture : (instMode === "custom" ? isCustomInstFuture : isInstFuture);
+  const isInstFuture = shipOption === "custom" && customShipDate !== "" && customShipDate > todayStr;
+  const isCustomInstFuture = isInstFuture;
+  const isFutureDeal = dealType === "subscription" ? isSubFuture : isInstFuture;
 
   // Auto-calculate total from products
   const instProductsTotal = useMemo(() => {
@@ -888,22 +888,6 @@ export default function DoneDealModal({
                   <option value="30">Monthly (30 days)</option>
                 </select>
               </div>
-              <div className="col-span-2">
-                <label className="text-xs font-semibold text-black mb-1 block">
-                  <Calendar size={12} className="inline mr-1" />
-                  First payment date
-                </label>
-                <input
-                  type="date"
-                  value={instFirstPaymentDate}
-                  onChange={(e) => setInstFirstPaymentDate(e.target.value)}
-                  min={todayStr}
-                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-                />
-                <p className={`text-xs mt-1 font-bold ${isInstFuture ? "text-purple-700" : "text-black"}`}>
-                  {isInstFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
-                </p>
-              </div>
             </div>
           ) : (
             /* Custom mode */
@@ -963,23 +947,6 @@ export default function DoneDealModal({
                 ))}
               </div>
 
-              {/* First payment date */}
-              <div>
-                <label className="text-xs font-semibold text-black mb-1 block">
-                  <Calendar size={12} className="inline mr-1" />
-                  First payment date
-                </label>
-                <input
-                  type="date"
-                  value={customFirstPaymentDate}
-                  onChange={(e) => setCustomFirstPaymentDate(e.target.value)}
-                  min={todayStr}
-                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-medium focus:ring-2 focus:ring-blue-500"
-                />
-                <p className={`text-xs mt-1 font-bold ${isCustomInstFuture ? "text-purple-700" : "text-black"}`}>
-                  {isCustomInstFuture ? "⏳ Future Deal — customer will be charged on the date above" : "For a future deal, select the date you want the customer to be charged. Leave empty to charge now."}
-                </p>
-              </div>
             </div>
           )}
         </div>
@@ -1019,7 +986,7 @@ export default function DoneDealModal({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-black">First Payment</span>
                 <span className="text-xs font-bold text-black">
-                  {isInstFuture ? new Date(instFirstPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+                  {isInstFuture ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
                 </span>
               </div>
               {isInstFuture && (
@@ -1068,7 +1035,7 @@ export default function DoneDealModal({
               <div className="flex items-center justify-between border-t border-gray-200 pt-2">
                 <span className="text-xs font-semibold text-black">First Payment</span>
                 <span className="text-xs font-bold text-black">
-                  {isCustomInstFuture ? new Date(customFirstPaymentDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+                  {isCustomInstFuture ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
                 </span>
               </div>
               {isCustomInstFuture && (
@@ -1103,8 +1070,8 @@ export default function DoneDealModal({
           )}
         </div>
 
-        {/* Ship Date — only if NOT future */}
-        {!isInstFuture && renderShipDateSection()}
+        {/* Ship Date */}
+        {renderShipDateSection()}
 
         {/* Notes */}
         <div>
