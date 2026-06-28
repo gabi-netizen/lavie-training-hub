@@ -3546,6 +3546,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
                 .set({
                   mintsoftOrderId: orderResult.orderId,
                   mintsoftOrderNumber: orderResult.orderNumber ?? null,
+                  shipmentStatus: "created",
                   updatedAt: Date.now(),
                 })
                 .where(
@@ -3554,10 +3555,18 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
 
               console.log(`[markDoneDeal] Mintsoft order created: ${orderResult.orderNumber} (Pack and Hold) for contact ${contactId}`);
             } else {
-              console.error(`[markDoneDeal] Mintsoft order failed for contact ${contactId}: ${orderResult.error}`);
+              console.error(`[SHIPMENT_FAILED] markDoneDeal — contact ${contactId}: Mintsoft order failed — ${orderResult.error}`);
+              await db
+                .update(retentionDeals)
+                .set({ shipmentStatus: "failed", updatedAt: Date.now() })
+                .where(eq(retentionDeals.contactId, contactId));
             }
           } else if (!contact.address) {
-            console.warn(`[markDoneDeal] Mintsoft order skipped for contact ${contactId}: no address on file`);
+            console.error(`[SHIPMENT_FAILED] markDoneDeal — contact ${contactId}: no address on file — Mintsoft order skipped`);
+            await db
+              .update(retentionDeals)
+              .set({ shipmentStatus: "skipped", updatedAt: Date.now() })
+              .where(eq(retentionDeals.contactId, contactId));
           }
         } catch (mintsoftErr: any) {
           console.error(`[markDoneDeal] Mintsoft error: ${mintsoftErr.message}`);

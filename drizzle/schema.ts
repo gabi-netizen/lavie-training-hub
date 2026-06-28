@@ -1215,6 +1215,8 @@ export const retentionDeals = mysqlTable("retention_deals", {
   mintsoftOrderNumber: varchar("mintsoftOrderNumber", { length: 128 }),
   /** Deal status — updated by Stripe webhooks */
   status: mysqlEnum("status", ["pending", "active", "future", "failed", "cancelled"]).default("pending").notNull(),
+  /** Shipment status — updated when Mintsoft order is created or fails */
+  shipmentStatus: mysqlEnum("shipmentStatus", ["pending", "created", "failed", "skipped"]).default("pending"),
   /** Agent notes */
   notes: text("notes"),
   /** Creation timestamp (ms) */

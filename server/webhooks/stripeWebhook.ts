@@ -23,9 +23,9 @@ import type { Request, Response } from "express";
 import Stripe from "stripe";
 import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
-import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions, billingPlans, openingTrials } from "../../drizzle/schema";
+import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions, billingPlans, openingTrials, retentionDeals } from "../../drizzle/schema";
+import { createMintsoftOrder, createMintsoftOrderFromPhase, markOrderPackAndHold } from "../mintsoft";
 import { eq, sql } from "drizzle-orm";
-import { createMintsoftOrder, createMintsoftOrderFromPhase } from "../mintsoft";
 
 // ─── Signature Verification & Event Construction ─────────────────────────────
 
@@ -825,6 +825,121 @@ async function handleChargeRefunded(event: Stripe.Event): Promise<void> {
   });
 }
 
+// ─── Retention Deal: handle first successful payment for future deals ───────────────────────────
+
+/**
+ * When a Stripe invoice is paid for a subscription/schedule that belongs to a
+ * retention future deal, create the Mintsoft order (Pack and Hold) and update
+ * the retention_deals status to 'active'.
+ *
+ * Triggered by: invoice.paid
+ * Condition: subscription metadata contains retentionDeal=true AND isFutureDeal
+ */
+async function handleRetentionFutureDealPayment(
+  subscriptionId: string,
+  customerId: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    // Find the retention deal by stripeScheduleId or stripeSubscriptionIds containing this ID
+    const deals = await db
+      .select()
+      .from(retentionDeals)
+      .where(
+        sql`(
+          ${retentionDeals.stripeScheduleId} = ${subscriptionId}
+          OR JSON_CONTAINS(${retentionDeals.stripeSubscriptionIds}, JSON_QUOTE(${subscriptionId}))
+        ) AND ${retentionDeals.status} = 'future'`
+      )
+      .limit(1);
+
+    const deal = deals[0];
+    if (!deal) return; // Not a retention future deal
+
+    console.log(`[Stripe Webhook] Retention future deal payment received for deal ${deal.id}, contact ${deal.contactId}`);
+
+    // Fetch contact details for Mintsoft order
+    const [contact] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, deal.contactId))
+      .limit(1);
+
+    if (!contact?.address) {
+      console.error(`[SHIPMENT_FAILED] Retention deal ${deal.id} (contact ${deal.contactId}): no address on file — Mintsoft order skipped`);
+      await db
+        .update(retentionDeals)
+        .set({ status: "active", shipmentStatus: "skipped", updatedAt: Date.now() })
+        .where(eq(retentionDeals.id, deal.id));
+      return;
+    }
+
+    // Build SKU list from stored products + free gifts
+    const products = (deal.products as any[]) ?? [];
+    const gifts = (deal.freeGifts as any[]) ?? [];
+    const mintsoftItems: { SKU: string; Quantity: number }[] = [
+      ...products.map((p: any) => ({ SKU: p.sku, Quantity: p.quantity })),
+      ...gifts.map((g: any) => ({ SKU: g.sku, Quantity: g.quantity })),
+    ];
+
+    if (mintsoftItems.length === 0) {
+      console.error(`[SHIPMENT_FAILED] Retention deal ${deal.id} (contact ${deal.contactId}): no items — Mintsoft order skipped`);
+      await db
+        .update(retentionDeals)
+        .set({ status: "active", shipmentStatus: "skipped", updatedAt: Date.now() })
+        .where(eq(retentionDeals.id, deal.id));
+      return;
+    }
+
+    const nameParts = (contact.name || "").trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    const totalAmount = parseFloat(String(deal.totalAmount)) || 0;
+
+    const orderResult = await createMintsoftOrderFromPhase({
+      contactId: deal.contactId,
+      firstName,
+      lastName,
+      email: contact.email || "",
+      phone: contact.phone || "",
+      address: contact.address,
+      mintsoftItems,
+      orderValue: totalAmount,
+    });
+
+    if (orderResult.success && orderResult.orderId) {
+      // Put on Pack and Hold
+      const holdResult = await markOrderPackAndHold(orderResult.orderId);
+      if (!holdResult.success) {
+        console.error(`[SHIPMENT_FAILED] MarkPackAndHold failed for retention deal ${deal.id}: ${holdResult.error}`);
+      }
+
+      await db
+        .update(retentionDeals)
+        .set({
+          status: "active",
+          shipmentStatus: "created",
+          mintsoftOrderId: orderResult.orderId,
+          mintsoftOrderNumber: orderResult.orderNumber ?? null,
+          updatedAt: Date.now(),
+        })
+        .where(eq(retentionDeals.id, deal.id));
+
+      console.log(`[Stripe Webhook] Retention deal ${deal.id}: Mintsoft order ${orderResult.orderNumber} created (Pack and Hold)`);
+    } else {
+      console.error(`[SHIPMENT_FAILED] Retention deal ${deal.id} (contact ${deal.contactId}): Mintsoft order failed — ${orderResult.error}`);
+      await db
+        .update(retentionDeals)
+        .set({ status: "active", shipmentStatus: "failed", updatedAt: Date.now() })
+        .where(eq(retentionDeals.id, deal.id));
+    }
+  } catch (err: any) {
+    console.error(`[Stripe Webhook] handleRetentionFutureDealPayment error: ${err.message}`);
+  }
+}
+
 async function handleChargeSucceeded(event: Stripe.Event): Promise<void> {
   const charge = event.data.object as Stripe.Charge;
   const customerId = extractCustomerId(charge.customer as any);
@@ -880,9 +995,17 @@ export default async function handler(req: Request, res: Response) {
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event);
         break;
-      case "invoice.paid":
+      case "invoice.paid": {
         await handleInvoicePaid(event);
+        // Also check if this is a retention future deal first payment
+        const invoicePaid = event.data.object as Stripe.Invoice;
+        const retentionSubId = (invoicePaid as any).subscription as string | null;
+        const retentionCustId = extractCustomerId((invoicePaid as any).customer);
+        if (retentionSubId && retentionCustId) {
+          await handleRetentionFutureDealPayment(retentionSubId, retentionCustId);
+        }
         break;
+      }
       case "invoice.payment_failed":
         await handleInvoicePaymentFailed(event);
         break;

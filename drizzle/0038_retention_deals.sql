@@ -20,6 +20,7 @@ CREATE TABLE retention_deals (
   mintsoftOrderId INT DEFAULT NULL,
   mintsoftOrderNumber VARCHAR(128) DEFAULT NULL,
   status ENUM('pending', 'active', 'future', 'failed', 'cancelled') NOT NULL DEFAULT 'pending',
+  shipmentStatus ENUM('pending', 'created', 'failed', 'skipped') DEFAULT 'pending',
   notes TEXT DEFAULT NULL,
   createdAt BIGINT NOT NULL,
   updatedAt BIGINT NOT NULL,
