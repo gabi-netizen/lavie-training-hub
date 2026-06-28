@@ -1277,20 +1277,16 @@ export default function ContactCard() {
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Card</span>
                   <span className="text-sm font-semibold text-gray-800">
-                    {(() => {
-                      if (!contact.cardLast4) return "\u2014";
-                      const brand = contact.cardBrand ? contact.cardBrand.charAt(0).toUpperCase() + contact.cardBrand.slice(1) : "Card";
-                      return `${brand} \u2022\u2022\u2022\u2022${contact.cardLast4} (${String(contact.cardExpMonth ?? 0).padStart(2, "0")}/${String(contact.cardExpYear ?? 0).slice(-2)})`;
-                    })()}
+                    {contact.cardLast4
+                      ? `\u2022\u2022\u2022\u2022 ${contact.cardLast4} | ${String(contact.cardExpMonth ?? 0).padStart(2, "0")}/${String(contact.cardExpYear ?? 0).slice(-2)}`
+                      : "\u2014"}
                   </span>
                 </div>
                 {/* Assigned */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Assigned</span>
                   <span className="text-sm font-semibold text-gray-800">
-                    {currentRetentionLead?.createdAt
-                      ? new Date(currentRetentionLead.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                      : "\u2014"}
+                    {currentRetentionLead?.assignedAgent || "\u2014"}
                   </span>
                 </div>
               </div>
