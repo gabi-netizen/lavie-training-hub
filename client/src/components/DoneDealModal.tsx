@@ -729,8 +729,8 @@ export default function DoneDealModal({
           )}
         </div>
 
-        {/* Ship Date — only if NOT future */}
-        {!isSubFuture && renderShipDateSection()}
+        {/* Ship Date */}
+        {renderShipDateSection()}
 
         {/* Notes */}
         <div>
