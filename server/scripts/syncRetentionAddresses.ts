@@ -125,7 +125,7 @@ async function getZohoAddressByEmail(email: string): Promise<string | null> {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  const conn = await mysql.createConnection(DATABASE_URL!);
+  let conn = await mysql.createConnection(DATABASE_URL!);
   console.log("[syncRetentionAddresses] Connected to database.");
 
   // 1. Fetch all retention contacts with a missing address
