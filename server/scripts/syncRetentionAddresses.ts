@@ -206,10 +206,25 @@ async function main() {
 
       // ── Step C: Update all contact rows with this email ───────────────────
       for (const contactId of contactIds) {
-        await conn.execute(
-          `UPDATE contacts SET address = ? WHERE id = ? AND (address IS NULL OR address = '')`,
-          [address, contactId]
-        );
+        try {
+          await conn.execute(
+            `UPDATE contacts SET address = ? WHERE id = ? AND (address IS NULL OR address = '')`,
+            [address, contactId]
+          );
+        } catch (dbErr: any) {
+          // If connection dropped, try to reconnect once
+          if (dbErr.message.includes("closed state") || dbErr.message.includes("lost connection")) {
+            console.log("  [DB] Connection lost. Reconnecting...");
+            await conn.end().catch(() => {});
+            conn = await mysql.createConnection(DATABASE_URL!);
+            await conn.execute(
+              `UPDATE contacts SET address = ? WHERE id = ? AND (address IS NULL OR address = '')`,
+              [address, contactId]
+            );
+          } else {
+            throw dbErr;
+          }
+        }
       }
 
       if (source === "local") {
