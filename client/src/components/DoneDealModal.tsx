@@ -216,7 +216,7 @@ export default function DoneDealModal({
   const handleCustomDepositChange = (value: string) => {
     setCustomDeposit(value);
     const dep = parseFloat(value) || 0;
-    const total = instProductsTotal > 0 ? instProductsTotal : 0;
+    const total = instProductsTotal > 0 ? instProductsTotal : (parseFloat(instTotalAmount) || 0);
     const n = parseInt(customPaymentCount) || 0;
     setCustomPayments(distributeCustomPayments(n, dep, total, customPayments));
   };
@@ -233,7 +233,7 @@ export default function DoneDealModal({
       // Redistribute unlocked payments whenever an amount is manually changed
       if (field === "amount") {
         const dep = parseFloat(customDeposit) || 0;
-        const total = instProductsTotal > 0 ? instProductsTotal : 0;
+        const total = instProductsTotal > 0 ? instProductsTotal : (parseFloat(instTotalAmount) || 0);
         const remaining = total - dep;
         // Use the updated locked amount (the one just typed) for the locked sum
         const lockedSum = updated.reduce((s, p) => s + (p.locked ? (parseFloat(p.amount) || 0) : 0), 0);
