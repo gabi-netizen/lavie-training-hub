@@ -247,7 +247,6 @@ export const contactsRouter = router({
         callNotes: z.string().optional(),
         address: z.string().optional(),
         brands: z.string().optional(),
-        alternativeEmail: z.string().optional(),
         // For email notifications
         notifyEmail: z.string().optional(),
         previousStatus: z.string().optional(),

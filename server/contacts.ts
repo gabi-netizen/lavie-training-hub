@@ -134,7 +134,6 @@ export async function listContacts({
         or(
           like(contacts.name, `%${search}%`),
           like(contacts.email, `%${search}%`),
-          like(contacts.alternativeEmail, `%${search}%`),
           ...phoneConditions
         )
       );
@@ -143,8 +142,7 @@ export async function listContacts({
         or(
           like(contacts.name, `%${search}%`),
           like(contacts.phone, `%${search}%`),
-          like(contacts.email, `%${search}%`),
-          like(contacts.alternativeEmail, `%${search}%`)
+          like(contacts.email, `%${search}%`)
         )
       );
     }
