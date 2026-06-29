@@ -24,7 +24,7 @@ import Stripe from "stripe";
 import { getStripeClient, getCustomerPaymentMethods, createSubscriptionSchedule } from "../stripe/index";
 import { getDb } from "../db";
 import { stripeAuditLog, stripeCustomers, contacts, clientSubscriptions, billingPlans, openingTrials, retentionDeals } from "../../drizzle/schema";
-import { createMintsoftOrder, createMintsoftOrderFromPhase, markOrderPackAndHold } from "../mintsoft";
+import { createMintsoftOrderFromPhase, markOrderPackAndHold } from "../mintsoft";
 import { eq, sql } from "drizzle-orm";
 
 // ─── Signature Verification & Event Construction ─────────────────────────────
@@ -331,152 +331,14 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event): Promise<void> 
       }
     }
 
-    // ─── Auto-create Mintsoft order for trial kit shipment ──────────────────
-    try {
-      const db = await getDb();
-      if (db) {
-        // Safety net: check for existing Mintsoft order for this contact
-        const existingOrder = await db
-          .select({ id: stripeAuditLog.id })
-          .from(stripeAuditLog)
-          .where(
-            sql`${stripeAuditLog.eventType} = 'mintsoft_order_created' AND JSON_EXTRACT(${stripeAuditLog.metadata}, '$.contactId') = ${contactId}`
-          )
-          .limit(1);
-
-        if (existingOrder.length > 0) {
-          await db.insert(stripeAuditLog).values({
-            eventId: `mintsoft-duplicate-${contactId}-${Date.now()}`,
-            eventType: "mintsoft_order_duplicate",
-            customerId,
-            status: "skipped",
-            source: "max_billing",
-            metadata: {
-              contactId,
-              reason: "Duplicate order prevented (already exists in audit log)",
-            },
-          });
-          console.log(`[Stripe Webhook] Mintsoft order skipped for contact ${contactId}: already created`);
-          return;
-        }
-
-        const [contact] = await db
-          .select({
-            name: contacts.name,
-            email: contacts.email,
-            phone: contacts.phone,
-            address: contacts.address,
-            trialKit: contacts.trialKit,
-          })
-          .from(contacts)
-          .where(eq(contacts.id, Number(contactId)))
-          .limit(1);
-
-        if (!contact) {
-          console.warn(`[Stripe Webhook] Mintsoft order skipped: contact ${contactId} not found`);
-        } else if (!contact.trialKit || !contact.address) {
-          // Missing required fields — log and skip
-          await db.insert(stripeAuditLog).values({
-            eventId: `mintsoft-skipped-${contactId}-${Date.now()}`,
-            eventType: "mintsoft_order_skipped",
-            customerId,
-            status: "skipped",
-            metadata: {
-              contactId,
-              reason: !contact.trialKit
-                ? "Missing trialKit"
-                : "Missing address",
-              hasTrialKit: !!contact.trialKit,
-              hasAddress: !!contact.address,
-            },
-          });
-          console.warn(
-            `[Stripe Webhook] Mintsoft order skipped for contact ${contactId}: missing ${!contact.trialKit ? "trialKit" : "address"}`
-          );
-        } else {
-          // Parse name into first/last
-          const nameParts = (contact.name || "").trim().split(/\s+/);
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
-
-          const result = await createMintsoftOrder({
-            contactId: Number(contactId),
-            firstName,
-            lastName,
-            email: contact.email || "",
-            phone: contact.phone || "",
-            address: contact.address,
-            trialKit: contact.trialKit,
-          });
-
-          if (result.success) {
-            await db.insert(stripeAuditLog).values({
-              eventId: `mintsoft-${contactId}-${Date.now()}`,
-              eventType: "mintsoft_order_created",
-              customerId,
-              status: "processed",
-              source: "max_billing",
-              metadata: {
-                contactId,
-                orderId: result.orderId,
-                orderNumber: result.orderNumber,
-                trialKit: contact.trialKit,
-                triggeredBy: "webhook_payment_intent.succeeded",
-              },
-            });
-            console.log(`[Stripe Webhook] Mintsoft trial order created: ${result.orderNumber} for contact ${contactId}`);
-
-            // ─── Insert into opening_trials for Opening Dashboard ──────────
-            try {
-              // Get agent name (first name only, matching opening_trials format)
-              const [contactForAgent] = await db
-                .select({ agentName: contacts.agentName })
-                .from(contacts)
-                .where(eq(contacts.id, Number(contactId)))
-                .limit(1);
-              const fullAgentName = contactForAgent?.agentName || "Unknown";
-              const firstName = fullAgentName.trim().split(/\s+/)[0];
-              const today = new Date();
-              const createdDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
-              const month = createdDate.substring(0, 7); // YYYY-MM
-
-              await db.insert(openingTrials).values({
-                subscriptionId: `max_billing_${contactId}`,
-                customerName: contact.name || null,
-                email: contact.email || null,
-                agentName: firstName,
-                planName: `Max Billing - ${contact.trialKit || "Trial Kit"}`,
-                createdDate,
-                status: "trial",
-                classification: "still_in_trial",
-                month,
-              }).onDuplicateKeyUpdate({ set: { status: "trial" } });
-
-              console.log(`[Stripe Webhook] Opening trial recorded for ${contact.name} (agent: ${firstName}, month: ${month})`);
-            } catch (otErr) {
-              console.error(`[Stripe Webhook] Failed to insert opening_trial for contact ${contactId}:`, otErr);
-            }
-          } else {
-            await db.insert(stripeAuditLog).values({
-              eventId: `mintsoft-failed-${contactId}-${Date.now()}`,
-              eventType: "mintsoft_order_failed",
-              customerId,
-              status: "error",
-              source: "max_billing",
-              metadata: {
-                contactId,
-                error: result.error,
-                trialKit: contact.trialKit,
-                triggeredBy: "webhook_payment_intent.succeeded",
-              },
-            });
-            console.error(`[Stripe Webhook] Mintsoft trial order failed for contact ${contactId}: ${result.error}`);
-          }
-        }
-      }
-    } catch (mintsoftErr) {
-      console.error(`[Stripe Webhook] Mintsoft trial order error for contact ${contactId}:`, mintsoftErr);
-    }
+    // ─── Mintsoft order creation intentionally removed from this webhook ───────
+    // The Opening flow creates the Mintsoft order explicitly via the
+    // contacts.confirmSold tRPC endpoint when the agent clicks "Confirm & Ship".
+    // Creating it here as well caused a duplicate order for every Opening sale
+    // (same LAVIE-##### order number sent to Mintsoft twice).
+    //
+    // Retention Done Deal Mintsoft orders are handled separately by
+    // handleRetentionFutureDealPayment — that path is NOT affected by this change.
   }
 }
 
