@@ -388,6 +388,7 @@ export default function DoneDealModal({
   // ─── Mutations ──────────────────────────────────────────────────────────────
   const [dealError, setDealError] = useState<string | null>(null);
   const [dealSubmitted, setDealSubmitted] = useState(false);
+  const [successData, setSuccessData] = useState<{ dealTypeLabel: string; isFutureLabel: string; totalDisplay: string; productNames: string; mintsoftOrderNumber?: string } | null>(null);
 
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: (data: any) => {
@@ -400,13 +401,18 @@ export default function DoneDealModal({
       setDealError(null);
       const dealTypeLabel = dealType === "subscription" ? "Subscription" : "Installment";
       const isFutureLabel = isFutureDeal ? " (Future Deal)" : "";
-      toast.success(
-        `Deal confirmed! ${dealTypeLabel}${isFutureLabel} for ${customerName}` +
-        (data?.mintsoftOrderNumber ? ` — Order ${data.mintsoftOrderNumber} created` : ""),
-        { duration: 6000 }
-      );
-      onClose();
-      onSuccess?.();
+      const totalDisplay = dealType === "subscription"
+        ? `£${subTotalPerCycle.reduce((s, g) => s + g.total, 0).toFixed(2)}`
+        : `£${(parseFloat(instTotalAmount) || instProductsTotal).toFixed(2)}`;
+      const productNames = (dealType === "subscription" ? subProducts : instProducts)
+        .map((p) => `${p.name} x${p.quantity}`).join(", ");
+      setSuccessData({
+        dealTypeLabel,
+        isFutureLabel,
+        totalDisplay,
+        productNames,
+        mintsoftOrderNumber: data?.mintsoftOrderNumber ?? undefined,
+      });
     },
     onError: (err: any) => {
       setDealError(err.message || "Failed to mark done deal");
@@ -505,6 +511,48 @@ export default function DoneDealModal({
   };
 
   if (!open) return null;
+
+  // ─── Success Confirmation Modal ──────────────────────────────────────────────────────────────
+  if (successData) {
+    return (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">✅</span>
+          </div>
+          <h2 className="text-xl font-bold text-black mb-1">Deal Confirmed!</h2>
+          <p className="text-sm font-semibold text-black mb-4">{customerName}</p>
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-left space-y-2 mb-6">
+            <div className="flex justify-between text-sm">
+              <span className="font-semibold text-black">Type</span>
+              <span className="font-bold text-black">{successData.dealTypeLabel}{successData.isFutureLabel}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="font-semibold text-black">Total</span>
+              <span className="font-bold text-green-700">{successData.totalDisplay}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="font-semibold text-black">Products</span>
+              <span className="font-bold text-black text-right max-w-[60%]">{successData.productNames}</span>
+            </div>
+            {successData.mintsoftOrderNumber && (
+              <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                <span className="font-semibold text-black">Mintsoft Order</span>
+                <span className="font-bold text-blue-700">{successData.mintsoftOrderNumber} — Pack &amp; Hold</span>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => { setSuccessData(null); onClose(); onSuccess?.(); }}
+            className="w-full py-3 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 transition-colors shadow-md"
+          >
+            Got it!
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ─── Shared: Free Gifts Section ─────────────────────────────────────────────
   const renderFreeGiftsSection = () => (

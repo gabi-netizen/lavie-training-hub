@@ -361,6 +361,7 @@ export async function createMintsoftOrderFromPhase(params: CreateMintsoftOrderFr
     CurrencyId: 1, // GBP
     Channel: "Max Billing",
     OrderValue: orderValue ?? 44.90,
+    OrderStatusId: 14, // Pack and Hold — prevents automatic dispatch by warehouse
     OrderItems: mintsoftItems.map((item) => ({
       SKU: item.SKU,
       Quantity: item.Quantity,
