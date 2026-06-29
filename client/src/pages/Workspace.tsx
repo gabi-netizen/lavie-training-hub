@@ -3061,7 +3061,6 @@ export default function Workspace() {
   const [activeTab, setActiveTab] = useState<"pitch" | "callbacks" | "manager" | "whatsapp" | "emails" | "fullscript" | "butler">("pitch");
   // ── Card Entry Modal state (for manual charge when no payment found) ──
   const [cardEntryModal, setCardEntryModal] = useState<{ contactId: number; contactName: string } | null>(null);
-  const [mismatchedEmailModal, setMismatchedEmailModal] = useState<{ contactId: number; mismatchedEmail: string; contactEmail: string } | null>(null);
 
   // ── Sold validation popup state ──
   const [soldValidationModal, setSoldValidationModal] = useState<{ contactId: number; missing: string[] } | null>(null);
@@ -3299,22 +3298,11 @@ export default function Workspace() {
   const confirmSold = trpc.contacts.confirmSold.useMutation({
     onSuccess: (data) => {
       if (data.alreadyShipped) {
-        toast.success("Deal confirmed! (shipment already created) ✅");
+        toast.success("Deal confirmed! (shipment already created) \u2705");
       } else {
-        toast.success(`Deal confirmed! Mintsoft order #${data.orderNumber} created ✅`);
+        toast.success(`Deal confirmed! Mintsoft order #${data.orderNumber} created \u2705`);
       }
       refetch();
-      // Check for mismatched email (Apple Pay / Google Pay)
-      if ((data as any).mismatchedEmail) {
-        const activeContact = (contacts as any[]).find((c) => c.id === activeId);
-        if (activeContact) {
-          setMismatchedEmailModal({
-            contactId: activeContact.id,
-            mismatchedEmail: (data as any).mismatchedEmail,
-            contactEmail: activeContact.email || "",
-          });
-        }
-      }
     },
     onError: (err: any) => {
       // If no payment found, open CardEntryModal instead of showing error toast
@@ -4620,37 +4608,6 @@ export default function Workspace() {
             refetch();
           }}
         />
-      )}
-
-      {/* ── Mismatched Email Modal (Apple Pay / Google Pay) ── */}
-      {mismatchedEmailModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Different email detected</h2>
-            <p className="text-sm text-gray-800 mb-4">
-              The payment was made with <span className="font-bold">{mismatchedEmailModal.mismatchedEmail}</span> which is different from the customer’s email <span className="font-bold">{mismatchedEmailModal.contactEmail}</span>.
-            </p>
-            <p className="text-sm text-gray-800 mb-5">Add as alternative email?</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  updateContact.mutate({ id: mismatchedEmailModal.contactId, alternativeEmail: mismatchedEmailModal.mismatchedEmail });
-                  setMismatchedEmailModal(null);
-                  toast.success(`Alternative email ${mismatchedEmailModal.mismatchedEmail} saved`);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 transition"
-              >
-                Yes, add
-              </button>
-              <button
-                onClick={() => setMismatchedEmailModal(null)}
-                className="flex-1 py-2.5 rounded-xl border-2 border-gray-300 text-gray-800 font-bold text-sm hover:bg-gray-50 transition"
-              >
-                No thanks
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {soldValidationModal && (
