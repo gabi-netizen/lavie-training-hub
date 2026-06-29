@@ -123,4 +123,24 @@ export async function ensureSupportTicketsTable() {
   } catch (err) {
     console.error("[DB] Error adding callbackNote column:", err);
   }
+
+  // ── lead_assignments.followUpAt (follow-up scheduled timestamp ms) ──────────
+  try {
+    await db.execute(sql`
+      ALTER TABLE lead_assignments ADD COLUMN IF NOT EXISTS followUpAt bigint NULL;
+    `);
+    console.log("[DB] lead_assignments.followUpAt column ensured");
+  } catch (err) {
+    console.error("[DB] Error adding followUpAt column:", err);
+  }
+
+  // ── lead_assignments.followUpNote (follow-up reason/notes) ────────────────
+  try {
+    await db.execute(sql`
+      ALTER TABLE lead_assignments ADD COLUMN IF NOT EXISTS followUpNote text NULL;
+    `);
+    console.log("[DB] lead_assignments.followUpNote column ensured");
+  } catch (err) {
+    console.error("[DB] Error adding followUpNote column:", err);
+  }
 }
