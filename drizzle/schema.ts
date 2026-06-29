@@ -490,6 +490,8 @@ export const leadAssignments = mysqlTable("lead_assignments", {
   lastCallResult: varchar("lastCallResult", { length: 32 }),
   /** Scheduled callback timestamp (ms) */
   callbackAt: bigint("callbackAt", { mode: "number" }),
+  /** Short note / reason for the scheduled callback */
+  callbackNote: text("callbackNote"),
   /** Timestamp (ms) when callback reminder notification was sent */
   callbackNotifiedAt: bigint("callbackNotifiedAt", { mode: "number" }),
   /** Follow-up timestamp (ms) */

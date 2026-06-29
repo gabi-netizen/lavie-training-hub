@@ -588,6 +588,7 @@ export const managerRouter = router({
         result: z.enum(CALL_RESULTS),
         note: z.string().optional(),
         callbackAt: z.number().optional(),
+        callbackNote: z.string().optional(),
         followUpAt: z.number().optional(),
         followUpNote: z.string().optional(),
       })
@@ -646,7 +647,15 @@ export const managerRouter = router({
         statusChangedAt: Date.now(),
       };
       if (input.result === "callback" && input.callbackAt) {
+        // Replace any existing callback — overwrite with the new time and note,
+        // clearing the old values so there is never more than one active callback.
         updateData.callbackAt = input.callbackAt;
+        updateData.callbackNote = input.callbackNote ?? null;
+        updateData.callbackNotifiedAt = null; // reset reminder flag for the new callback
+      } else if (input.result !== "callback") {
+        // When scheduling something other than a callback, clear any stale callback
+        updateData.callbackAt = null;
+        updateData.callbackNote = null;
       }
       if (input.result === "follow_up") {
         updateData.followUpAt = input.followUpAt || null;

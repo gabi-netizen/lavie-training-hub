@@ -330,7 +330,11 @@ export default function ContactCard() {
 
   // ─── Retention lead status & note management ────────────────────────────────
   const logCallAttemptMutation = trpc.manager.logCallAttempt.useMutation({
-    onSuccess: () => { toast.success("Callback scheduled"); },
+    onSuccess: () => {
+      toast.success("Callback scheduled");
+      refetch();
+      utils.contacts.getRetentionData.invalidate({ contactId });
+    },
     onError: (err: any) => toast.error(err.message || "Failed to schedule callback"),
   });
   const assignLeadMutation = trpc.manager.assignLead.useMutation({
@@ -620,6 +624,7 @@ export default function ContactCard() {
   const [callbackModalOpen, setCallbackModalOpen] = useState(false);
   const [callbackModalType, setCallbackModalType] = useState<"callback" | "follow_up">("callback");
   const [callbackDateTime, setCallbackDateTime] = useState("");
+  const [callbackNoteText, setCallbackNoteText] = useState("");
   const { data: whatsappTemplates, isLoading: waTemplatesLoading } = trpc.whatsapp.templates.useQuery(
     undefined,
     { enabled: waModalOpen }
@@ -1027,11 +1032,15 @@ export default function ContactCard() {
                   const cbDate = new Date(typeof cbRaw === 'number' ? cbRaw : cbRaw);
                   const dateStr = cbDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: userTimezone });
                   const timeStr = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: userTimezone });
+                  const cbNote = currentRetentionLead?.callbackNote ?? null;
                   return (
                     <div className="rounded-xl p-3" style={{ background: "#fff8e1", border: "2px solid #f5a623" }}>
                       <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#e65100" }}>Callback Scheduled</div>
                       <div className="text-gray-800 font-bold" style={{ fontSize: "28px", lineHeight: 1.2 }}>{timeStr}</div>
-                      <div className="text-gray-600 font-semibold text-sm mt-1">{dateStr}</div>
+                      <div className="text-gray-800 font-semibold text-sm mt-1">{dateStr}</div>
+                      {cbNote && (
+                        <div className="text-gray-800 text-xs mt-2 border-t border-amber-200 pt-2 leading-snug">{cbNote}</div>
+                      )}
                     </div>
                   );
                 }
@@ -3225,8 +3234,19 @@ export default function ContactCard() {
               </div>
             )}
 
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-700">Callback Notes <span className="font-normal text-gray-500">(optional)</span></label>
+              <textarea
+                value={callbackNoteText}
+                onChange={(e) => setCallbackNoteText(e.target.value)}
+                placeholder="Reason for callback, what to discuss..."
+                rows={3}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 w-full resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+            </div>
+
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setCallbackModalOpen(false)}
+              <button onClick={() => { setCallbackModalOpen(false); setCallbackNoteText(""); }}
                 className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50">Cancel</button>
               <button
                 onClick={() => {
@@ -3249,10 +3269,13 @@ export default function ContactCard() {
                     agentName: user?.name || "Rob",
                     result: callbackModalType,
                     callbackAt: callbackModalType === "callback" ? utcMs : undefined,
+                    callbackNote: callbackModalType === "callback" && callbackNoteText.trim() ? callbackNoteText.trim() : undefined,
                     followUpAt: callbackModalType === "follow_up" ? utcMs : undefined,
-                    note: `${callbackModalType === "follow_up" ? "Follow up" : "Callback"} scheduled: ${selectedDate} ${selectedTime}`,
+                    followUpNote: callbackModalType === "follow_up" && callbackNoteText.trim() ? callbackNoteText.trim() : undefined,
+                    note: `${callbackModalType === "follow_up" ? "Follow up" : "Callback"} scheduled: ${selectedDate} ${selectedTime}${callbackNoteText.trim() ? ` — ${callbackNoteText.trim()}` : ""}`,
                   });
                   setCallbackModalOpen(false);
+                  setCallbackNoteText("");
                 }}
                 disabled={!isValid}
                 className={`px-5 py-2 rounded-lg border-none font-bold text-sm text-white ${
