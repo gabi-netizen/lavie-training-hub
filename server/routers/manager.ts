@@ -3439,6 +3439,33 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         ? Math.floor(new Date(shipDate).getTime() / 1000)
         : undefined;
 
+      // ─── Idempotency check: block duplicate deals within 5 minutes ────────────
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      const [recentDeal] = await db
+        .select({ id: retentionDeals.id, status: retentionDeals.status, stripeScheduleId: retentionDeals.stripeScheduleId, stripeSubscriptionIds: retentionDeals.stripeSubscriptionIds, mintsoftOrderNumber: retentionDeals.mintsoftOrderNumber })
+        .from(retentionDeals)
+        .where(
+          and(
+            eq(retentionDeals.contactId, contactId),
+            inArray(retentionDeals.status, ["active", "future", "pending"]),
+            gte(retentionDeals.createdAt, fiveMinutesAgo)
+          )
+        )
+        .limit(1);
+
+      if (recentDeal) {
+        console.warn(`[markDoneDeal] Duplicate deal blocked for contact ${contactId} — deal ${recentDeal.id} already created within 5 minutes`);
+        return {
+          success: true,
+          stripeScheduleId: recentDeal.stripeScheduleId ?? null,
+          stripeSubscriptionIds: (recentDeal.stripeSubscriptionIds as string[]) ?? [],
+          isFutureDeal: isFutureDeal ?? false,
+          mintsoftOrderId: null,
+          mintsoftOrderNumber: recentDeal.mintsoftOrderNumber ?? null,
+          duplicate: true,
+        };
+      }
+
       try {
         if (dealType === "subscription") {
           // ── Subscription: one Stripe subscription per unique billing cycle ────────
@@ -3640,6 +3667,23 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           ];
 
           if (mintsoftItems.length > 0 && contact.address) {
+            // Mintsoft duplicate check: skip if order already created for this contact in last 5 min
+            const [recentMintsoft] = await db
+              .select({ mintsoftOrderId: retentionDeals.mintsoftOrderId, mintsoftOrderNumber: retentionDeals.mintsoftOrderNumber })
+              .from(retentionDeals)
+              .where(
+                and(
+                  eq(retentionDeals.contactId, contactId),
+                  gte(retentionDeals.createdAt, fiveMinutesAgo)
+                )
+              )
+              .limit(1);
+
+            if (recentMintsoft?.mintsoftOrderId) {
+              console.warn(`[markDoneDeal] Mintsoft duplicate blocked for contact ${contactId} — order ${recentMintsoft.mintsoftOrderNumber} already exists`);
+              mintsoftOrderId = recentMintsoft.mintsoftOrderId;
+              mintsoftOrderNumber = recentMintsoft.mintsoftOrderNumber ?? undefined;
+            } else {
             const nameParts = (contact.name || "").trim().split(/\s+/);
             const firstName = nameParts[0] || "";
             const lastName = nameParts.slice(1).join(" ") || "";
@@ -3686,6 +3730,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
                 .set({ shipmentStatus: "failed", updatedAt: Date.now() })
                 .where(eq(retentionDeals.contactId, contactId));
             }
+            } // end else (not duplicate mintsoft)
           } else if (!contact.address) {
             console.error(`[SHIPMENT_FAILED] markDoneDeal — contact ${contactId}: no address on file — Mintsoft order skipped`);
             await db

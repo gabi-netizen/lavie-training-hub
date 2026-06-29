@@ -387,12 +387,14 @@ export default function DoneDealModal({
 
   // ─── Mutations ──────────────────────────────────────────────────────────────
   const [dealError, setDealError] = useState<string | null>(null);
+  const [dealSubmitted, setDealSubmitted] = useState(false);
 
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: (data: any) => {
       if (data?.success === false) {
-        // Stripe/card error — deal saved as failed, modal stays open
+        // Stripe/card error — deal saved as failed, modal stays open, allow retry
         setDealError(data.errorMessage || "Payment failed. Please check card details and try again.");
+        setDealSubmitted(false);
         return;
       }
       setDealError(null);
@@ -408,11 +410,13 @@ export default function DoneDealModal({
     },
     onError: (err: any) => {
       setDealError(err.message || "Failed to mark done deal");
+      setDealSubmitted(false);
     },
   });
 
   // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleConfirm = () => {
+    if (dealSubmitted) return;
     const products = dealType === "subscription" ? subProducts : instProducts;
     if (products.length === 0) {
       toast.error("Please select at least one product");
@@ -438,6 +442,7 @@ export default function DoneDealModal({
       return;
     }
 
+    setDealSubmitted(true);
     markDoneDealMutation.mutate({
       contactId,
       subscriptionId,
@@ -1270,6 +1275,7 @@ export default function DoneDealModal({
                 onClick={handleConfirm}
                 disabled={
                   markDoneDealMutation.isPending ||
+                  dealSubmitted ||
                   !contactAddress ||
                   (dealType === "subscription" ? subProducts.length === 0 : instProducts.length === 0)
                 }
@@ -1277,7 +1283,7 @@ export default function DoneDealModal({
                 className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-50 shadow-md"
                 style={{ background: isFutureDeal ? "#7c3aed" : "#16a34a" }}
               >
-                {markDoneDealMutation.isPending
+                {(markDoneDealMutation.isPending || (dealSubmitted && !dealError))
                   ? "Processing..."
                   : isFutureDeal
                     ? "Schedule Future Deal"
