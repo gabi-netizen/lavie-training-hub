@@ -814,6 +814,13 @@ function ContactCard({
               onSave={(v) => onFieldChange("email", v)}
             />
             <EditableField
+              icon={<Mail size={14} />}
+              value={contact.alternativeEmail ?? ""}
+              originalValue={contact.alternativeEmail ?? ""}
+              placeholder="Alt Email (Apple Pay / Google Pay)"
+              onSave={(v) => onFieldChange("alternativeEmail", v)}
+            />
+            <EditableField
               icon={<MapPin size={14} />}
               value={contact.address ?? ""}
               originalValue={contact.address ?? ""}
@@ -900,8 +907,11 @@ function ContactCard({
                     <p className="text-sm text-gray-500 mt-0.5">
                       To: <span className="font-medium text-gray-700">{contact.name}</span>
                       {contact.email
-                        ? <span className="ml-2 text-gray-400">&lt;{contact.email}&gt;</span>
+                        ? <span className="ml-2 text-gray-800">&lt;{contact.email}&gt;</span>
                         : <span className="ml-2 text-red-500 text-xs">⚠ No email on file</span>}
+                      {contact.alternativeEmail && (
+                        <span className="ml-2 text-gray-600 text-xs">(Alt: {contact.alternativeEmail})</span>
+                      )}
                     </p>
                   </div>
                   <button
