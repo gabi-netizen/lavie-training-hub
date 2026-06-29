@@ -829,11 +829,12 @@ async function handleChargeRefunded(event: Stripe.Event): Promise<void> {
 
 /**
  * When a Stripe invoice is paid for a subscription/schedule that belongs to a
- * retention future deal, create the Mintsoft order (Pack and Hold) and update
+ * retention deal, create the Mintsoft order (Pack and Hold) and update
  * the retention_deals status to 'active'.
  *
  * Triggered by: invoice.paid
- * Condition: subscription metadata contains retentionDeal=true AND isFutureDeal
+ * Condition: deal status is 'future' or 'pending' (first payment not yet confirmed)
+ * This handles BOTH immediate and future deals — Mintsoft order is always created after payment.
  */
 async function handleRetentionFutureDealPayment(
   subscriptionId: string,
@@ -844,6 +845,7 @@ async function handleRetentionFutureDealPayment(
 
   try {
     // Find the retention deal by stripeScheduleId or stripeSubscriptionIds containing this ID
+    // Match deals that are still waiting for first payment (status = 'future' or 'pending')
     const deals = await db
       .select()
       .from(retentionDeals)
@@ -851,12 +853,12 @@ async function handleRetentionFutureDealPayment(
         sql`(
           ${retentionDeals.stripeScheduleId} = ${subscriptionId}
           OR JSON_CONTAINS(${retentionDeals.stripeSubscriptionIds}, JSON_QUOTE(${subscriptionId}))
-        ) AND ${retentionDeals.status} = 'future'`
+        ) AND ${retentionDeals.status} IN ('future', 'pending')`
       )
       .limit(1);
 
     const deal = deals[0];
-    if (!deal) return; // Not a retention future deal
+    if (!deal) return; // Not a retention deal waiting for first payment
 
     console.log(`[Stripe Webhook] Retention future deal payment received for deal ${deal.id}, contact ${deal.contactId}`);
 

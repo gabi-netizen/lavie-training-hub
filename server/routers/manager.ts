@@ -3688,96 +3688,10 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         updatedAt: now,
       });
 
-      // ─── 6. Create Mintsoft order (immediate deals only) ─────────────────────────
-      let mintsoftOrderId: number | undefined;
-      let mintsoftOrderNumber: string | undefined;
-
-      if (!isFutureDeal) {
-        try {
-          // Build SKU list: paid products + free gifts
-          const allProducts = dealType === "subscription" ? subProducts : instProducts;
-          const mintsoftItems: { SKU: string; Quantity: number }[] = [
-            ...allProducts.map((p) => ({ SKU: p.sku, Quantity: p.quantity })),
-            ...(freeGifts ?? []).map((g) => ({ SKU: g.sku, Quantity: g.quantity })),
-          ];
-
-          if (mintsoftItems.length > 0 && contact.address) {
-            // Mintsoft duplicate check: skip if order already created for this contact in last 5 min
-            const [recentMintsoft] = await db
-              .select({ mintsoftOrderId: retentionDeals.mintsoftOrderId, mintsoftOrderNumber: retentionDeals.mintsoftOrderNumber })
-              .from(retentionDeals)
-              .where(
-                and(
-                  eq(retentionDeals.contactId, contactId),
-                  gte(retentionDeals.createdAt, fiveMinutesAgo)
-                )
-              )
-              .limit(1);
-
-            if (recentMintsoft?.mintsoftOrderId) {
-              console.warn(`[markDoneDeal] Mintsoft duplicate blocked for contact ${contactId} — order ${recentMintsoft.mintsoftOrderNumber} already exists`);
-              mintsoftOrderId = recentMintsoft.mintsoftOrderId;
-              mintsoftOrderNumber = recentMintsoft.mintsoftOrderNumber ?? undefined;
-            } else {
-            const nameParts = (contact.name || "").trim().split(/\s+/);
-            const firstName = nameParts[0] || "";
-            const lastName = nameParts.slice(1).join(" ") || "";
-
-            const orderResult = await createMintsoftOrderFromPhase({
-              contactId,
-              firstName,
-              lastName,
-              email: contact.email || "",
-              phone: contact.phone || "",
-              address: contact.address,
-              mintsoftItems,
-              orderValue: totalAmount,
-            });
-
-            if (orderResult.success && orderResult.orderId) {
-              mintsoftOrderId = orderResult.orderId;
-              mintsoftOrderNumber = orderResult.orderNumber;
-
-              // Put order on Pack and Hold — do not ship automatically
-              const holdResult = await markOrderPackAndHold(orderResult.orderId);
-              if (!holdResult.success) {
-                console.error(`[markDoneDeal] MarkPackAndHold failed for order ${orderResult.orderId}: ${holdResult.error}`);
-              }
-
-              // Update retention_deal record with Mintsoft order details
-              await db
-                .update(retentionDeals)
-                .set({
-                  mintsoftOrderId: orderResult.orderId,
-                  mintsoftOrderNumber: orderResult.orderNumber ?? null,
-                  shipmentStatus: "created",
-                  updatedAt: Date.now(),
-                })
-                .where(
-                  eq(retentionDeals.contactId, contactId)
-                );
-
-              console.log(`[markDoneDeal] Mintsoft order created: ${orderResult.orderNumber} (Pack and Hold) for contact ${contactId}`);
-            } else {
-              console.error(`[SHIPMENT_FAILED] markDoneDeal — contact ${contactId}: Mintsoft order failed — ${orderResult.error}`);
-              await db
-                .update(retentionDeals)
-                .set({ shipmentStatus: "failed", updatedAt: Date.now() })
-                .where(eq(retentionDeals.contactId, contactId));
-            }
-            } // end else (not duplicate mintsoft)
-          } else if (!contact.address) {
-            console.error(`[SHIPMENT_FAILED] markDoneDeal — contact ${contactId}: no address on file — Mintsoft order skipped`);
-            await db
-              .update(retentionDeals)
-              .set({ shipmentStatus: "skipped", updatedAt: Date.now() })
-              .where(eq(retentionDeals.contactId, contactId));
-          }
-        } catch (mintsoftErr: any) {
-          console.error(`[markDoneDeal] Mintsoft error: ${mintsoftErr.message}`);
-          // Non-fatal — deal is already saved
-        }
-      }
+      // Mintsoft order is NOT created here.
+      // It is created by the Stripe webhook (invoice.paid) after the first payment is confirmed.
+      const mintsoftOrderId: number | undefined = undefined;
+      const mintsoftOrderNumber: string | undefined = undefined;
 
       // Build email body
       const productLines = dealDetails.products
