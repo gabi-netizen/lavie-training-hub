@@ -163,7 +163,7 @@ async function autoLinkLeadsToContacts(
         const byEmail = await db
           .select({ id: contacts.id })
           .from(contacts)
-          .where(eq(contacts.email, lead.email))
+          .where(or(eq(contacts.email, lead.email), eq(contacts.alternativeEmail, lead.email)))
           .limit(1);
         existingContact = byEmail[0];
       }
@@ -934,7 +934,7 @@ export const managerRouter = router({
               const byEmail = await db
                 .select({ id: contacts.id, address: contacts.address })
                 .from(contacts)
-                .where(eq(contacts.email, lead.email))
+                .where(or(eq(contacts.email, lead.email), eq(contacts.alternativeEmail, lead.email)))
                 .limit(1);
               if (byEmail.length > 0) {
                 linkedContactId = byEmail[0].id;
@@ -1106,7 +1106,7 @@ export const managerRouter = router({
           const byEmail = await db
             .select({ id: contacts.id })
             .from(contacts)
-            .where(eq(contacts.email, lead.email))
+            .where(or(eq(contacts.email, lead.email), eq(contacts.alternativeEmail, lead.email)))
             .limit(1);
           existingContact = byEmail[0];
         }
@@ -1367,7 +1367,7 @@ export const managerRouter = router({
         try {
           const conditions = [];
           if (targetName) conditions.push(like(contacts.name, `%${targetName}%`));
-          if (targetEmail) conditions.push(eq(contacts.email, targetEmail));
+          if (targetEmail) conditions.push(or(eq(contacts.email, targetEmail), eq(contacts.alternativeEmail, targetEmail)));
           if (targetPhone) conditions.push(like(contacts.phone, `%${targetPhone}%`));
           const matchedContacts = await db
             .select({ id: contacts.id, email: contacts.email })

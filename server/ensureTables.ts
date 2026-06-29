@@ -114,3 +114,17 @@ export async function ensureSupportTicketsTable() {
     console.error("[DB] Error adding callbackNotifiedAt column:", err);
   }
 }
+
+// ── contacts.alternativeEmail — added as a safe migration on startup ──────────
+export async function ensureAlternativeEmailColumn() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`
+      ALTER TABLE contacts ADD COLUMN IF NOT EXISTS alternativeEmail varchar(320) NULL;
+    `);
+    console.log("[DB] contacts.alternativeEmail column ensured");
+  } catch (err) {
+    console.error("[DB] Error adding alternativeEmail column:", err);
+  }
+}

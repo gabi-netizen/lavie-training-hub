@@ -138,6 +138,8 @@ export const contacts = mysqlTable("contacts", {
   name: varchar("name", { length: 256 }).notNull(),
   /** Email address */
   email: varchar("email", { length: 320 }),
+  /** Alternative email — used for Apple Pay / Google Pay / secondary email */
+  alternativeEmail: varchar("alternativeEmail", { length: 320 }),
   /** Phone number (UK format) */
   phone: varchar("phone", { length: 64 }),
   /**

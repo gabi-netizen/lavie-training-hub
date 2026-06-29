@@ -708,6 +708,11 @@ export default function ContactCard() {
     toast.success("Email updated");
   };
 
+  const handleSaveAltEmail = (newAltEmail: string) => {
+    updateMutation.mutate({ id: contactId, alternativeEmail: newAltEmail });
+    toast.success("Alternative email updated");
+  };
+
   const handleSaveAddress = (newAddress: string) => {
     updateMutation.mutate({ id: contactId, address: newAddress });
     toast.success("Address updated");
@@ -1504,6 +1509,47 @@ export default function ContactCard() {
                         onClick={() => { navigator.clipboard.writeText(contact.email || ""); }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
                         title="Copy email"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Alternative Email */}
+            {(contact.alternativeEmail || isFromRetention) && (
+              <div className="mb-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold text-gray-800 uppercase tracking-wider mb-1">Alt Email <span className="text-[9px] font-normal text-gray-600 normal-case">(Apple Pay / Google Pay)</span></p>
+                {isFromRetention ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <InlineEditableField
+                        label="Alt Email"
+                        value={contact.alternativeEmail ?? ""}
+                        onSave={handleSaveAltEmail}
+                        icon={<Mail size={14} />}
+                      />
+                    </div>
+                    {contact.alternativeEmail && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(contact.alternativeEmail || ""); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
+                        title="Copy alt email"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-800">{contact.alternativeEmail}</p>
+                    {contact.alternativeEmail && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(contact.alternativeEmail || ""); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
+                        title="Copy alt email"
                       >
                         <Copy size={14} />
                       </button>
