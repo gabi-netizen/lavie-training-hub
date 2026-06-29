@@ -1412,7 +1412,27 @@ export const contactsRouter = router({
           console.error(`[confirmSold] Failed to insert opening_trial for contact ${contactId}:`, otErr);
         }
 
-        return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
+        // ── Check for mismatched email (Apple Pay / Google Pay billing email) ──
+        let mismatchedEmail: string | undefined;
+        try {
+          if (paymentId) {
+            const pi = await stripe.paymentIntents.retrieve(paymentId, {
+              expand: ['charges'],
+            });
+            const billingEmail = (pi as any).charges?.data?.[0]?.billing_details?.email as string | null;
+            if (
+              billingEmail &&
+              billingEmail.toLowerCase() !== (contact.email || "").toLowerCase() &&
+              billingEmail.toLowerCase() !== (contact.alternativeEmail || "").toLowerCase()
+            ) {
+              mismatchedEmail = billingEmail;
+            }
+          }
+        } catch (_e) {
+          // Skip silently if Stripe doesn't return billing email
+        }
+
+        return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber, mismatchedEmail };
       } else {
         // Log failure
         await db.insert(stripeAuditLog).values({
