@@ -388,7 +388,7 @@ export default function DoneDealModal({
   // ─── Mutations ──────────────────────────────────────────────────────────────
   const [dealError, setDealError] = useState<string | null>(null);
   const [dealSubmitted, setDealSubmitted] = useState(false);
-  const [successData, setSuccessData] = useState<{ dealTypeLabel: string; isFutureLabel: string; totalDisplay: string; productNames: string; mintsoftOrderNumber?: string } | null>(null);
+  const [successData, setSuccessData] = useState<{ dealTypeLabel: string; isFutureLabel: string; totalDisplay: string; productNames: string; mintsoftOrderNumber?: string; deposit?: string; paymentCount?: number; perPayment?: string } | null>(null);
 
   const markDoneDealMutation = trpc.manager.markDoneDeal.useMutation({
     onSuccess: (data: any) => {
@@ -406,12 +406,24 @@ export default function DoneDealModal({
         : `£${(parseFloat(instTotalAmount) || instProductsTotal).toFixed(2)}`;
       const productNames = (dealType === "subscription" ? subProducts : instProducts)
         .map((p) => `${p.name} x${p.quantity}`).join(", ");
+      const depositVal = dealType === "installment"
+        ? (instMode === "custom" ? parseFloat(customDeposit) || 0 : parseFloat(instDeposit) || 0)
+        : 0;
+      const paymentCountVal = dealType === "installment"
+        ? (instMode === "custom" ? customPayments.length : parseInt(instPayments) || 1)
+        : undefined;
+      const perPaymentVal = dealType === "installment" && instMode === "equal" && paymentCountVal
+        ? instMonthlyPayment
+        : undefined;
       setSuccessData({
         dealTypeLabel,
         isFutureLabel,
         totalDisplay,
         productNames,
         mintsoftOrderNumber: data?.mintsoftOrderNumber ?? undefined,
+        deposit: depositVal > 0 ? `£${depositVal.toFixed(2)}` : undefined,
+        paymentCount: paymentCountVal,
+        perPayment: perPaymentVal !== undefined ? `£${perPaymentVal.toFixed(2)}` : undefined,
       });
     },
     onError: (err: any) => {
@@ -536,6 +548,24 @@ export default function DoneDealModal({
               <span className="font-semibold text-black">Products</span>
               <span className="font-bold text-black text-right max-w-[60%]">{successData.productNames}</span>
             </div>
+            {successData.deposit && (
+              <div className="flex justify-between text-sm">
+                <span className="font-semibold text-black">Deposit (today)</span>
+                <span className="font-bold text-black">{successData.deposit}</span>
+              </div>
+            )}
+            {successData.paymentCount !== undefined && (
+              <div className="flex justify-between text-sm">
+                <span className="font-semibold text-black">Number of payments</span>
+                <span className="font-bold text-black">{successData.paymentCount}</span>
+              </div>
+            )}
+            {successData.perPayment && (
+              <div className="flex justify-between text-sm">
+                <span className="font-semibold text-black">Per payment</span>
+                <span className="font-bold text-green-700">{successData.perPayment}</span>
+              </div>
+            )}
             {successData.mintsoftOrderNumber && (
               <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
                 <span className="font-semibold text-black">Mintsoft Order</span>
