@@ -475,7 +475,7 @@ export default function DoneDealModal({
         sku: g.sku,
         quantity: g.quantity,
       })),
-      shipDate: customShipDate || instFirstPaymentDate || undefined,
+      shipDate: customShipDate || undefined,
       isFutureDeal,
       firstChargeDate: instFirstPaymentDate || customFirstPaymentDate || undefined,
       cardNumber: cardNumber || undefined,
@@ -761,7 +761,7 @@ export default function DoneDealModal({
 
         {/* First Charge Date */}
         <div>
-          <label className="text-xs font-semibold text-black mb-1 block">First Charge Date <span className="font-normal text-black">(optional — leave empty for today)</span></label>
+          <label className="text-xs font-semibold text-black mb-1 block">Next Charge Date <span className="font-normal text-black">(optional — 2nd charge onwards)</span></label>
           <input
             type="date"
             value={instFirstPaymentDate}
@@ -1009,7 +1009,7 @@ export default function DoneDealModal({
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="text-xs font-semibold text-black mb-1 block">First Charge Date <span className="font-normal text-black">(optional — leave empty for today)</span></label>
+                <label className="text-xs font-semibold text-black mb-1 block">Next Charge Date <span className="font-normal text-black">(optional — 2nd charge onwards)</span></label>
                 <input
                   type="date"
                   value={instFirstPaymentDate}
@@ -1050,7 +1050,7 @@ export default function DoneDealModal({
 
               {/* Payment rows */}
               <div className="col-span-2">
-                <label className="text-xs font-semibold text-black mb-1 block">First Charge Date <span className="font-normal text-black">(optional — leave empty for today)</span></label>
+                <label className="text-xs font-semibold text-black mb-1 block">Next Charge Date <span className="font-normal text-black">(optional — 2nd charge onwards)</span></label>
                 <input
                   type="date"
                   value={customFirstPaymentDate}

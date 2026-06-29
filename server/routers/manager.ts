@@ -3436,12 +3436,14 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       let paymentsJson: { amount: number; interval: number }[] | undefined;
 
       // Convert ship date to Unix timestamp for future deals
-      // Also support firstChargeDate for non-future deals (preferred billing day)
       const startDateUnix = isFutureDeal && shipDate
         ? Math.floor(new Date(shipDate).getTime() / 1000)
-        : firstChargeDate && firstChargeDate > new Date().toISOString().split("T")[0]
-          ? Math.floor(new Date(firstChargeDate).getTime() / 1000)
-          : undefined;
+        : undefined;
+
+      // Next charge date: 2nd charge onwards at a preferred date (immediate first charge)
+      const nextChargeDateUnix = !isFutureDeal && firstChargeDate && firstChargeDate > new Date().toISOString().split("T")[0]
+        ? Math.floor(new Date(firstChargeDate).getTime() / 1000)
+        : undefined;
 
       // ─── Idempotency check: block duplicate deals within 5 minutes ────────────
       const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
@@ -3497,7 +3499,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             };
 
             if (startDateUnix) {
-              // Future deal or preferred first charge date — use Subscription Schedule with start_date
+              // Future deal — use Subscription Schedule with start_date
               const schedule = await createSubscriptionSchedule({
                 customerId: stripeCustomerId,
                 phases: [{ amount: amountPence, interval: "day", intervalCount: cycle, iterations: 999 }],
@@ -3506,6 +3508,35 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
                 metadata: meta,
               });
               stripeSubscriptionIds.push(schedule.id);
+            } else if (nextChargeDateUnix) {
+              // Immediate first charge today, then 2nd charge onwards at preferred date
+              // Phase 1: charge today (1 iteration, interval 1 day = fires immediately)
+              // Phase 2: starts at nextChargeDateUnix, repeats every cycle days
+              const stripe2 = getStripeClient();
+              // Create a shared product for both phases
+              const sharedProduct = await stripe2.products.create({
+                name: `Lavie Labs — ${group.productNames.join(", ")} (every ${cycle} days)`,
+              });
+              const scheduleWithNextDate = await stripe2.subscriptionSchedules.create({
+                customer: stripeCustomerId,
+                start_date: "now" as any,
+                end_behavior: "release",
+                metadata: { ...meta, nextChargeDate: firstChargeDate! },
+                phases: [
+                  {
+                    items: [{ price_data: { currency: "gbp", product: sharedProduct.id, unit_amount: amountPence, recurring: { interval: "day" as any, interval_count: 1 } }, quantity: 1 }],
+                    iterations: 1,
+                    ...(stripePaymentMethodId ? { default_payment_method: stripePaymentMethodId } : {}),
+                  } as any,
+                  {
+                    items: [{ price_data: { currency: "gbp", product: sharedProduct.id, unit_amount: amountPence, recurring: { interval: "day" as any, interval_count: cycle } }, quantity: 1 }],
+                    start_date: nextChargeDateUnix,
+                    iterations: 999,
+                    ...(stripePaymentMethodId ? { default_payment_method: stripePaymentMethodId } : {}),
+                  } as any,
+                ],
+              });
+              stripeSubscriptionIds.push(scheduleWithNextDate.id);
             } else {
               // Immediate deal — create a regular subscription
               const product = await stripe.products.create({
@@ -3580,7 +3611,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
               customerId: stripeCustomerId,
               phases,
               defaultPaymentMethod: stripePaymentMethodId,
-              startDate: startDateUnix,
+              startDate: startDateUnix ?? undefined,
               metadata: {
                 contactId: String(contactId),
                 agentName,
