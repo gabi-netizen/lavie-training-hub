@@ -1033,9 +1033,28 @@ export default function ContactCard() {
                   const dateStr = cbDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: userTimezone });
                   const timeStr = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: userTimezone });
                   const cbNote = currentRetentionLead?.callbackNote ?? null;
+                  const openEditCallback = () => {
+                    // Pre-fill the modal with the existing callback date/time/note
+                    const existingDate = cbDate.toISOString().slice(0, 10);
+                    const existingTime = cbDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: userTimezone });
+                    setCallbackDateTime(existingDate + "T" + existingTime);
+                    setCallbackNoteText(cbNote || "");
+                    setCallbackModalType("callback");
+                    setCallbackModalOpen(true);
+                  };
                   return (
                     <div className="rounded-xl p-3" style={{ background: "#fff8e1", border: "2px solid #f5a623" }}>
-                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#e65100" }}>Callback Scheduled</div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#e65100" }}>Callback Scheduled</div>
+                        <button
+                          onClick={openEditCallback}
+                          className="flex items-center gap-1 text-xs font-semibold text-gray-800 hover:text-orange-700 transition-colors px-2 py-0.5 rounded-md hover:bg-amber-100"
+                          title="Edit callback"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit
+                        </button>
+                      </div>
                       <div className="text-gray-800 font-bold" style={{ fontSize: "28px", lineHeight: 1.2 }}>{timeStr}</div>
                       <div className="text-gray-800 font-semibold text-sm mt-1">{dateStr}</div>
                       {cbNote && (
