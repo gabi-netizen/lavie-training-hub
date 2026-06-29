@@ -828,6 +828,10 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
               />
             </>
           )}
+          <Button onClick={() => setActiveTab("butler")} className="bg-purple-600 hover:bg-purple-700 text-white font-bold flex items-center gap-2 h-9 px-4 text-sm">
+            <Swords size={14} />
+            Maximus
+          </Button>
           <Button onClick={() => setProtocolOpen(true)} className="bg-[#FF6B00] hover:bg-[#E55F00] text-white font-bold flex items-center gap-2 h-9 px-4 text-sm">
             <BookOpen size={14} />
             Usage Protocol

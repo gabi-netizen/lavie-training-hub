@@ -3863,15 +3863,12 @@ export default function Workspace() {
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "7px 14px", borderRadius: 7, border: "none", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
-                    background: activeTab === "butler" ? "#7c3aed" : "transparent",
-                    color: activeTab === "butler" ? "#fff" : "#7c3aed",
-                    boxShadow: activeTab === "butler" ? "0 1px 4px rgba(124,58,237,0.3)" : "none",
-                    borderBottom: activeTab === "butler" ? "2px solid #7c3aed" : "2px solid transparent",
+                    fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+                    background: "#7c3aed", color: "#ffffff",
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { if (activeTab !== "butler") { e.currentTarget.style.background = "#f5f3ff"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(124,58,237,0.15)"; } }}
-                  onMouseLeave={(e) => { if (activeTab !== "butler") { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; } }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#6d28d9"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#7c3aed"; }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',marginRight:4}}><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg> Maximus
                 </button>
