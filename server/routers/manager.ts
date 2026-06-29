@@ -3949,4 +3949,133 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         mintsoftOrderNumber: mintsoftOrderNumber ?? null,
       };
     }),
+
+  // ─── Update Card & Retry Failed Payment ─────────────────────────────────────────────────────────────────────────────────
+  updateCardAndRetry: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        cardNumber: z.string(),
+        cardExpiry: z.string(), // MM/YY
+        cardCvv: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { contactId, cardNumber, cardExpiry, cardCvv } = input;
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const stripe = getStripeClient();
+
+      // 1. Get Stripe customer ID for this contact
+      const [stripeCustomerRow] = await db
+        .select()
+        .from(stripeCustomers)
+        .where(eq(stripeCustomers.contactId, contactId))
+        .limit(1);
+
+      if (!stripeCustomerRow?.stripeCustomerId) {
+        throw new Error("No Stripe customer found for this contact. Please create a deal first.");
+      }
+
+      const stripeCustomerId = stripeCustomerRow.stripeCustomerId;
+
+      // 2. Create and attach new payment method
+      const [expMonth, expYear] = (cardExpiry || "").split("/").map((s) => parseInt(s.trim()));
+      let newPaymentMethodId: string;
+      try {
+        const pm = await stripe.paymentMethods.create({
+          type: "card",
+          card: {
+            number: cardNumber.replace(/\s/g, ""),
+            exp_month: expMonth,
+            exp_year: expYear + 2000,
+            cvc: cardCvv,
+          },
+        });
+        await stripe.paymentMethods.attach(pm.id, { customer: stripeCustomerId });
+        await stripe.customers.update(stripeCustomerId, {
+          invoice_settings: { default_payment_method: pm.id },
+        });
+        newPaymentMethodId = pm.id;
+
+        // Update card last4 in DB
+        const cardLast4 = cardNumber.replace(/\s/g, "").slice(-4);
+        await db.update(stripeCustomers)
+          .set({ paymentMethodId: pm.id })
+          .where(eq(stripeCustomers.contactId, contactId));
+        await db.update(contacts)
+          .set({ cardLast4 })
+          .where(eq(contacts.id, contactId));
+      } catch (cardErr: any) {
+        const msg = cardErr?.raw?.message || cardErr?.message || "Unknown card error";
+        throw new Error(`Card error: ${msg}`);
+      }
+
+      // 3. Find open invoices or past_due subscriptions for this customer and retry
+      let chargedAmount: number | undefined;
+      let chargeStatus: string = "no_failed_payment";
+
+      try {
+        // Check for open/past_due invoices
+        const invoices = await stripe.invoices.list({
+          customer: stripeCustomerId,
+          status: "open",
+          limit: 5,
+        });
+
+        for (const invoice of invoices.data) {
+          try {
+            const paid = await stripe.invoices.pay(invoice.id, {
+              payment_method: newPaymentMethodId,
+            });
+            if (paid.status === "paid") {
+              chargedAmount = paid.amount_paid / 100;
+              chargeStatus = "succeeded";
+              break;
+            }
+          } catch (retryErr: any) {
+            chargeStatus = "failed";
+            const msg = retryErr?.raw?.message || retryErr?.message || "Payment failed";
+            throw new Error(`Card updated but payment failed: ${msg}`);
+          }
+        }
+
+        // Also update default payment method on all active subscriptions
+        const subs = await stripe.subscriptions.list({
+          customer: stripeCustomerId,
+          status: "active",
+          limit: 10,
+        });
+        for (const sub of subs.data) {
+          await stripe.subscriptions.update(sub.id, {
+            default_payment_method: newPaymentMethodId,
+          });
+        }
+
+        // Update default payment method on all active subscription schedules
+        const schedules = await stripe.subscriptionSchedules.list({
+          customer: stripeCustomerId,
+          scheduled: false,
+        } as any);
+        for (const sched of (schedules as any).data ?? []) {
+          if (sched.status === "active") {
+            await stripe.subscriptionSchedules.update(sched.id, {
+              default_settings: { default_payment_method: newPaymentMethodId } as any,
+            });
+          }
+        }
+      } catch (retryErr: any) {
+        if (chargeStatus !== "succeeded") throw retryErr;
+      }
+
+      return {
+        success: true,
+        chargeStatus,
+        chargedAmount,
+        message: chargeStatus === "succeeded"
+          ? `Card updated and £${chargedAmount?.toFixed(2)} charged successfully`
+          : "Card updated successfully. Future payments will use the new card.",
+      };
+    }),
 });

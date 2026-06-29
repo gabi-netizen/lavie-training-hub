@@ -358,6 +358,19 @@ export default function ContactCard() {
   const [paymentCardNumber, setPaymentCardNumber] = useState("");
   const [paymentExpiry, setPaymentExpiry] = useState("");
   const [paymentCvv, setPaymentCvv] = useState("");
+  const [updateCardResult, setUpdateCardResult] = useState<{ success: boolean; message: string; chargedAmount?: number } | null>(null);
+
+  const updateCardMutation = trpc.manager.updateCardAndRetry.useMutation({
+    onSuccess: (data: any) => {
+      setUpdateCardResult({ success: true, message: data.message, chargedAmount: data.chargedAmount });
+      setPaymentCardNumber("");
+      setPaymentExpiry("");
+      setPaymentCvv("");
+    },
+    onError: (err: any) => {
+      setUpdateCardResult({ success: false, message: err.message || "Failed to update card" });
+    },
+  });
 
   // Sync agent note value from data
   useEffect(() => {
@@ -1269,7 +1282,7 @@ export default function ContactCard() {
                       onClick={() => setTakePaymentOpen(true)}
                       className="flex-1 px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition shadow-sm"
                     >
-                      Take Payment
+                      Update Card
                     </button>
                   </div>
                 )}
@@ -3275,7 +3288,7 @@ export default function ContactCard() {
         <div className="absolute inset-0 bg-black/50" onClick={() => setTakePaymentOpen(false)} />
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
           <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">Take Payment</h2>
+            <h2 className="text-lg font-bold text-gray-900">Update Card & Retry Payment</h2>
             <button onClick={() => setTakePaymentOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
               <X size={20} className="text-gray-900" />
             </button>
@@ -3314,9 +3327,13 @@ export default function ContactCard() {
                 />
               </div>
             </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-xs text-yellow-800 font-medium">Payment processing will be enabled soon. Card details are saved for future use.</p>
-            </div>
+            {updateCardResult && (
+              <div className={`rounded-lg p-3 border ${updateCardResult.success ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+                <p className={`text-xs font-bold ${updateCardResult.success ? 'text-green-800' : 'text-red-700'}`}>
+                  {updateCardResult.success ? '✅ ' : '✕ '}{updateCardResult.message}
+                </p>
+              </div>
+            )}
           </div>
           <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
             <button
@@ -3327,13 +3344,18 @@ export default function ContactCard() {
             </button>
             <button
               onClick={() => {
-                toast.success("Card details saved");
-                setTakePaymentOpen(false);
+                setUpdateCardResult(null);
+                updateCardMutation.mutate({
+                  contactId: contact.id,
+                  cardNumber: paymentCardNumber,
+                  cardExpiry: paymentExpiry,
+                  cardCvv: paymentCvv,
+                });
               }}
-              disabled={!paymentCardNumber || !paymentExpiry || !paymentCvv}
+              disabled={!paymentCardNumber || !paymentExpiry || !paymentCvv || updateCardMutation.isPending}
               className="px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 transition disabled:opacity-50 shadow-sm"
             >
-              Save Card
+              {updateCardMutation.isPending ? 'Processing...' : 'Update & Charge'}
             </button>
           </div>
         </div>
