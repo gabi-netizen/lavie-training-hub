@@ -3581,6 +3581,41 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           const deposit = instDeposit ?? 0;
           const remaining = totalAmount - deposit;
 
+          // ── Step 1: Charge deposit immediately via PaymentIntent (synchronous) ──
+          // This gives the agent immediate confirmation that payment succeeded.
+          if (deposit > 0 && stripePaymentMethodId) {
+            const depositPence = Math.round(deposit * 100);
+            const depositPI = await stripe.paymentIntents.create({
+              amount: depositPence,
+              currency: "gbp",
+              customer: stripeCustomerId,
+              payment_method: stripePaymentMethodId,
+              confirm: true,
+              off_session: true,
+              metadata: {
+                contactId: String(contactId),
+                agentName,
+                dealType: "installment",
+                retentionDeal: "true",
+                isDeposit: "true",
+              },
+            });
+
+            if (depositPI.status === "requires_payment_method") {
+              throw new Error("Card error: Card was declined \u2014 please use a different card");
+            }
+            if (depositPI.status === "requires_action") {
+              throw new Error("Card error: Card requires 3D Secure authentication \u2014 please contact the customer");
+            }
+            if (depositPI.status !== "succeeded") {
+              throw new Error(`Card error: Payment failed with status: ${depositPI.status}`);
+            }
+
+            // Store the PaymentIntent ID for webhook reference
+            stripeScheduleId = depositPI.id; // temporarily store PI id — will be overwritten by schedule if created
+          }
+
+          // ── Step 2: Create SubscriptionSchedule for remaining payments only ──
           let phases: { amount: number; interval: "day"; intervalCount: number; iterations: number }[] = [];
 
           if (instMode === "equal") {
@@ -3593,11 +3628,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
               interval,
             }));
 
-            // Phase 1: deposit (if any)
-            if (deposit > 0) {
-              phases.push({ amount: Math.round(deposit * 100), interval: "day", intervalCount: 1, iterations: 1 });
-            }
-            // Phase 2: equal payments
+            // Only remaining payments (deposit already charged above)
             phases.push({
               amount: Math.round(perPayment * 100),
               interval: "day",
@@ -3610,9 +3641,6 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             paymentCount = customPayments.length;
             paymentsJson = customPayments.map((p) => ({ amount: p.amount, interval: p.interval }));
 
-            if (deposit > 0) {
-              phases.push({ amount: Math.round(deposit * 100), interval: "day", intervalCount: 1, iterations: 1 });
-            }
             for (const p of customPayments) {
               phases.push({
                 amount: Math.round(p.amount * 100),
@@ -3628,7 +3656,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
               customerId: stripeCustomerId,
               phases,
               defaultPaymentMethod: stripePaymentMethodId,
-              startDate: startDateUnix ?? undefined,
+              startDate: nextChargeDateUnix ?? undefined,
               metadata: {
                 contactId: String(contactId),
                 agentName,

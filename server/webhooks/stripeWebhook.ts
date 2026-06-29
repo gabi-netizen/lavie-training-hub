@@ -844,7 +844,7 @@ async function handleRetentionFutureDealPayment(
   if (!db) return;
 
   try {
-    // Find the retention deal by stripeScheduleId or stripeSubscriptionIds containing this ID
+    // Find the retention deal by stripeScheduleId, stripeSubscriptionIds, or stripeCustomerId
     // Match deals that are still waiting for first payment (status = 'future' or 'pending')
     const deals = await db
       .select()
@@ -853,8 +853,10 @@ async function handleRetentionFutureDealPayment(
         sql`(
           ${retentionDeals.stripeScheduleId} = ${subscriptionId}
           OR JSON_CONTAINS(${retentionDeals.stripeSubscriptionIds}, JSON_QUOTE(${subscriptionId}))
+          OR (${retentionDeals.stripeCustomerId} = ${customerId} AND ${retentionDeals.dealType} = 'installment')
         ) AND ${retentionDeals.status} IN ('future', 'pending')`
       )
+      .orderBy(sql`${retentionDeals.createdAt} DESC`)
       .limit(1);
 
     const deal = deals[0];
@@ -997,6 +999,15 @@ export default async function handler(req: Request, res: Response) {
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event);
         break;
+      case "payment_intent.succeeded": {
+        // Handle immediate deposit payment for Retention Installment deals
+        const piSucceeded = event.data.object as any;
+        const piMeta = piSucceeded.metadata ?? {};
+        if (piMeta.retentionDeal === "true" && piMeta.isDeposit === "true" && piMeta.contactId) {
+          await handleRetentionFutureDealPayment(piSucceeded.id, piSucceeded.customer);
+        }
+        break;
+      }
       case "invoice.paid": {
         await handleInvoicePaid(event);
         // Also check if this is a retention future deal first payment
