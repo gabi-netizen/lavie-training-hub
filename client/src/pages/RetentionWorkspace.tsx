@@ -492,13 +492,14 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     if (leadTypeFilter !== "all") {
       result = result.filter((l) => l.leadType === leadTypeFilter);
     }
-    // Search filter
+    // Search filter — match name, email, or phone (normalised: strip spaces/dashes/brackets)
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
+      const qPhone = searchQuery.trim().replace(/[\s\-().]/g, "");
       result = result.filter((l) =>
         (l.customerName || "").toLowerCase().includes(q) ||
         (l.email || "").toLowerCase().includes(q) ||
-        (l.phone || "").includes(q)
+        (l.phone || "").replace(/[\s\-().]/g, "").includes(qPhone)
       );
     }
     return result;
@@ -570,6 +571,17 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
 
     cbs = [...cbs, ...billingCbs];
 
+    // Apply search filter (same logic as queue tab)
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const qPhone = searchQuery.trim().replace(/[\s\-().]/g, "");
+      cbs = cbs.filter((l) =>
+        (l.customerName || "").toLowerCase().includes(q) ||
+        (l.email || "").toLowerCase().includes(q) ||
+        (l.phone || "").replace(/[\s\-().]/g, "").includes(qPhone)
+      );
+    }
+
     // Apply callback date filter
     if (callbackDateFilter !== "all") {
       const now = new Date();
@@ -602,7 +614,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
       return aTime - bTime;
     });
     return cbs;
-  }, [allLeads, billingCallbacksData, callbackDateFilter]);
+  }, [allLeads, billingCallbacksData, callbackDateFilter, searchQuery]);
 
   const doneDealCount = useMemo(
     () => allLeads.filter((l: Lead) => l.workStatus === "done_deal" || l.workStatus === "retained").length,
@@ -629,10 +641,20 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   // Follow-up leads — show all leads with a followUpAt set (past due + upcoming)
   const followUpLeads = useMemo(() => {
     let fups = allLeads.filter((l: Lead) => l.followUpAt && l.followUpAt > 0);
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const qPhone = searchQuery.trim().replace(/[\s\-().]/g, "");
+      fups = fups.filter((l) =>
+        (l.customerName || "").toLowerCase().includes(q) ||
+        (l.email || "").toLowerCase().includes(q) ||
+        (l.phone || "").replace(/[\s\-().]/g, "").includes(qPhone)
+      );
+    }
     // Sort by soonest first
     fups.sort((a, b) => (a.followUpAt ?? 0) - (b.followUpAt ?? 0));
     return fups;
-  }, [allLeads]);
+  }, [allLeads, searchQuery]);
 
   const displayLeads = activeTab === "queue" ? queueLeads : activeTab === "callbacks" ? callbackLeads : activeTab === "followups" ? followUpLeads : [];
 

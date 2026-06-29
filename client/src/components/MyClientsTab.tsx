@@ -328,7 +328,7 @@ export function MyClientsTab({ agentName, onWhatsApp, onSms, onEmail, onCallback
         {/* Search Input — Smaller, fixed width */}
         <input
           type="text"
-          placeholder="Search name or email..."
+          placeholder="Search name, email or phone..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);

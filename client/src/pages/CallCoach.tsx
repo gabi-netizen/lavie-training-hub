@@ -105,6 +105,7 @@ interface CallAnalysisReport {
   // Retention Notes (auto-generated call summary)
   retentionNotes?: {
     rapport: string | null;
+    personalRapportInfo: string | null;
     currentRoutine: string | null;
     productsToSend: string | null;
     customerSituation: string | null;
@@ -1057,8 +1058,14 @@ function AnalysisReport({ analysisId, onBack, onDeleted, bestCallId, worstCallId
                   <CardContent className="space-y-3">
                     {report.retentionNotes.rapport && (
                       <div className="border-l-4 border-teal-400 pl-4 py-1">
-                        <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-1">Rapport & Personal Info</p>
+                        <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-1">Rapport</p>
                         <p className="text-sm text-gray-800">{report.retentionNotes.rapport}</p>
+                      </div>
+                    )}
+                    {report.retentionNotes.personalRapportInfo && (
+                      <div className="border-l-4 border-pink-400 pl-4 py-1">
+                        <p className="text-xs font-bold text-pink-700 uppercase tracking-wide mb-1">Personal Rapport Info</p>
+                        <p className="text-sm text-gray-800">{report.retentionNotes.personalRapportInfo}</p>
                       </div>
                     )}
                     {report.retentionNotes.currentRoutine && (

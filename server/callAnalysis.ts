@@ -816,12 +816,13 @@ export interface CallAnalysisReport {
   }[] | null;
   // ─── RETENTION NOTES (auto-generated call summary for retention agents) ───
   retentionNotes?: {
-    rapport: string | null;           // Personal info, rapport topics, things discussed outside products
-    currentRoutine: string | null;    // How customer currently uses products
-    productsToSend: string | null;    // What was agreed to send (quantities, sizes, specific products)
-    customerSituation: string | null; // Customer's situation, concerns, objections, emotional state
-    keyCommitments: string | null;    // What was promised/committed to by the agent during the call
-    nextActions: string | null;       // Follow-up actions (check-in date, emails to send, etc.)
+    rapport: string | null;              // Emotional context, personality, conversational tone
+    personalRapportInfo: string | null;  // Birthday, children/grandchildren, pets, hobbies, job — non-skincare personal info
+    currentRoutine: string | null;       // How customer currently uses products
+    productsToSend: string | null;       // What was agreed to send (quantities, sizes, specific products)
+    customerSituation: string | null;    // Customer's situation, concerns, objections, emotional state
+    keyCommitments: string | null;       // What was promised/committed to by the agent during the call
+    nextActions: string | null;          // Follow-up actions (check-in date, emails to send, etc.)
   } | null;
 }
 
@@ -1217,7 +1218,8 @@ ${isRetentionLongCall ? `
   - Be 100% specific to THIS call — reference the customer by name, reference specific products/prices mentioned, reference the exact moment in the conversation. NEVER give generic advice that could apply to any call.
 
   "retentionNotes": {
-    "rapport": "<Personal info about the customer: age, family situation, hobbies, personality traits, things discussed outside of products. Include any emotional context (e.g. 'retired in August 2025, cares for husband diagnosed with dementia'). null if no personal info shared>",
+    "rapport": "<Emotional tone and conversational context: customer's mood, personality, how the call felt overall (e.g. 'warm and chatty', 'hesitant but open', 'frustrated but calmed down'). null if no emotional context>",
+    "personalRapportInfo": "<PERSONAL INFO ONLY — non-skincare personal details shared during the call: birthday or birth month, children or grandchildren (names, ages), pets (names, type), hobbies, job or occupation, retirement, health conditions unrelated to skincare, any personal life details. Examples: 'Birthday in March', 'Has 3 grandchildren — Emma (7), Jack (5), Lily (2)', 'Retired nurse', 'Has a dog named Biscuit', 'Loves gardening'. null if no personal info shared>",
     "currentRoutine": "<How the customer currently uses products: which products, how often, morning/evening, any issues. null if not discussed>",
     "productsToSend": "<Exact products agreed to send with quantities and sizes (e.g. '6x Ashkara 15ml DROPPERS, 3x Oulala 30ml BLACK BOTTLES'). Include any special shipping notes (e.g. 'SHIP WHEN READY'). Also include sample sizes if mentioned. null if no products discussed>",
     "customerSituation": "<Customer's current situation and concerns: skin issues, health conditions, reasons for calling, emotional state, objections raised, hesitations. Include context like 'on medication affecting skin', 'worried about cost', 'wants to cancel because not seeing results'. null if no situation details discussed>",
@@ -1230,6 +1232,8 @@ ${isRetentionLongCall ? `
   - Include SPECIFIC details: names, dates, amounts, product names, quantities
   - Use the customer's name where relevant
   - If a field has no relevant information from the call, set it to null
+  - For personalRapportInfo: ONLY include non-skincare personal details (birthday, family, pets, hobbies, job). Do NOT include skincare-related info here — that belongs in currentRoutine or customerSituation. Be specific: include names, ages, dates where mentioned.
+  - For rapport: focus on emotional tone and conversational feel, NOT personal details (those go in personalRapportInfo)
   - For productsToSend: list EVERY product mentioned with exact quantities and sizes
   - For customerSituation: include the customer's emotional state, specific skin/health concerns, reasons for the call, and any objections or hesitations they expressed
   - For keyCommitments: include EVERY promise made by the agent — products, discounts, follow-up dates, emails, anything the agent said they would do. Be specific with dates and amounts.

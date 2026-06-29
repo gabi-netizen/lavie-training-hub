@@ -55,10 +55,14 @@ export const clientSubscriptionsRouter = router({
 
       if (input.search) {
         const searchTerm = `%${input.search}%`;
+        // Normalise phone search: strip spaces/dashes/brackets so +447... matches 07...
+        const rawPhone = input.search.replace(/[\s\-().]/g, "");
+        const phoneTerm = `%${rawPhone}%`;
         conditions.push(
           or(
             like(clientSubscriptions.customerName, searchTerm),
-            like(clientSubscriptions.email, searchTerm)
+            like(clientSubscriptions.email, searchTerm),
+            like(clientSubscriptions.phone, phoneTerm)
           )
         );
       }

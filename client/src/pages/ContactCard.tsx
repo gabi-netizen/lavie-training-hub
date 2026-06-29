@@ -2408,6 +2408,12 @@ export default function ContactCard() {
                                         <p className="text-sm text-gray-800">{note.retentionNotes.rapport}</p>
                                       </div>
                                     )}
+                                    {note.retentionNotes.personalRapportInfo && (
+                                      <div className="border-l-4 border-pink-400 pl-3 py-1">
+                                        <p className="text-[10px] font-bold text-pink-700 uppercase">Personal Rapport Info</p>
+                                        <p className="text-sm text-gray-800">{note.retentionNotes.personalRapportInfo}</p>
+                                      </div>
+                                    )}
                                     {note.retentionNotes.currentRoutine && (
                                       <div className="border-l-4 border-indigo-400 pl-3 py-1">
                                         <p className="text-[10px] font-bold text-indigo-700 uppercase">Current Routine</p>

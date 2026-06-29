@@ -174,7 +174,7 @@ export function EndInstalmentTab({ agentName, onWhatsApp, onSms, onEmail, onCall
       <div className="flex flex-wrap items-center gap-3 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <input
           type="text"
-          placeholder="Search name or email..."
+          placeholder="Search name, email or phone..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
