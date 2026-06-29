@@ -16,7 +16,7 @@ import { handlePostmarkInbound } from "../webhooks/postmarkInbound";
 import { handleWhatsAppIncoming } from "../webhooks/whatsappIncoming";
 import { handleWhatsAppStatus } from "../webhooks/whatsappStatus";
 import { handleSMSIncoming } from "../webhooks/smsIncoming";
-import { ensureSupportTicketsTable, ensureAlternativeEmailColumn } from "../ensureTables";
+import { ensureSupportTicketsTable } from "../ensureTables";
 import { ensureShareTokenColumn } from "../ensureShareToken";
 import { ensureTemplateVisibilityColumn } from "../ensureTemplateVisibility";
 import { ensureBrandsColumn } from "../ensureBrandsColumn";
@@ -341,12 +341,6 @@ async function startServer() {
           console.error("[DB] Error ensuring client_subscriptions / starting sync:", err)
         );
     }, 9000);
-    // Ensure alternativeEmail column exists on contacts
-    setTimeout(() => {
-      ensureAlternativeEmailColumn().catch((err) =>
-        console.error("[DB] Error ensuring alternativeEmail column:", err)
-      );
-    }, 7500);
     // Start nightly Cooling Pool cron (23:00 UTC — moves N/A leads to unassigned)
     setTimeout(() => {
       startNightlyCron();
