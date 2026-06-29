@@ -174,26 +174,32 @@ export async function createSubscriptionSchedule(
   }
 
   // Build Stripe phases from our simplified interface
-  const stripePhases = params.phases.map((phase) => ({
-    items: [
-      {
-        price_data: {
-          currency,
-          product: productId!,
-          unit_amount: phase.amount,
-          recurring: {
-            interval: phase.interval as "day" | "week" | "month" | "year",
-            interval_count: phase.intervalCount ?? 1,
+  // NOTE: iterations must be omitted for the last/infinite phase (Stripe rejects it when end_behavior=release)
+  const stripePhases = params.phases.map((phase, idx) => {
+    const isLastPhase = idx === params.phases.length - 1;
+    const isInfinite = phase.iterations >= 999;
+    return {
+      items: [
+        {
+          price_data: {
+            currency,
+            product: productId!,
+            unit_amount: phase.amount,
+            recurring: {
+              interval: phase.interval as "day" | "week" | "month" | "year",
+              interval_count: phase.intervalCount ?? 1,
+            },
           },
+          quantity: 1,
         },
-        quantity: 1,
-      },
-    ],
-    iterations: phase.iterations,
-    ...(params.defaultPaymentMethod
-      ? { default_payment_method: params.defaultPaymentMethod }
-      : {}),
-  }));
+      ],
+      // Omit iterations for infinite/last phase — Stripe requires no iterations on the final phase with end_behavior=release
+      ...((isLastPhase || isInfinite) ? {} : { iterations: phase.iterations }),
+      ...(params.defaultPaymentMethod
+        ? { default_payment_method: params.defaultPaymentMethod }
+        : {}),
+    };
+  });
 
   return stripe.subscriptionSchedules.create(
     {
@@ -235,26 +241,30 @@ export async function updateSubscriptionSchedule(
     productId = product.id;
   }
 
-  const stripePhases = phases.map((phase) => ({
-    items: [
-      {
-        price_data: {
-          currency,
-          product: productId!,
-          unit_amount: phase.amount,
-          recurring: {
-            interval: phase.interval as "day" | "week" | "month" | "year",
-            interval_count: phase.intervalCount ?? 1,
+  const stripePhases = phases.map((phase, idx) => {
+    const isLastPhase = idx === phases.length - 1;
+    const isInfinite = phase.iterations >= 999;
+    return {
+      items: [
+        {
+          price_data: {
+            currency,
+            product: productId!,
+            unit_amount: phase.amount,
+            recurring: {
+              interval: phase.interval as "day" | "week" | "month" | "year",
+              interval_count: phase.intervalCount ?? 1,
+            },
           },
+          quantity: 1,
         },
-        quantity: 1,
-      },
-    ],
-    iterations: phase.iterations,
-    ...(options?.defaultPaymentMethod
-      ? { default_payment_method: options.defaultPaymentMethod }
-      : {}),
-  }));
+      ],
+      ...((isLastPhase || isInfinite) ? {} : { iterations: phase.iterations }),
+      ...(options?.defaultPaymentMethod
+        ? { default_payment_method: options.defaultPaymentMethod }
+        : {}),
+    };
+  });
 
   return stripe.subscriptionSchedules.update(
     scheduleId,

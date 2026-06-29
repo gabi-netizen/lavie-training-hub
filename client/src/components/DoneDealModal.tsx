@@ -1336,7 +1336,21 @@ export default function DoneDealModal({
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-50 border-2 border-red-400">
               <span className="text-red-600 font-bold text-sm mt-0.5">✕</span>
               <div className="flex-1">
-                <p className="text-sm font-bold text-red-700">התשלום נכשל — אנא תקן ונסה שוב</p>
+                <p className="text-sm font-bold text-red-700">
+                  {dealError?.includes("card_declined") || dealError?.includes("declined")
+                    ? "Card declined — ask the customer for a different card"
+                    : dealError?.includes("insufficient_funds")
+                    ? "Card declined — insufficient funds. Ask for a different card."
+                    : dealError?.includes("incorrect_number") || dealError?.includes("invalid_number")
+                    ? "Card number is incorrect — please re-enter"
+                    : dealError?.includes("expired_card")
+                    ? "Card has expired — please use a different card"
+                    : dealError?.includes("No such customer")
+                    ? "Customer not found in Stripe — contact support"
+                    : dealError?.includes("No payment method") || dealError?.includes("payment method")
+                    ? "No payment method on file — please enter card details"
+                    : "Payment failed — please review the details below and try again"}
+                </p>
                 <p className="text-xs font-semibold text-red-600 mt-0.5">{dealError}</p>
               </div>
               <button onClick={() => setDealError(null)} className="text-red-400 hover:text-red-600 font-bold text-sm">✕</button>
