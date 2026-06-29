@@ -690,6 +690,28 @@ export const managerRouter = router({
         });
       }
 
+      // ── Sync callback to contacts table so ContactCard sidebar shows new time immediately ──
+      // The ContactCard sidebar reads contact.callbackAt (from contacts table via contacts.get).
+      // logCallAttempt updates lead_assignments but not contacts, so refetch() returns stale data.
+      try {
+        const leadRow = current ?? (await db.select().from(leadAssignments).where(eq(leadAssignments.subscriptionId, input.subscriptionId)).limit(1))[0];
+        if (leadRow?.contactId) {
+          if (input.result === "callback" && input.callbackAt) {
+            await db
+              .update(contacts)
+              .set({ callbackAt: new Date(input.callbackAt) })
+              .where(eq(contacts.id, leadRow.contactId));
+          } else if (input.result !== "callback") {
+            await db
+              .update(contacts)
+              .set({ callbackAt: null })
+              .where(eq(contacts.id, leadRow.contactId));
+          }
+        }
+      } catch (e) {
+        console.error("[logCallAttempt] Failed to sync callback to contacts table:", e);
+      }
+
       // ── Sync callback to client_subscriptions so Workspace Callbacks tab stays in sync ──
       // client_subscriptions has its own callbackAt/callbackNote/retentionAgent columns
       // that the Workspace reads via getClientCallbacks. We must keep them in sync with
