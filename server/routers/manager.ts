@@ -3554,6 +3554,23 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
                 default_payment_method: stripePaymentMethodId,
                 metadata: meta,
               });
+
+              // Check payment status immediately after subscription creation
+              const expandedSub = await stripe.subscriptions.retrieve(sub.id, {
+                expand: ['latest_invoice.payment_intent'],
+              });
+              const latestInvoice = expandedSub.latest_invoice as any;
+              const piStatus = latestInvoice?.payment_intent?.status;
+
+              if (piStatus === 'requires_payment_method') {
+                await stripe.subscriptions.cancel(sub.id);
+                throw new Error('Card error: Card was declined — please use a different card');
+              }
+              if (piStatus === 'requires_action') {
+                await stripe.subscriptions.cancel(sub.id);
+                throw new Error('Card error: Card requires 3D Secure authentication — please contact the customer');
+              }
+
               stripeSubscriptionIds.push(sub.id);
             }
           }
