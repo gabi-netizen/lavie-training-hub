@@ -475,8 +475,9 @@ export default function DoneDealModal({
         sku: g.sku,
         quantity: g.quantity,
       })),
-      shipDate: customShipDate || undefined,
+      shipDate: customShipDate || instFirstPaymentDate || undefined,
       isFutureDeal,
+      firstChargeDate: instFirstPaymentDate || customFirstPaymentDate || undefined,
       cardNumber: cardNumber || undefined,
       cardExpiry: cardExpiry || undefined,
       cardCvv: cardCvv || undefined,
@@ -758,6 +759,18 @@ export default function DoneDealModal({
           </div>
         </div>
 
+        {/* First Charge Date */}
+        <div>
+          <label className="text-xs font-semibold text-black mb-1 block">First Charge Date <span className="font-normal text-black">(optional — leave empty for today)</span></label>
+          <input
+            type="date"
+            value={instFirstPaymentDate}
+            onChange={(e) => setInstFirstPaymentDate(e.target.value)}
+            min={todayStr}
+            className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
         {/* Free Gifts */}
         {renderFreeGiftsSection()}
       </div>
@@ -794,7 +807,11 @@ export default function DoneDealModal({
           <div className="flex items-center justify-between border-t border-gray-200 pt-2">
             <span className="text-xs font-semibold text-black">First Charge</span>
             <span className="text-xs font-bold text-black">
-              {isSubFuture ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+              {isSubFuture
+                ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                : instFirstPaymentDate
+                  ? (() => { const [y,m,d] = instFirstPaymentDate.split("-"); return `${d}/${m}/${y}`; })()
+                  : "Today (immediate)"}
             </span>
           </div>
 
@@ -991,6 +1008,16 @@ export default function DoneDealModal({
                   <option value="30">Monthly (30 days)</option>
                 </select>
               </div>
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-black mb-1 block">First Charge Date <span className="font-normal text-black">(optional — leave empty for today)</span></label>
+                <input
+                  type="date"
+                  value={instFirstPaymentDate}
+                  onChange={(e) => setInstFirstPaymentDate(e.target.value)}
+                  min={todayStr}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
           ) : (
             /* Custom mode */
@@ -1022,6 +1049,16 @@ export default function DoneDealModal({
               </div>
 
               {/* Payment rows */}
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-black mb-1 block">First Charge Date <span className="font-normal text-black">(optional — leave empty for today)</span></label>
+                <input
+                  type="date"
+                  value={customFirstPaymentDate}
+                  onChange={(e) => setCustomFirstPaymentDate(e.target.value)}
+                  min={todayStr}
+                  className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-lg outline-none font-bold focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
               <div className="space-y-2 max-h-[240px] overflow-y-auto">
                 {customPayments.map((payment, idx) => (
                   <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2 border border-gray-200">
@@ -1089,7 +1126,11 @@ export default function DoneDealModal({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-black">First Payment</span>
                 <span className="text-xs font-bold text-black">
-                  {isInstFuture ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+                  {isInstFuture
+                    ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    : instFirstPaymentDate
+                      ? (() => { const [y,m,d] = instFirstPaymentDate.split("-"); return `${d}/${m}/${y}`; })()
+                      : "Today (immediate)"}
                 </span>
               </div>
               {isInstFuture && (
@@ -1138,7 +1179,11 @@ export default function DoneDealModal({
               <div className="flex items-center justify-between border-t border-gray-200 pt-2">
                 <span className="text-xs font-semibold text-black">First Payment</span>
                 <span className="text-xs font-bold text-black">
-                  {isCustomInstFuture ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Today (immediate)"}
+                  {isCustomInstFuture
+                    ? new Date(customShipDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    : customFirstPaymentDate
+                      ? (() => { const [y,m,d] = customFirstPaymentDate.split("-"); return `${d}/${m}/${y}`; })()
+                      : "Today (immediate)"}
                 </span>
               </div>
               {isCustomInstFuture && (

@@ -3278,6 +3278,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         cardExpiry: z.string().optional(),  // MM/YY
         cardCvv: z.string().optional(),
         notes: z.string().optional(),
+        firstChargeDate: z.string().optional(), // yyyy-mm-dd — preferred first charge date (not a future deal)
         // ─── Legacy fields — kept for email summary ────────────────────────
         dealDetails: z.object({
           products: z.array(
@@ -3315,7 +3316,7 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         contactId, subscriptionId, customerName, agentName,
         dealType, subProducts, instMode, instProducts,
         instDeposit, instPayments, instInterval, customPayments,
-        freeGifts, shipDate, isFutureDeal,
+        freeGifts, shipDate, isFutureDeal, firstChargeDate,
         cardNumber, cardExpiry, cardCvv, notes,
         dealDetails,
       } = input;
@@ -3435,9 +3436,12 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
       let paymentsJson: { amount: number; interval: number }[] | undefined;
 
       // Convert ship date to Unix timestamp for future deals
+      // Also support firstChargeDate for non-future deals (preferred billing day)
       const startDateUnix = isFutureDeal && shipDate
         ? Math.floor(new Date(shipDate).getTime() / 1000)
-        : undefined;
+        : firstChargeDate && firstChargeDate > new Date().toISOString().split("T")[0]
+          ? Math.floor(new Date(firstChargeDate).getTime() / 1000)
+          : undefined;
 
       // ─── Idempotency check: block duplicate deals within 5 minutes ────────────
       const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
@@ -3492,13 +3496,13 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
               retentionDeal: "true",
             };
 
-            if (isFutureDeal && startDateUnix) {
-              // Future deal — use Subscription Schedule with start_date
+            if (startDateUnix) {
+              // Future deal or preferred first charge date — use Subscription Schedule with start_date
               const schedule = await createSubscriptionSchedule({
                 customerId: stripeCustomerId,
                 phases: [{ amount: amountPence, interval: "day", intervalCount: cycle, iterations: 999 }],
                 defaultPaymentMethod: stripePaymentMethodId,
-                startDate: startDateUnix!,
+                startDate: startDateUnix,
                 metadata: meta,
               });
               stripeSubscriptionIds.push(schedule.id);
