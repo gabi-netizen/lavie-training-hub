@@ -141,6 +141,8 @@ export interface CreateSubscriptionScheduleParams {
   productId?: string;
   /** Unix timestamp for when the schedule should start. If omitted, defaults to "now". */
   startDate?: number;
+  /** What happens when the schedule ends: 'release' (default, subscription continues) or 'cancel' (subscription ends) */
+  endBehavior?: "release" | "cancel";
 }
 
 /**
@@ -173,11 +175,19 @@ export async function createSubscriptionSchedule(
     productId = product.id;
   }
 
-  // Build Stripe phases from our simplified interface
-  // NOTE: iterations must be omitted for the last/infinite phase (Stripe rejects it when end_behavior=release)
-  const stripePhases = params.phases.map((phase, idx) => {
-    const isLastPhase = idx === params.phases.length - 1;
+  // Determine end_behavior:
+  // - 'release' when the last phase is infinite (subscriptions that continue forever)
+  // - 'cancel' when all phases have finite duration (installment plans)
+  const hasInfinitePhase = params.phases.some(p => p.iterations >= 999);
+  const endBehavior = params.endBehavior ?? (hasInfinitePhase ? "release" : "cancel");
+
+  // Build Stripe phases.
+  // IMPORTANT: Stripe does NOT support 'iterations' as a parameter.
+  // Finite phases use 'duration' (interval + interval_count).
+  // Infinite phases (iterations >= 999) omit duration entirely — they run until end_behavior.
+  const stripePhases = params.phases.map((phase) => {
     const isInfinite = phase.iterations >= 999;
+    const intervalCount = phase.intervalCount ?? 1;
     return {
       items: [
         {
@@ -187,14 +197,20 @@ export async function createSubscriptionSchedule(
             unit_amount: phase.amount,
             recurring: {
               interval: phase.interval as "day" | "week" | "month" | "year",
-              interval_count: phase.intervalCount ?? 1,
+              interval_count: intervalCount,
             },
           },
           quantity: 1,
         },
       ],
-      // Omit iterations for infinite/last phase — Stripe requires no iterations on the final phase with end_behavior=release
-      ...((isLastPhase || isInfinite) ? {} : { iterations: phase.iterations }),
+      // Finite phase: set duration so Stripe knows when to end this phase
+      // Infinite phase: no duration — runs indefinitely until end_behavior
+      ...(isInfinite ? {} : {
+        duration: {
+          interval: phase.interval as "day" | "week" | "month" | "year",
+          interval_count: intervalCount * phase.iterations,
+        },
+      }),
       ...(params.defaultPaymentMethod
         ? { default_payment_method: params.defaultPaymentMethod }
         : {}),
@@ -205,7 +221,7 @@ export async function createSubscriptionSchedule(
     {
       customer: params.customerId,
       start_date: params.startDate ?? ("now" as unknown as number),
-      end_behavior: "release",
+      end_behavior: endBehavior,
       phases: stripePhases,
       metadata: params.metadata ?? {},
     } as any,
@@ -241,9 +257,9 @@ export async function updateSubscriptionSchedule(
     productId = product.id;
   }
 
-  const stripePhases = phases.map((phase, idx) => {
-    const isLastPhase = idx === phases.length - 1;
+  const stripePhases = phases.map((phase) => {
     const isInfinite = phase.iterations >= 999;
+    const intervalCount = phase.intervalCount ?? 1;
     return {
       items: [
         {
@@ -253,13 +269,18 @@ export async function updateSubscriptionSchedule(
             unit_amount: phase.amount,
             recurring: {
               interval: phase.interval as "day" | "week" | "month" | "year",
-              interval_count: phase.intervalCount ?? 1,
+              interval_count: intervalCount,
             },
           },
           quantity: 1,
         },
       ],
-      ...((isLastPhase || isInfinite) ? {} : { iterations: phase.iterations }),
+      ...(isInfinite ? {} : {
+        duration: {
+          interval: phase.interval as "day" | "week" | "month" | "year",
+          interval_count: intervalCount * phase.iterations,
+        },
+      }),
       ...(options?.defaultPaymentMethod
         ? { default_payment_method: options.defaultPaymentMethod }
         : {}),
