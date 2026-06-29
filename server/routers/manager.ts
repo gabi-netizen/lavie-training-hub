@@ -690,6 +690,33 @@ export const managerRouter = router({
         });
       }
 
+      // ── Sync callback to client_subscriptions so Workspace Callbacks tab stays in sync ──
+      // client_subscriptions has its own callbackAt/callbackNote/retentionAgent columns
+      // that the Workspace reads via getClientCallbacks. We must keep them in sync with
+      // lead_assignments to avoid duplicate/stale entries in the Callbacks tab.
+      try {
+        if (input.result === "callback" && input.callbackAt) {
+          // Convert ms timestamp to a Date for the timestamp column
+          await db
+            .update(clientSubscriptions)
+            .set({
+              callbackAt: new Date(input.callbackAt),
+              callbackNote: input.callbackNote ?? null,
+              retentionAgent: input.agentName,
+            })
+            .where(eq(clientSubscriptions.subscriptionId, input.subscriptionId));
+        } else if (input.result !== "callback") {
+          // Clear stale callback from client_subscriptions when a different result is logged
+          await db
+            .update(clientSubscriptions)
+            .set({ callbackAt: null, callbackNote: null })
+            .where(eq(clientSubscriptions.subscriptionId, input.subscriptionId));
+        }
+      } catch (e) {
+        // Non-fatal: log but don't fail the mutation if client_subscriptions sync fails
+        console.error("[logCallAttempt] Failed to sync callback to client_subscriptions:", e);
+      }
+
       return {
         success: true,
         movedToWhatsApp: newWorkStatus === "whatsapp_queue",

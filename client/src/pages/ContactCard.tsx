@@ -334,6 +334,8 @@ export default function ContactCard() {
       toast.success("Callback scheduled");
       refetch();
       utils.contacts.getRetentionData.invalidate({ contactId });
+      // Also invalidate the Workspace Callbacks tab so it shows the updated time immediately
+      utils.billing.getClientCallbacks.invalidate();
     },
     onError: (err: any) => toast.error(err.message || "Failed to schedule callback"),
   });
