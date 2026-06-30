@@ -254,10 +254,29 @@ export const contactsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { id, notifyEmail, previousStatus, ...updates } = input;
+
+      // If agentName is being changed, capture the old value for the timeline note
+      let oldAgentName: string | null = null;
+      if (updates.agentName !== undefined) {
+        const [currentContact] = await db.select({ agentName: contactsSchema.agentName }).from(contactsSchema).where(eq(contactsSchema.id, id)).limit(1);
+        oldAgentName = currentContact?.agentName ?? null;
+      }
+
       const result = await updateContact(id, updates);
 
       // Get contact for downstream operations
       const contact = await getContact(id);
+
+      // ── Timeline note: log agent reassignment ─────────────────────────────────────────────────────────────────────────────────
+      if (updates.agentName !== undefined && oldAgentName !== updates.agentName) {
+        try {
+          await addCallNote({
+            contactId: id,
+            agentName: ctx.user.name ?? "Manager",
+            note: `Reassigned from ${oldAgentName || "(unassigned)"} to ${updates.agentName || "(unassigned)"} by ${ctx.user.name ?? "Manager"}`,
+          });
+        } catch (_e) { /* non-fatal */ }
+      }
 
       // ── ActiveCampaign: update status tags ──────────────────────────────
       if (contact && updates.status && previousStatus && updates.status !== previousStatus) {
