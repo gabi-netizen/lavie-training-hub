@@ -361,6 +361,8 @@ export default function ContactCard() {
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [doneDealModalOpen, setDoneDealModalOpen] = useState(false);
   const [takePaymentOpen, setTakePaymentOpen] = useState(false);
+  const [editingAssigned, setEditingAssigned] = useState(false);
+  const [assignedInput, setAssignedInput] = useState("");
   const [paymentCardNumber, setPaymentCardNumber] = useState("");
   const [paymentExpiry, setPaymentExpiry] = useState("");
   const [paymentCvv, setPaymentCvv] = useState("");
@@ -1328,9 +1330,49 @@ export default function ContactCard() {
                 {/* Assigned */}
                 <div className="flex justify-between items-center py-2.5">
                   <span className="text-sm font-bold text-black">Assigned</span>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {currentRetentionLead?.assignedAgent || "\u2014"}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {editingAssigned ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={assignedInput}
+                          onChange={(e) => setAssignedInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              updateMutation.mutate({ id: contactId, agentName: assignedInput });
+                              setEditingAssigned(false);
+                              toast.success('Assigned updated');
+                            }
+                            if (e.key === 'Escape') setEditingAssigned(false);
+                          }}
+                          autoFocus
+                          className="px-2 py-1 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 w-32 text-black font-medium"
+                        />
+                        <button
+                          onClick={() => {
+                            updateMutation.mutate({ id: contactId, agentName: assignedInput });
+                            setEditingAssigned(false);
+                            toast.success('Assigned updated');
+                          }}
+                          className="text-green-600 hover:text-green-800 font-bold text-xs px-1"
+                        >✓</button>
+                        <button onClick={() => setEditingAssigned(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xs px-1">×</button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {currentRetentionLead?.assignedAgent || "—"}
+                        </span>
+                        <button
+                          onClick={() => { setAssignedInput(currentRetentionLead?.assignedAgent || ''); setEditingAssigned(true); }}
+                          className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                          title="Edit assigned agent"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
