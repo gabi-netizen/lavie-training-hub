@@ -368,6 +368,8 @@ export default function ContactCard() {
   const [paymentCvv, setPaymentCvv] = useState("");
   const [updateCardResult, setUpdateCardResult] = useState<{ success: boolean; message: string; chargedAmount?: number } | null>(null);
 
+  const { data: allUsersData } = trpc.users.getUsers.useQuery();
+
   const updateCardMutation = trpc.manager.updateCardAndRetry.useMutation({
     onSuccess: (data: any) => {
       setUpdateCardResult({ success: true, message: data.message, chargedAmount: data.chargedAmount });
@@ -1333,26 +1335,24 @@ export default function ContactCard() {
                   <div className="flex items-center gap-1.5">
                     {editingAssigned ? (
                       <div className="flex items-center gap-1">
-                        <input
-                          type="text"
+                        <select
                           value={assignedInput}
                           onChange={(e) => setAssignedInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                          autoFocus
+                          className="px-2 py-1 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-black font-medium max-w-[160px]"
+                        >
+                          <option value="">Select agent...</option>
+                          {(allUsersData ?? []).filter((u: any) => u.active !== false).map((u: any) => (
+                            <option key={u.id} value={u.name ?? u.email}>{u.name ?? u.email}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => {
+                            if (assignedInput) {
                               updateMutation.mutate({ id: contactId, agentName: assignedInput });
                               setEditingAssigned(false);
                               toast.success('Assigned updated');
                             }
-                            if (e.key === 'Escape') setEditingAssigned(false);
-                          }}
-                          autoFocus
-                          className="px-2 py-1 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 w-32 text-black font-medium"
-                        />
-                        <button
-                          onClick={() => {
-                            updateMutation.mutate({ id: contactId, agentName: assignedInput });
-                            setEditingAssigned(false);
-                            toast.success('Assigned updated');
                           }}
                           className="text-green-600 hover:text-green-800 font-bold text-xs px-1"
                         >✓</button>
