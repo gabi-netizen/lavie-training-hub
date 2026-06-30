@@ -3745,11 +3745,14 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           }
 
           if (phases.length > 0) {
+            // Start the schedule after the first interval (deposit was already charged today)
+            const firstInterval = phases[0]?.intervalCount ?? 30;
+            const scheduleStartDate = nextChargeDateUnix ?? Math.floor((Date.now() + firstInterval * 24 * 60 * 60 * 1000) / 1000);
             const schedule = await createSubscriptionSchedule({
               customerId: stripeCustomerId,
               phases,
               defaultPaymentMethod: stripePaymentMethodId,
-              startDate: nextChargeDateUnix ?? undefined,
+              startDate: scheduleStartDate,
               metadata: {
                 contactId: String(contactId),
                 agentName,
