@@ -3785,7 +3785,8 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         shipDate: shipDate ?? null,
         isFutureDeal: isFutureDeal ?? false,
         cardLast4: cardLast4 ?? null,
-        status: isFutureDeal ? "future" : stripeScheduleId ? "active" : "pending",
+        // All deals start as 'pending' — webhook sets 'active' after Mintsoft order is created
+        status: isFutureDeal ? "future" : "pending",
         notes: notes ?? null,
         createdAt: now,
         updatedAt: now,
