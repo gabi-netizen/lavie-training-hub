@@ -389,12 +389,22 @@ export async function createMintsoftOrderFromPhase(params: CreateMintsoftOrderFr
   }
 
   const data = await response.json();
-  const orderId = data?.ID ?? data?.id ?? null;
+  // Mintsoft returns an array: [{OrderId: 123, OrderNumber: "...", Success: true, ...}]
+  const result = Array.isArray(data) ? data[0] : data;
+  const orderId = result?.OrderId ?? result?.ID ?? result?.id ?? null;
+  const returnedOrderNumber = result?.OrderNumber ?? orderNumber;
+
+  if (result?.Success === false) {
+    return {
+      success: false,
+      error: result?.Message || "Mintsoft order creation returned Success: false",
+    };
+  }
 
   return {
     success: true,
     orderId: orderId,
-    orderNumber: orderNumber,
+    orderNumber: returnedOrderNumber,
   };
 }
 
