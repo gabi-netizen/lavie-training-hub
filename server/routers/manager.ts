@@ -3639,6 +3639,34 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
           const deposit = instDeposit ?? 0;
           const remaining = totalAmount - deposit;
 
+          // ── Save deal to DB FIRST (before charging) so webhook can find it ──
+          const products = instProducts;
+          paymentCount = instPayments ?? 1;
+          const instDealValues = {
+            contactId,
+            agentName,
+            dealType: "installment" as const,
+            instMode: instMode ?? null,
+            stripeCustomerId,
+            stripeScheduleId: null as string | null,
+            stripeSubscriptionIds: null,
+            totalAmount: String(totalAmount.toFixed(2)),
+            deposit: String(deposit.toFixed(2)),
+            paymentCount,
+            billingCycle: null as number | null,
+            products: products as any,
+            freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+            payments: null as any,
+            shipDate: shipDate ?? null,
+            isFutureDeal: isFutureDeal ?? false,
+            cardLast4: cardLast4 ?? null,
+            status: "pending" as const,
+            notes: notes ?? null,
+            createdAt: now,
+            updatedAt: now,
+          };
+          await db.insert(retentionDeals).values(instDealValues);
+
           // ── Step 1: Charge deposit immediately via PaymentIntent (synchronous) ──
           // This gives the agent immediate confirmation that payment succeeded.
           if (deposit > 0 && stripePaymentMethodId) {
@@ -3660,12 +3688,19 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
             });
 
             if (depositPI.status === "requires_payment_method") {
+              // Mark pre-saved deal as failed
+              await db.update(retentionDeals).set({ status: "failed", errorMessage: "Card was declined", updatedAt: Date.now() })
+                .where(and(eq(retentionDeals.contactId, contactId), eq(retentionDeals.status, "pending")));
               throw new Error("Card error: Card was declined \u2014 please use a different card");
             }
             if (depositPI.status === "requires_action") {
+              await db.update(retentionDeals).set({ status: "failed", errorMessage: "Card requires 3D Secure", updatedAt: Date.now() })
+                .where(and(eq(retentionDeals.contactId, contactId), eq(retentionDeals.status, "pending")));
               throw new Error("Card error: Card requires 3D Secure authentication \u2014 please contact the customer");
             }
             if (depositPI.status !== "succeeded") {
+              await db.update(retentionDeals).set({ status: "failed", errorMessage: `Payment failed: ${depositPI.status}`, updatedAt: Date.now() })
+                .where(and(eq(retentionDeals.contactId, contactId), eq(retentionDeals.status, "pending")));
               throw new Error(`Card error: Payment failed with status: ${depositPI.status}`);
             }
 
@@ -3724,6 +3759,12 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
               },
             });
             stripeScheduleId = schedule.id;
+            // Update the pre-saved deal with schedule ID and payments info
+            await db.update(retentionDeals).set({
+              stripeScheduleId: schedule.id,
+              payments: paymentsJson ? paymentsJson as any : null,
+              updatedAt: Date.now(),
+            }).where(and(eq(retentionDeals.contactId, contactId), eq(retentionDeals.status, "pending"), eq(retentionDeals.dealType, "installment")));
           }
         }
       } catch (stripeErr: any) {
@@ -3764,33 +3805,35 @@ IMPORTANT: The ---CSV_START--- and ---CSV_END--- markers MUST be on their own li
         return { success: false, errorMessage: `Payment setup failed: ${stripeMsg}` };
       }
 
-      // ─── 5. Save retention deal to DB ────────────────────────────────────────
+      // ─── 5. Save retention deal to DB (subscription only — installment already saved above) ──
       const products = dealType === "subscription" ? subProducts : instProducts;
 
-      await db.insert(retentionDeals).values({
-        contactId,
-        agentName,
-        dealType,
-        instMode: instMode ?? null,
-        stripeCustomerId,
-        stripeScheduleId: stripeScheduleId ?? null,
-        stripeSubscriptionIds: stripeSubscriptionIds.length > 0 ? stripeSubscriptionIds as any : null,
-        totalAmount: String(totalAmount.toFixed(2)),
-        deposit: String((instDeposit ?? 0).toFixed(2)),
-        paymentCount: paymentCount ?? null,
-        billingCycle: billingCycle ?? null,
-        products: products as any,
-        freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
-        payments: paymentsJson ? paymentsJson as any : null,
-        shipDate: shipDate ?? null,
-        isFutureDeal: isFutureDeal ?? false,
-        cardLast4: cardLast4 ?? null,
-        // All deals start as 'pending' — webhook sets 'active' after Mintsoft order is created
-        status: isFutureDeal ? "future" : "pending",
-        notes: notes ?? null,
-        createdAt: now,
-        updatedAt: now,
-      });
+      if (dealType === "subscription") {
+        await db.insert(retentionDeals).values({
+          contactId,
+          agentName,
+          dealType,
+          instMode: instMode ?? null,
+          stripeCustomerId,
+          stripeScheduleId: stripeScheduleId ?? null,
+          stripeSubscriptionIds: stripeSubscriptionIds.length > 0 ? stripeSubscriptionIds as any : null,
+          totalAmount: String(totalAmount.toFixed(2)),
+          deposit: String((instDeposit ?? 0).toFixed(2)),
+          paymentCount: paymentCount ?? null,
+          billingCycle: billingCycle ?? null,
+          products: products as any,
+          freeGifts: (freeGifts && freeGifts.length > 0 ? freeGifts : null) as any,
+          payments: paymentsJson ? paymentsJson as any : null,
+          shipDate: shipDate ?? null,
+          isFutureDeal: isFutureDeal ?? false,
+          cardLast4: cardLast4 ?? null,
+          // All deals start as 'pending' — webhook sets 'active' after Mintsoft order is created
+          status: isFutureDeal ? "future" : "pending",
+          notes: notes ?? null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
 
       // Mintsoft order is NOT created here.
       // It is created by the Stripe webhook (invoice.paid) after the first payment is confirmed.
