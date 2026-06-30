@@ -724,7 +724,7 @@ export const managerRouter = router({
             .set({
               callbackAt: new Date(input.callbackAt),
               callbackNote: input.callbackNote ?? null,
-              retentionAgent: input.agentName,
+              // Do NOT update retentionAgent here — it should only change via manual reassignment
             })
             .where(eq(clientSubscriptions.subscriptionId, input.subscriptionId));
         } else if (input.result !== "callback") {
