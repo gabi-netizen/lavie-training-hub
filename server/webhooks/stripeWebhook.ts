@@ -31,11 +31,20 @@ import { eq, sql } from "drizzle-orm";
 
 function constructEvent(rawBody: Buffer, signature: string): Stripe.Event {
   const webhookSecret = process.env.STRIPE_BILLING_WEBHOOK_SECRET;
-  if (!webhookSecret) {
+  const testWebhookSecret = process.env.STRIPE_BILLING_WEBHOOK_SECRET_TEST;
+  if (!webhookSecret && !testWebhookSecret) {
     throw new Error("[Stripe Webhook] STRIPE_BILLING_WEBHOOK_SECRET is not configured");
   }
   const stripe = getStripeClient();
-  return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  // Try primary (live) secret first, then test secret as fallback
+  try {
+    return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret!);
+  } catch (err) {
+    if (testWebhookSecret) {
+      return stripe.webhooks.constructEvent(rawBody, signature, testWebhookSecret);
+    }
+    throw err;
+  }
 }
 
 // ─── Idempotency Check ───────────────────────────────────────────────────────
