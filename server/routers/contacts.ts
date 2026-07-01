@@ -1439,6 +1439,37 @@ export const contactsRouter = router({
           console.error(`[confirmSold] Failed to insert opening_trial for contact ${contactId}:`, otErr);
         }
 
+        // ─── Send New Sale email notification to support and trial ──────────
+        try {
+          const agentName = contact.agentName || "Unknown Agent";
+          const customerName = contact.name || "Unknown";
+          const phone = contact.phone || "N/A";
+          const email = contact.email || "N/A";
+          const address = contact.address || "N/A";
+          const starterKit = contact.trialKit || "N/A";
+
+          const htmlBody = `
+            <h2>🎉 New Sale!!!!</h2>
+            <table style="border-collapse:collapse; font-size:15px;">
+              <tr><td style="padding:6px 12px; font-weight:bold;">Agent Name:</td><td style="padding:6px 12px;">${agentName}</td></tr>
+              <tr><td style="padding:6px 12px; font-weight:bold;">Customer Name:</td><td style="padding:6px 12px;">${customerName}</td></tr>
+              <tr><td style="padding:6px 12px; font-weight:bold;">Phone Number:</td><td style="padding:6px 12px;">${phone}</td></tr>
+              <tr><td style="padding:6px 12px; font-weight:bold;">Email Address:</td><td style="padding:6px 12px;">${email}</td></tr>
+              <tr><td style="padding:6px 12px; font-weight:bold;">Delivery Address:</td><td style="padding:6px 12px;">${address}</td></tr>
+              <tr><td style="padding:6px 12px; font-weight:bold;">Starter Kit:</td><td style="padding:6px 12px;">${starterKit}</td></tr>
+            </table>
+          `;
+
+          sendViaGmail({
+            from: "Lavie Labs <trial@lavielabs.com>",
+            to: "support@lavielabs.com, trial@lavielabs.com",
+            subject: "🎉 New Sale!!!!",
+            htmlBody,
+          }).catch((err) => console.error("[confirmSold Email] Failed:", err));
+        } catch (emailErr) {
+          console.error(`[confirmSold] Failed to send sale email for contact ${contactId}:`, emailErr);
+        }
+
         return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
       }
       // else block removed: result.success is always true now since Mintsoft creation is disabled
