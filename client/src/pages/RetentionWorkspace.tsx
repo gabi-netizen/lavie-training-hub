@@ -621,7 +621,7 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
     [allLeads]
   );
 
-  // Callbacks today count
+  // Callbacks today count (unfiltered — shows total)
   const callbacksTodayCount = useMemo(() => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -631,6 +631,11 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
       (l: Lead) => l.callbackAt && l.callbackAt >= todayStart.getTime() && l.callbackAt <= todayEnd.getTime()
     ).length;
   }, [allLeads]);
+
+  // Filtered callbacks count (respects search filter) — used for displaying search results count
+  const filteredCallbacksCount = useMemo(() => {
+    return callbackLeads.length;
+  }, [callbackLeads]);
 
   // Unique lead types for filter dropdown
   const uniqueLeadTypes = useMemo(
@@ -657,6 +662,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   }, [allLeads, searchQuery]);
 
   const displayLeads = activeTab === "queue" ? queueLeads : activeTab === "callbacks" ? callbackLeads : activeTab === "followups" ? followUpLeads : [];
+
+  // Show filtered count when search is active, otherwise show total
+  const displayCallbacksCount = searchQuery.trim() ? filteredCallbacksCount : callbackLeads.length;
 
   // Clear bulk selection when switching tabs
   useEffect(() => { bulkClearSelection(); }, [activeTab, bulkClearSelection]);
@@ -890,9 +898,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
         >
           <Clock className="w-4 h-4" />
           My Callbacks
-          {callbackLeads.length > 0 && (
+          {displayCallbacksCount > 0 && (
             <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 text-white ${callbacksTodayCount > 0 ? 'bg-red-600' : 'bg-indigo-500'}`}>
-              {callbackLeads.length}
+              {displayCallbacksCount}
             </span>
           )}
         </button>
