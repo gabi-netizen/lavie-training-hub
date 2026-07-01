@@ -528,7 +528,10 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
           }
 
           // ─── Billing Plan Phase-based Mintsoft Order ──────────────────────
-          // Look up contact's billingPlanId and create Mintsoft order based on the appropriate phase
+          // DISABLED: Mintsoft orders now handled manually via Zoho Billing
+          // Removed automatic Mintsoft order creation from invoice.paid webhook
+          // to prevent duplicate orders and allow manual control via Zoho Billing
+          /*
           try {
             const [contactFull] = await db
               .select({
@@ -643,6 +646,8 @@ async function handleInvoicePaid(event: Stripe.Event): Promise<void> {
           } catch (phaseErr) {
             console.error(`[Stripe Webhook] Error processing billing plan phase for contact ${mapping.contactId}:`, phaseErr);
           }
+          */
+          // END DISABLED: Mintsoft order creation from invoice.paid webhook
         }
       }
     } catch (err) {
@@ -768,6 +773,10 @@ async function handleRetentionFutureDealPayment(
       return;
     }
 
+    // DISABLED: Mintsoft orders now handled manually via Zoho Billing
+    // Removed automatic Mintsoft order creation from retention deal payment handler
+    // to allow manual control via Zoho Billing
+    /*
     const nameParts = (contact.name || "").trim().split(/\s+/);
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
@@ -810,6 +819,15 @@ async function handleRetentionFutureDealPayment(
         .set({ status: "active", shipmentStatus: "failed", updatedAt: Date.now() })
         .where(eq(retentionDeals.id, deal.id));
     }
+    */
+    // END DISABLED: Mintsoft order creation from retention deal payment
+    // Mark deal as active without creating Mintsoft order
+    await db
+      .update(retentionDeals)
+      .set({ status: "active", shipmentStatus: "pending_manual", updatedAt: Date.now() })
+      .where(eq(retentionDeals.id, deal.id));
+    console.log(`[Stripe Webhook] Retention deal ${deal.id}: marked active (Mintsoft order creation disabled - handle via Zoho Billing)`);
+    
   } catch (err: any) {
     console.error(`[Stripe Webhook] handleRetentionFutureDealPayment error: ${err.message}`);
   }

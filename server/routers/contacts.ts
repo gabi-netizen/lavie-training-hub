@@ -1372,6 +1372,10 @@ export const contactsRouter = router({
       }
 
       // ── Create Mintsoft order ──
+      // DISABLED: Mintsoft orders now handled manually via Zoho Billing
+      // Removed automatic Mintsoft order creation from confirmSold
+      // to allow manual control via Zoho Billing
+      /*
       const nameParts = (contact.name || "").trim().split(/\s+/);
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
@@ -1385,12 +1389,16 @@ export const contactsRouter = router({
         address: contact.address,
         trialKit: contact.trialKit,
       });
+      */
+      // END DISABLED: Mintsoft order creation from confirmSold
+      // Skip Mintsoft order creation and proceed with status update
+      const result = { success: true, orderId: null, orderNumber: null };
 
       if (result.success) {
-        // Log success
+        // Log success (Mintsoft order creation disabled, but still log for audit)
         await db.insert(stripeAuditLog).values({
           eventId: `mintsoft-sold-${contactId}-${Date.now()}`,
-          eventType: "mintsoft_order_created",
+          eventType: "mintsoft_order_skipped",
           customerId: paymentId || "",
           status: "processed",
           source: "max_billing",
@@ -1400,6 +1408,7 @@ export const contactsRouter = router({
             orderNumber: result.orderNumber,
             trialKit: contact.trialKit,
             triggeredBy: "sold_button",
+            note: "Mintsoft order creation disabled - handle via Zoho Billing",
           },
         });
         // Mark as done_deal + assign billing plan
@@ -1431,26 +1440,8 @@ export const contactsRouter = router({
         }
 
         return { success: true, alreadyShipped: false, orderId: result.orderId, orderNumber: result.orderNumber };
-      } else {
-        // Log failure
-        await db.insert(stripeAuditLog).values({
-          eventId: `mintsoft-failed-${contactId}-${Date.now()}`,
-          eventType: "mintsoft_order_failed",
-          customerId: paymentId || "",
-          status: "failed",
-          source: "max_billing",
-          metadata: {
-            contactId,
-            error: result.error,
-            trialKit: contact.trialKit,
-            triggeredBy: "sold_button",
-          },
-        });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Mintsoft order failed: ${result.error}`,
-        });
       }
+      // else block removed: result.success is always true now since Mintsoft creation is disabled
     }),
 
   // ─── Get retention data from lead_assignments linked to a contact ───────────────
