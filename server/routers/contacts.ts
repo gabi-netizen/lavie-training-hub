@@ -267,6 +267,21 @@ export const contactsRouter = router({
       // Get contact for downstream operations
       const contact = await getContact(id);
 
+      // ── Update lead_assignments and client_subscriptions when agentName changes ────────────────────────────────────────────
+      if (updates.agentName !== undefined && oldAgentName !== updates.agentName) {
+        // Update lead_assignments table
+        await db
+          .update(leadAssignments)
+          .set({ assignedAgent: updates.agentName || null })
+          .where(eq(leadAssignments.contactId, id));
+        
+        // Update client_subscriptions table
+        await db
+          .update(clientSubscriptions)
+          .set({ assignedAgent: updates.agentName || null })
+          .where(eq(clientSubscriptions.contactId, id));
+      }
+
       // ── Timeline note: log agent reassignment ─────────────────────────────────────────────────────────────────────────────────
       if (updates.agentName !== undefined && oldAgentName !== updates.agentName) {
         try {
