@@ -1416,6 +1416,10 @@ export const contactsRouter = router({
         await db.update(contactsSchema).set(updateData2).where(eq(contactsSchema.id, contactId));
 
         // ─── Insert into opening_trials for Opening Dashboard ──────────
+        // DISABLED: Opening Dashboard now pulls data directly from Zoho Billing.
+        // No need to write to opening_trials table anymore.
+        // The subscription is created in Zoho Billing via the webhook, which is the source of truth.
+        /*
         try {
           const fullAgentName = contact.agentName || "Unknown";
           const agentFirstName = fullAgentName.trim().split(/\s+/)[0];
@@ -1438,6 +1442,8 @@ export const contactsRouter = router({
         } catch (otErr) {
           console.error(`[confirmSold] Failed to insert opening_trial for contact ${contactId}:`, otErr);
         }
+        */
+        // END DISABLED: opening_trials insertion
 
         // ─── Send New Sale email notification to support and trial ──────────
         try {
