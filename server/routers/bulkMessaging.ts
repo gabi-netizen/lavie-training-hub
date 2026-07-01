@@ -266,7 +266,8 @@ export const bulkMessagingRouter = router({
               to: r.email,
               subject: resolvedSubject,
               htmlBody: resolvedHtml,
-              replyTo: agentEmail,
+              replyTo: "support@lavielabs.com",
+              bcc: "support@lavielabs.com",
             });
             results.push({ recipient: r.name || r.email, success: true });
           } catch (err) {

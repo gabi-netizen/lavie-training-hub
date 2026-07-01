@@ -225,7 +225,8 @@ export const emailsRouter = router({
           to: contact.email,
           subject: input.subject,
           htmlBody: trackedHtml,
-          replyTo: agentEmail,
+          replyTo: "support@lavielabs.com",
+          bcc: "support@lavielabs.com",
         });
 
         // Update the log with the message ID
@@ -409,7 +410,8 @@ export const emailsRouter = router({
           to: input.toEmail,
           subject: input.subject,
           htmlBody: trackedHtml,
-          replyTo: agentEmail,
+          replyTo: "support@lavielabs.com",
+          bcc: "support@lavielabs.com",
         });
 
         await db

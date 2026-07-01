@@ -304,7 +304,8 @@ export const emailTemplatesRouter = router({
           to: contact.email,
           subject: resolvedSubject,
           htmlBody: resolvedHtml,
-          replyTo: agentEmail,
+          replyTo: "support@lavielabs.com",
+          bcc: "support@lavielabs.com",
         });
         postmarkMessageId = result.MessageID ?? null;
       } catch (err) {

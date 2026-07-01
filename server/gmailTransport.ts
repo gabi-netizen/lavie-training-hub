@@ -33,6 +33,7 @@ export interface SendViaGmailOptions {
   subject: string;
   htmlBody: string;
   replyTo?: string;
+  bcc?: string;
   textBody?: string;
   attachments?: EmailAttachment[];
 }
@@ -53,6 +54,7 @@ export async function sendViaGmail(opts: SendViaGmailOptions): Promise<{ Message
     html: opts.htmlBody,
     ...(opts.textBody ? { text: opts.textBody } : {}),
     ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+    ...(opts.bcc ? { bcc: opts.bcc } : {}),
     ...(opts.attachments && opts.attachments.length > 0
       ? {
           attachments: opts.attachments.map((a) => ({
