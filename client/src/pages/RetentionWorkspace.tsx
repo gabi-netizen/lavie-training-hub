@@ -512,6 +512,11 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
   );
 
   const callbackLeads = useMemo(() => {
+    // DEBUG: Log data sources at the beginning
+    const leadCallbacksCount = allLeads.filter((l: Lead) => l.callbackAt).length;
+    const billingCallbacksCount = billingCallbacksData?.callbacks?.length ?? 0;
+    console.log(`[callbackLeads] START - leadCallbacks: ${leadCallbacksCount}, billingCallbacks: ${billingCallbacksCount}, searchQuery: "${searchQuery}"`);
+    
     // Lead-assignment callbacks
     let cbs: (Lead & { source?: string })[] = allLeads
       .filter((l: Lead) => l.callbackAt)
@@ -613,8 +618,15 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
       // Within same group: overdue = oldest first, today/future = soonest first
       return aTime - bTime;
     });
+    
+    // DEBUG: Log results at the end
+    console.log(`[callbackLeads] END - searchQuery: "${searchQuery}", cbs.length: ${cbs.length}`);
+    if (cbs.length > 0) {
+      console.log(`[callbackLeads] First 3 items:`, cbs.slice(0, 3).map(c => ({ customerName: c.customerName, email: c.email, source: c.source })));
+    }
+    
     return cbs;
-  }, [allLeads, billingCallbacksData, callbackDateFilter, searchQuery]);
+  }, [allLeads, billingCallbacksData, callbackDateFilter, searchQuery]); // DEBUG: Dependency array
 
   const doneDealCount = useMemo(
     () => allLeads.filter((l: Lead) => l.workStatus === "done_deal" || l.workStatus === "retained").length,
