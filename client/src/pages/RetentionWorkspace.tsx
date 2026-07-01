@@ -523,9 +523,9 @@ export default function RetentionWorkspace({ agentName: agentNameProp }: { agent
       .map((cb) => ({
         subscriptionId: cb.subscriptionId,
         customerId: null,
-        customerName: cb.customerName,
-        email: cb.email,
-        phone: cb.phone,
+        customerName: cb.customerName || "",
+        email: cb.email || "",
+        phone: cb.phone || "",
         planName: cb.planName,
         billingStatus: cb.status,
         cyclesCompleted: 0,
